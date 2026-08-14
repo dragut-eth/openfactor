@@ -1,0 +1,9 @@
+This folder is intentionally empty.
+
+The test target's sources are Tests/OpenFactorCoreTests, attached to it as a second
+synchronised folder, so one suite runs both unsigned under swift test and inside the app
+under xcodebuild test. See docs/PROJECT.md.
+
+The folder itself still has to exist, because the project file references it and git does
+not track empty directories. Deleting this file breaks a fresh clone. Tests that belong to
+the app rather than the core would go here.

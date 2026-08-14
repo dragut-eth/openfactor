@@ -54,17 +54,18 @@ against the official test vectors in those documents.
 Package.swift                  The OpenFactorCore package. No dependencies, and it stays that way.
 Sources/OpenFactorCore/        Base32, HOTP, TOTP, otpauth parsing, secret storage.
                                No UI. This is the security sensitive code.
-Tests/OpenFactorCoreTests/     Including the published RFC vector tables.
-App/                           iOS app target. Views and view models only.
-Watch/                         watchOS app target.
-docs/                          Architecture, roadmap, UI specification, backup format.
+Tests/OpenFactorCoreTests/     Including the published RFC vector tables and the fuzzing.
+OpenFactor.xcodeproj           The app project. See docs/PROJECT.md for what is in it.
+OpenFactor/                    iOS app target. Views and view models only.
+OpenFactorTests/               Runs the suite above inside a real app, for the Keychain.
+docs/                          Architecture, roadmap, UI specification, audits.
 ```
 
-`App/` and `Watch/` do not exist yet. They arrive PR by PR, per the roadmap.
+The watchOS target does not exist yet. It arrives in PR 14, per the roadmap.
 
 ## Building
 
-Requires Xcode 26 or later, targeting iOS 18 and watchOS 11.
+Requires Xcode 16 or later, targeting iOS 18 and watchOS 11.
 
 ```bash
 git clone https://github.com/dragut-eth/openfactor.git
@@ -72,7 +73,19 @@ cd openfactor
 swift test
 ```
 
-`swift test` runs the core test suite, including the RFC vectors, without opening Xcode.
+`swift test` runs the core suite, including the RFC vectors and the fuzzing, in under a
+second and without a simulator.
+
+The tests that assert how secrets are protected in the Keychain **skip** under
+`swift test`, because reaching the data protection Keychain needs an entitlement that an
+unsigned test bundle does not have. To run those, open `OpenFactor.xcodeproj` and run the
+tests, or:
+
+```bash
+xcodebuild test -project OpenFactor.xcodeproj -scheme OpenFactor -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:OpenFactorTests
+```
+
+Same files, two contexts. CI runs both. See [docs/PROJECT.md](docs/PROJECT.md).
 
 ## Audits
 
@@ -90,14 +103,17 @@ section will name the audited commit and who reviewed it.
 **Gate A1** ran on 2026-08-14 against the core, tag `audit-a1`: an adversarial model
 review, the RFC vector tables re-verified against the IETF documents, and 17,000+ fuzz
 iterations. Two defects found and fixed, full findings in
-[docs/audits/A1.md](docs/audits/A1.md), one item still open there. It was a model review,
-not a human one, and it does not soften the warning above.
+[docs/audits/A1.md](docs/audits/A1.md), and its one open item closed in PR 5 when the
+protection class tests first ran for real. It was a model review, not a human one, and it
+does not soften the warning above.
 
 ## Documentation
 
 - [docs/ROADMAP.md](docs/ROADMAP.md), the PR by PR delivery plan
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), how the pieces fit and why
 - [docs/UI_SPEC.md](docs/UI_SPEC.md), every screen and its behavior
+- [docs/PROJECT.md](docs/PROJECT.md), what is in the Xcode project, in plain language
+- [docs/audits/](docs/audits/), findings from each review gate
 - [SECURITY.md](SECURITY.md), threat model and how to report a vulnerability
 - [CONTRIBUTING.md](CONTRIBUTING.md), how changes get reviewed
 

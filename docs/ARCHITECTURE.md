@@ -165,11 +165,23 @@ leak, and iCloud Keychain already solves the problem correctly.
 
 Recorded here so they are not silently defaulted.
 
+### A shared Keychain access group for the watch
+
+**Needs verifying before PR 14.** A watchOS target has its own bundle identifier and
+therefore its own default Keychain access group, and Keychain items are scoped to a group.
+iCloud Keychain syncs within a group rather than across them, so the watch app most likely
+cannot see the phone's accounts unless both targets declare a shared `keychain-access-groups`
+entitlement and the store writes to it explicitly. Likely but unverified, and it shapes what
+PR 13 can assume about sync. Cheap to settle before there are users, awkward afterwards.
+
 ### The Xcode project file
 
-**Decided in PR 5.** A checked in `.xcodeproj` is an unreadable blob in every diff that
-touches it, which works against the point of the project. Generating it from a checked in
-spec keeps diffs reviewable at the cost of one build tool. Current lean is to generate.
+**Decided in PR 5: checked in, not generated,** which is the opposite of the lean recorded
+here beforehand. Requiring a `brew install` before anyone can open the project is a real
+cost for a project whose pitch is that it has no dependencies, and a generated project is
+only as trustworthy as its generator. The auditability that costs is bought back by
+`docs/PROJECT.md`, which says in words what the project contains, and by a CI job that
+asserts the load bearing settings still match it. Full reasoning in that file.
 
 ### Export format
 

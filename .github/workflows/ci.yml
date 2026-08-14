@@ -32,14 +32,33 @@ jobs:
           fi
           echo "No trailing whitespace found."
 
-  test:
-    name: Build and test
+      # An Xcode project file is not readable in a diff, so the settings that matter are
+      # asserted here instead. Changing one of these is a deliberate act that also has to
+      # change this job and docs/PROJECT.md. See that file for what each one is for.
+      - name: Project settings are what the documentation says
+        run: |
+          set -e
+          check() {
+            if ! grep -q "$1" OpenFactor.xcodeproj/project.pbxproj; then
+              echo "Missing from the project file: $1"
+              echo "If this change is intended, update this job and docs/PROJECT.md."
+              exit 1
+            fi
+            echo "ok: $1"
+          }
+          check "PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev;"
+          check "IPHONEOS_DEPLOYMENT_TARGET = 18.0;"
+          check "TEST_HOST = "
+          check "relativePath = .;"
+
+  package:
+    name: Package tests
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -switch /Applications/Xcode_26.app
+      - name: Select the newest Xcode
+        run: sudo xcode-select -switch "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
 
       - name: Swift version
         run: swift --version
@@ -47,8 +66,44 @@ jobs:
       - name: Build
         run: swift build
 
-      # Includes the RFC 4648, RFC 4226, and RFC 6238 vector tables. A failure here means
-      # the generated codes would be wrong, so this job is never to be skipped or made
-      # advisory.
+      # Includes the RFC 4648, RFC 4226, and RFC 6238 vector tables, and the fuzzing.
+      # A failure here means the generated codes would be wrong, so this job is never to
+      # be skipped or made advisory.
+      #
+      # The Keychain tests skip in this job. An unsigned test bundle has no entitlement
+      # for the data protection Keychain, which is the entire reason the hosted job below
+      # exists. Do not "fix" the skip by weakening what those tests assert.
       - name: Test
         run: swift test
+
+  hosted:
+    name: Hosted tests, real Keychain
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the newest Xcode
+        run: sudo xcode-select -switch "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+
+      # Runner images change which simulators they ship, so the device is resolved rather
+      # than named. A hardcoded name is the usual reason a job like this rots.
+      - name: Pick a simulator
+        id: simulator
+        run: |
+          NAME=$(xcrun simctl list devices available | grep -oE 'iPhone [0-9]+[^(]*' | head -1 | sed 's/ *$//')
+          if [ -z "$NAME" ]; then
+            echo "No iPhone simulator available on this runner."
+            exit 1
+          fi
+          echo "Using $NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      # Only the unit tests. The UI test target is a template placeholder with nothing in
+      # it worth running, and booting the app for it would add a minute for no signal.
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project OpenFactor.xcodeproj \
+            -scheme OpenFactor \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -only-testing:OpenFactorTests

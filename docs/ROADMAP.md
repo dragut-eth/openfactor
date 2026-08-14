@@ -180,14 +180,10 @@ this the cheapest possible moment to find something wrong with it.
 - Confirm no secret material reaches a log, an error message, or a description
 - Tag the audited commit and record findings
 
-**One item cannot close at this gate.** The Keychain protection class on a stored secret
-cannot be asserted from an unsigned `swift test` bundle, so those tests exist and are
-skipped. They run against the host application target added at the start of PR 5, and gate
-A1 stays open on that single point until they pass. Everything else at this gate closes
-here.
-
-**Do not start PR 5 beyond the host application test target until the rest of the findings
-are closed.**
+**Ran 2026-08-14. Fully closed**, findings in `docs/audits/A1.md`, audited commit tagged
+`audit-a1`. Two defects found and fixed, fuzzing added permanently, and the one item that
+could not close at the time, the Keychain protection class, was verified at the start of
+PR 5 as planned.
 
 ---
 

@@ -3,17 +3,14 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of gate A1.
+**Last updated:** 2026-08-14, end of PR 5.
 
 ## Where things stand
 
-Gate A1 has run. Findings, fixes, and the honesty caveats are in
-[docs/audits/A1.md](docs/audits/A1.md), and the audited commit is tagged `audit-a1`. Two
-defects were found and fixed with regression tests, fuzzing is now a permanent part of the
-suite, and the RFC vector tables were re-verified against the IETF documents themselves.
-
-A1 remains open on exactly one point: the six skipped Keychain tests, which need the host
-application target that PR 5 builds first.
+PR 5 is complete and **gate A1 is fully closed.** There is an Xcode project, the app
+launches on the simulator and shows an empty state read from the real Keychain, and the six
+Keychain tests that could only ever skip before now pass against the data protection
+Keychain. 407 test cases hosted, none skipped.
 
 | Phase | Status |
 | --- | --- |
@@ -22,16 +19,15 @@ application target that PR 5 builds first.
 | PR 2, HOTP and TOTP | Done |
 | PR 3, `otpauth://` parsing | Done |
 | PR 4, Keychain storage | Done |
-| Gate A1, audit the core | Done, except the item below |
-| PR 5, app shell | **Next**, and its first job closes A1 |
-| PR 6 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| Gate A1, audit the core | Done and fully closed |
+| PR 5, Xcode project and app shell | Done |
+| PR 6, design tokens and the card | **Next** |
+| PR 7 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
-**Next audit gate: A2, after PR 13.** A1 ran on 2026-08-14 and is recorded in
-[docs/audits/A1.md](docs/audits/A1.md), open on one point: the Keychain protection class is
-implemented but unverified, because asserting it needs an entitlement an unsigned
-`swift test` bundle does not have. Six tests are written and skipped. PR 5's first job is
-the host application test target that runs them, and A1 closes when they pass. F3, F4, and
-F5 in the audit record carry obligations into PR 7, the HOTP PR, and PR 17 respectively.
+**Next audit gate: A2, after PR 13.** A1 is recorded in
+[docs/audits/A1.md](docs/audits/A1.md) and fully closed, with a `/security-review` addendum
+that found nothing. F3, F4, F5, and F7 in that record carry obligations into PR 7, the HOTP
+PR, and PR 17 respectively. Read them before starting those.
 
 ## What exists
 
@@ -48,15 +44,26 @@ Sources/OpenFactorCore/
   KeychainSecretStore.swift                One Keychain item per account
   InMemorySecretStore.swift                For previews and tests. Never used by the app
   AccountMetadata.swift, AccountColor.swift  What is stored beside a secret
-Tests/OpenFactorCoreTests/                 106 tests across 12 suites, plus 6 skipped,
-                                           including 17k iteration deterministic fuzzing
+Tests/OpenFactorCoreTests/                 106 tests, 12 suites, 17k fuzz iterations
+OpenFactor.xcodeproj                       See docs/PROJECT.md, checked in deliberately
+OpenFactor/                                App shell: entry point and an empty list
+OpenFactorTests/                           Empty folder. Its sources are Tests/ above
 docs/audits/A1.md                          Gate A1 findings and disposition
+docs/PROJECT.md                            The project file in plain language
 LICENSE, README.md, SECURITY.md, CONTRIBUTING.md, handoff.md
 docs/ROADMAP.md, docs/ARCHITECTURE.md, docs/UI_SPEC.md
 .github/workflows/ci.yml                   Style checks, then build and test
 ```
 
-Run the suite with `swift test`. It takes about a tenth of a second and needs no simulator.
+Run the suite two ways, and CI runs both:
+
+- `swift test`, under a second, no simulator, Keychain tests **skip**
+- `xcodebuild test -project OpenFactor.xcodeproj -scheme OpenFactor -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:OpenFactorTests`, about 25 seconds, Keychain tests **run**
+
+Same files both times. `OpenFactorTests` is an empty folder whose sources are
+`Tests/OpenFactorCoreTests`, attached as a second synchronised folder. Do not "fix" the
+skip under `swift test`: it is correct, and the only way to make those tests pass there
+would be to weaken what they assert.
 
 ## Decisions locked in
 
@@ -92,11 +99,16 @@ Run the suite with `swift test`. It takes about a tenth of a second and needs no
 - Light mode is a v1 requirement, not a later addition
 - Sync through iCloud Keychain, not CloudKit
 - Squash merges into `main`, Conventional Commits
+- The `.xcodeproj` is checked in rather than generated, reversing the earlier lean. A
+  generator would make `brew install` a prerequisite for opening the project. The cost is
+  paid back by `docs/PROJECT.md` and a CI job asserting the settings it describes
+- Bundle identifier `com.openfactor.dev`, fixed by the App Store Connect record
 
 ## Decisions still open
 
-- Whether the `.xcodeproj` is checked in or generated from a spec. Decided in PR 5,
-  current lean is to generate
+- Whether the watch needs a shared `keychain-access-groups` entitlement to see the phone's
+  accounts. Likely yes, unverified. Settle before PR 14, and PR 13 should not assume
+  otherwise. See `docs/ARCHITECTURE.md`
 - The encrypted export format. Decided in PR 16
 
 ## Effort and model, by pull request
@@ -107,9 +119,7 @@ deliberately rather than left where it happened to be.
 
 | Pull request | Suggested effort | Note |
 | --- | --- | --- |
-| PR 3, URI parsing | High | The only place untrusted input enters the app. Currently set to High |
-| PR 4, Keychain | High | Accessibility attributes fail silently and hand over secrets |
-| PR 5 to PR 12, interface | Medium | Ordinary app work, and mechanical once the spec is settled |
+| PR 6 to PR 12, interface | Medium | Ordinary app work, and mechanical once the spec is settled |
 | PR 13, sync | High | Changes the threat model |
 | PR 15, app lock | High | The interesting part is the bypass paths, not the Face ID call |
 | PR 16, export | High | Applied cryptography, and the one decision that cannot be undone |
@@ -130,15 +140,17 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 5, the Xcode project and app shell. In order:
+PR 6, design tokens and the account card, per `docs/UI_SPEC.md`. Tokens for colour, type,
+and spacing defined once for both light and dark, the ten entry account palette with each
+entry contrast checked against the text drawn on it, and the card view itself driven by
+static preview data so it can be reviewed without a store.
 
-1. The host application test target, so the six skipped Keychain tests run. This closes
-   A1, and nothing else in the PR matters until they pass. Record the result in
-   docs/audits/A1.md.
-2. The project format decision (checked in .xcodeproj versus generated). Current lean is
-   to generate. Record it in docs/ARCHITECTURE.md.
-3. The iOS app target depending on the local package, launching to an empty list.
+Nothing in `AccountListView.swift` is meant to survive PR 6 and PR 7. It is a shell that
+proves the app launches and reads the Keychain.
 
-Suggested effort: **Medium**. This is project plumbing and interface shell. A cold session
-adversarial review of Sources/ remains worth doing at any point, see the honesty note in
-the audit record.
+Suggested effort: **Medium**, and Opus 5 is the right seat for it. Fable 5 earns its keep
+again at gate A2, PR 16, and PR 17.
+
+Still worth doing at any time: a genuinely cold adversarial review of `Sources/` from a
+fresh session, since the A1 review shared this session's context. See the honesty note at
+the top of the audit record.
