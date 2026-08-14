@@ -132,6 +132,16 @@ sharing a model share their blind spots.
 
 - `assets/` holds Step Two reference screenshots. It is gitignored on purpose and must
   never be committed. `docs/UI_SPEC.md` captures everything needed from it.
+- `README.md` has an Inspiration section stating what OpenFactor took from Step Two, that
+  its creator declined to license it, and that he has no involvement in or endorsement of
+  this project. **The App Store description and any other public copy must not imply an
+  association either.** Add that to the PR 18 checklist. Do not weaken the sentence about
+  no code, assets, or artwork being used: it is the substantive claim in that section and
+  it is verifiable against the source.
+- `docs/UI_SPEC.md` justifies App Lock with "the reference has no lock at all", which
+  overstates it. iOS 18 can lock any individual app with Face ID at the system level, so
+  the real case for App Lock is the configurable grace period and hiding codes on return
+  from background. Reword when PR 15 lands.
 - Nothing has been pushed to the remote. Do not push without asking Xavier.
 - No em dashes anywhere. CI enforces this, as it does trailing whitespace.
 - The RFC vector tables are the authority. If a change breaks one, the change is wrong.

@@ -15,6 +15,22 @@ Keychain sync, which Apple cannot read.
 Most authenticator apps ask you to trust a company. This one asks you to trust code you
 can read. Every design decision below follows from that.
 
+## Inspiration
+
+OpenFactor is heavily inspired by [Step Two](https://steptwo.app/), which I use every day
+and consider the best two factor authenticator available. The feature set here
+deliberately follows its shape.
+
+I asked its creator, Neil Sardesai, more than once over a few years, whether he would open
+source Step Two or license it to me so that I could. He declined, politely, and wished me
+luck. He has had no involvement in OpenFactor and has not endorsed it. No Step Two source
+code, assets, or artwork is used here, and nothing was decompiled or extracted. Everything
+is written from the published RFCs.
+
+I built it because if I am going to depend on something as consequential as an
+authenticator, I would rather be able to read the source and see how my data is handled.
+That is a preference for verification over trust, not a criticism of a very good app.
+
 ## Principles
 
 1. **Nothing is stored online.** No backend exists. There is nothing to breach, subpoena,
