@@ -74,6 +74,19 @@ swift test
 
 `swift test` runs the core test suite, including the RFC vectors, without opening Xcode.
 
+## Audits
+
+**OpenFactor has not been audited. Do not trust it with a real account yet.**
+
+That sentence stays exactly as it is until it stops being true. An unaudited security tool
+that reads as though it were audited is worse than one that says nothing.
+
+Five review gates are planned, and the plan is public before any of them have happened, in
+[docs/ROADMAP.md](docs/ROADMAP.md): the core before anything is built on it, sync, the
+export format before any user has a backup, the finished app, and then the diff at every
+release after that. Findings get published whether or not they are flattering, and this
+section will name the audited commit and who reviewed it.
+
 ## Documentation
 
 - [docs/ROADMAP.md](docs/ROADMAP.md), the PR by PR delivery plan

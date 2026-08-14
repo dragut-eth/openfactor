@@ -18,6 +18,11 @@ full RFC 4226 Appendix D and RFC 6238 Appendix B vector tables, for all three al
 | PR 3, `otpauth://` parsing | Next |
 | PR 4 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
+**Next audit gate: A1, immediately after PR 4.** The core gets reviewed by someone who did
+not write it before anything is built on top of it. The five gates and the rules for them
+are in [docs/ROADMAP.md](docs/ROADMAP.md). A gate that gets waived quietly is the failure
+this project is trying to avoid, so this line is updated in every pull request.
+
 ## What exists
 
 ```
@@ -60,6 +65,25 @@ Run the suite with `swift test`. It takes about a tenth of a second and needs no
 - Whether the `.xcodeproj` is checked in or generated from a spec. Decided in PR 5,
   current lean is to generate
 - The encrypted export format. Decided in PR 16
+
+## Effort and model, by pull request
+
+Xavier sets the reasoning effort himself and can switch between Opus 5 and Fable 5. The
+recommendation for each pull request is stated before it starts, so the lever gets pulled
+deliberately rather than left where it happened to be.
+
+| Pull request | Suggested effort | Note |
+| --- | --- | --- |
+| PR 3, URI parsing | High | The only place untrusted input enters the app. Currently set to High |
+| PR 4, Keychain | High | Accessibility attributes fail silently and hand over secrets |
+| PR 5 to PR 12, interface | Medium | Ordinary app work, and mechanical once the spec is settled |
+| PR 13, sync | High | Changes the threat model |
+| PR 15, app lock | High | The interesting part is the bypass paths, not the Face ID call |
+| PR 16, export | High | Applied cryptography, and the one decision that cannot be undone |
+| PR 17, threat model | High | Where a wrong claim becomes a published promise |
+
+The reviewer at a gate is never the model that wrote the code. A writer and a reviewer
+sharing a model share their blind spots.
 
 ## Notes for whoever works on this next
 
