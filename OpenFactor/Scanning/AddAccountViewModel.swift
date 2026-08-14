@@ -32,8 +32,11 @@ final class AddAccountViewModel {
     /// What went wrong with the last attempt, in words the user can act on.
     private(set) var problem: String?
 
-    /// The colour the account will get, suggested from the issuer and changeable later.
-    private(set) var suggestedColor: AccountColor = .default
+    /// The colour the account will get.
+    ///
+    /// Seeded from the issuer when a code is read, then the user's to change on the
+    /// confirmation screen before anything is saved.
+    var color: AccountColor = .default
 
     private let store: any SecretStore
 
@@ -49,7 +52,7 @@ final class AddAccountViewModel {
 
         do {
             let account = try OTPAuthURI.account(from: payload)
-            suggestedColor = .suggested(forIssuer: account.issuer)
+            color = .suggested(forIssuer: account.issuer)
             problem = nil
             stage = .confirming(account)
         } catch {
@@ -105,7 +108,7 @@ final class AddAccountViewModel {
         guard case let .confirming(account) = stage else { return }
 
         do {
-            try store.add(account, color: suggestedColor)
+            try store.add(account, color: color)
             problem = nil
             stage = .added
         } catch {

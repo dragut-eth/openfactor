@@ -80,11 +80,7 @@ struct AddAccountView: View {
         case .scanning:
             scanner
         case let .confirming(account):
-            ConfirmAccountView(
-                account: account,
-                color: model.suggestedColor,
-                model: model
-            )
+            ConfirmAccountView(account: account, model: model)
         case .added:
             ProgressView()
         }
@@ -187,8 +183,7 @@ private struct CameraUnavailableView: View {
 /// What was in the code, and the code it produces right now.
 private struct ConfirmAccountView: View {
     let account: OTPAccount
-    let color: AccountColor
-    let model: AddAccountViewModel
+    @Bindable var model: AddAccountViewModel
 
     @State private var now = Date()
 
@@ -209,9 +204,13 @@ private struct ConfirmAccountView: View {
                         code: model.previewCode(at: now) ?? "------",
                         secondsRemaining: model.previewSecondsRemaining(at: now),
                         period: period,
-                        color: color
+                        color: model.color
                     )
                 )
+
+                // Directly under the card, so the choice lands on the thing being chosen
+                // for rather than behind a screen that covers it.
+                AccountColorStrip(selection: $model.color)
 
                 VStack(spacing: Tokens.Spacing.small) {
                     Button {

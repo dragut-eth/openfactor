@@ -99,6 +99,8 @@ both as translucent pill buttons. No frame overlay, no instructions.
   only verification opportunity the flow has.
 - An image holding more than one QR code is refused rather than guessed at. Which account
   gets added should not be a coin toss.
+- The confirmation carries a **swatch strip directly under the card**, so a colour choice
+  lands on the thing being chosen for. A picker that covered the card would hide it.
 
 ## Screen 4: Manual setup
 
@@ -119,6 +121,11 @@ both as translucent pill buttons. No frame overlay, no instructions.
   and Save is simply unavailable until the form describes a real account.
 - Show a live preview of the generated code before saving, so the user can confirm it
   matches the service before losing access to the enrollment page.
+- A **colour row opening the grid**, rather than the strip the scan screen uses. In a form
+  a disclosure row is the native idiom, and the preview card is far enough down that a
+  strip would not sit next to what it changes. The colour follows the service name until
+  somebody picks one, then stops, because a choice that reverted on the next keystroke
+  would be worse than no choice.
 - **Counter based accounts get a next code button in the list, not a countdown ring.**
   Their codes advance when asked for rather than with the clock, so a ring would be a lie.
   The counter is persisted before the new code is shown, for the reasons in

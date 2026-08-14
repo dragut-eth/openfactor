@@ -110,12 +110,26 @@ struct AddAccountViewModelTests {
         #expect(model.previewSecondsRemaining(at: Date(timeIntervalSince1970: 59)) == 1)
     }
 
-    @Test("A suggested colour comes from the issuer")
+    @Test("The colour starts as the one suggested by the issuer")
     func suggestsAColourFromTheIssuer() {
         let model = AddAccountViewModel(store: InMemorySecretStore())
         model.handleScan(Self.validURI)
 
-        #expect(model.suggestedColor == AccountColor.suggested(forIssuer: "GitHub"))
+        #expect(model.color == AccountColor.suggested(forIssuer: "GitHub"))
+    }
+
+    /// The suggestion is a starting point, not the only option, and what the user picks on
+    /// the confirmation screen is what gets stored.
+    @Test("A chosen colour is the one saved")
+    func savesTheChosenColour() throws {
+        let store = InMemorySecretStore()
+        let model = AddAccountViewModel(store: store)
+
+        model.handleScan(Self.validURI)
+        model.color = .pink
+        model.confirm()
+
+        #expect(try store.records().readable.first?.metadata.color == .pink)
     }
 
     // MARK: - Rejection

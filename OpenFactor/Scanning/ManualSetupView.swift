@@ -12,8 +12,10 @@ struct ManualSetupView: View {
     @State private var model: ManualSetupViewModel
     @State private var now = Date()
     @State private var showsAdvanced = false
+    @State private var isChoosingColour = false
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -50,6 +52,9 @@ struct ManualSetupView: View {
             }
         }
         .onReceive(tick) { now = $0 }
+        .sheet(isPresented: $isChoosingColour) {
+            AccountColorPicker(selected: model.color) { model.color = $0 }
+        }
     }
 
     // MARK: - Sections
@@ -76,6 +81,27 @@ struct ManualSetupView: View {
                     .keyboardType(.emailAddress)
                     .multilineTextAlignment(.trailing)
             }
+
+            // A row opening the grid, rather than the strip the scan screen uses. In a
+            // Form a disclosure row is the native idiom, and the preview card is far
+            // enough down that a strip would not be next to what it changes anyway.
+            Button {
+                isChoosingColour = true
+            } label: {
+                LabeledContent("Colour") {
+                    HStack(spacing: Tokens.Spacing.small) {
+                        Circle()
+                            .fill(Palette.gradient(for: model.color, in: colorScheme))
+                            .frame(width: 22, height: 22)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Colour, \(model.color.rawValue)")
         } header: {
             Text("Account")
         } footer: {
@@ -133,7 +159,7 @@ struct ManualSetupView: View {
                         code: code,
                         secondsRemaining: model.previewSecondsRemaining(at: now),
                         period: model.period,
-                        color: model.suggestedColor
+                        color: model.color
                     )
                 )
                 .listRowInsets(EdgeInsets())

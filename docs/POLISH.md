@@ -29,8 +29,11 @@ Not everything waits for PR 12.
    in that state. It should switch to manual order instead of refusing.
 5. **The copied confirmation is small and tucked in a corner.** Wants it larger and centred.
 6. **Cancel and Enter manually are set in different weights** on the scan screen.
-7. **Colour cannot be chosen while adding an account.** Design proposed before building, at
-   Xavier's request.
+7. **Colour cannot be chosen while adding an account.** Done. Two treatments, chosen after
+   a proposal: a swatch strip directly under the card on the scan confirmation, where the
+   point is watching the choice land on the card above it, and a disclosure row opening the
+   grid in manual setup, where a `Form` row is the native idiom and the preview is too far
+   down for a strip to sit next to what it changes.
 
 ### Fixed in PR 12
 
@@ -50,6 +53,9 @@ Not everything waits for PR 12.
 9. The expiring ring is red rather than amber, at Xavier's call. Bright red, because the
    palette's own red card is dark and a deep red ring vanishes into it. Verified against
    the red card, which is the worst case.
+7. Colour is choosable in both add paths, and in manual setup it follows the issuer until
+   somebody picks one. A choice that silently reverted on the next keystroke in the service
+   field would be worse than not offering it.
 10. The system context menu removed entirely. See below.
 
 ### Fixed on sight rather than deferred

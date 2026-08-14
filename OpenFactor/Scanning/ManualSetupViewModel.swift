@@ -111,9 +111,18 @@ final class ManualSetupViewModel {
         return TOTP.timeRemaining(at: date, period: period)
     }
 
-    var suggestedColor: AccountColor {
-        .suggested(forIssuer: issuer.trimmed.nilIfBlank)
+    /// The colour the account will get.
+    ///
+    /// Follows the issuer while nobody has expressed an opinion, so typing "GitHub" moves
+    /// it without anyone asking, and stops following the moment someone picks one. A
+    /// choice that silently reverted because the next keystroke changed the issuer would
+    /// be worse than not offering the choice at all.
+    var color: AccountColor {
+        get { chosenColor ?? .suggested(forIssuer: issuer.trimmed.nilIfBlank) }
+        set { chosenColor = newValue }
     }
+
+    private var chosenColor: AccountColor?
 
     // MARK: - Saving
 
@@ -123,7 +132,7 @@ final class ManualSetupViewModel {
         guard let account else { return false }
 
         do {
-            try store.add(account, color: suggestedColor)
+            try store.add(account, color: color)
             saveFailure = nil
             return true
         } catch {

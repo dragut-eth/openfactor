@@ -116,6 +116,61 @@ struct AccountColorPicker: View {
     }
 }
 
+/// The palette as a single row, for the scan confirmation.
+///
+/// A strip rather than a separate screen because the card it recolours is directly above
+/// it: the point is watching the choice land, and a picker that covers the card would hide
+/// the thing being chosen for. The manual form uses the grid instead, where a disclosure
+/// row is the native idiom and a strip would look foreign.
+struct AccountColorStrip: View {
+    @Binding var selection: AccountColor
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: Tokens.Spacing.small + 2) {
+                ForEach(AccountColor.allCases, id: \.self) { color in
+                    Button {
+                        withAnimation(.snappy) { selection = color }
+                    } label: {
+                        Circle()
+                            .fill(Palette.gradient(for: color, in: colorScheme))
+                            .frame(width: 38, height: 38)
+                            .overlay {
+                                if color == selection {
+                                    Image(systemName: "checkmark")
+                                        .font(.footnote.weight(.bold))
+                                        .foregroundStyle(Tokens.OnCard.primary)
+                                }
+                            }
+                            .overlay {
+                                Circle()
+                                    .strokeBorder(
+                                        Color.primary.opacity(color == selection ? 0.55 : 0),
+                                        lineWidth: 2
+                                    )
+                                    .padding(-3)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(color.rawValue.capitalized)
+                    .accessibilityAddTraits(color == selection ? [.isSelected] : [])
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 4)
+        }
+        .scrollIndicators(.hidden)
+        .accessibilityLabel("Card colour")
+    }
+}
+
+#Preview("Strip") {
+    @Previewable @State var colour = AccountColor.indigo
+    return AccountColorStrip(selection: $colour).padding()
+}
+
 #Preview("Edit") {
     EditAccountView(
         record: AccountRecord(

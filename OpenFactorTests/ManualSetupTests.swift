@@ -117,6 +117,44 @@ struct ManualSetupViewModelTests {
         #expect(model.previewSecondsRemaining(at: Date()) == nil)
     }
 
+    // MARK: - Colour
+
+    /// Following the issuer while nobody has an opinion is what makes the suggestion
+    /// useful. Typing a service name should move the colour without anyone asking.
+    @Test("The colour follows the issuer until somebody picks one")
+    func colourFollowsTheIssuer() {
+        let model = ManualSetupViewModel(store: InMemorySecretStore())
+
+        model.issuer = "GitHub"
+        #expect(model.color == AccountColor.suggested(forIssuer: "GitHub"))
+
+        model.issuer = "AWS"
+        #expect(model.color == AccountColor.suggested(forIssuer: "AWS"))
+    }
+
+    /// And it must stop following the moment someone chooses, or the next keystroke in the
+    /// service field would silently undo their choice.
+    @Test("A chosen colour stops following the issuer")
+    func chosenColourSticks() {
+        let model = ManualSetupViewModel(store: InMemorySecretStore())
+        model.issuer = "GitHub"
+        model.color = .pink
+
+        model.issuer = "Something else entirely"
+
+        #expect(model.color == .pink)
+    }
+
+    @Test("The chosen colour is the one saved")
+    func savesTheChosenColour() throws {
+        let store = InMemorySecretStore()
+        let model = filledModel(store: store)
+        model.color = .teal
+
+        #expect(model.save())
+        #expect(try store.records().readable.first?.metadata.color == .teal)
+    }
+
     // MARK: - Saving
 
     @Test("Saving stores exactly what the form described")

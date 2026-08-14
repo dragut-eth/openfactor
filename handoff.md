@@ -7,9 +7,8 @@ first when picking the work back up.
 
 ## Where things stand
 
-PR 12 is in progress. Nine of Xavier's ten items are done, all from device testing, and
-recorded in [docs/POLISH.md](docs/POLISH.md). The tenth, choosing a colour while adding an
-account, is waiting on a design he asked to see before it is built.
+PR 12 is in progress. All ten of Xavier's items from device testing are done and recorded
+in [docs/POLISH.md](docs/POLISH.md).
 
 **One of the ten turned out to be a security matter, not polish.** iOS had added an "Ask
 Siri" entry to the account card's system context menu, offering to hand the contents of a
