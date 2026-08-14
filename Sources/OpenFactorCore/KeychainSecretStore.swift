@@ -28,7 +28,15 @@ import Security
 /// The issuer and account name cannot generate a code, but they say which services
 /// someone uses and under which email address. Keeping them in a plist or a database file
 /// would leave that in the clear on the device and in every unencrypted backup. In the
-/// Keychain they are encrypted at rest for the same cost.
+/// Keychain they are encrypted at rest.
+///
+/// To be exact about the strength of that, because this project's claims should be no
+/// stronger than the facts: the accessibility class chosen below protects the item's
+/// **data**, meaning the secret. Attributes, and the metadata JSON lives in one, are
+/// encrypted under the keychain's own key rather than the per item class, which is a
+/// weaker guarantee than the secret gets. Still encrypted at rest and still absent from
+/// unencrypted backups, but not "the same protection as the secret", and the threat
+/// model should not claim otherwise. Noted at gate A1.
 ///
 /// `kSecAttrLabel` is deliberately set to a constant rather than to the account name. On
 /// macOS that field is what Keychain Access lists, and there is no reason for a passer by
