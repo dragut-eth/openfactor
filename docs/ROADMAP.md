@@ -64,8 +64,10 @@ than throwing away bytes silently.
 
 - `HOTP.swift`: RFC 4226 truncation, SHA1, SHA256, SHA512 via CryptoKit
 - `TOTP.swift`: RFC 6238 time step, configurable period and digit count
-- Clock injected as a protocol so tests are deterministic and so a clock skew
-  correction can be added later without touching the generator
+- The moment to generate for is a parameter rather than something read from `Date()`, so
+  tests are deterministic and a clock skew correction stays a call site concern. Delivered
+  as a plain `Date` parameter rather than the clock protocol originally planned here, see
+  `docs/ARCHITECTURE.md`
 - Tests: the full RFC 4226 Appendix D and RFC 6238 Appendix B vector tables
 
 **Done when:** all published vectors pass for all three hash algorithms.

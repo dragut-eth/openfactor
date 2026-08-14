@@ -3,46 +3,54 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 1.
+**Last updated:** 2026-08-14, end of PR 2.
 
 ## Where things stand
 
-PR 1 is complete. The `OpenFactorCore` package exists with Base32 decoding and encoding,
-verified against the RFC 4648 vector table. CI builds and tests for real now, with no
-guard on the test step.
+PR 2 is complete. The app can generate codes. `HOTP` and `TOTP` are verified against the
+full RFC 4226 Appendix D and RFC 6238 Appendix B vector tables, for all three algorithms.
 
 | Phase | Status |
 | --- | --- |
 | PR 0, repository bootstrap | Done |
 | PR 1, `OpenFactorCore` and Base32 | Done |
-| PR 2, HOTP and TOTP | Next |
-| PR 3 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 2, HOTP and TOTP | Done |
+| PR 3, `otpauth://` parsing | Next |
+| PR 4 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 ## What exists
 
 ```
-Package.swift                          OpenFactorCore, no dependencies
-Sources/OpenFactorCore/Base32.swift    RFC 4648 decoding and encoding
-Sources/OpenFactorCore/Base32Error.swift   Typed errors, each with a user readable message
-Tests/OpenFactorCoreTests/Base32Tests.swift  13 tests, 137 cases, all passing
+Package.swift                              OpenFactorCore, no dependencies
+Sources/OpenFactorCore/
+  Base32.swift, Base32Error.swift          RFC 4648 decoding and encoding
+  OTPAlgorithm.swift, OTPDigits.swift      The parameters a service enrolls with
+  HOTP.swift                               RFC 4226, the only hand written cryptography
+  TOTP.swift, TOTPConfiguration.swift      RFC 6238, time arithmetic only
+Tests/OpenFactorCoreTests/                 32 tests across 4 suites, all passing
 LICENSE, README.md, SECURITY.md, CONTRIBUTING.md, handoff.md
 docs/ROADMAP.md, docs/ARCHITECTURE.md, docs/UI_SPEC.md
-.github/workflows/ci.yml               Style checks, then build and test
+.github/workflows/ci.yml                   Style checks, then build and test
 ```
 
-Run the suite with `swift test`. It takes well under a second and needs no simulator.
+Run the suite with `swift test`. It takes about a tenth of a second and needs no simulator.
 
 ## Decisions locked in
 
 - iOS 18 and watchOS 11 minimum, macOS 15 declared only so the suite runs in CI
 - MIT license
-- Zero third party dependencies. Swift Testing is used for tests and ships with the
-  toolchain, so it is not a dependency
-- Typed throws throughout the core, so every failure a caller must handle is visible in
-  the signature
-- Base32 accepts lowercase, spaces, and hyphens, and rejects anything else with a specific
-  error. Leftover bits at the end of a secret are discarded, not rejected. Reasoning is in
-  `docs/ARCHITECTURE.md` and repeated at the code
+- Zero third party dependencies. Swift Testing ships with the toolchain, so it is not one
+- Typed throws throughout the core, so every failure a caller must handle is in the
+  signature
+- Base32 accepts lowercase, spaces, and hyphens, rejects anything else with a specific
+  error, and discards the leftover bits at the end of a secret
+- The moment to generate a code for is always a parameter. Nothing in the core calls
+  `Date()`. This replaced the clock protocol the roadmap originally called for
+- The secret is never stored in a configuration object, only passed to the function that
+  needs it
+- Codes are `String`, never `Int`, so a leading zero survives
+- Digit counts are an enumeration of 6, 7, and 8, so an unsupported length cannot be built
+- Periods are validated on construction, 1 second to 1 hour
 - Light mode is a v1 requirement, not a later addition
 - Sync through iCloud Keychain, not CloudKit
 - Squash merges into `main`, Conventional Commits
@@ -60,10 +68,15 @@ Run the suite with `swift test`. It takes well under a second and needs no simul
 - Nothing has been pushed to the remote. Do not push without asking Xavier.
 - No em dashes anywhere. CI enforces this, as it does trailing whitespace.
 - The RFC vector tables are the authority. If a change breaks one, the change is wrong.
+- RFC 6238 Appendix B uses a **different seed per algorithm**, 20, 32, and 64 bytes.
+  Running the whole table against the 20 byte seed is the usual way to get it wrong.
 
 ## Next step
 
-PR 2: `HOTP` implementing RFC 4226 dynamic truncation over CryptoKit HMAC for SHA1,
-SHA256, and SHA512, then `TOTP` on top of it with the clock injected rather than read from
-`Date()` directly. Tests are the full RFC 4226 Appendix D and RFC 6238 Appendix B tables.
-The seed those tables use already has a decoding test in `Base32Tests`.
+PR 3: `OTPAuthURI`, parsing and serializing `otpauth://` URIs. Parsing must be total,
+meaning every input yields either a fully valid account or a typed error, never a
+partially populated one. The messy cases to cover are an issuer that appears both as a
+label prefix and as a query parameter and disagrees, percent encoding, and missing
+optional parameters. Test against a corpus of URIs as emitted by Google Authenticator,
+1Password, GitHub, and AWS. The period validation in `TOTPConfiguration` is already
+typed, so the parser should surface that error rather than inventing its own.

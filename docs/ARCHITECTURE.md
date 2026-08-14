@@ -24,7 +24,7 @@ through interface code. The app targets are deliberately thin.
 
 ## OpenFactorCore
 
-*`Base32` exists as of PR 1. The rest arrives in PR 2 through PR 4.*
+*`Base32`, `HOTP`, and `TOTP` exist as of PR 2. The rest arrives in PR 3 and PR 4.*
 
 | Component | Responsibility |
 | --- | --- |
@@ -36,9 +36,24 @@ through interface code. The app targets are deliberately thin.
 
 ### Design decisions
 
-**Time is injected.** `TOTP` takes a clock rather than calling `Date()` internally. That
-makes every RFC test vector reproducible, and it leaves room for a clock skew correction
-later without touching the generator.
+**Time is passed in, never read.** Nothing in `TOTP` calls `Date()`. Every function takes
+the moment to generate for as a parameter.
+
+The roadmap originally called for injecting a clock protocol. A plain `Date` parameter
+turned out to be strictly better: it is the same testability with no protocol, no
+conformance, and no stored state, and it still leaves room for a correction for a skewed
+device clock, which becomes an adjustment at the call site rather than a second
+implementation of a clock. The interface layer owns the timer and therefore owns the
+question of what time it is.
+
+**The secret is not part of the configuration.** `TOTPConfiguration` holds the algorithm,
+digit count, and period, all of which are stored and copied freely. The secret is a
+parameter to the one function that needs it, read from the Keychain at the moment a code
+is generated. No long lived object holds secret material, so no object can leak one by
+being logged.
+
+**A code is text, not a number.** `07081804` is a valid code, and an integer would lose
+the leading zero. The generators return `String` throughout for that reason.
 
 **Parsing is total.** `OTPAuthURI` either returns a fully valid account or a typed error.
 It never returns a partially populated account, because a silently dropped algorithm
