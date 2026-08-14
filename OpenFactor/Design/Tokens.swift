@@ -50,6 +50,14 @@ enum Tokens {
         static let medium: CGFloat = 16
         static let large: CGFloat = 20
         static let cardGap: CGFloat = 14
+
+        /// How far the cards sit from the screen edges.
+        ///
+        /// Wider than the system's default list inset, so the cards read as objects on a
+        /// surface rather than as a sheet that happens to be rounded. It also leaves room
+        /// for the delete control and drag handle in edit mode without either crowding the
+        /// card, which is the state where the margin is doing the most work.
+        static let listInset: CGFloat = 22
     }
 
     enum Radius {

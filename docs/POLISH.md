@@ -57,6 +57,9 @@ Not everything waits for PR 12.
    somebody picks one. A choice that silently reverted on the next keystroke in the service
    field would be worse than not offering it.
 10. The system context menu removed entirely. See below.
+11. Wider margins on the cards, to Apple Weather's proportions. The margin does the most
+    work in edit mode, where the delete control and the drag handle otherwise crowd the
+    card's edges.
 
 ### Fixed on sight rather than deferred
 

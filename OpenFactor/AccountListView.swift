@@ -171,7 +171,7 @@ struct AccountListView: View {
         .listStyle(.plain)
         .listRowSpacing(Tokens.Spacing.cardGap)
         .scrollContentBackground(.hidden)
-        .padding(.horizontal, Tokens.Spacing.medium)
+        .padding(.horizontal, Tokens.Spacing.listInset)
     }
 
     private func card(for row: AccountListViewModel.Row) -> some View {
