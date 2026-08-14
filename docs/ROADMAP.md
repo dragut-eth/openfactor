@@ -282,11 +282,20 @@ wait. Anything touching correctness or security is fixed immediately, wherever w
 
 ### PR 13: iCloud Keychain sync, opt in
 
+- **An explicit shared `keychain-access-groups` entitlement, and a migration of every
+  existing secret into it.** Decided here rather than in PR 14 because a Keychain item lives
+  in the group it was written to, and introducing a shared group after people have accounts
+  is a migration whose failure mode is "my accounts vanished". See `docs/ARCHITECTURE.md`
 - A settings toggle that flips items to `kSecAttrSynchronizable`
 - Plain language explanation in the UI of exactly what leaves the device and who can read
   it, which is to say Apple cannot
-- Conflict and duplicate handling on merge
-- `SECURITY.md` updated with the sync threat model
+- What turning sync **off** means has to be defined, not left to fall out of the code: does
+  it stop syncing, or also pull secrets back to device only, and what happens to the copies
+  already on another device
+- Conflict and duplicate handling on merge: the same account added on two devices, renamed
+  on both, deleted on one
+- `SECURITY.md` updated with the sync threat model, including that the watch becomes a
+  device holding secrets
 
 #### Gate A2: audit sync
 
@@ -302,10 +311,24 @@ reassuring.
 
 ### PR 14: watchOS app
 
-- Watch target reading the same synchronizable Keychain items rather than shuttling
-  secrets over WatchConnectivity
-- List and countdown, scaled to the watch
-- Complication showing the next code or a launch shortcut
+**Read only. No adding, no editing, no deleting, and no copying.** The watch shows the list
+and a code, and that is the whole surface. Decided from Xavier's design, and it is a
+security property as much as a scope decision: the smallest device with the weakest lock
+gets the fewest capabilities.
+
+- Watch target reading the same synchronizable Keychain items from the shared access group,
+  rather than shuttling secrets over WatchConnectivity, which would be a second transport
+  for secret material to leak through
+- **It must work with the phone off, absent, or out of range.** That is what rules out the
+  alternative where the watch holds nothing and asks the phone for each code
+- List: near black rows, issuer in the account's colour, account name in white beneath.
+  Not a resized phone card. The palette inverts, so the vivid variants that fail as a card
+  background under white text are the right values for coloured text on black
+- Code screen: code large at the top, countdown ring beside it, issuer and name beneath,
+  back to the list. Nothing else
+- **Complications need deciding rather than assuming.** One showing a live code puts a
+  second factor on a watch face readable by anyone glancing at a wrist, which is against
+  the spirit of the rest of this. One that only launches the app is harmless
 
 ### PR 15: App lock
 

@@ -167,12 +167,30 @@ Recorded here so they are not silently defaulted.
 
 ### A shared Keychain access group for the watch
 
-**Needs verifying before PR 14.** A watchOS target has its own bundle identifier and
-therefore its own default Keychain access group, and Keychain items are scoped to a group.
-iCloud Keychain syncs within a group rather than across them, so the watch app most likely
-cannot see the phone's accounts unless both targets declare a shared `keychain-access-groups`
-entitlement and the store writes to it explicitly. Likely but unverified, and it shapes what
-PR 13 can assume about sync. Cheap to settle before there are users, awkward afterwards.
+**Decided: yes, and it lands in PR 13 rather than PR 14.**
+
+The watch is read only, shows a list and a code, and must work with the phone off or absent.
+That rules out asking the phone for a code on demand, and it rules out handing secrets over
+WatchConnectivity, which would mean building a second transport for secret material. What
+is left is the mechanism Apple provides: both targets declare the same
+`keychain-access-groups` entitlement, items are written to that explicit group, and iCloud
+Keychain carries them between devices.
+
+Three consequences, and the first is why this cannot wait for PR 14:
+
+- **A Keychain item lives in the group it was written to.** Every secret stored today is in
+  the app's default group. Introducing a shared group later means migrating them, and a
+  migration that goes wrong looks like "my accounts vanished". Doing it while there is one
+  user and one device is nearly free.
+- **The watch will require iCloud sync to be on.** A shared access group shares between apps
+  on one device; getting anything to a second device is iCloud Keychain's job. The watch
+  cannot work with sync off, and the interface has to say so rather than ship a watch app
+  that silently shows nothing.
+- **The watch becomes a device holding your secrets.** That belongs in the threat model
+  next to the sync entry, not left implicit.
+
+Still unverified, and worth proving with a throwaway target before PR 13 depends on it:
+that a watchOS app declaring the same group actually sees the phone's synced items.
 
 ### The Xcode project file
 
