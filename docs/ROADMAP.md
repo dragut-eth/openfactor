@@ -255,10 +255,26 @@ reference screenshots. Feature parity is the goal, with the adaptations listed t
 - Rows are wired to real state as the features land, so this PR delivers the shell plus
   Sort Accounts, Appearance, About, and Report an Issue
 
-### PR 12: Accessibility pass
+### PR 12: Polish and accessibility pass
 
-- Dynamic Type across every screen, VoiceOver labels, Reduce Motion, contrast audit
-- Not deferred past this point, since retrofitting it later is far more expensive
+**The first moment every screen exists,** which is the earliest polishing is worth doing.
+Adjusting spacing and copy before the add flow and the settings sheet are next to the list
+means renegotiating all of it once they arrive.
+
+Polish and accessibility are one pull request rather than two because they are the same
+work. Dynamic Type at accessibility sizes breaks layouts, so separating them means
+adjusting the same spacing and truncation twice.
+
+- Everything accumulated in `docs/POLISH.md`, which is added to as things are noticed
+  rather than recalled at the end
+- Dynamic Type across every screen, including the accessibility sizes where cards reflow
+- VoiceOver labels and order, Reduce Motion, contrast audit against real content
+- Copy review: every user facing string read once, in order, as a whole
+
+**Structural observations are not deferred to here.** A wrong token, a layout approach that
+will not survive Dynamic Type, or an interaction pattern other screens will copy gets fixed
+when it is noticed, because everything built afterward inherits it. Only cosmetic items
+wait. Anything touching correctness or security is fixed immediately, wherever we are.
 
 ---
 

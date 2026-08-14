@@ -63,7 +63,7 @@ both as translucent pill buttons. No frame overlay, no instructions.
 **Adaptations**
 
 - Add a scanning frame and a one line hint. The bare camera gives no feedback about
-  whether anything is happening.
+  whether anything is happening. Verified working on device, 2026-08-14.
 - Add import from a photo, since services often show the QR on the same phone. It goes
   through `PhotosPicker`, so the app never gets access to the photo library itself and
   never asks for it.

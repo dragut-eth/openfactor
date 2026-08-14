@@ -29,7 +29,7 @@ device run before it can be called done.
 | PR 5, Xcode project and app shell | Done |
 | PR 6, design tokens and the card | Done |
 | PR 7, account list and live countdown | Done |
-| PR 8, add account by QR scan | Done, camera untested on device |
+| PR 8, add account by QR scan | Done, camera verified on device |
 | PR 9, manual setup and counter accounts | Done |
 | PR 10, edit mode | Done |
 | PR 11, settings sheet | **Next** |
@@ -215,8 +215,19 @@ Report an Issue. The others get their rows when their features do.
 This is also where the **settings gear** finally has somewhere to go, having been left out
 of the top bar since PR 7 on the grounds that a dead button is worse than no button.
 
-**The app is installed on Xavier's iPhone 15 Pro** (signed with team HST4KH9P2X, passed on
-the command line so it stays out of the repo). The live camera path is being tested there.
+**The live camera works.** Verified on Xavier's iPhone 15 Pro on 2026-08-14, which closes
+the last unverified path in the add flow. The app is installed there, signed with team
+HST4KH9P2X passed on the command line so it stays out of the repo.
+
+**Still unproven, and it is the big one:** no code from this app has ever been accepted by
+a real service. Every check so far says our output matches the published RFC vectors. None
+says a verifier on someone else's server accepts it. That closes the first time Xavier logs
+in somewhere using an OpenFactor code.
+
+**Polish is PR 12,** widened from an accessibility pass to cover both, because Dynamic Type
+at accessibility sizes breaks layouts and separating them means adjusting the same spacing
+twice. Items accumulate in [docs/POLISH.md](docs/POLISH.md) as they are noticed. Structural
+observations are still fixed when spotted rather than deferred there.
 
 **All audit findings that had code obligations are now closed.** F1, F2, F3, F4, and F6.
 F5 (no zeroization) and F7 (metadata is encrypted under the keychain key rather than the
