@@ -8,6 +8,11 @@ struct AccountListView: View {
     @State private var model: AccountListViewModel
     @State private var copied: UUID?
     @State private var isAdding = false
+    @State private var editMode: EditMode = .inactive
+
+    @State private var editing: AccountListViewModel.Row?
+    @State private var recolouring: AccountListViewModel.Row?
+    @State private var pendingDeletion: AccountListViewModel.Row?
 
     private let store: any SecretStore
 
@@ -25,22 +30,70 @@ struct AccountListView: View {
                 .navigationTitle("OpenFactor")
                 .searchable(text: $model.searchText, prompt: "Search accounts")
                 .background(Tokens.Surface.background)
+                .environment(\.editMode, $editMode)
                 .onAppear { model.load(at: Date()) }
                 .onReceive(tick) { model.tick(at: $0) }
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            isAdding = true
-                        } label: {
-                            Label("Add account", systemImage: "plus")
-                        }
-                    }
-                }
+                .toolbar { toolbar }
                 .sheet(isPresented: $isAdding) {
-                    AddAccountView(store: store) {
-                        model.load(at: Date())
+                    AddAccountView(store: store) { model.load(at: Date()) }
+                }
+                .sheet(item: $editing) { row in
+                    EditAccountView(record: row.record) { issuer, name in
+                        model.rename(row, issuer: issuer, name: name)
                     }
                 }
+                .sheet(item: $recolouring) { row in
+                    AccountColorPicker(selected: row.record.metadata.color) { colour in
+                        model.setColor(colour, for: row)
+                    }
+                }
+                .alert(
+                    "Remove \(pendingDeletion?.record.metadata.displayIssuer ?? "this account")?",
+                    isPresented: Binding(
+                        get: { pendingDeletion != nil },
+                        set: { if !$0 { pendingDeletion = nil } }
+                    ),
+                    presenting: pendingDeletion
+                ) { row in
+                    Button("Remove", role: .destructive) {
+                        model.delete(row)
+                        pendingDeletion = nil
+                    }
+                    Button("Cancel", role: .cancel) { pendingDeletion = nil }
+                } message: { _ in
+                    // The only irreversible thing in the app, so the consequence is named
+                    // rather than left to be inferred from the word "remove".
+                    Text(
+                        """
+                        Its secret is deleted from this device and cannot be recovered. \
+                        If this is your only way to sign in, you will lose access to the account.
+                        """
+                    )
+                }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbar: some ToolbarContent {
+        // Reordering rearranges the whole list, so it makes no sense while a search is
+        // hiding part of it.
+        if !model.rows.isEmpty && !model.isSearching {
+            ToolbarItem(placement: .topBarLeading) {
+                // Not `EditButton`. That toggles whichever edit mode the toolbar happens
+                // to see, which is not the one this view puts into the list's environment,
+                // so the button would flip to Done while the rows stayed as they were.
+                Button(editMode.isEditing ? "Done" : "Edit") {
+                    withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                }
+            }
+        }
+
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                isAdding = true
+            } label: {
+                Label("Add account", systemImage: "plus")
+            }
         }
     }
 
@@ -69,37 +122,74 @@ struct AccountListView: View {
     }
 
     private var list: some View {
-        ScrollView {
-            LazyVStack(spacing: Tokens.Spacing.cardGap) {
-                ForEach(model.visibleRows) { row in
-                    Button {
-                        copy(row)
-                    } label: {
-                        AccountCard(model: row.card)
-                    }
-                    .buttonStyle(.plain)
-                    .overlay(alignment: .topTrailing) {
-                        if copied == row.id {
-                            CopiedBadge()
-                        } else if !row.isTimeBased {
-                            // Counter based accounts have no ring, because nothing counts
-                            // down. What they need instead is a way to ask for the next
-                            // code, which is the only way their codes ever change.
-                            NextCodeButton { model.advanceCounter(for: row) }
-                        }
-                    }
-                    .accessibilityHint("Copies the code")
-                }
-
-                // Accounts this version cannot read. Shown rather than hidden: an account
-                // that silently disappears is one the user thinks they have lost, and its
-                // secret is still in the Keychain, intact.
-                ForEach(model.unreadable, id: \.self) { id in
-                    UnreadableAccountRow(id: id)
-                }
+        List {
+            ForEach(model.visibleRows) { row in
+                card(for: row).listRowStyling()
             }
-            .padding(.horizontal, Tokens.Spacing.medium)
-            .padding(.vertical, Tokens.Spacing.small)
+            .onMove { model.move(from: $0, to: $1) }
+            .onDelete { offsets in
+                // Routed through the same confirmation as everything else. A swipe is a
+                // convenient gesture, not a decision to lose an account.
+                pendingDeletion = offsets.compactMap { model.visibleRows[$0] }.first
+            }
+
+            // Accounts this version cannot read. Shown rather than hidden: an account
+            // that silently disappears is one the user thinks they have lost, and its
+            // secret is still in the Keychain, intact.
+            ForEach(model.unreadable, id: \.self) { id in
+                UnreadableAccountRow(id: id).listRowStyling()
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .padding(.horizontal, Tokens.Spacing.medium)
+    }
+
+    private func card(for row: AccountListViewModel.Row) -> some View {
+        Button {
+            copy(row)
+        } label: {
+            AccountCard(model: row.card)
+        }
+        .buttonStyle(.plain)
+        .disabled(editMode.isEditing)
+        .overlay(alignment: .topTrailing) { accessory(for: row) }
+        .contextMenu { menu(for: row) }
+        .accessibilityHint(editMode.isEditing ? "" : "Copies the code")
+    }
+
+    @ViewBuilder
+    private func accessory(for row: AccountListViewModel.Row) -> some View {
+        if editMode.isEditing {
+            Menu {
+                menu(for: row)
+            } label: {
+                CardButtonLabel(systemImage: "ellipsis")
+            }
+            .padding(Tokens.Spacing.large)
+            .accessibilityLabel("Options for \(row.record.metadata.displayIssuer)")
+        } else if copied == row.id {
+            CopiedBadge()
+        } else if !row.isTimeBased {
+            // Counter based accounts have no ring, because nothing counts down. What they
+            // need instead is a way to ask for the next code.
+            Button {
+                model.advanceCounter(for: row)
+            } label: {
+                CardButtonLabel(systemImage: "arrow.trianglehead.clockwise")
+            }
+            .buttonStyle(.plain)
+            .padding(Tokens.Spacing.large)
+            .accessibilityLabel("Next code")
+        }
+    }
+
+    @ViewBuilder
+    private func menu(for row: AccountListViewModel.Row) -> some View {
+        Button { recolouring = row } label: { Label("Change colour", systemImage: "paintpalette") }
+        Button { editing = row } label: { Label("Edit details", systemImage: "pencil") }
+        Button(role: .destructive) { pendingDeletion = row } label: {
+            Label("Remove \(row.record.metadata.displayIssuer)", systemImage: "trash")
         }
     }
 
@@ -117,21 +207,34 @@ struct AccountListView: View {
     }
 }
 
-/// Asks a counter based account for its next code.
-private struct NextCodeButton: View {
-    let action: () -> Void
+// MARK: - Pieces
+
+extension View {
+    /// Cards provide their own background and spacing, so the list gets out of the way.
+    fileprivate func listRowStyling() -> some View {
+        listRowInsets(
+            EdgeInsets(
+                top: Tokens.Spacing.small,
+                leading: 0,
+                bottom: Tokens.Spacing.small,
+                trailing: 0
+            )
+        )
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
+}
+
+/// The round button that sits where the countdown ring would be.
+private struct CardButtonLabel: View {
+    let systemImage: String
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: "arrow.trianglehead.clockwise")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Tokens.OnCard.primary)
-                .frame(width: Tokens.Ring.size, height: Tokens.Ring.size)
-                .background(Tokens.OnCard.primary.opacity(0.18), in: Circle())
-        }
-        .buttonStyle(.plain)
-        .padding(Tokens.Spacing.large)
-        .accessibilityLabel("Next code")
+        Image(systemName: systemImage)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(Tokens.OnCard.primary)
+            .frame(width: Tokens.Ring.size, height: Tokens.Ring.size)
+            .background(Tokens.OnCard.primary.opacity(0.18), in: Circle())
     }
 }
 

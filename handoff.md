@@ -3,13 +3,14 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 9.
+**Last updated:** 2026-08-14, end of PR 10.
 
 ## Where things stand
 
-PR 9 is complete. Accounts can be typed in by hand, with the secret validated on every
-keystroke and a live code shown before anything is saved. Counter based accounts work end
-to end, which closes **audit finding F4**.
+PR 10 is complete. Accounts can be renamed, recoloured, reordered by dragging, and
+removed behind a confirmation that names what is lost.
+
+Every screen in `docs/UI_SPEC.md` now exists except Settings, which is PR 11.
 
 **The live camera path is the one thing not verified.** The simulator has no camera. The
 photo import path, the permission denied path, parsing, confirmation, and saving were all
@@ -30,8 +31,9 @@ device run before it can be called done.
 | PR 7, account list and live countdown | Done |
 | PR 8, add account by QR scan | Done, camera untested on device |
 | PR 9, manual setup and counter accounts | Done |
-| PR 10, edit mode | **Next** |
-| PR 11 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 10, edit mode | Done |
+| PR 11, settings sheet | **Next** |
+| PR 12 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
 [docs/audits/A1.md](docs/audits/A1.md) and fully closed, with a `/security-review` addendum
@@ -68,6 +70,7 @@ OpenFactor/                                App target
   Scanning/AddAccountView.swift            The add sheet
   Scanning/ManualSetupViewModel.swift      Validation, preview, saving
   Scanning/ManualSetupView.swift           The form, with Advanced collapsed
+  Views/EditAccountView.swift              Renaming, and the colour grid
 OpenFactorTests/PaletteTests.swift         Contrast asserted, not eyeballed
 OpenFactorTests/                           Empty folder. Its sources are Tests/ above
 docs/audits/A1.md                          Gate A1 findings and disposition
@@ -150,6 +153,13 @@ would be to weaken what they assert.
   checked arithmetic, and cannot be done through a metadata update. See F4 in the audit
 - Manual setup shows the parser's own typed errors rather than rewriting them, and stays
   quiet until there is something to validate
+- Editing exposes only the labels a person chose. The generator settings came from the
+  service and changing them would silently stop the codes matching
+- Deletion always goes through a confirmation naming the consequence, including the swipe
+- Reordering writes back only the positions that changed, and is unavailable during a
+  search
+- The list drives edit mode from its own state rather than `EditButton`, which toggles a
+  different binding than the one the list reads and silently does nothing
 
 ## Decisions still open
 
@@ -197,13 +207,16 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 10, edit mode, per `docs/UI_SPEC.md`: rename, change colour, reorder by drag, and
-delete. Deletion is the one irreversible action in the app and takes an explicit second
-confirmation naming the consequence, rather than the reference's single destructive tap.
+PR 11, the settings sheet: Sort Accounts, Appearance, iCloud, App Lock, Export and Import,
+About and Source, Report an Issue, Rate on the App Store. Rows are wired to real state as
+the features land, so this PR delivers the shell plus Sort Accounts, Appearance, About, and
+Report an Issue. The others get their rows when their features do.
 
-**Still outstanding, and only a device can settle it:** the live camera path from PR 8 has
-never seen a real QR code, because the simulator has no camera. Everything around it is
-verified. Worth doing before PR 10 rather than later.
+This is also where the **settings gear** finally has somewhere to go, having been left out
+of the top bar since PR 7 on the grounds that a dead button is worse than no button.
+
+**The app is installed on Xavier's iPhone 15 Pro** (signed with team HST4KH9P2X, passed on
+the command line so it stays out of the repo). The live camera path is being tested there.
 
 **All audit findings that had code obligations are now closed.** F1, F2, F3, F4, and F6.
 F5 (no zeroization) and F7 (metadata is encrypted under the keychain key rather than the

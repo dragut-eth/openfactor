@@ -111,10 +111,24 @@ implied by the Sort Accounts setting.
 
 **Adaptations**
 
-- Removal requires a typed or explicit second confirmation, naming the consequence:
-  losing access to the account if no other factor exists. The reference uses a single
-  destructive tap.
-- Change Color offers the palette as a grid rather than a nested list.
+- Removal takes an explicit second confirmation naming the consequence, that the secret is
+  deleted from the device and cannot be recovered, and that access to the account is lost
+  if this is the only way in. The reference uses a single destructive tap. Deletion is the
+  only irreversible thing in the app, so the word "remove" is not left to carry that alone.
+- Swiping to delete exists too, and routes through the same confirmation. A swipe is a
+  convenient gesture, not a decision to lose an account.
+- Change Color offers the palette as a grid rather than a nested list. Ten swatches fit on
+  one screen, so nobody should have to scroll a list of colour names.
+- **Reordering uses the system's drag handles rather than a custom drag.** The reference
+  implies dragging with no visible affordance. The native handles are familiar, work with
+  VoiceOver, and cost nothing to adopt.
+- Reordering is unavailable while a search is filtering the list, since rearranging a list
+  you can only partly see is not a coherent gesture.
+- Only positions that actually changed are written back, because each one is a Keychain
+  round trip and dragging one card to the top would otherwise rewrite every account.
+- Editing exposes only the service and account names. Algorithm, digits, period, and
+  counter came from the service at enrolment; changing them here would not change what the
+  service expects, it would just stop the codes matching.
 
 ## Design tokens
 

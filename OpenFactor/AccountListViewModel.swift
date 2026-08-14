@@ -1,5 +1,6 @@
 import Foundation
 import OpenFactorCore
+import SwiftUI
 
 /// Everything the account list needs to draw itself, and nothing else.
 ///
@@ -178,6 +179,88 @@ final class AccountListViewModel {
         }
     }
 
+    // MARK: - Editing
+
+    /// Renames an account. Never touches its secret or its generator settings.
+    func rename(_ row: Row, issuer: String?, name: String) {
+        var metadata = row.record.metadata
+        metadata.issuer = issuer?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank
+        metadata.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        apply(metadata, to: row)
+    }
+
+    func setColor(_ color: AccountColor, for row: Row) {
+        var metadata = row.record.metadata
+        metadata.color = color
+
+        apply(metadata, to: row)
+    }
+
+    /// Writes new metadata for one row, keeping the code it is already showing.
+    ///
+    /// The row is rebuilt rather than reloaded so that renaming an account does not blank
+    /// its code for a second, and so a failed write leaves the screen showing what is
+    /// actually stored rather than what was typed.
+    private func apply(_ metadata: AccountMetadata, to row: Row) {
+        guard let index = rows.firstIndex(where: { $0.id == row.id }) else { return }
+
+        let updated = AccountRecord(id: row.id, metadata: metadata)
+
+        do {
+            try store.update(updated)
+            rows[index] = Row(
+                record: updated,
+                code: rows[index].code,
+                codeFailure: rows[index].codeFailure,
+                secondsRemaining: rows[index].secondsRemaining,
+                generatedCounter: rows[index].generatedCounter
+            )
+        } catch {
+            rows[index].codeFailure = error.description
+        }
+    }
+
+    /// Deletes an account and its secret. Irreversible, and the interface confirms before
+    /// calling this.
+    func delete(_ row: Row) {
+        do {
+            try store.delete(id: row.id)
+            rows.removeAll { $0.id == row.id }
+        } catch {
+            loadFailure = error.description
+        }
+    }
+
+    /// Reorders the list and writes the new positions.
+    ///
+    /// Only the rows whose position actually changed are written, because each write is a
+    /// Keychain round trip and dragging one card to the top would otherwise rewrite every
+    /// account in the list.
+    func move(from source: IndexSet, to destination: Int) {
+        rows.move(fromOffsets: source, toOffset: destination)
+
+        for index in rows.indices where rows[index].record.metadata.sortIndex != index {
+            var metadata = rows[index].record.metadata
+            metadata.sortIndex = index
+
+            let updated = AccountRecord(id: rows[index].id, metadata: metadata)
+
+            do {
+                try store.update(updated)
+                rows[index] = Row(
+                    record: updated,
+                    code: rows[index].code,
+                    codeFailure: rows[index].codeFailure,
+                    secondsRemaining: rows[index].secondsRemaining,
+                    generatedCounter: rows[index].generatedCounter
+                )
+            } catch {
+                loadFailure = error.description
+            }
+        }
+    }
+
     // MARK: - Counter based accounts
 
     /// Moves a counter based account to its next code.
@@ -214,5 +297,12 @@ final class AccountListViewModel {
 
         CodeClipboard.copy(code, expiring: expiry)
         return true
+    }
+}
+
+
+extension String {
+    fileprivate var nilIfBlank: String? {
+        isEmpty ? nil : self
     }
 }
