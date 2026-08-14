@@ -66,7 +66,9 @@ Not everything waits for PR 12.
 12. Uneven margins between the two scan screen buttons. Cancel was a `Button` and Enter
     manually a `NavigationLink`, and the two pad their labels differently. Both are buttons
     now, with the navigation driven by state.
-13. The scroll indicator drew on top of the cards. It was drawing exactly where it should:
+13. The scroll indicator drew on top of the cards.
+14. Haptic feedback when a code is copied, at Xavier's request. `sensoryFeedback`, so it
+    honours the system haptics setting. It was drawing exactly where it should:
     padding the list had moved the list's own trailing edge inward to meet the cards. The
     margins now belong to the rows, leaving the list full width and the indicator beside
     the cards rather than over them.

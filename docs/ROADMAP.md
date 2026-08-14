@@ -320,6 +320,40 @@ reassuring.
 - Import of the same format, plus other apps' plain URI lists
 - The format documented in `docs/BACKUP_FORMAT.md` so it can be decrypted without this app
 
+### PR 16a: Import from Google Authenticator
+
+Split from PR 16 rather than folded into it, because it is a second binary parser rather
+than more of the same format, and mixing the two would make both harder to review. Do it
+after PR 16, or before, but not inside it.
+
+**The argument for it is the argument the project already makes about export.** An
+authenticator you cannot leave is a trap, and that applies just as much to arriving.
+Google Authenticator is where most people would be arriving from, and today its export is
+rejected as "not a setup code", which is true and useless at exactly the wrong moment.
+
+The format, per [Alex Bakker's write up](https://alexbakker.me/post/parsing-google-auth-export-qr-code.html):
+`otpauth-migration://offline?data=` followed by base64 protobuf. A `MigrationPayload` holds
+repeated `OtpParameters` (secret, name, issuer, algorithm, digits, type, counter) plus
+`version`, `batch_size`, `batch_index`, and `batch_id`.
+
+- **No dependency.** The schema uses only varints and length delimited fields, so a minimal
+  reader is roughly 150 lines. Adding SwiftProtobuf to save that would break the rule that
+  every dependency is code a user has to trust without choosing to
+- **Treat it as hostile input.** This is a second binary parser fed by a camera, which is a
+  wider attack surface than the URI parser. Bounds checked throughout, no allocation sized
+  by an attacker supplied length, and added to the existing fuzzing suite in the same pull
+  request
+- **Batches.** A large export spans several QR codes. Collect them, track `batch_index`
+  against `batch_size`, refuse codes carrying a different `batch_id`, and say plainly which
+  ones are still missing
+- **Their enumerations are not ours.** They permit MD5, which this app deliberately does not
+  implement, and their digit count is only 6 or 8. Refuse those accounts by name rather than
+  guessing or silently mangling them
+- **Bulk confirmation.** Adding forty accounts at once is a different problem from adding
+  one, and the scan confirmation screen does not answer it
+- Recognise the `otpauth-migration` scheme even before it is supported, so the error names
+  what the code actually is rather than saying it is not a setup code
+
 #### Gate A3: audit the export format
 
 **Stop here, and stop hardest here.** Every other mistake in this project is fixable in an

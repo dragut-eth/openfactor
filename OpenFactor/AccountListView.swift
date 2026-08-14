@@ -13,6 +13,8 @@ struct AccountListView: View {
 
     @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     @State private var editing: AccountListViewModel.Row?
     @State private var recolouring: AccountListViewModel.Row?
     @State private var pendingDeletion: AccountListViewModel.Row?
@@ -46,6 +48,13 @@ struct AccountListView: View {
                     model.sortOrder = AccountSortOrder(rawValue: raw) ?? .manual
                 }
                 .onReceive(tick) { model.tick(at: $0) }
+                // A tap on a card produces no visible change except a badge that fades,
+                // so the tap needs an answer you can feel. `sensoryFeedback` is the system
+                // one, which means it honours the user's haptics setting rather than
+                // buzzing regardless.
+                .sensoryFeedback(trigger: copied) { _, current in
+                    current == nil ? nil : .success
+                }
                 .toolbar { toolbar }
                 .sheet(isPresented: $isAdding) {
                     AddAccountView(store: store) { model.load(at: Date()) }
@@ -181,7 +190,12 @@ struct AccountListView: View {
         }
         .buttonStyle(.plain)
         .disabled(editMode.isEditing)
-        .overlay(alignment: .topTrailing) { accessory(for: row) }
+        // Follows the ring, which moves to the bottom of the card at accessibility sizes.
+        .overlay(
+            alignment: dynamicTypeSize.isAccessibilitySize ? .bottomTrailing : .topTrailing
+        ) {
+            accessory(for: row)
+        }
         .overlay {
             if copied == row.id {
                 CopiedBadge()
@@ -297,6 +311,8 @@ private struct CardButtonLabel: View {
 /// the digits. It deliberately does not repeat the code: the point of copying it is that
 /// it no longer needs to be read off the screen.
 private struct CopiedBadge: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Label("Copied", systemImage: "checkmark")
             .font(.title3.weight(.semibold))
@@ -305,7 +321,10 @@ private struct CopiedBadge: View {
             .padding(.horizontal, Tokens.Spacing.large)
             .padding(.vertical, Tokens.Spacing.small + 2)
             .background(.ultraThinMaterial, in: Capsule())
-            .transition(.opacity.combined(with: .scale(scale: 0.92)))
+            // Reduce Motion means no scaling. A fade still reads as an appearance, and the
+            // setting exists because movement makes some people ill, not because they
+            // dislike it.
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.92)))
             .accessibilityHidden(true)
     }
 }

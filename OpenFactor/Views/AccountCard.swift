@@ -41,12 +41,21 @@ struct AccountCard: View {
     let model: Model
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// Scaled rather than fixed, so the code follows the reader's text size setting.
     @ScaledMetric(relativeTo: .largeTitle) private var codeSize = Tokens.Text.codeSize
 
+    /// The ring scales too. Fixed, it shrinks into insignificance beside text at
+    /// accessibility sizes, and it carries real information.
+    @ScaledMetric(relativeTo: .body) private var ringSize = Tokens.Ring.size
+
     var body: some View {
-        HStack(alignment: .top) {
+        // Side by side normally. At accessibility sizes the ring is stacked underneath
+        // instead, because a fixed element beside growing text squeezes it into a column
+        // and "Account 1" starts wrapping mid name. The text gets the full width and the
+        // ring keeps its meaning.
+        layout {
             VStack(alignment: .leading, spacing: Tokens.Spacing.tight) {
                 Text(model.issuer)
                     .font(Tokens.Text.issuer)
@@ -55,7 +64,11 @@ struct AccountCard: View {
                 Text(model.name)
                     .font(Tokens.Text.name)
                     .foregroundStyle(Tokens.OnCard.secondary)
-                    .lineLimit(1)
+                    // One line normally, because an account name is a label and the code
+                    // is what matters. At accessibility sizes it wraps instead: truncating
+                    // an email address to a few characters helps nobody, and the extra
+                    // height is what the reader asked for by turning the text up.
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                     .truncationMode(.middle)
 
                 Text(CodeFormatting.grouped(model.code))
@@ -63,16 +76,26 @@ struct AccountCard: View {
                     // rather than jittering every time the code changes. Rounded keeps it
                     // from looking like a terminal.
                     .font(.system(size: codeSize, weight: .bold, design: .rounded).monospacedDigit())
-                    .minimumScaleFactor(0.6)
+                    // A code never wraps. Six digits split across two lines would be read
+                    // wrong more often than it would be read slowly, so it shrinks to fit
+                    // instead, which is the one place Dynamic Type is allowed to lose.
+                    .minimumScaleFactor(0.5)
                     .lineLimit(1)
                     .foregroundStyle(Tokens.OnCard.primary)
                     .padding(.top, Tokens.Spacing.tight)
             }
 
-            Spacer(minLength: Tokens.Spacing.medium)
+            if !isAccessibilitySize {
+                Spacer(minLength: Tokens.Spacing.medium)
+            }
 
             if let fractionRemaining = model.fractionRemaining {
-                CountdownRing(fractionRemaining: fractionRemaining, isExpiring: model.isExpiring)
+                CountdownRing(
+                    fractionRemaining: fractionRemaining,
+                    isExpiring: model.isExpiring,
+                    size: ringSize
+                )
+                .frame(maxWidth: isAccessibilitySize ? .infinity : nil, alignment: .trailing)
             }
         }
         .padding(Tokens.Spacing.large)
@@ -82,6 +105,14 @@ struct AccountCard: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(model.issuer), \(model.name)")
         .accessibilityValue(accessibilityValue)
+    }
+
+    private var isAccessibilitySize: Bool { dynamicTypeSize.isAccessibilitySize }
+
+    private var layout: AnyLayout {
+        isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Tokens.Spacing.medium))
+            : AnyLayout(HStackLayout(alignment: .top))
     }
 
     private var accessibilityValue: String {
@@ -99,6 +130,7 @@ struct AccountCard: View {
 private struct CountdownRing: View {
     let fractionRemaining: Double
     let isExpiring: Bool
+    let size: CGFloat
 
     var body: some View {
         ZStack {
@@ -115,7 +147,7 @@ private struct CountdownRing: View {
                 // the top, which is the direction people read a clock face.
                 .rotationEffect(.degrees(-90))
         }
-        .frame(width: Tokens.Ring.size, height: Tokens.Ring.size)
+        .frame(width: size, height: size)
         .accessibilityHidden(true)
     }
 }

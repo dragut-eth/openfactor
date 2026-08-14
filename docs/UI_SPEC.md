@@ -177,7 +177,35 @@ file diff and so light mode is possible at all.
   No color is ever hardcoded at a call site, so a scheme is a one file change.
 - **Scheme override:** a setting offering System, Light, and Dark, defaulting to System.
 - **Type:** issuer, label, code, and UI scales, all built on Dynamic Type so the app
-  responds to accessibility text sizes rather than shipping fixed point sizes.
+  responds to accessibility text sizes rather than shipping fixed point sizes. The code is
+  a scaled point size rather than a text style, because it should be larger than
+  `.largeTitle` and that is the largest style there is.
+
+## Accessibility
+
+Not a pass at the end. The rules the interface follows.
+
+- **The card reflows at accessibility sizes.** Normally the countdown ring sits beside the
+  text. At accessibility sizes it stacks underneath instead, because a fixed element beside
+  growing text squeezes the text into a column and an issuer starts wrapping mid name. The
+  per card menu button follows the ring.
+- **A code never wraps.** Six digits split across two lines get read wrong more often than
+  they get read slowly, so the code shrinks to fit rather than reflowing. It is the one
+  place Dynamic Type is allowed to lose, and the only one.
+- **An account name wraps rather than truncating at accessibility sizes.** Truncating an
+  email address to a few characters helps nobody, and the extra height is what the reader
+  asked for by turning the text up.
+- **VoiceOver reads a card as one element**: issuer and name as the label, the code spoken
+  one digit at a time and the seconds remaining as the value. Without digit by digit,
+  `751702` is read as "seven hundred fifty one thousand, seven hundred two", which nobody
+  can type into a login form. The ring is hidden from VoiceOver, since its information is
+  already in the value.
+- **Reduce Motion removes scaling, not feedback.** The copied confirmation still appears,
+  by fading rather than scaling. The setting exists because movement makes some people ill,
+  not because they dislike it.
+- **A copy is confirmed by touch as well as sight.** Tapping a card produces no visible
+  change except a badge that fades, so it also triggers system haptic feedback, which
+  honours the user's own haptics setting rather than buzzing regardless.
 
 ## App icon
 
