@@ -51,14 +51,16 @@ against the official test vectors in those documents.
 ## Repository layout
 
 ```
-OpenFactorCore/    Swift package: Base32, HOTP, TOTP, otpauth parsing, secret storage.
-                   No UI, no dependencies. This is the security sensitive code.
-App/               iOS app target. Views and view models only.
-Watch/             watchOS app target.
-docs/              Architecture, roadmap, UI specification, backup format.
+Package.swift                  The OpenFactorCore package. No dependencies, and it stays that way.
+Sources/OpenFactorCore/        Base32, HOTP, TOTP, otpauth parsing, secret storage.
+                               No UI. This is the security sensitive code.
+Tests/OpenFactorCoreTests/     Including the published RFC vector tables.
+App/                           iOS app target. Views and view models only.
+Watch/                         watchOS app target.
+docs/                          Architecture, roadmap, UI specification, backup format.
 ```
 
-Nothing above exists yet beyond `docs/`. It arrives PR by PR, per the roadmap.
+`App/` and `Watch/` do not exist yet. They arrive PR by PR, per the roadmap.
 
 ## Building
 

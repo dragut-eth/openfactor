@@ -44,18 +44,11 @@ jobs:
       - name: Swift version
         run: swift --version
 
-      # OpenFactorCore does not exist until PR 1. Remove this guard, and the condition on
-      # the step below, once Package.swift is committed.
-      - name: Check for the package
-        id: package
-        run: |
-          if [ -f Package.swift ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "No Package.swift yet, skipping tests. This is expected until PR 1."
-          fi
+      - name: Build
+        run: swift build
 
+      # Includes the RFC 4648, RFC 4226, and RFC 6238 vector tables. A failure here means
+      # the generated codes would be wrong, so this job is never to be skipped or made
+      # advisory.
       - name: Test
-        if: steps.package.outputs.exists == 'true'
         run: swift test

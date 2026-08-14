@@ -24,7 +24,7 @@ through interface code. The app targets are deliberately thin.
 
 ## OpenFactorCore
 
-*Planned, arriving in PR 1 through PR 4.*
+*`Base32` exists as of PR 1. The rest arrives in PR 2 through PR 4.*
 
 | Component | Responsibility |
 | --- | --- |
@@ -51,6 +51,16 @@ secret material into memory.
 **No hand rolled cryptography.** HMAC and the hash functions come from CryptoKit. The only
 cryptographic code written here is the RFC 4226 dynamic truncation, which is arithmetic on
 the HMAC output and is covered by the published vectors.
+
+**Decoding is lenient about formatting and strict about content.** `Base32` accepts
+lowercase, spaces, and hyphens, because that is how services actually print secrets and
+how they land on the pasteboard. It rejects everything else with a specific error rather
+than skipping the character, since skipping would decode a different secret than the user
+believes they entered. The one deliberate exception is the handful of leftover bits at the
+end of a secret whose length is not a multiple of 8 characters, which are discarded rather
+than rejected. RFC 4648 section 3.5 permits rejecting them, but a 26 character secret
+carries two such bits and real services set them, so rejecting would refuse secrets that
+work everywhere else. The reasoning is repeated at the code.
 
 ## App targets
 
