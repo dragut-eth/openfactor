@@ -90,9 +90,17 @@ both as translucent pill buttons. No frame overlay, no instructions.
   The reference silently assumes the defaults, which breaks for a real minority of
   services. Hidden by default, so the simple path stays as simple as the reference.
 - Validate the secret as the user types and say precisely what is wrong, since a bad
-  Base32 secret otherwise fails silently and produces codes that never work.
+  Base32 secret otherwise fails silently and produces codes that never work. The message
+  is the parser's own typed error, not a rewritten one, so it names the offending
+  character and its position.
+- An untouched field says nothing. Validation appears once there is something to validate,
+  and Save is simply unavailable until the form describes a real account.
 - Show a live preview of the generated code before saving, so the user can confirm it
   matches the service before losing access to the enrollment page.
+- **Counter based accounts get a next code button in the list, not a countdown ring.**
+  Their codes advance when asked for rather than with the clock, so a ring would be a lie.
+  The counter is persisted before the new code is shown, for the reasons in
+  `docs/audits/A1.md` under F4.
 
 ## Screen 5: Edit mode
 

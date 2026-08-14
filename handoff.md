@@ -3,12 +3,13 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 8.
+**Last updated:** 2026-08-14, end of PR 9.
 
 ## Where things stand
 
-PR 8 is complete. Accounts can be added by scanning a QR code or importing a picture of
-one, which closes the loop: add, see the code, copy it.
+PR 9 is complete. Accounts can be typed in by hand, with the secret validated on every
+keystroke and a live code shown before anything is saved. Counter based accounts work end
+to end, which closes **audit finding F4**.
 
 **The live camera path is the one thing not verified.** The simulator has no camera. The
 photo import path, the permission denied path, parsing, confirmation, and saving were all
@@ -28,8 +29,9 @@ device run before it can be called done.
 | PR 6, design tokens and the card | Done |
 | PR 7, account list and live countdown | Done |
 | PR 8, add account by QR scan | Done, camera untested on device |
-| PR 9, manual setup | **Next** |
-| PR 10 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 9, manual setup and counter accounts | Done |
+| PR 10, edit mode | **Next** |
+| PR 11 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
 [docs/audits/A1.md](docs/audits/A1.md) and fully closed, with a `/security-review` addendum
@@ -64,6 +66,8 @@ OpenFactor/                                App target
   Scanning/CameraScannerView.swift         The live camera, and permission state
   Scanning/AddAccountViewModel.swift       Scan, confirm, save. All the judgement
   Scanning/AddAccountView.swift            The add sheet
+  Scanning/ManualSetupViewModel.swift      Validation, preview, saving
+  Scanning/ManualSetupView.swift           The form, with Advanced collapsed
 OpenFactorTests/PaletteTests.swift         Contrast asserted, not eyeballed
 OpenFactorTests/                           Empty folder. Its sources are Tests/ above
 docs/audits/A1.md                          Gate A1 findings and disposition
@@ -142,6 +146,10 @@ would be to weaken what they assert.
 - An image with more than one QR code is refused rather than guessed at
 - Photo import goes through `PhotosPicker`, so the app never gets photo library access and
   never asks for it. The only usage string is for the camera
+- Advancing a counter is a single store call that persists before it returns the code, uses
+  checked arithmetic, and cannot be done through a metadata update. See F4 in the audit
+- Manual setup shows the parser's own typed errors rather than rewriting them, and stays
+  quiet until there is something to validate
 
 ## Decisions still open
 
@@ -189,21 +197,17 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 9, manual setup, for services that print a secret instead of showing a QR code:
+PR 10, edit mode, per `docs/UI_SPEC.md`: rename, change colour, reorder by drag, and
+delete. Deletion is the one irreversible action in the app and takes an explicit second
+confirmation naming the consequence, rather than the reference's single destructive tap.
 
-- Secret Key, Account Name, Email or Username, matching the reference
-- An Advanced disclosure, collapsed: algorithm, digits, period, and TOTP versus HOTP
-- Inline validation using the typed errors the parser already produces
-- A live code preview before saving, the same confirmation the scan flow now has
+**Still outstanding, and only a device can settle it:** the live camera path from PR 8 has
+never seen a real QR code, because the simulator has no camera. Everything around it is
+verified. Worth doing before PR 10 rather than later.
 
-**F4 from the audit belongs here or nowhere.** Counter based accounts can be created once
-manual setup exposes the choice, and right now nothing can advance a counter. Whatever
-implements it must use checked arithmetic at `UInt64.max`, persist the new counter before
-showing the code, and do both through one store call rather than a metadata update. See
-`docs/audits/A1.md`.
-
-**Before PR 9, run PR 8 on a real device once.** Point it at a genuine enrollment QR code.
-It is the only part of the add flow a simulator cannot exercise.
+**All audit findings that had code obligations are now closed.** F1, F2, F3, F4, and F6.
+F5 (no zeroization) and F7 (metadata is encrypted under the keychain key rather than the
+per item class) are accepted limitations that must appear in the PR 17 threat model.
 
 ### Testing the app against a real Keychain
 

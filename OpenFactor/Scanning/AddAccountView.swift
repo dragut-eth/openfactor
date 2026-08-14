@@ -12,9 +12,11 @@ struct AddAccountView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    private let store: any SecretStore
     let onAdded: () -> Void
 
     init(store: any SecretStore, onAdded: @escaping () -> Void) {
+        self.store = store
         _model = State(initialValue: AddAccountViewModel(store: store))
         self.onAdded = onAdded
     }
@@ -27,6 +29,18 @@ struct AddAccountView: View {
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { dismiss() }
+                    }
+
+                    // The reference puts this here too. It is the way out for services
+                    // that print a secret instead of showing a code, and the way out when
+                    // the camera is unavailable.
+                    ToolbarItem(placement: .confirmationAction) {
+                        NavigationLink("Enter manually") {
+                            ManualSetupView(store: store) {
+                                onAdded()
+                                dismiss()
+                            }
+                        }
                     }
                 }
                 .task {

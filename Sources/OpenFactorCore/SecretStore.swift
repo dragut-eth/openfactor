@@ -60,6 +60,51 @@ extension SecretStore {
         )
     }
 
+    /// Moves a counter based account to its next code.
+    ///
+    /// Counter based codes do not advance with the clock. They advance when the user asks
+    /// for one, which makes the counter state the app owns and must not lose.
+    ///
+    /// **The new counter is stored before the code is returned, deliberately.** If the app
+    /// dies between the two, the user sees no code and asks again, which costs them a tap.
+    /// The other order loses the count: the user reads a code, the app forgets it ever
+    /// advanced, and the next request repeats a code the service has already consumed.
+    /// Services reject a replayed counter, so that failure is silent until a login fails.
+    ///
+    /// Advancing lives here rather than at a call site so the order cannot be got wrong by
+    /// whoever writes the next screen, and so it can never be done through a plain
+    /// metadata update. Written to the rules recorded as finding F4 at gate A1.
+    ///
+    /// - Returns: the updated record and the code its new counter produces.
+    public func advancingCounter(
+        for record: AccountRecord
+    ) throws(SecretStoreError) -> (record: AccountRecord, code: String) {
+        guard case let .hotp(counter, digits, algorithm) = record.metadata.generator else {
+            throw SecretStoreError.notCounterBased
+        }
+
+        // Checked, not wrapping. Wrapping would send the account back to counter zero and
+        // replay every code it has ever produced.
+        let (next, overflowed) = counter.addingReportingOverflow(1)
+        guard !overflowed else {
+            throw SecretStoreError.counterExhausted
+        }
+
+        var advanced = record
+        advanced.metadata.generator = .hotp(counter: next, digits: digits, algorithm: algorithm)
+
+        try update(advanced)
+
+        let code = HOTP.code(
+            secret: try secret(for: record.id),
+            counter: next,
+            digits: digits,
+            algorithm: algorithm
+        )
+
+        return (advanced, code)
+    }
+
     /// The code for one account at a given moment.
     ///
     /// The convenience worth having: the secret is read, used, and goes out of scope in

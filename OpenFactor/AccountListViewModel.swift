@@ -178,6 +178,24 @@ final class AccountListViewModel {
         }
     }
 
+    // MARK: - Counter based accounts
+
+    /// Moves a counter based account to its next code.
+    ///
+    /// The store persists the new counter before handing back the code, so a crash here
+    /// costs a tap rather than replaying a code the service has already consumed. See
+    /// `SecretStore.advancingCounter(for:)`.
+    func advanceCounter(for row: Row) {
+        guard let index = rows.firstIndex(where: { $0.id == row.id }) else { return }
+
+        do {
+            let (advanced, code) = try store.advancingCounter(for: rows[index].record)
+            rows[index] = Row(record: advanced, code: code, codeFailure: nil, secondsRemaining: nil)
+        } catch {
+            rows[index].codeFailure = error.description
+        }
+    }
+
     // MARK: - Copying
 
     /// Puts a code on the pasteboard, briefly.

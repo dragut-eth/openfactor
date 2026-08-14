@@ -28,6 +28,16 @@ public enum SecretStoreError: Error, Equatable, Sendable {
     /// that a later version would have read perfectly.
     case unreadableMetadata(id: UUID)
 
+    /// Asked to advance a counter on an account whose codes come from the clock.
+    case notCounterBased
+
+    /// A counter based account has reached `UInt64.max` and cannot advance again.
+    ///
+    /// Unreachable by any human: at one code per second it takes longer than the age of
+    /// the universe. It exists because the alternative to checking is wrapping silently
+    /// back to zero, which would replay every code the account has ever produced.
+    case counterExhausted
+
     /// Anything else the Keychain reported, carrying the raw status so a bug report can
     /// name it exactly.
     case keychain(status: Int32)
@@ -44,6 +54,10 @@ extension SecretStoreError: CustomStringConvertible {
             return "Unlock the device to read this account."
         case let .unreadableMetadata(id):
             return "The details for account \(id) could not be read. Its secret is intact."
+        case .notCounterBased:
+            return "This account's codes change on a timer, so there is no next code to ask for."
+        case .counterExhausted:
+            return "This account has run out of codes and needs to be set up again."
         case let .keychain(status):
             let message = SecCopyErrorMessageString(status, nil) as String? ?? "no description"
             return "The Keychain returned error \(status): \(message)."

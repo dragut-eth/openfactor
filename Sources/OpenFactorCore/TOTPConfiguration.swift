@@ -42,7 +42,10 @@ public struct TOTPConfiguration: Sendable, Equatable {
     }
 
     /// One second to one hour. Real services use 30, occasionally 60.
-    static let supportedPeriods = 1...3600
+    ///
+    /// Public because the interface needs to know the bounds it is validating against,
+    /// and restating them there would give the rule two homes that could disagree.
+    public static let supportedPeriods = 1...3600
 
     /// Skips validation, for constants known to be in range at compile time.
     private init(algorithm: OTPAlgorithm, digits: OTPDigits, validatedPeriod: Int) {

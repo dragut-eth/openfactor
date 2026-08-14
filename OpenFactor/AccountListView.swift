@@ -81,6 +81,11 @@ struct AccountListView: View {
                     .overlay(alignment: .topTrailing) {
                         if copied == row.id {
                             CopiedBadge()
+                        } else if !row.isTimeBased {
+                            // Counter based accounts have no ring, because nothing counts
+                            // down. What they need instead is a way to ask for the next
+                            // code, which is the only way their codes ever change.
+                            NextCodeButton { model.advanceCounter(for: row) }
                         }
                     }
                     .accessibilityHint("Copies the code")
@@ -109,6 +114,24 @@ struct AccountListView: View {
                 if copied == row.id { copied = nil }
             }
         }
+    }
+}
+
+/// Asks a counter based account for its next code.
+private struct NextCodeButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "arrow.trianglehead.clockwise")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Tokens.OnCard.primary)
+                .frame(width: Tokens.Ring.size, height: Tokens.Ring.size)
+                .background(Tokens.OnCard.primary.opacity(0.18), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .padding(Tokens.Spacing.large)
+        .accessibilityLabel("Next code")
     }
 }
 
