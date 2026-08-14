@@ -16,6 +16,7 @@ struct AccountListView: View {
     @State private var editing: AccountListViewModel.Row?
     @State private var recolouring: AccountListViewModel.Row?
     @State private var pendingDeletion: AccountListViewModel.Row?
+    @State private var showingActions: AccountListViewModel.Row?
 
     private let store: any SecretStore
 
@@ -55,6 +56,19 @@ struct AccountListView: View {
                     EditAccountView(record: row.record) { issuer, name in
                         model.rename(row, issuer: issuer, name: name)
                     }
+                }
+                .confirmationDialog(
+                    showingActions?.record.metadata.displayIssuer ?? "",
+                    isPresented: Binding(
+                        get: { showingActions != nil },
+                        set: { if !$0 { showingActions = nil } }
+                    ),
+                    titleVisibility: .visible,
+                    presenting: showingActions
+                ) { row in
+                    Button("Change colour") { recolouring = row }
+                    Button("Edit details") { editing = row }
+                    Button("Remove", role: .destructive) { pendingDeletion = row }
                 }
                 .sheet(item: $recolouring) { row in
                     AccountColorPicker(selected: row.record.metadata.color) { colour in
@@ -174,34 +188,47 @@ struct AccountListView: View {
     }
 
     private func card(for row: AccountListViewModel.Row) -> some View {
-        Button {
-            copy(row)
-        } label: {
-            AccountCard(model: row.card)
-        }
-        .buttonStyle(.plain)
-        .disabled(editMode.isEditing)
-        .overlay(alignment: .topTrailing) { accessory(for: row) }
-        .overlay {
-            if copied == row.id {
-                CopiedBadge()
+        AccountCard(model: row.card)
+            .overlay(alignment: .topTrailing) { accessory(for: row) }
+            .overlay {
+                if copied == row.id {
+                    CopiedBadge()
+                }
             }
-        }
-        // Without this the drag preview is a rectangle, and the card's rounded corners
-        // reveal its opaque backing as a dark notch. Naming the shape makes the lifted
-        // card exactly the card.
-        .contentShape(
-            .dragPreview,
-            RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
-        )
-        // No `.contextMenu` here, deliberately. iOS appends its own entries to a system
-        // context menu, and on this card it appended "Ask Siri", which offers to hand the
-        // contents of a two factor code card to an assistant that may process it off
-        // device. What it actually transmits is not something this project can verify, and
-        // an app whose first claim is that nothing leaves the device cannot ship a menu
-        // that might. The same three actions live behind the button in edit mode, which is
-        // ours and gets no additions.
-        .accessibilityHint(editMode.isEditing ? "" : "Copies the code")
+            .contentShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
+            // Without this the drag preview is a rectangle, and the card's rounded corners
+            // reveal its opaque backing as a dark notch. Naming the shape makes the lifted
+            // card exactly the card.
+            .contentShape(
+                .dragPreview,
+                RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+            )
+            // Tap and long press are handled here rather than by a Button and a
+            // `.contextMenu`. iOS appends its own entries to a system context menu, and on
+            // this card it appended "Ask Siri", offering to hand the contents of a two
+            // factor code card to an assistant that may process it off device. A
+            // confirmation dialog shows only the buttons it is given, so the long press
+            // survives without the additions. See SECURITY.md.
+            .onTapGesture {
+                guard !editMode.isEditing else { return }
+                copy(row)
+            }
+            // `highPriorityGesture` rather than `onLongPressGesture` or
+            // `simultaneousGesture`, both of which lose to the recognisers a List row
+            // already carries and never fire.
+            .highPriorityGesture(
+                LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                    guard !editMode.isEditing else { return }
+                    showingActions = row
+                }
+            )
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(editMode.isEditing ? "" : "Copies the code")
+            // VoiceOver cannot long press, so the same actions are offered as rotor
+            // actions on the element itself.
+            .accessibilityAction(named: "Change colour") { recolouring = row }
+            .accessibilityAction(named: "Edit details") { editing = row }
+            .accessibilityAction(named: "Remove") { pendingDeletion = row }
     }
 
     @ViewBuilder

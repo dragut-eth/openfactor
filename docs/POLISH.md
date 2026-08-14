@@ -60,7 +60,12 @@ Not everything waits for PR 12.
 11. Wider margins on the cards, to Apple Weather's proportions. The margin does the most
     work in edit mode, where the delete control and the drag handle otherwise crowd the
     card's edges.
-12. The scroll indicator drew on top of the cards. It was drawing exactly where it should:
+12. Long press restored after the context menu removal, as a confirmation dialog. It is a
+    standard iOS action sheet, not a custom control: the difference from a context menu is
+    that a dialog shows only the buttons it is given, so the system cannot append entries
+    to it. `highPriorityGesture` is required, since `onLongPressGesture` and
+    `simultaneousGesture` both lose to the recognisers a `List` row already carries.
+13. The scroll indicator drew on top of the cards. It was drawing exactly where it should:
     padding the list had moved the list's own trailing edge inward to meet the cards. The
     margins now belong to the rows, leaving the list full width and the indicator beside
     the cards rather than over them.
