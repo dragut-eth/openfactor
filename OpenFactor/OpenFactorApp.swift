@@ -4,6 +4,9 @@ import SwiftUI
 @main
 struct OpenFactorApp: App {
 
+    /// The colour scheme override, applied at the root so every sheet inherits it.
+    @AppStorage(PreferenceKey.appearance) private var appearance = AppearancePreference.system.rawValue
+
     /// The one store the app uses. Constructed here and passed down, so there is exactly
     /// one place in the app that decides where secrets live.
     ///
@@ -14,6 +17,9 @@ struct OpenFactorApp: App {
     var body: some Scene {
         WindowGroup {
             AccountListView(store: store)
+                .preferredColorScheme(
+                    (AppearancePreference(rawValue: appearance) ?? .system).colorScheme
+                )
         }
     }
 }

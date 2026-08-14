@@ -81,16 +81,55 @@ final class AccountListViewModel {
 
     var searchText: String = ""
 
-    /// The rows actually shown, after the search field.
+    /// How the list is ordered. Manual means the stored positions, which the store already
+    /// sorted by, so it is the identity case.
+    var sortOrder: AccountSortOrder = .manual
+
+    /// The rows actually shown, after the search field and the sort order.
     var visibleRows: [Row] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return rows }
 
-        return rows.filter { row in
-            row.record.metadata.displayIssuer.localizedCaseInsensitiveContains(query)
-                || row.record.metadata.name.localizedCaseInsensitiveContains(query)
+        let matching =
+            query.isEmpty
+            ? rows
+            : rows.filter { row in
+                row.record.metadata.displayIssuer.localizedCaseInsensitiveContains(query)
+                    || row.record.metadata.name.localizedCaseInsensitiveContains(query)
+            }
+
+        return sorted(matching)
+    }
+
+    /// Sorting is applied to what is shown rather than to `rows`, which stays in stored
+    /// order. That way switching to an automatic sort and back does not rewrite every
+    /// account's position, and the manual order someone arranged is still there when they
+    /// return to it.
+    private func sorted(_ rows: [Row]) -> [Row] {
+        switch sortOrder {
+        case .manual:
+            rows
+        case .issuer:
+            rows.sorted { first, second in
+                let byIssuer = first.record.metadata.displayIssuer
+                    .localizedCaseInsensitiveCompare(second.record.metadata.displayIssuer)
+
+                // Two accounts at the same service are common, so the account name breaks
+                // the tie rather than leaving the order to chance.
+                guard byIssuer == .orderedSame else { return byIssuer == .orderedAscending }
+
+                return first.record.metadata.name
+                    .localizedCaseInsensitiveCompare(second.record.metadata.name) == .orderedAscending
+            }
+        case .name:
+            rows.sorted {
+                $0.record.metadata.name.localizedCaseInsensitiveCompare($1.record.metadata.name)
+                    == .orderedAscending
+            }
         }
     }
+
+    /// Dragging only makes sense when the order is the user's to set.
+    var canReorder: Bool { sortOrder == .manual && !isSearching }
 
     var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

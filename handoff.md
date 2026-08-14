@@ -3,14 +3,14 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 10.
+**Last updated:** 2026-08-14, end of PR 11.
 
 ## Where things stand
 
-PR 10 is complete. Accounts can be renamed, recoloured, reordered by dragging, and
-removed behind a confirmation that names what is lost.
+PR 11 is complete. **Every screen in `docs/UI_SPEC.md` now exists.** Settings carries sort
+order, appearance, version, and links to the source, the licence, and the issue tracker.
 
-Every screen in `docs/UI_SPEC.md` now exists except Settings, which is PR 11.
+Phase 2 is done. What follows is polish, then sync, the watch, and hardening.
 
 **The live camera path is the one thing not verified.** The simulator has no camera. The
 photo import path, the permission denied path, parsing, confirmation, and saving were all
@@ -32,8 +32,9 @@ device run before it can be called done.
 | PR 8, add account by QR scan | Done, camera verified on device |
 | PR 9, manual setup and counter accounts | Done |
 | PR 10, edit mode | Done |
-| PR 11, settings sheet | **Next** |
-| PR 12 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 11, settings sheet | Done |
+| PR 12, polish and accessibility | **Next** |
+| PR 13 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
 [docs/audits/A1.md](docs/audits/A1.md) and fully closed, with a `/security-review` addendum
@@ -72,6 +73,8 @@ OpenFactor/                                App target
   Scanning/ManualSetupViewModel.swift      Validation, preview, saving
   Scanning/ManualSetupView.swift           The form, with Advanced collapsed
   Views/EditAccountView.swift              Renaming, and the colour grid
+  Settings/SettingsView.swift              Only rows whose features exist
+  Settings/Preferences.swift               Sort order and appearance, in UserDefaults
 OpenFactorTests/PaletteTests.swift         Contrast asserted, not eyeballed
 OpenFactorTests/                           Empty folder. Its sources are Tests/ above
 docs/audits/A1.md                          Gate A1 findings and disposition
@@ -163,6 +166,13 @@ would be to weaken what they assert.
   search
 - The list drives edit mode from its own state rather than `EditButton`, which toggles a
   different binding than the one the list reads and silently does nothing
+- A settings row appears when its feature does. No greyed rows for iCloud, the app lock, or
+  export: a settings screen describes what an app does, and in a security tool an
+  aspirational row is a false claim
+- Sorting is a view of the list. An automatic order never touches the stored positions, so
+  the manual arrangement survives switching away and back
+- Preferences are in `UserDefaults` because a sort order and a colour scheme reveal nothing.
+  Anything naming a service stays in the Keychain with the secrets
 
 ## Decisions still open
 
@@ -210,13 +220,15 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 11, the settings sheet: Sort Accounts, Appearance, iCloud, App Lock, Export and Import,
-About and Source, Report an Issue, Rate on the App Store. Rows are wired to real state as
-the features land, so this PR delivers the shell plus Sort Accounts, Appearance, About, and
-Report an Issue. The others get their rows when their features do.
+PR 12, the polish and accessibility pass, and the first pull request whose input is a list
+rather than a specification. Start from [docs/POLISH.md](docs/POLISH.md), which already has
+Xavier's outstanding item (choosing a colour while adding an account) and four noticed while
+building. Ask him for anything else before starting, since his list is the main input and
+most of it has not been written down.
 
-This is also where the **settings gear** finally has somewhere to go, having been left out
-of the top bar since PR 7 on the grounds that a dead button is worse than no button.
+Then: Dynamic Type across every screen including the accessibility sizes where cards
+reflow, VoiceOver labels and order, Reduce Motion, a contrast audit against real content,
+and every user facing string read once in order as a whole.
 
 **The live camera works.** Verified on Xavier's iPhone 15 Pro on 2026-08-14, which closes
 the last unverified path in the add flow. The app is installed there, signed with team

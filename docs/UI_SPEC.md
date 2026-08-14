@@ -52,8 +52,26 @@ Rate on the App Store, Send Feedback. Each row has a colored rounded icon. `Done
 | Add **Export and Import** | Users must be able to leave. An authenticator you cannot escape is a trap |
 | Add **About and Source**, linking to the GitHub repo and license | The whole point of the project |
 | Replace **Send Feedback** with **Report an Issue**, linking to GitHub Issues | No mail composer, no support inbox to run |
-| Keep **Rate on the App Store** | Uses `StoreKit`, involves no tracking |
+| Keep **Rate on the App Store** | Uses `StoreKit`, involves no tracking. Not present until there is a listing to point at, which is PR 18 |
+| Add **Appearance** (System, Light, Dark) | The palette was built for both schemes from the start, so honouring a preference costs nothing |
 | iCloud row explains in plain words what is synced and that Apple cannot read it | Sync is the one thing that leaves the device, so it gets an explanation, not just a toggle |
+
+**A row appears when its feature does.** There is no row for iCloud sync, the app lock, or
+export, because a settings screen is a description of what an app does. A row reading "App
+Lock" tells someone their codes are behind Face ID, and a greyed one reading "coming soon"
+tells them the app is nearly there. Neither is true yet, and in a security tool that is not
+a harmless exaggeration. This is the same rule that kept the add button out of the top bar
+until PR 8 and the settings gear out until PR 11.
+
+**Sorting is a view of the list, not a rewrite of it.** Choosing an automatic order does not
+touch the stored positions, so switching away and back returns the arrangement someone made
+by hand. Dragging is offered only while the order is theirs to set, since a drag into a list
+that sorts itself would either be ignored or would silently change the setting.
+
+**Preferences live in `UserDefaults`, secrets do not.** A sort order and a colour scheme
+reveal nothing, not even that any accounts exist. Anything that would say which services
+someone uses is in the Keychain with the secrets, which is why the account metadata is there
+and not here.
 
 ## Screen 3: QR scanner
 

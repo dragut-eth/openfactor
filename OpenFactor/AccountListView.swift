@@ -8,7 +8,10 @@ struct AccountListView: View {
     @State private var model: AccountListViewModel
     @State private var copied: UUID?
     @State private var isAdding = false
+    @State private var isShowingSettings = false
     @State private var editMode: EditMode = .inactive
+
+    @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
 
     @State private var editing: AccountListViewModel.Row?
     @State private var recolouring: AccountListViewModel.Row?
@@ -31,12 +34,19 @@ struct AccountListView: View {
                 .searchable(text: $model.searchText, prompt: "Search accounts")
                 .background(Tokens.Surface.background)
                 .environment(\.editMode, $editMode)
-                .onAppear { model.load(at: Date()) }
+                .onAppear {
+                    model.sortOrder = AccountSortOrder(rawValue: sortOrder) ?? .manual
+                    model.load(at: Date())
+                }
+                .onChange(of: sortOrder) { _, raw in
+                    model.sortOrder = AccountSortOrder(rawValue: raw) ?? .manual
+                }
                 .onReceive(tick) { model.tick(at: $0) }
                 .toolbar { toolbar }
                 .sheet(isPresented: $isAdding) {
                     AddAccountView(store: store) { model.load(at: Date()) }
                 }
+                .sheet(isPresented: $isShowingSettings) { SettingsView() }
                 .sheet(item: $editing) { row in
                     EditAccountView(record: row.record) { issuer, name in
                         model.rename(row, issuer: issuer, name: name)
@@ -75,9 +85,17 @@ struct AccountListView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                isShowingSettings = true
+            } label: {
+                Label("Settings", systemImage: "gearshape")
+            }
+        }
+
         // Reordering rearranges the whole list, so it makes no sense while a search is
-        // hiding part of it.
-        if !model.rows.isEmpty && !model.isSearching {
+        // hiding part of it, or while the list is sorting itself.
+        if !model.rows.isEmpty && model.canReorder {
             ToolbarItem(placement: .topBarLeading) {
                 // Not `EditButton`. That toggles whichever edit mode the toolbar happens
                 // to see, which is not the one this view puts into the list's environment,
