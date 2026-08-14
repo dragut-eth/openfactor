@@ -39,12 +39,16 @@ public enum TOTP {
     /// code exactly when they agree on this number, which is why a phone with a badly
     /// wrong clock produces codes that are rejected everywhere.
     public static func counter(at date: Date, period: Int) -> UInt64 {
-        // A clock set before 1970 is broken, and no code generated from it will work.
-        // Clamping keeps the arithmetic defined rather than trapping on the conversion.
+        // A clock outside the representable range is broken, and no code generated from
+        // it will work anywhere. Clamping at both ends keeps the arithmetic defined
+        // rather than trapping on the conversion: the low end at zero, and the high end
+        // at UInt64.max, which the exact conversion refuses. Found at gate A1, where the
+        // unclamped conversion crashed on Date(timeIntervalSince1970: 1e20).
         let seconds = date.timeIntervalSince1970
         guard seconds >= 0 else { return 0 }
 
-        return UInt64(seconds.rounded(.down)) / UInt64(period)
+        let whole = UInt64(exactly: seconds.rounded(.down)) ?? UInt64.max
+        return whole / UInt64(period)
     }
 
     /// How long the current code stays valid, in seconds.

@@ -6,7 +6,7 @@ import Foundation
 /// not: the actual values live with the design tokens in the app, one set for light mode
 /// and one for dark, so a palette change never touches stored data. What is stored is
 /// this name, which stays meaningful whatever the palette does next.
-public enum AccountColor: String, Sendable, Equatable, CaseIterable, Codable {
+public enum AccountColor: String, Sendable, Equatable, CaseIterable {
     case red
     case orange
     case yellow
@@ -20,6 +20,18 @@ public enum AccountColor: String, Sendable, Equatable, CaseIterable, Codable {
 
     /// Used when an account arrives without a colour, mostly on import.
     public static let `default` = AccountColor.blue
+
+    /// A palette name this version does not know is read as the default, not as an error.
+    ///
+    /// Deliberately different from how the generator settings decode, and the difference
+    /// is the point. An unknown algorithm changes the codes, so it must fail loudly. An
+    /// unknown colour changes nothing but a tint, and refusing it would mean a record
+    /// written by a newer version with a bigger palette could not be read by this one,
+    /// which in `KeychainSecretStore.records()` blocks the entire list over a paint
+    /// colour. Found at gate A1.
+    public init(fallingBack name: String) {
+        self = AccountColor(rawValue: name) ?? .default
+    }
 
     /// A colour derived from the issuer, so a freshly added account is not the same blue
     /// as the last one and the list stays scannable.
@@ -38,5 +50,16 @@ public enum AccountColor: String, Sendable, Equatable, CaseIterable, Codable {
         }
 
         return allCases[Int(total % UInt32(allCases.count))]
+    }
+}
+
+extension AccountColor: Codable {
+    public init(from decoder: any Decoder) throws {
+        self.init(fallingBack: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 }

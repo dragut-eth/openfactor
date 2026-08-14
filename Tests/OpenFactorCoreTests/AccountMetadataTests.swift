@@ -119,6 +119,23 @@ struct AccountMetadataTests {
         }
     }
 
+    /// The asymmetry between this and the refusals above is deliberate. An unknown
+    /// algorithm changes the codes and must fail. An unknown colour changes a tint, and
+    /// failing would let a record written by a newer, bigger palette block the whole list.
+    @Test("An unknown colour decodes as the default rather than failing")
+    func unknownColorFallsBack() throws {
+        let json = Data(
+            """
+            {"issuer":"GitHub","name":"octocat","color":"chartreuse","sortIndex":0,\
+            "generator":{"totp":{"_0":{"algorithm":"SHA1","digits":6,"period":30}}}}
+            """.utf8
+        )
+
+        let decoded = try JSONDecoder().decode(AccountMetadata.self, from: json)
+        #expect(decoded.color == .default)
+        #expect(decoded.name == "octocat")
+    }
+
     // MARK: - Display
 
     @Test(

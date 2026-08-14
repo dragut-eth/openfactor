@@ -107,6 +107,16 @@ call that returns every account with its secret.
 cryptographic code written here is the RFC 4226 dynamic truncation, which is arithmetic on
 the HMAC output and is covered by the published vectors.
 
+**The metadata schema must evolve without stranding old readers.** Metadata is JSON in the
+Keychain, and a record written by a newer version will one day be read by an older one, on
+a second device that has not updated. Two rules, set at gate A1. New fields must be
+optional with a default, so an old reader can ignore them. And values that change code
+generation, the algorithm, digits, period, and counter, are never given fallbacks: an
+unknown algorithm fails the record loudly, because guessing produces plausible codes that
+are rejected everywhere. Cosmetic values get fallbacks instead, which is why an unknown
+colour name decodes as the default rather than making an account, or the whole list,
+unreadable.
+
 **Decoding is lenient about formatting and strict about content.** `Base32` accepts
 lowercase, spaces, and hyphens, because that is how services actually print secrets and
 how they land on the pasteboard. It rejects everything else with a specific error rather

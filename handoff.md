@@ -3,14 +3,17 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 4.
+**Last updated:** 2026-08-14, end of gate A1.
 
 ## Where things stand
 
-PR 4 is complete. `OpenFactorCore` is finished. Accounts can be saved, listed, read,
-renamed, reordered, and deleted, and the list is drawn without decrypting a single secret.
+Gate A1 has run. Findings, fixes, and the honesty caveats are in
+[docs/audits/A1.md](docs/audits/A1.md), and the audited commit is tagged `audit-a1`. Two
+defects were found and fixed with regression tests, fuzzing is now a permanent part of the
+suite, and the RFC vector tables were re-verified against the IETF documents themselves.
 
-**Stop here for gate A1 before starting PR 5.**
+A1 remains open on exactly one point: the six skipped Keychain tests, which need the host
+application target that PR 5 builds first.
 
 | Phase | Status |
 | --- | --- |
@@ -18,22 +21,17 @@ renamed, reordered, and deleted, and the list is drawn without decrypting a sing
 | PR 1, `OpenFactorCore` and Base32 | Done |
 | PR 2, HOTP and TOTP | Done |
 | PR 3, `otpauth://` parsing | Done |
-| PR 4, Keychain storage | Done, with one item deferred, see below |
-| Gate A1, audit the core | **Next** |
-| PR 5 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 4, Keychain storage | Done |
+| Gate A1, audit the core | Done, except the item below |
+| PR 5, app shell | **Next**, and its first job closes A1 |
+| PR 6 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
-**Next audit gate: A1, now.** The core is complete and nothing is built on it, which is
-the cheapest moment it will ever be to find something wrong. The five gates and the rules
-for them are in [docs/ROADMAP.md](docs/ROADMAP.md). A gate that gets waived quietly is the
-failure this project is trying to avoid, so this line is updated in every pull request.
-
-**The one thing A1 cannot close.** The Keychain protection class on a stored secret is
-implemented but unverified: asserting it needs the data protection Keychain, which needs an
-entitlement, which needs code signing, which a `swift test` bundle does not have. Six tests
-are written and skipped. They run against the host application target that PR 5 adds first,
-and A1 stays open on that point until they pass. The macOS legacy Keychain is not a stand
-in: it accepts the writes and ignores `kSecAttrAccessible` entirely, so a test against it
-would pass while proving nothing.
+**Next audit gate: A2, after PR 13.** A1 ran on 2026-08-14 and is recorded in
+[docs/audits/A1.md](docs/audits/A1.md), open on one point: the Keychain protection class is
+implemented but unverified, because asserting it needs an entitlement an unsigned
+`swift test` bundle does not have. Six tests are written and skipped. PR 5's first job is
+the host application test target that runs them, and A1 closes when they pass. F3, F4, and
+F5 in the audit record carry obligations into PR 7, the HOTP PR, and PR 17 respectively.
 
 ## What exists
 
@@ -50,7 +48,9 @@ Sources/OpenFactorCore/
   KeychainSecretStore.swift                One Keychain item per account
   InMemorySecretStore.swift                For previews and tests. Never used by the app
   AccountMetadata.swift, AccountColor.swift  What is stored beside a secret
-Tests/OpenFactorCoreTests/                 99 tests across 11 suites, plus 6 skipped
+Tests/OpenFactorCoreTests/                 106 tests across 12 suites, plus 6 skipped,
+                                           including 17k iteration deterministic fuzzing
+docs/audits/A1.md                          Gate A1 findings and disposition
 LICENSE, README.md, SECURITY.md, CONTRIBUTING.md, handoff.md
 docs/ROADMAP.md, docs/ARCHITECTURE.md, docs/UI_SPEC.md
 .github/workflows/ci.yml                   Style checks, then build and test
@@ -130,15 +130,15 @@ sharing a model share their blind spots.
 
 ## Next step
 
-**Gate A1, not a pull request.** The checklist is in [docs/ROADMAP.md](docs/ROADMAP.md).
-In short: an independent review of the whole of `OpenFactorCore` by someone or something
-that did not write it, `/security-review` over the accumulated diff, the RFC vector tables
-re-checked by hand against the published documents rather than against what the tests
-assert, fuzzing of the parser and the Base32 decoder, and a check that no secret material
-reaches a log or a description. Findings recorded in the open, audited commit tagged.
+PR 5, the Xcode project and app shell. In order:
 
-Then PR 5, whose first job is the host application test target that lets the six skipped
-Keychain tests run. Nothing else in PR 5 matters until they pass.
+1. The host application test target, so the six skipped Keychain tests run. This closes
+   A1, and nothing else in the PR matters until they pass. Record the result in
+   docs/audits/A1.md.
+2. The project format decision (checked in .xcodeproj versus generated). Current lean is
+   to generate. Record it in docs/ARCHITECTURE.md.
+3. The iOS app target depending on the local package, launching to an empty list.
 
-Suggested effort: **High** for the gate itself, then **Medium** from PR 5 onward, where
-the work turns into ordinary interface building.
+Suggested effort: **Medium**. This is project plumbing and interface shell. A cold session
+adversarial review of Sources/ remains worth doing at any point, see the honesty note in
+the audit record.

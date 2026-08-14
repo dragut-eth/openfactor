@@ -130,6 +130,19 @@ struct TOTPTests {
         #expect(TOTP.timeRemaining(at: date, period: 30) == 30)
     }
 
+    /// The same promise at the other end of the range. Before gate A1 this trapped, since
+    /// UInt64(_: Double) crashes on a value past UInt64.max rather than saturating.
+    @Test("A clock set absurdly far in the future does not trap")
+    func handlesFarFutureClock() {
+        for interval in [1e19, 1e20, 1e30, .greatestFiniteMagnitude, Date.distantFuture.timeIntervalSince1970] {
+            let date = Date(timeIntervalSince1970: interval)
+            _ = TOTP.counter(at: date, period: 30)
+            _ = TOTP.timeRemaining(at: date, period: 30)
+        }
+
+        #expect(TOTP.counter(at: Date(timeIntervalSince1970: 1e20), period: 30) == UInt64.max / 30)
+    }
+
     // MARK: - Countdown
 
     @Test(

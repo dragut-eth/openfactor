@@ -87,6 +87,12 @@ export format before any user has a backup, the finished app, and then the diff 
 release after that. Findings get published whether or not they are flattering, and this
 section will name the audited commit and who reviewed it.
 
+**Gate A1** ran on 2026-08-14 against the core, tag `audit-a1`: an adversarial model
+review, the RFC vector tables re-verified against the IETF documents, and 17,000+ fuzz
+iterations. Two defects found and fixed, full findings in
+[docs/audits/A1.md](docs/audits/A1.md), one item still open there. It was a model review,
+not a human one, and it does not soften the warning above.
+
 ## Documentation
 
 - [docs/ROADMAP.md](docs/ROADMAP.md), the PR by PR delivery plan
