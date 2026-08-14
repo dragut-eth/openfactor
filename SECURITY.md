@@ -83,6 +83,28 @@ frameworks and this repository.
 Verify what you install. Reproducible build notes land in PR 18 so a third party can
 confirm that a released binary was built from the tagged source.
 
+### System added menu entries
+
+*Known and accepted, to be re-examined in PR 17.*
+
+Long pressing an account card opens a system context menu. iOS may add entries to such a
+menu that this app does not define, and on iOS 26 it adds "Ask Siri". Invoking it may pass
+what is on screen, which includes a live code and an account name, to an assistant that can
+process requests off device.
+
+This was found during development and the menu was removed. It was then deliberately
+restored, because the system menu carries a preview and a lift animation that an app
+defined action sheet cannot reproduce, and the alternative was judged the worse product.
+The trade is recorded here rather than left implicit.
+
+What is known: the entry exists, and the app does not put it there. What is not known, and
+what this project cannot verify from the outside, is exactly what it transmits and when.
+Anyone for whom that matters can turn off Apple Intelligence in iOS Settings, which removes
+the entry.
+
+PR 17 should either establish what it transmits, or state plainly that it is unverified,
+rather than leaving this paragraph as the last word.
+
 ### Explicitly out of scope
 
 - A jailbroken or already compromised device. If the OS is owned, nothing in userspace
@@ -102,10 +124,6 @@ confirm that a released binary was built from the tagged source.
   written outside the Keychain.
 - Non secret metadata such as the account color and sort order is stored separately from
   the secret, so drawing the list never requires loading secret material.
-- **No system context menus on anything showing a code.** iOS adds its own entries to a
-  system context menu, and on the account card it added "Ask Siri", which offers to hand
-  the card's contents to an assistant that may process them off device. What such an entry
-  actually transmits is not something this project can verify from the outside, and an app
-  whose first claim is that nothing leaves the device cannot ship a menu that might. The
-  same actions are available from a menu the app defines, which gets no additions. Any
-  future screen showing secret material inherits this rule.
+- The account card uses a **system context menu**, and iOS may append entries of its own to
+  it. On iOS 26 it appends "Ask Siri", which offers to pass the card's contents to an
+  assistant that may process them off device. See the threat model entry above.

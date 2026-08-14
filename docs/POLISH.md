@@ -56,15 +56,16 @@ Not everything waits for PR 12.
 7. Colour is choosable in both add paths, and in manual setup it follows the issuer until
    somebody picks one. A choice that silently reverted on the next keystroke in the service
    field would be worse than not offering it.
-10. The system context menu removed entirely. See below.
+10. "Ask Siri" in the card's context menu. Removed the context menu, then restored it at
+    Xavier's decision once it was clear the replacement cost the lift and preview
+    animation. The trade is recorded in `SECURITY.md` as an accepted risk rather than left
+    implicit, and PR 17 should establish what the entry actually transmits.
 11. Wider margins on the cards, to Apple Weather's proportions. The margin does the most
     work in edit mode, where the delete control and the drag handle otherwise crowd the
     card's edges.
-12. Long press restored after the context menu removal, as a confirmation dialog. It is a
-    standard iOS action sheet, not a custom control: the difference from a context menu is
-    that a dialog shows only the buttons it is given, so the system cannot append entries
-    to it. `highPriorityGesture` is required, since `onLongPressGesture` and
-    `simultaneousGesture` both lose to the recognisers a `List` row already carries.
+12. Uneven margins between the two scan screen buttons. Cancel was a `Button` and Enter
+    manually a `NavigationLink`, and the two pad their labels differently. Both are buttons
+    now, with the navigation driven by state.
 13. The scroll indicator drew on top of the cards. It was drawing exactly where it should:
     padding the list had moved the list's own trailing edge inward to meet the cards. The
     margins now belong to the rows, leaving the list full width and the indicator beside

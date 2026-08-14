@@ -16,7 +16,6 @@ struct AccountListView: View {
     @State private var editing: AccountListViewModel.Row?
     @State private var recolouring: AccountListViewModel.Row?
     @State private var pendingDeletion: AccountListViewModel.Row?
-    @State private var showingActions: AccountListViewModel.Row?
 
     private let store: any SecretStore
 
@@ -56,19 +55,6 @@ struct AccountListView: View {
                     EditAccountView(record: row.record) { issuer, name in
                         model.rename(row, issuer: issuer, name: name)
                     }
-                }
-                .confirmationDialog(
-                    showingActions?.record.metadata.displayIssuer ?? "",
-                    isPresented: Binding(
-                        get: { showingActions != nil },
-                        set: { if !$0 { showingActions = nil } }
-                    ),
-                    titleVisibility: .visible,
-                    presenting: showingActions
-                ) { row in
-                    Button("Change colour") { recolouring = row }
-                    Button("Edit details") { editing = row }
-                    Button("Remove", role: .destructive) { pendingDeletion = row }
                 }
                 .sheet(item: $recolouring) { row in
                     AccountColorPicker(selected: row.record.metadata.color) { colour in
@@ -188,47 +174,31 @@ struct AccountListView: View {
     }
 
     private func card(for row: AccountListViewModel.Row) -> some View {
-        AccountCard(model: row.card)
-            .overlay(alignment: .topTrailing) { accessory(for: row) }
-            .overlay {
-                if copied == row.id {
-                    CopiedBadge()
-                }
+        Button {
+            copy(row)
+        } label: {
+            AccountCard(model: row.card)
+        }
+        .buttonStyle(.plain)
+        .disabled(editMode.isEditing)
+        .overlay(alignment: .topTrailing) { accessory(for: row) }
+        .overlay {
+            if copied == row.id {
+                CopiedBadge()
             }
-            .contentShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
-            // Without this the drag preview is a rectangle, and the card's rounded corners
-            // reveal its opaque backing as a dark notch. Naming the shape makes the lifted
-            // card exactly the card.
-            .contentShape(
-                .dragPreview,
-                RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
-            )
-            // Tap and long press are handled here rather than by a Button and a
-            // `.contextMenu`. iOS appends its own entries to a system context menu, and on
-            // this card it appended "Ask Siri", offering to hand the contents of a two
-            // factor code card to an assistant that may process it off device. A
-            // confirmation dialog shows only the buttons it is given, so the long press
-            // survives without the additions. See SECURITY.md.
-            .onTapGesture {
-                guard !editMode.isEditing else { return }
-                copy(row)
-            }
-            // `highPriorityGesture` rather than `onLongPressGesture` or
-            // `simultaneousGesture`, both of which lose to the recognisers a List row
-            // already carries and never fire.
-            .highPriorityGesture(
-                LongPressGesture(minimumDuration: 0.4).onEnded { _ in
-                    guard !editMode.isEditing else { return }
-                    showingActions = row
-                }
-            )
-            .accessibilityAddTraits(.isButton)
-            .accessibilityHint(editMode.isEditing ? "" : "Copies the code")
-            // VoiceOver cannot long press, so the same actions are offered as rotor
-            // actions on the element itself.
-            .accessibilityAction(named: "Change colour") { recolouring = row }
-            .accessibilityAction(named: "Edit details") { editing = row }
-            .accessibilityAction(named: "Remove") { pendingDeletion = row }
+        }
+        // Without this the drag preview is a rectangle, and the card's rounded corners
+        // reveal its opaque backing as a dark notch. Naming the shape makes the lifted
+        // card exactly the card.
+        .contentShape(
+            .dragPreview,
+            RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+        )
+        // A system context menu, for the lift and the card preview behind it, which an
+        // action sheet cannot reproduce. The cost is that iOS may append entries of its
+        // own, including "Ask Siri". Accepted deliberately, see SECURITY.md.
+        .contextMenu { menu(for: row) }
+        .accessibilityHint(editMode.isEditing ? "" : "Copies the code")
     }
 
     @ViewBuilder

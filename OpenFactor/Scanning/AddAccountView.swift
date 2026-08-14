@@ -9,6 +9,7 @@ struct AddAccountView: View {
     @State private var model: AddAccountViewModel
     @State private var cameraStatus = CameraAccess.status
     @State private var photoItem: PhotosPickerItem?
+    @State private var isEnteringManually = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -36,22 +37,25 @@ struct AddAccountView: View {
                     // The reference puts this here too. It is the way out for services
                     // that print a secret instead of showing a code, and the way out when
                     // the camera is unavailable.
-                    // Trailing rather than `.confirmationAction`, which renders bold and
-                    // made this read as the primary action next to a regular weight
-                    // Cancel. Scanning is the primary action; this is the way out of it.
+                    // A Button rather than a NavigationLink, and trailing rather than
+                    // `.confirmationAction`. The placement keeps it from rendering bold
+                    // beside a regular weight Cancel, and the control type keeps the two
+                    // capsules padding their labels identically: a NavigationLink insets
+                    // its title differently, which showed as uneven margins.
                     ToolbarItem(placement: .topBarTrailing) {
-                        NavigationLink("Enter manually") {
-                            ManualSetupView(store: store) {
-                                onAdded()
-                                dismiss()
-                            }
-                        }
+                        Button("Enter manually") { isEnteringManually = true }
                     }
                 }
                 .task {
                     if cameraStatus == .notAsked {
                         _ = await CameraAccess.request()
                         cameraStatus = CameraAccess.status
+                    }
+                }
+                .navigationDestination(isPresented: $isEnteringManually) {
+                    ManualSetupView(store: store) {
+                        onAdded()
+                        dismiss()
                     }
                 }
                 .onChange(of: model.stage) { _, stage in

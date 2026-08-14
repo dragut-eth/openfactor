@@ -30,7 +30,7 @@ treatment is adapted where noted.
 | Full light mode support, a v1 requirement | The reference is dark only. Light mode costs little if color tokens are defined from the start and is painful to retrofit later |
 | Card color meets contrast requirements against white text | Some reference colors are borderline. Every palette entry gets checked |
 | The copied confirmation sits across the middle of the card | It confirms the reason the card was tapped, and the reader's eyes are already on the digits. A corner badge was missed |
-| No system context menu anywhere a code is shown | iOS adds its own entries, and it added "Ask Siri". See `SECURITY.md` |
+| Long press opens the system context menu | Kept for the lift and the card preview, which an app defined sheet cannot reproduce. iOS may append entries of its own to it, including "Ask Siri". Recorded as accepted in `SECURITY.md` |
 | Dragging a list that is sorting itself adopts the visible order | Refusing the gesture was the worst option. The user has said where they want the card |
 
 **Interactions**
