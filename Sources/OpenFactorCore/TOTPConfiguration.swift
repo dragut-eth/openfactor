@@ -52,6 +52,38 @@ public struct TOTPConfiguration: Sendable, Equatable {
     }
 }
 
+extension TOTPConfiguration: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case algorithm
+        case digits
+        case period
+    }
+
+    /// Decoding runs the same validation as the initialiser, deliberately.
+    ///
+    /// Synthesised decoding would write straight into the stored properties and skip the
+    /// range check, which is exactly the wrong behaviour for a value read back from
+    /// storage. A period of zero arriving from a corrupted or edited record would divide
+    /// by zero the first time a code was generated. Stored data is input like any other.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let algorithm = try container.decode(OTPAlgorithm.self, forKey: .algorithm)
+        let digits = try container.decode(OTPDigits.self, forKey: .digits)
+        let period = try container.decode(Int.self, forKey: .period)
+
+        do {
+            try self.init(algorithm: algorithm, digits: digits, period: period)
+        } catch {
+            throw DecodingError.dataCorruptedError(
+                forKey: .period,
+                in: container,
+                debugDescription: error.description
+            )
+        }
+    }
+}
+
 /// Why a configuration was refused.
 public enum TOTPConfigurationError: Error, Equatable, Sendable {
     case invalidPeriod(Int)

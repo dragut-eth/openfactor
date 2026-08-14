@@ -5,7 +5,7 @@ import Foundation
 /// RFC 4226 section 5.3 requires at least 6 and treats 7 and 8 as optional. Making this
 /// an enumeration rather than an `Int` means a code length that no service issues cannot
 /// be constructed at all, so nothing downstream has to check for one.
-public enum OTPDigits: Int, Sendable, Equatable, CaseIterable {
+public enum OTPDigits: Int, Sendable, Equatable, CaseIterable, Codable {
     case six = 6
     case seven = 7
     case eight = 8

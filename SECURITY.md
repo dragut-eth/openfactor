@@ -32,10 +32,20 @@ There is no revocation short of re enrolling with the service.
 
 ### Attacker with your locked device
 
-*Planned.* Secrets live in the Keychain with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`.
-They are encrypted with a key derived from your device passcode and the Secure Enclave,
-and are unreadable while the device is locked. An attacker with the hardware and no
-passcode should get nothing.
+*Implemented, not yet verified by test.* Secrets live in the Keychain with
+`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. They are encrypted with a key derived from
+your device passcode and the Secure Enclave, and are unreadable while the device is locked.
+An attacker with the hardware and no passcode should get nothing.
+
+The test that asserts this protection class cannot run in the current test setup, because
+reaching the data protection Keychain requires an entitlement that an unsigned test bundle
+does not have. The test is written and skipped, and runs once the app target exists. Until
+then, treat this paragraph as a description of intent rather than of verified behaviour.
+
+Your account names are protected too. The issuer and account name cannot generate a code,
+but they say which services you use and under which email address, so they are stored in
+the Keychain alongside the secret rather than in an ordinary file. They are encrypted at
+rest and absent from unencrypted backups for the same reason the secrets are.
 
 ### Attacker with your unlocked device
 

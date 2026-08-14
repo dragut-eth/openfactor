@@ -153,9 +153,10 @@ typed error, never a partially populated account.
 - `SecretStore.swift`: protocol plus a Keychain backed implementation
 - `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` by default
 - The `synchronizable` flag exposed but left off, wired up in PR 11
-- Non secret metadata (issuer, label, color, sort index) stored separately from the secret
-  so the UI never needs to page in secret material to draw a list. The color and manual
-  sort index are required by the design, see `docs/UI_SPEC.md`
+- Metadata (issuer, label, color, sort index) kept out of the path that draws the list, so
+  the UI never pages in secret material. Delivered as one Keychain item per account with
+  the separation enforced by the query rather than by two separate stores, which also
+  encrypts the metadata. Reasoning in `docs/ARCHITECTURE.md`
 - Tests against a real Keychain in a host app test target
 
 **Done when:** a secret can be written, read, listed, and deleted, and the accessibility
@@ -179,7 +180,14 @@ this the cheapest possible moment to find something wrong with it.
 - Confirm no secret material reaches a log, an error message, or a description
 - Tag the audited commit and record findings
 
-**Do not start PR 5 until findings are closed.**
+**One item cannot close at this gate.** The Keychain protection class on a stored secret
+cannot be asserted from an unsigned `swift test` bundle, so those tests exist and are
+skipped. They run against the host application target added at the start of PR 5, and gate
+A1 stays open on that single point until they pass. Everything else at this gate closes
+here.
+
+**Do not start PR 5 beyond the host application test target until the rest of the findings
+are closed.**
 
 ---
 
@@ -192,6 +200,9 @@ reference screenshots. Feature parity is the goal, with the adaptations listed t
 
 **Goal:** something that launches.
 
+- **First job: a host application test target,** so the Keychain tests written in PR 4 can
+  finally run. They are the last open item on gate A1 and nothing else in this PR matters
+  until they pass
 - Xcode project with the iOS app target, depending on the local `OpenFactorCore` package
 - App entry point, root navigation, empty state
 - Decision recorded in `docs/ARCHITECTURE.md`: whether the project file is checked in

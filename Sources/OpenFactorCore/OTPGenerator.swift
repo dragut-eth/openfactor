@@ -8,7 +8,7 @@ import Foundation
 /// step with the service. Modelling them as one type with an optional counter would let a
 /// time based account carry a meaningless counter, and would let a counter based account
 /// exist without one.
-public enum OTPGenerator: Sendable, Equatable {
+public enum OTPGenerator: Sendable, Equatable, Codable {
 
     /// Time based, RFC 6238. What almost every service issues.
     case totp(TOTPConfiguration)

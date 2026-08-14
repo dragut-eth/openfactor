@@ -85,9 +85,23 @@ generating. The stored form splits the two, see below. It deliberately conforms 
 `Codable` nor `CustomStringConvertible`, so encoding or printing an account, and its
 secret with it, is never one keystroke away.
 
-**Secrets and metadata are stored separately.** Issuer, label, color, and sort index are
-not secret and live apart from the secret itself, so drawing the account list never loads
-secret material into memory.
+**Secrets and metadata are separated by the query, not by the file.** Drawing the account
+list never loads secret material. How that is achieved changed during PR 4, and the new
+answer is stronger than the planned one, so it is worth stating precisely.
+
+The plan was two stores: secrets in the Keychain, metadata somewhere ordinary. Two
+problems with that. Two records can get out of step, leaving a secret nobody can name or a
+name with no secret behind it, and more importantly the metadata is not secret but it is
+sensitive: the issuer and account name say which services someone uses and under which
+email address. In a plist or a database file that sits in the clear on the device and in
+every unencrypted backup.
+
+So each account is a single Keychain item. The secret is in `kSecValueData`, the metadata
+is JSON in `kSecAttrGeneric`, and both are encrypted at rest. The separation comes from
+the queries instead: listing accounts asks for attributes and explicitly sets
+`kSecReturnData` to false, so it decrypts no secrets at all, and only `secret(for:)` asks
+for data, for one account, at the moment a code is generated. There is deliberately no
+call that returns every account with its secret.
 
 **No hand rolled cryptography.** HMAC and the hash functions come from CryptoKit. The only
 cryptographic code written here is the RFC 4226 dynamic truncation, which is arithmetic on
@@ -113,11 +127,25 @@ single shared tick.
 
 ## Storage and sync
 
-*Planned, arriving in PR 4 and PR 13.*
+*Storage exists as of PR 4. Sync arrives in PR 13.*
 
 Secrets are Keychain items with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` by default.
 Turning on sync flips them to synchronizable, which puts them in iCloud Keychain, end to
 end encrypted with keys Apple does not hold.
+
+**Sync requires weakening the protection class.** A synchronizable item cannot be
+`ThisDeviceOnly`, by definition, so PR 13 has to move those items to
+`kSecAttrAccessibleWhenUnlocked`. `SecretAccessibility` names both classes and documents
+the trade at the point of use, so the weakening is a visible decision rather than a
+side effect of setting a flag.
+
+**The protection class is not yet verified by test.** Reaching the data protection
+Keychain needs an entitlement, entitlements come from code signing, and a `swift test`
+bundle is unsigned, so those tests are written and skipped. The macOS legacy Keychain
+accepts writes from an unsigned process and ignores `kSecAttrAccessible` entirely, which
+makes it worse than useless as a stand in: asserting against it would pass while proving
+nothing. The tests run once a host application target exists in PR 5. Until they do, this
+is an open item on gate A1.
 
 The watch reads the same synchronizable Keychain items rather than receiving secrets over
 WatchConnectivity. A bespoke transfer channel is another place for secret material to

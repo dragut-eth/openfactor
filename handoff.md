@@ -3,12 +3,14 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 3.
+**Last updated:** 2026-08-14, end of PR 4.
 
 ## Where things stand
 
-PR 3 is complete. Accounts can be imported from and exported to `otpauth://` URIs.
-Everything in the core is done except storage.
+PR 4 is complete. `OpenFactorCore` is finished. Accounts can be saved, listed, read,
+renamed, reordered, and deleted, and the list is drawn without decrypting a single secret.
+
+**Stop here for gate A1 before starting PR 5.**
 
 | Phase | Status |
 | --- | --- |
@@ -16,13 +18,22 @@ Everything in the core is done except storage.
 | PR 1, `OpenFactorCore` and Base32 | Done |
 | PR 2, HOTP and TOTP | Done |
 | PR 3, `otpauth://` parsing | Done |
-| PR 4, Keychain storage | Next, and the last PR before gate A1 |
+| PR 4, Keychain storage | Done, with one item deferred, see below |
+| Gate A1, audit the core | **Next** |
 | PR 5 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
-**Next audit gate: A1, immediately after PR 4.** The core gets reviewed by someone who did
-not write it before anything is built on top of it. The five gates and the rules for them
-are in [docs/ROADMAP.md](docs/ROADMAP.md). A gate that gets waived quietly is the failure
-this project is trying to avoid, so this line is updated in every pull request.
+**Next audit gate: A1, now.** The core is complete and nothing is built on it, which is
+the cheapest moment it will ever be to find something wrong. The five gates and the rules
+for them are in [docs/ROADMAP.md](docs/ROADMAP.md). A gate that gets waived quietly is the
+failure this project is trying to avoid, so this line is updated in every pull request.
+
+**The one thing A1 cannot close.** The Keychain protection class on a stored secret is
+implemented but unverified: asserting it needs the data protection Keychain, which needs an
+entitlement, which needs code signing, which a `swift test` bundle does not have. Six tests
+are written and skipped. They run against the host application target that PR 5 adds first,
+and A1 stays open on that point until they pass. The macOS legacy Keychain is not a stand
+in: it accepts the writes and ignores `kSecAttrAccessible` entirely, so a test against it
+would pass while proving nothing.
 
 ## What exists
 
@@ -35,7 +46,11 @@ Sources/OpenFactorCore/
   TOTP.swift, TOTPConfiguration.swift      RFC 6238, time arithmetic only
   OTPGenerator.swift, OTPAccount.swift     What an account is. OTPAccount is transient
   OTPAuthURI.swift, ...Serialization.swift Import and export, plus OTPAuthURIError
-Tests/OpenFactorCoreTests/                 67 tests across 7 suites, all passing
+  SecretStore.swift, SecretStoreError.swift  The storage contract
+  KeychainSecretStore.swift                One Keychain item per account
+  InMemorySecretStore.swift                For previews and tests. Never used by the app
+  AccountMetadata.swift, AccountColor.swift  What is stored beside a secret
+Tests/OpenFactorCoreTests/                 99 tests across 11 suites, plus 6 skipped
 LICENSE, README.md, SECURITY.md, CONTRIBUTING.md, handoff.md
 docs/ROADMAP.md, docs/ARCHITECTURE.md, docs/UI_SPEC.md
 .github/workflows/ci.yml                   Style checks, then build and test
@@ -66,6 +81,14 @@ Run the suite with `swift test`. It takes about a tenth of a second and needs no
   wherever one exists, and `%3A` counts only when there is no bare colon
 - `OTPAccount` is the one type pairing a secret with metadata, and is deliberately
   transient and not `Codable`
+- One Keychain item per account, secret in `kSecValueData` and metadata as JSON in
+  `kSecAttrGeneric`. Two items can get out of step, one cannot
+- Metadata is in the Keychain too, because account names say which services someone uses
+  and under which email, which is sensitive even though it cannot generate a code
+- Listing accounts sets `kSecReturnData` to false, so drawing the list decrypts nothing.
+  There is deliberately no call that returns every account with its secret
+- Decoding stored metadata runs the same validation as constructing it. A record with a
+  period of zero is refused rather than dividing by zero later
 - Light mode is a v1 requirement, not a later addition
 - Sync through iCloud Keychain, not CloudKit
 - Squash merges into `main`, Conventional Commits
@@ -107,17 +130,15 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 4: `SecretStore`, the Keychain layer, and the last piece before gate A1.
+**Gate A1, not a pull request.** The checklist is in [docs/ROADMAP.md](docs/ROADMAP.md).
+In short: an independent review of the whole of `OpenFactorCore` by someone or something
+that did not write it, `/security-review` over the accumulated diff, the RFC vector tables
+re-checked by hand against the published documents rather than against what the tests
+assert, fuzzing of the parser and the Base32 decoder, and a check that no secret material
+reaches a log or a description. Findings recorded in the open, audited commit tagged.
 
-- Protocol plus a Keychain backed implementation, so tests and previews can substitute
-- `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` by default. Assert the attributes in
-  tests rather than trusting that they were set, since getting this wrong is silent
-- The `synchronizable` flag exposed but left off. Sync is PR 13
-- Secrets and metadata stored separately. Metadata is issuer, name, generator settings,
-  colour, and sort index, and the list must be drawable without reading a single secret.
-  `OTPAccount` is the transient pairing of the two, not the stored shape
-- Needs a host app test target, since Keychain access requires an entitlement
+Then PR 5, whose first job is the host application test target that lets the six skipped
+Keychain tests run. Nothing else in PR 5 matters until they pass.
 
-Suggested effort: **High**. Accessibility attributes fail silently, and a mistake here
-hands over secrets without anything visibly breaking. Immediately after this PR, stop for
-gate A1 before starting PR 5.
+Suggested effort: **High** for the gate itself, then **Medium** from PR 5 onward, where
+the work turns into ordinary interface building.

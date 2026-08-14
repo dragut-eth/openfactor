@@ -4,7 +4,7 @@ import Foundation
 ///
 /// The raw values are the spellings used in `otpauth://` URIs, so PR 3 parses straight
 /// into this type.
-public enum OTPAlgorithm: String, Sendable, Equatable, CaseIterable {
+public enum OTPAlgorithm: String, Sendable, Equatable, CaseIterable, Codable {
     case sha1 = "SHA1"
     case sha256 = "SHA256"
     case sha512 = "SHA512"
