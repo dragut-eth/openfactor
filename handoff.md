@@ -59,6 +59,7 @@ Sources/OpenFactorCore/
 Tests/OpenFactorCoreTests/                 106 tests, 12 suites, 17k fuzz iterations
 OpenFactor.xcodeproj                       See docs/PROJECT.md, checked in deliberately
 OpenFactor/                                App target
+  Assets.xcassets/AppIcon.appiconset/      The app icon, single 1024 source
   Design/                                  Tokens, palette, code formatting
   Views/AccountCard.swift                  The card. No state, no timer, no store
   AccountListViewModel.swift               Rows, ticking, search, copying
@@ -75,6 +76,8 @@ OpenFactorTests/PaletteTests.swift         Contrast asserted, not eyeballed
 OpenFactorTests/                           Empty folder. Its sources are Tests/ above
 docs/audits/A1.md                          Gate A1 findings and disposition
 docs/PROJECT.md                            The project file in plain language
+docs/POLISH.md                             Polish items, for PR 12
+docs/design/icon.svg                       The app icon, source of truth
 LICENSE, README.md, SECURITY.md, CONTRIBUTING.md, handoff.md
 docs/ROADMAP.md, docs/ARCHITECTURE.md, docs/UI_SPEC.md
 .github/workflows/ci.yml                   Style checks, then build and test
@@ -223,6 +226,11 @@ HST4KH9P2X passed on the command line so it stays out of the repo.
 a real service. Every check so far says our output matches the published RFC vectors. None
 says a verifier on someone else's server accepts it. That closes the first time Xavier logs
 in somewhere using an OpenFactor code.
+
+**The app icon has landed,** out of band rather than as a numbered pull request, since it
+was a design task with no dependencies. `docs/design/icon.svg` is the source of truth and
+the 1024 PNG in the asset catalog is rendered from it. The reasoning, geometry, and the one
+command that regenerates the tinted variant are in `docs/UI_SPEC.md`.
 
 **Polish is PR 12,** widened from an accessibility pass to cover both, because Dynamic Type
 at accessibility sizes breaks layouts and separating them means adjusting the same spacing

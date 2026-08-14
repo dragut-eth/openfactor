@@ -150,6 +150,64 @@ file diff and so light mode is possible at all.
 - **Type:** issuer, label, code, and UI scales, all built on Dynamic Type so the app
   responds to accessibility text sizes rather than shipping fixed point sizes.
 
+## App icon
+
+The icon is the app at its smallest size: six account cards on the black canvas,
+nothing else. It makes no metaphorical claim. No lock, no shield, no key. Those are
+promises, and an unaudited tool should not make promises. It also keeps distance
+from every neighbor on the shelf: the lock is Microsoft's, the keyhole is
+1Password's, the shields belong to Authy and Aegis, the star to Google, and the
+ring to Step Two. What remains is the truthful option, a picture of what is inside.
+
+Six tiles because a code has six digits, in two rows of three because that is how
+codes are printed, 123 over 456. The grid is 2 by 3 and not 2 by 2 or 3 by 3 on
+purpose: four colored squares is Microsoft's flag, and nine reads as a launcher.
+
+Color does the work that shape cannot. At 29 px, thin geometry collapses but hue
+survives, so the icon degrades into a spectrum chip that is still recognizably this
+app. The six colors are the card palette in hue order: red, orange, green, teal,
+indigo, pink. Gray is excluded because it spends a slot without saying anything.
+The icon colors run slightly more vivid than the in-app cards, which are contrast
+tuned for white text; the icon carries no text.
+
+One light source at the upper left. The canvas falls from #1B1B21 to #08080B on the
+diagonal, and every tile gradient is angled a few degrees off vertical toward that
+same light, which is what makes six shapes read as one object instead of six
+stickers.
+
+Geometry, in the 1024 canvas: tiles of 184 with corner radius 52, gutters of 60,
+grid centered at 512, 512. The whole grid sits inside the inscribed circle with
+margin to spare, so the same artwork survives the watchOS circular mask when the
+watch target arrives in PR 14.
+
+The source of truth is docs/design/icon.svg. The 1024 PNG in the asset catalog is
+rendered from it, and any SVG renderer at 1024 by 1024 reproduces it exactly.
+
+### How it is installed
+
+The asset catalog uses the single size format: one 1024 by 1024 image at
+`OpenFactor/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`, from which Xcode
+derives every size the system asks for. The artwork is full bleed and square, with no
+pre rounded corners and no padding, because the system applies its own mask and
+rounding a second time would show.
+
+Two of the three iOS 18 appearances are declared:
+
+- **Default.** The artwork as rendered.
+- **Tinted.** `AppIcon-1024-Tinted.png`, a grayscale rendition the system colours with
+  the user's chosen tint. Derived from the same PNG with `sips`, so there is no second
+  piece of artwork to keep in step:
+
+  ```bash
+  sips --matchTo "/System/Library/ColorSync/Profiles/Generic Gray Profile.icc" \
+    AppIcon-1024.png --out AppIcon-1024-Tinted.png
+  ```
+
+- **Dark** is deliberately absent. An appearance that is not declared falls back to the
+  default, which is exactly what is wanted here: the canvas is already near black, so the
+  dark variant would be the same artwork. Declaring it would mean committing a second file
+  byte for byte identical to the first, which a reviewer would rightly stop to question.
+
 ## Consequences for the data model
 
 Two attributes the roadmap needs to account for in the storage layer (PR 4), both of

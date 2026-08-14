@@ -53,12 +53,13 @@ Not everything waits for PR 12.
 
 ### Deferred deliberately, with a reason
 
-- **No app icon.** Still the default. It is a design task with no dependencies, so it can
-  land any time before PR 18.
 - **The list has no animation when accounts are added or removed.** Deliberate for now:
   motion is easier to judge once the screens around it are settled.
 
 ## Done
 
-Nothing yet. Items move here as PR 12 clears them, with a line saying what changed, so the
-file stays a record rather than a wish list.
+- **No app icon.** Landed out of band, since it was a design task with no dependencies on
+  the roadmap. Source at `docs/design/icon.svg`, reasoning in `docs/UI_SPEC.md`.
+
+Items move here as PR 12 clears them, with a line saying what changed, so the file stays a
+record rather than a wish list.
