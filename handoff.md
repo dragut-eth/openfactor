@@ -3,14 +3,22 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 11.
+**Last updated:** 2026-08-14, end of PR 12.
 
 ## Where things stand
 
-PR 11 is complete. **Every screen in `docs/UI_SPEC.md` now exists.** Settings carries sort
-order, appearance, version, and links to the source, the licence, and the issue tracker.
+PR 12 is in progress. Nine of Xavier's ten items are done, all from device testing, and
+recorded in [docs/POLISH.md](docs/POLISH.md). The tenth, choosing a colour while adding an
+account, is waiting on a design he asked to see before it is built.
 
-Phase 2 is done. What follows is polish, then sync, the watch, and hardening.
+**One of the ten turned out to be a security matter, not polish.** iOS had added an "Ask
+Siri" entry to the account card's system context menu, offering to hand the contents of a
+two factor code card to an assistant that may process it off device. The context menu is
+gone, and the rule is written into `SECURITY.md` so any future screen showing a code
+inherits it.
+
+The accessibility half of PR 12 has not started: Dynamic Type at accessibility sizes,
+VoiceOver order, Reduce Motion, and a contrast audit against real content.
 
 **The live camera path is the one thing not verified.** The simulator has no camera. The
 photo import path, the permission denied path, parsing, confirmation, and saving were all
@@ -33,7 +41,7 @@ device run before it can be called done.
 | PR 9, manual setup and counter accounts | Done |
 | PR 10, edit mode | Done |
 | PR 11, settings sheet | Done |
-| PR 12, polish and accessibility | **Next** |
+| PR 12, polish and accessibility | **In progress**, see docs/POLISH.md |
 | PR 13 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in

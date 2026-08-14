@@ -36,7 +36,10 @@ struct AddAccountView: View {
                     // The reference puts this here too. It is the way out for services
                     // that print a secret instead of showing a code, and the way out when
                     // the camera is unavailable.
-                    ToolbarItem(placement: .confirmationAction) {
+                    // Trailing rather than `.confirmationAction`, which renders bold and
+                    // made this read as the primary action next to a regular weight
+                    // Cancel. Scanning is the primary action; this is the way out of it.
+                    ToolbarItem(placement: .topBarTrailing) {
                         NavigationLink("Enter manually") {
                             ManualSetupView(store: store) {
                                 onAdded()

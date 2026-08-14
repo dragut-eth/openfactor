@@ -32,9 +32,16 @@ enum Tokens {
         /// The countdown ring in its normal state.
         static let ring = Color.white.opacity(0.9)
 
-        /// The ring once the code is nearly gone. Amber rather than red, because the code
-        /// is still perfectly valid and red would say it is not.
-        static let ringExpiring = Color(.sRGB, red: 1, green: 0.84, blue: 0.4)
+        /// The ring once the code is nearly gone.
+        ///
+        /// Red at Xavier's call, over an earlier amber. The argument for amber was that
+        /// the code is still perfectly valid and red says it is not; the argument for red
+        /// is that it is the colour people actually read as "hurry", and hesitating for a
+        /// second costs nothing while typing a code that expires mid login costs a retry.
+        ///
+        /// Bright rather than deep, because the palette's own red card is dark and a deep
+        /// red ring would disappear into it.
+        static let ringExpiring = Color(.sRGB, red: 1, green: 0.35, blue: 0.32)
     }
 
     enum Spacing {
@@ -50,8 +57,8 @@ enum Tokens {
     }
 
     enum Ring {
-        static let size: CGFloat = 26
-        static let lineWidth: CGFloat = 3
+        static let size: CGFloat = 29
+        static let lineWidth: CGFloat = 4.5
 
         /// How long is left when the ring turns amber. See `UI_SPEC.md`.
         static let warningThreshold: TimeInterval = 5
@@ -66,11 +73,12 @@ enum Tokens {
         static let issuer = Font.headline
         static let name = Font.subheadline
 
-        /// The code itself.
+        /// Base point size for the code.
         ///
-        /// Monospaced with tabular figures, so digits keep their positions rather than
-        /// jittering every time the code changes, and grouped for transcription. `.rounded`
-        /// keeps it from looking like a terminal.
-        static let code = Font.system(.largeTitle, design: .rounded).weight(.bold).monospacedDigit()
+        /// A number rather than a text style, because the code should be larger than
+        /// `.largeTitle` and that is the largest style there is. The card scales it with
+        /// `@ScaledMetric`, so it still grows and shrinks with the reader's text size
+        /// setting rather than being pinned at one size.
+        static let codeSize: CGFloat = 42
     }
 }

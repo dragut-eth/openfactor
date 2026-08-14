@@ -17,13 +17,40 @@ Not everything waits for PR 12.
 
 ## Open
 
-### From Xavier, device testing after PR 10
+### From Xavier, device testing after PR 11
 
-- **Colour cannot be chosen while adding an account.** It is suggested from the issuer and
-  can only be changed afterward, in edit mode. **Deferred to PR 12** as a small feature
-  rather than polish, and cheap now that `AccountColorPicker` exists: it needs adding to
-  the scan confirmation and to manual setup, and the suggested colour becomes the default
-  selection rather than the only one.
+1. **The app name takes a whole row to itself.** Move it into the top bar so the list starts
+   higher.
+2. **A black notch at the corner of a card while dragging.** The rounded corner reveals the
+   drag preview's own opaque backing.
+3. **The Edit button is text where everything else is an icon.** Wants a hamburger styled
+   like the settings gear.
+4. **Dragging while sorted automatically does nothing,** because the Edit button is hidden
+   in that state. It should switch to manual order instead of refusing.
+5. **The copied confirmation is small and tucked in a corner.** Wants it larger and centred.
+6. **Cancel and Enter manually are set in different weights** on the scan screen.
+7. **Colour cannot be chosen while adding an account.** Design proposed before building, at
+   Xavier's request.
+
+### Fixed in PR 12
+
+1. Name moved into the top bar, inline, so the list starts higher.
+2. Drag preview given the card's own shape, so the corner no longer shows its backing.
+3. Edit is an icon matching the gear, a hamburger that becomes a checkmark while editing.
+4. Dragging a sorted list now adopts the order on screen and switches to manual, rather
+   than the affordance being hidden. Refusing the gesture was the worst of the options: the
+   user has said plainly where they want the card.
+5. The copied confirmation is larger, centred on the card, and lasts 2.2 seconds rather
+   than 1.6. The old duration was a guess and was consistently gone before it could be
+   observed.
+6. Both scan buttons in the same weight. Enter manually was a confirmation action, which
+   renders bold and made it read as the primary action next to a regular weight Cancel.
+8. Code digits larger and the ring thicker. The code is scaled with `@ScaledMetric` rather
+   than pinned, so it still follows the reader's text size.
+9. The expiring ring is red rather than amber, at Xavier's call. Bright red, because the
+   palette's own red card is dark and a deep red ring vanishes into it. Verified against
+   the red card, which is the worst case.
+10. The system context menu removed entirely. See below.
 
 ### Fixed on sight rather than deferred
 
@@ -38,10 +65,6 @@ Not everything waits for PR 12.
 
 ### Noticed while building
 
-- **The copied confirmation may be too brief.** It shows for 1.6 seconds, which was chosen
-  rather than measured, and it was consistently gone before a screenshot could catch it
-  during PR 7. Worth watching on a real device before changing, since a screenshot round
-  trip is not a person.
 - **Empty issuer and name in the manual setup preview** was fixed during PR 9 rather than
   deferred, because a card rendering as blank lines reads as broken. Noted here only as a
   precedent for where the line sits.

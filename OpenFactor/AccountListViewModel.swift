@@ -128,8 +128,13 @@ final class AccountListViewModel {
         }
     }
 
-    /// Dragging only makes sense when the order is the user's to set.
-    var canReorder: Bool { sortOrder == .manual && !isSearching }
+    /// Dragging is coherent whenever the whole list is on screen. An automatic sort is no
+    /// longer a reason to refuse it: see ``move(from:to:)``, which adopts the order being
+    /// shown and switches to manual rather than ignoring the gesture.
+    var canReorder: Bool { !isSearching }
+
+    /// Called when a drag switches the sort order to manual, so the view can persist it.
+    var onSortOrderChange: ((AccountSortOrder) -> Void)?
 
     var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -277,6 +282,20 @@ final class AccountListViewModel {
     /// Keychain round trip and dragging one card to the top would otherwise rewrite every
     /// account in the list.
     func move(from source: IndexSet, to destination: Int) {
+        // Dragging a list that is sorting itself used to be impossible, because the affordance
+        // was hidden. Refusing the gesture is the worst of the options: the user has said
+        // plainly where they want the card, and the honest response is to take the order
+        // currently on screen, make it theirs, and then move the card within it.
+        //
+        // Adopting the visible order first is what makes the indices mean anything. Without
+        // it, positions from the sorted view would be applied to the stored order and the
+        // card would land somewhere nobody asked for.
+        if sortOrder != .manual {
+            rows = visibleRows
+            sortOrder = .manual
+            onSortOrderChange?(.manual)
+        }
+
         rows.move(fromOffsets: source, toOffset: destination)
 
         for index in rows.indices where rows[index].record.metadata.sortIndex != index {

@@ -102,3 +102,10 @@ confirm that a released binary was built from the tagged source.
   written outside the Keychain.
 - Non secret metadata such as the account color and sort order is stored separately from
   the secret, so drawing the list never requires loading secret material.
+- **No system context menus on anything showing a code.** iOS adds its own entries to a
+  system context menu, and on the account card it added "Ask Siri", which offers to hand
+  the card's contents to an assistant that may process them off device. What such an entry
+  actually transmits is not something this project can verify from the outside, and an app
+  whose first claim is that nothing leaves the device cannot ship a menu that might. The
+  same actions are available from a menu the app defines, which gets no additions. Any
+  future screen showing secret material inherits this rule.

@@ -42,6 +42,9 @@ struct AccountCard: View {
 
     @Environment(\.colorScheme) private var colorScheme
 
+    /// Scaled rather than fixed, so the code follows the reader's text size setting.
+    @ScaledMetric(relativeTo: .largeTitle) private var codeSize = Tokens.Text.codeSize
+
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: Tokens.Spacing.tight) {
@@ -56,7 +59,12 @@ struct AccountCard: View {
                     .truncationMode(.middle)
 
                 Text(CodeFormatting.grouped(model.code))
-                    .font(Tokens.Text.code)
+                    // Monospaced with tabular figures, so digits keep their positions
+                    // rather than jittering every time the code changes. Rounded keeps it
+                    // from looking like a terminal.
+                    .font(.system(size: codeSize, weight: .bold, design: .rounded).monospacedDigit())
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
                     .foregroundStyle(Tokens.OnCard.primary)
                     .padding(.top, Tokens.Spacing.tight)
             }

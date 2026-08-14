@@ -31,11 +31,15 @@ struct AccountListView: View {
         NavigationStack {
             content
                 .navigationTitle("OpenFactor")
+                // Inline, so the name sits in the bar rather than taking a row of the
+                // screen away from the cards.
+                .navigationBarTitleDisplayMode(.inline)
                 .searchable(text: $model.searchText, prompt: "Search accounts")
                 .background(Tokens.Surface.background)
                 .environment(\.editMode, $editMode)
                 .onAppear {
                     model.sortOrder = AccountSortOrder(rawValue: sortOrder) ?? .manual
+                    model.onSortOrderChange = { sortOrder = $0.rawValue }
                     model.load(at: Date())
                 }
                 .onChange(of: sortOrder) { _, raw in
@@ -93,15 +97,21 @@ struct AccountListView: View {
             }
         }
 
-        // Reordering rearranges the whole list, so it makes no sense while a search is
-        // hiding part of it, or while the list is sorting itself.
+        // Rearranging still makes no sense while a search hides part of the list. An
+        // automatic sort is no longer a reason to hide this: dragging adopts the visible
+        // order and switches to manual.
         if !model.rows.isEmpty && model.canReorder {
             ToolbarItem(placement: .topBarLeading) {
                 // Not `EditButton`. That toggles whichever edit mode the toolbar happens
                 // to see, which is not the one this view puts into the list's environment,
                 // so the button would flip to Done while the rows stayed as they were.
-                Button(editMode.isEditing ? "Done" : "Edit") {
+                Button {
                     withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                } label: {
+                    Label(
+                        editMode.isEditing ? "Done editing" : "Edit list",
+                        systemImage: editMode.isEditing ? "checkmark" : "line.3.horizontal"
+                    )
                 }
             }
         }
@@ -173,7 +183,25 @@ struct AccountListView: View {
         .buttonStyle(.plain)
         .disabled(editMode.isEditing)
         .overlay(alignment: .topTrailing) { accessory(for: row) }
-        .contextMenu { menu(for: row) }
+        .overlay {
+            if copied == row.id {
+                CopiedBadge()
+            }
+        }
+        // Without this the drag preview is a rectangle, and the card's rounded corners
+        // reveal its opaque backing as a dark notch. Naming the shape makes the lifted
+        // card exactly the card.
+        .contentShape(
+            .dragPreview,
+            RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+        )
+        // No `.contextMenu` here, deliberately. iOS appends its own entries to a system
+        // context menu, and on this card it appended "Ask Siri", which offers to hand the
+        // contents of a two factor code card to an assistant that may process it off
+        // device. What it actually transmits is not something this project can verify, and
+        // an app whose first claim is that nothing leaves the device cannot ship a menu
+        // that might. The same three actions live behind the button in edit mode, which is
+        // ours and gets no additions.
         .accessibilityHint(editMode.isEditing ? "" : "Copies the code")
     }
 
@@ -187,9 +215,7 @@ struct AccountListView: View {
             }
             .padding(Tokens.Spacing.large)
             .accessibilityLabel("Options for \(row.record.metadata.displayIssuer)")
-        } else if copied == row.id {
-            CopiedBadge()
-        } else if !row.isTimeBased {
+        } else if !row.isTimeBased && copied != row.id {
             // Counter based accounts have no ring, because nothing counts down. What they
             // need instead is a way to ask for the next code.
             Button {
@@ -218,7 +244,9 @@ struct AccountListView: View {
         withAnimation(.snappy) { copied = row.id }
 
         Task {
-            try? await Task.sleep(for: .seconds(1.6))
+            // 1.6 seconds was a guess, and it was consistently gone before it could be
+            // observed. Long enough to notice, short enough not to sit on the card.
+            try? await Task.sleep(for: .seconds(2.2))
             withAnimation(.snappy) {
                 if copied == row.id { copied = nil }
             }
@@ -256,18 +284,22 @@ private struct CardButtonLabel: View {
     }
 }
 
-/// The confirmation after a tap. Deliberately does not repeat the code: the point of
-/// copying it is that it does not need to be on screen twice.
+/// The confirmation after a tap.
+///
+/// Across the middle of the card rather than tucked into a corner, because the thing it
+/// confirms is the whole reason the card was tapped and a person's eyes are already on
+/// the digits. It deliberately does not repeat the code: the point of copying it is that
+/// it no longer needs to be read off the screen.
 private struct CopiedBadge: View {
     var body: some View {
         Label("Copied", systemImage: "checkmark")
-            .font(.caption.weight(.semibold))
+            .font(.title3.weight(.semibold))
             .labelStyle(.titleAndIcon)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .foregroundStyle(Tokens.OnCard.primary)
+            .padding(.horizontal, Tokens.Spacing.large)
+            .padding(.vertical, Tokens.Spacing.small + 2)
             .background(.ultraThinMaterial, in: Capsule())
-            .padding(Tokens.Spacing.small)
-            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            .transition(.opacity.combined(with: .scale(scale: 0.92)))
             .accessibilityHidden(true)
     }
 }

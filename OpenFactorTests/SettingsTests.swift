@@ -98,21 +98,61 @@ struct AccountSortOrderTests {
 
     // MARK: - Reordering
 
-    /// Dragging a card into place has no meaning in a list that sorts itself: the drag
-    /// would either be ignored or would have to silently change the setting.
-    @Test("Reordering is only offered when the order is the user's to set")
-    func reorderingRequiresManualOrder() throws {
+    /// Rearranging a list that is only half shown is not a coherent gesture. An automatic
+    /// sort is not a reason to refuse, see below.
+    @Test("Reordering is offered whenever the whole list is on screen")
+    func reorderingRequiresTheWholeList() throws {
         let model = try loadedModel()
 
         model.sortOrder = .manual
         #expect(model.canReorder)
 
         model.sortOrder = .issuer
-        #expect(!model.canReorder)
+        #expect(model.canReorder)
 
-        model.sortOrder = .manual
         model.searchText = "aws"
         #expect(!model.canReorder, "A list that is half hidden cannot be rearranged coherently")
+    }
+
+    /// Refusing the gesture is the worst option: the user has said plainly where they want
+    /// the card. Taking the order they are looking at, making it theirs, and then moving
+    /// the card within it is the only reading that respects what they did.
+    @Test("Dragging a sorted list adopts the order it is showing")
+    func draggingAdoptsTheVisibleOrder() throws {
+        let model = try loadedModel()
+        model.sortOrder = .name
+
+        var persisted: AccountSortOrder?
+        model.onSortOrderChange = { persisted = $0 }
+
+        let shown = model.visibleRows.map(\.record.metadata.name)
+        #expect(shown == ["alice@example.com", "Production", "Staging", "zoe@example.com"])
+
+        // Drag the last card to the top.
+        model.move(from: IndexSet(integer: 3), to: 0)
+
+        #expect(model.sortOrder == .manual)
+        #expect(persisted == .manual, "The switch has to be written back, or it reverts on relaunch")
+        #expect(model.visibleRows.map(\.record.metadata.name) == [
+            "zoe@example.com", "alice@example.com", "Production", "Staging",
+        ])
+    }
+
+    /// The point of adopting the visible order: the positions written must be the ones the
+    /// user was looking at, not the stored ones the sort was hiding.
+    @Test("The adopted order is the one that was on screen, and it survives a reload")
+    func adoptedOrderPersists() throws {
+        let model = try loadedModel()
+        model.sortOrder = .issuer
+
+        let shown = model.visibleRows.map(\.record.metadata.name)
+        model.move(from: IndexSet(integer: 0), to: 1)
+
+        var expected = shown
+        expected.move(fromOffsets: IndexSet(integer: 0), toOffset: 1)
+
+        #expect(model.visibleRows.map(\.record.metadata.name) == expected)
+        #expect(model.rows.map(\.record.metadata.sortIndex) == [0, 1, 2, 3])
     }
 }
 

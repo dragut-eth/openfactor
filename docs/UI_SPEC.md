@@ -9,7 +9,8 @@ treatment is adapted where noted.
 **Reference behavior**
 
 - Top bar: search field on the left, settings gear and add button as circular icon
-  buttons on the right. No large navigation title.
+  buttons on the right. No large navigation title. Ours puts the name inline in the bar for
+  the same reason: a title row of its own costs a card's worth of screen.
 - Vertically scrolling list of full width colored cards, generous spacing between them.
 - Each card carries, from top to bottom:
   - Issuer name, bold
@@ -25,9 +26,12 @@ treatment is adapted where noted.
 | --- | --- |
 | Code rendered with monospaced tabular figures, grouped `123 456` | Digits stop shifting on every tick, and grouped digits are easier to carry from screen to keyboard. Six splits into threes, eight into fours, seven is left alone since a lopsided split is worse than none. The separator is a thin space, so the code still reads as one number |
 | Ring redraws once per second, not continuously animated | One shared timer for the whole list, far less battery and CPU than a per card animation |
-| Ring turns amber in the last 5 seconds | Tells the user to wait for the next code rather than start typing one about to expire. Amber rather than red, because the code is still perfectly valid and red would say it is not |
+| Ring turns red in the last 5 seconds | Tells the user to wait for the next code rather than start typing one about to expire. Amber was tried first, on the argument that the code is still valid and red says it is not. Red won because it is what people actually read as "hurry", and a second of hesitation costs nothing while a code that expires mid login costs a retry. It is a bright red, since the palette's own red card is dark and a deep red ring would vanish into it |
 | Full light mode support, a v1 requirement | The reference is dark only. Light mode costs little if color tokens are defined from the start and is painful to retrofit later |
 | Card color meets contrast requirements against white text | Some reference colors are borderline. Every palette entry gets checked |
+| The copied confirmation sits across the middle of the card | It confirms the reason the card was tapped, and the reader's eyes are already on the digits. A corner badge was missed |
+| No system context menu anywhere a code is shown | iOS adds its own entries, and it added "Ask Siri". See `SECURITY.md` |
+| Dragging a list that is sorting itself adopts the visible order | Refusing the gesture was the worst option. The user has said where they want the card |
 
 **Interactions**
 
