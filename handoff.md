@@ -3,20 +3,21 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 2.
+**Last updated:** 2026-08-14, end of PR 3.
 
 ## Where things stand
 
-PR 2 is complete. The app can generate codes. `HOTP` and `TOTP` are verified against the
-full RFC 4226 Appendix D and RFC 6238 Appendix B vector tables, for all three algorithms.
+PR 3 is complete. Accounts can be imported from and exported to `otpauth://` URIs.
+Everything in the core is done except storage.
 
 | Phase | Status |
 | --- | --- |
 | PR 0, repository bootstrap | Done |
 | PR 1, `OpenFactorCore` and Base32 | Done |
 | PR 2, HOTP and TOTP | Done |
-| PR 3, `otpauth://` parsing | Next |
-| PR 4 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 3, `otpauth://` parsing | Done |
+| PR 4, Keychain storage | Next, and the last PR before gate A1 |
+| PR 5 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A1, immediately after PR 4.** The core gets reviewed by someone who did
 not write it before anything is built on top of it. The five gates and the rules for them
@@ -32,7 +33,9 @@ Sources/OpenFactorCore/
   OTPAlgorithm.swift, OTPDigits.swift      The parameters a service enrolls with
   HOTP.swift                               RFC 4226, the only hand written cryptography
   TOTP.swift, TOTPConfiguration.swift      RFC 6238, time arithmetic only
-Tests/OpenFactorCoreTests/                 32 tests across 4 suites, all passing
+  OTPGenerator.swift, OTPAccount.swift     What an account is. OTPAccount is transient
+  OTPAuthURI.swift, ...Serialization.swift Import and export, plus OTPAuthURIError
+Tests/OpenFactorCoreTests/                 67 tests across 7 suites, all passing
 LICENSE, README.md, SECURITY.md, CONTRIBUTING.md, handoff.md
 docs/ROADMAP.md, docs/ARCHITECTURE.md, docs/UI_SPEC.md
 .github/workflows/ci.yml                   Style checks, then build and test
@@ -56,6 +59,13 @@ Run the suite with `swift test`. It takes about a tenth of a second and needs no
 - Codes are `String`, never `Int`, so a leading zero survives
 - Digit counts are an enumeration of 6, 7, and 8, so an unsupported length cannot be built
 - Periods are validated on construction, 1 second to 1 hour
+- URI parsing is generous about form and strict about meaning. Nothing that changes a
+  code is ever guessed, so a counter based account with no counter is refused rather than
+  started at zero
+- The `issuer` parameter beats the label prefix. A bare colon is the label separator
+  wherever one exists, and `%3A` counts only when there is no bare colon
+- `OTPAccount` is the one type pairing a secret with metadata, and is deliberately
+  transient and not `Codable`
 - Light mode is a v1 requirement, not a later addition
 - Sync through iCloud Keychain, not CloudKit
 - Squash merges into `main`, Conventional Commits
@@ -97,10 +107,17 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 3: `OTPAuthURI`, parsing and serializing `otpauth://` URIs. Parsing must be total,
-meaning every input yields either a fully valid account or a typed error, never a
-partially populated one. The messy cases to cover are an issuer that appears both as a
-label prefix and as a query parameter and disagrees, percent encoding, and missing
-optional parameters. Test against a corpus of URIs as emitted by Google Authenticator,
-1Password, GitHub, and AWS. The period validation in `TOTPConfiguration` is already
-typed, so the parser should surface that error rather than inventing its own.
+PR 4: `SecretStore`, the Keychain layer, and the last piece before gate A1.
+
+- Protocol plus a Keychain backed implementation, so tests and previews can substitute
+- `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` by default. Assert the attributes in
+  tests rather than trusting that they were set, since getting this wrong is silent
+- The `synchronizable` flag exposed but left off. Sync is PR 13
+- Secrets and metadata stored separately. Metadata is issuer, name, generator settings,
+  colour, and sort index, and the list must be drawable without reading a single secret.
+  `OTPAccount` is the transient pairing of the two, not the stored shape
+- Needs a host app test target, since Keychain access requires an entitlement
+
+Suggested effort: **High**. Accessibility attributes fail silently, and a mistake here
+hands over secrets without anything visibly breaking. Immediately after this PR, stop for
+gate A1 before starting PR 5.

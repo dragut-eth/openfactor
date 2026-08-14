@@ -24,7 +24,7 @@ through interface code. The app targets are deliberately thin.
 
 ## OpenFactorCore
 
-*`Base32`, `HOTP`, and `TOTP` exist as of PR 2. The rest arrives in PR 3 and PR 4.*
+*Everything but `SecretStore` exists as of PR 3. Storage arrives in PR 4.*
 
 | Component | Responsibility |
 | --- | --- |
@@ -57,7 +57,33 @@ the leading zero. The generators return `String` throughout for that reason.
 
 **Parsing is total.** `OTPAuthURI` either returns a fully valid account or a typed error.
 It never returns a partially populated account, because a silently dropped algorithm
-parameter produces codes that look right and never work.
+parameter produces codes that look right and never work. The failure would not appear at
+the scan. It would appear at a login, long after the enrollment page is gone.
+
+The `otpauth://` format has no RFC. It is a de facto standard with real disagreement
+between implementations, so the parser is generous about form and strict about meaning.
+Four judgement calls, each of which could reasonably have gone the other way:
+
+- **Generous about form.** Scheme, type, parameter names, and algorithm spellings are all
+  matched without regard to case, `SHA-256` and `SHA256` mean the same thing, and unknown
+  parameters are ignored rather than refused. None of this changes a code.
+- **Strict about meaning.** No value that changes a code is ever guessed. A counter based
+  account with no counter is refused rather than started at zero, because a counter in the
+  wrong place produces codes that are rejected forever and hides the cause.
+- **The issuer parameter beats the label prefix** where both exist and disagree, which is
+  what the format documentation asks for and what other authenticators do, so an account
+  imported here is filed under the same name it would be anywhere else.
+- **A bare colon is the label separator wherever one exists,** and an encoded `%3A` counts
+  only when there is no bare colon at all. Writers encode colons that are part of an
+  issuer or a name and leave only the separator bare, so `Company%3A%20Ltd:alice` means
+  issuer `Company: Ltd`. Taking the first colon of either kind would rename the account on
+  import. This was a real bug, caught by a round trip test before it shipped.
+
+**`OTPAccount` is transient.** It is the only type that pairs a secret with its metadata,
+and it exists for the moment between parsing a URI and saving it, or between loading and
+generating. The stored form splits the two, see below. It deliberately conforms to neither
+`Codable` nor `CustomStringConvertible`, so encoding or printing an account, and its
+secret with it, is never one keystroke away.
 
 **Secrets and metadata are stored separately.** Issuer, label, color, and sort index are
 not secret and live apart from the secret itself, so drawing the account list never loads
