@@ -7,23 +7,20 @@ first when picking the work back up.
 
 ## Where things stand
 
-PR 12 is in progress. All ten of Xavier's items from device testing are done and recorded
-in [docs/POLISH.md](docs/POLISH.md).
+PR 12 is complete and merged. Fourteen items from Xavier's device testing, plus the
+accessibility pass, all recorded in [docs/POLISH.md](docs/POLISH.md). The app icon landed
+alongside it, out of band.
 
-**One of the ten turned out to be a security matter, not polish.** iOS had added an "Ask
-Siri" entry to the account card's system context menu, offering to hand the contents of a
-two factor code card to an assistant that may process it off device. The context menu is
-gone, and the rule is written into `SECURITY.md` so any future screen showing a code
-inherits it.
+**Phase 2 is finished. Every screen in `docs/UI_SPEC.md` exists**, works at accessibility
+text sizes, and has been used on a real phone.
 
-The accessibility half of PR 12 has not started: Dynamic Type at accessibility sizes,
-VoiceOver order, Reduce Motion, and a contrast audit against real content.
-
-**The live camera path is the one thing not verified.** The simulator has no camera. The
-photo import path, the permission denied path, parsing, confirmation, and saving were all
-exercised end to end on the simulator, and the decoder has a test that generates a real QR
-image and reads it back. But nobody has yet pointed a phone at a real code. That needs a
-device run before it can be called done.
+**One item in PR 12 was a security matter, and it ended in a decision rather than a fix.**
+iOS adds an "Ask Siri" entry to the account card's system context menu, offering to hand
+the contents of a two factor code card to an assistant that may process it off device. The
+menu was removed, then restored at Xavier's decision, because the replacement cost the lift
+and preview animation and the system menu was judged the better product. It is recorded in
+`SECURITY.md` as a known and accepted risk with its own threat model entry, and PR 17 owes
+either a finding about what the entry transmits or a plain statement that it is unverified.
 
 | Phase | Status |
 | --- | --- |
@@ -227,15 +224,30 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 12, the polish and accessibility pass, and the first pull request whose input is a list
-rather than a specification. Start from [docs/POLISH.md](docs/POLISH.md), which already has
-Xavier's outstanding item (choosing a colour while adding an account) and four noticed while
-building. Ask him for anything else before starting, since his list is the main input and
-most of it has not been written down.
+**PR 13, iCloud Keychain sync.** The first change to the security posture since PR 4, and
+the reason gate A2 sits immediately after it.
 
-Then: Dynamic Type across every screen including the accessibility sizes where cards
-reflow, VoiceOver labels and order, Reduce Motion, a contrast audit against real content,
-and every user facing string read once in order as a whole.
+It is not a feature that gets added on top. Turning sync on **weakens the protection class
+on every secret**, from `WhenUnlockedThisDeviceOnly` to `WhenUnlocked`, because a
+synchronizable Keychain item cannot be device only by definition. `SecretAccessibility`
+already names both classes so the weakening is a visible decision rather than a side effect
+of setting a flag, which is the whole reason it was written that way in PR 4.
+
+Three things to settle before writing much of it:
+
+1. **Does the watch need a shared `keychain-access-groups` entitlement?** Open since PR 5
+   and still unverified. A watchOS target has its own bundle identifier and therefore its
+   own default access group, and iCloud Keychain syncs within a group rather than across
+   them. If the answer is yes, it changes what PR 13 writes and where, and retrofitting it
+   after people have secrets stored is a migration rather than an edit. Settle it first.
+2. **What happens to existing accounts when sync is turned on, and off again.** Items have
+   to be rewritten with the new class, and turning it off has to have a defined meaning:
+   does it stop syncing, or does it also pull them back to device only, and what happens to
+   the copies already on the other device.
+3. **Merge behaviour.** Two devices, the same account added on both, the same account
+   renamed on both. Duplicates, conflicts, and deletions that come back.
+
+Suggested effort: **High**, and it is the strongest case yet for a second model at the gate.
 
 **The live camera works.** Verified on Xavier's iPhone 15 Pro on 2026-08-14, which closes
 the last unverified path in the add flow. The app is installed there, signed with team
