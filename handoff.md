@@ -37,8 +37,9 @@ either a finding about what the entry transmits or a plain statement that it is 
 | PR 9, manual setup and counter accounts | Done |
 | PR 10, edit mode | Done |
 | PR 11, settings sheet | Done |
-| PR 12, polish and accessibility | **In progress**, see docs/POLISH.md |
-| PR 13 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 12, polish and accessibility | Done |
+| PR 13, iCloud Keychain sync | **Next**, then gate A2 |
+| PR 14 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
 [docs/audits/A1.md](docs/audits/A1.md) and fully closed, with a `/security-review` addendum
