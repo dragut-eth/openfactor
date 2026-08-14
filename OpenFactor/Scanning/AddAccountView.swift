@@ -24,7 +24,9 @@ struct AddAccountView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Add account")
+                // No title. Cancel on one side and Enter manually on the other leave no
+                // room for one, and it truncated to "Add acc...". The two buttons already
+                // say what the screen is.
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {

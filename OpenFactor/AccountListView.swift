@@ -141,6 +141,7 @@ struct AccountListView: View {
             }
         }
         .listStyle(.plain)
+        .listRowSpacing(Tokens.Spacing.cardGap)
         .scrollContentBackground(.hidden)
         .padding(.horizontal, Tokens.Spacing.medium)
     }
@@ -210,18 +211,17 @@ struct AccountListView: View {
 // MARK: - Pieces
 
 extension View {
-    /// Cards provide their own background and spacing, so the list gets out of the way.
+    /// Cards provide their own background, so the list gets out of the way entirely.
+    ///
+    /// The insets are zero on purpose. Putting the gap between cards here would make the
+    /// row taller than the card it holds, and dragging one in edit mode then lifts that
+    /// extra margin with it, showing the list's own background as a dark rectangle around
+    /// the card. The gap belongs to the list, as `listRowSpacing`, so a row is exactly a
+    /// card and a lifted row is exactly a lifted card.
     fileprivate func listRowStyling() -> some View {
-        listRowInsets(
-            EdgeInsets(
-                top: Tokens.Spacing.small,
-                leading: 0,
-                bottom: Tokens.Spacing.small,
-                trailing: 0
-            )
-        )
-        .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
+        listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }
 

@@ -17,8 +17,24 @@ Not everything waits for PR 12.
 
 ## Open
 
-Nothing recorded yet from Xavier. His list is the main input to this file and has not been
-written down.
+### From Xavier, device testing after PR 10
+
+- **Colour cannot be chosen while adding an account.** It is suggested from the issuer and
+  can only be changed afterward, in edit mode. **Deferred to PR 12** as a small feature
+  rather than polish, and cheap now that `AccountColorPicker` exists: it needs adding to
+  the scan confirmation and to manual setup, and the suggested colour becomes the default
+  selection rather than the only one.
+
+### Fixed on sight rather than deferred
+
+- **The add sheet's title truncated to "Add acc...".** Cancel on one side and Enter
+  manually on the other left no room. Fixed by removing the title: the two buttons say what
+  the screen is, and a truncated word reads as a bug rather than as a tight layout.
+- **A dark rectangle around a card while dragging it.** The row was taller than the card,
+  because the gap between cards came from row insets, so lifting one showed the list's own
+  background in the margin. Fixed by giving the gap to `listRowSpacing` and letting the row
+  be exactly the card. Structural rather than cosmetic: it was the layout approach, and
+  every list built on it would have inherited the same seam.
 
 ### Noticed while building
 
