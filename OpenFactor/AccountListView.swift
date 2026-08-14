@@ -171,7 +171,6 @@ struct AccountListView: View {
         .listStyle(.plain)
         .listRowSpacing(Tokens.Spacing.cardGap)
         .scrollContentBackground(.hidden)
-        .padding(.horizontal, Tokens.Spacing.listInset)
     }
 
     private func card(for row: AccountListViewModel.Row) -> some View {
@@ -259,15 +258,25 @@ struct AccountListView: View {
 extension View {
     /// Cards provide their own background, so the list gets out of the way entirely.
     ///
-    /// The insets are zero on purpose. Putting the gap between cards here would make the
-    /// row taller than the card it holds, and dragging one in edit mode then lifts that
-    /// extra margin with it, showing the list's own background as a dark rectangle around
-    /// the card. The gap belongs to the list, as `listRowSpacing`, so a row is exactly a
-    /// card and a lifted row is exactly a lifted card.
+    /// The margins live here rather than on the list. Padding the list itself moves its
+    /// scroll indicator inward with it, so the indicator ends up drawn over the cards
+    /// instead of beside them. Insetting the rows leaves the list full width, which is
+    /// where the indicator belongs.
+    ///
+    /// Vertically the insets stay zero, because a row taller than the card it holds lifts
+    /// that extra margin during a drag and shows the list's background as a dark band. The
+    /// gap between cards belongs to `listRowSpacing`.
     fileprivate func listRowStyling() -> some View {
-        listRowInsets(EdgeInsets())
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+        listRowInsets(
+            EdgeInsets(
+                top: 0,
+                leading: Tokens.Spacing.listInset,
+                bottom: 0,
+                trailing: Tokens.Spacing.listInset
+            )
+        )
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
 }
 
