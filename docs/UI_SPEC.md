@@ -23,9 +23,9 @@ treatment is adapted where noted.
 
 | Change | Reason |
 | --- | --- |
-| Code rendered with monospaced tabular figures, grouped `123 456` | Digits stop shifting on every tick, and grouped digits are measurably easier to transcribe |
+| Code rendered with monospaced tabular figures, grouped `123 456` | Digits stop shifting on every tick, and grouped digits are easier to carry from screen to keyboard. Six splits into threes, eight into fours, seven is left alone since a lopsided split is worse than none. The separator is a thin space, so the code still reads as one number |
 | Ring redraws once per second, not continuously animated | One shared timer for the whole list, far less battery and CPU than a per card animation |
-| Ring turns amber in the last 5 seconds | Tells the user to wait for the next code rather than start typing one about to expire |
+| Ring turns amber in the last 5 seconds | Tells the user to wait for the next code rather than start typing one about to expire. Amber rather than red, because the code is still perfectly valid and red would say it is not |
 | Full light mode support, a v1 requirement | The reference is dark only. Light mode costs little if color tokens are defined from the start and is painful to retrofit later |
 | Card color meets contrast requirements against white text | Some reference colors are borderline. Every palette entry gets checked |
 
@@ -99,9 +99,14 @@ Defined once in the app and never hardcoded at a call site, so a design change i
 file diff and so light mode is possible at all.
 
 - **Account palette:** red, orange, yellow, green, teal, blue, indigo, purple, pink, gray.
-  Each entry ships a light and a dark variant, since a card color that reads well against
-  a near black background is usually too pale against white. Every variant is contrast
-  checked against the text drawn on it.
+  Each entry ships a light and a dark variant. Every variant, at both ends of its gradient,
+  is asserted at 4.5 to 1 or better against the white text drawn on it, by a test rather
+  than by eye. See `OpenFactor/Design/Palette.swift`.
+
+  **This is why the palette is visibly deeper than the reference.** Holding white text to
+  WCAG AA rules out the bright yellow and light orange an authenticator would reach for
+  first. That is a deliberate trade: a code that cannot be read at arm's length in sunlight
+  is a broken feature in an app whose whole job is showing six digits.
 - **Surfaces:** background, card, elevated, separator. Every one defined for both schemes.
   No color is ever hardcoded at a call site, so a scheme is a one file change.
 - **Scheme override:** a setting offering System, Light, and Dark, defaulting to System.

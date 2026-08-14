@@ -3,14 +3,16 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 5.
+**Last updated:** 2026-08-14, end of PR 6.
 
 ## Where things stand
 
-PR 5 is complete and **gate A1 is fully closed.** There is an Xcode project, the app
-launches on the simulator and shows an empty state read from the real Keychain, and the six
-Keychain tests that could only ever skip before now pass against the data protection
-Keychain. 407 test cases hosted, none skipped.
+PR 6 is complete. The visual language exists: design tokens, the ten entry account
+palette with every variant contrast checked by test, and the account card itself, driven by
+static data and verified in both colour schemes on the simulator.
+
+CI is green on `main` for the first time, all three jobs, and the hosted job really does
+run the Keychain tests on the runner rather than skipping them.
 
 | Phase | Status |
 | --- | --- |
@@ -21,8 +23,9 @@ Keychain. 407 test cases hosted, none skipped.
 | PR 4, Keychain storage | Done |
 | Gate A1, audit the core | Done and fully closed |
 | PR 5, Xcode project and app shell | Done |
-| PR 6, design tokens and the card | **Next** |
-| PR 7 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 6, design tokens and the card | Done |
+| PR 7, account list and live countdown | **Next** |
+| PR 8 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
 [docs/audits/A1.md](docs/audits/A1.md) and fully closed, with a `/security-review` addendum
@@ -46,7 +49,11 @@ Sources/OpenFactorCore/
   AccountMetadata.swift, AccountColor.swift  What is stored beside a secret
 Tests/OpenFactorCoreTests/                 106 tests, 12 suites, 17k fuzz iterations
 OpenFactor.xcodeproj                       See docs/PROJECT.md, checked in deliberately
-OpenFactor/                                App shell: entry point and an empty list
+OpenFactor/                                App target
+  Design/                                  Tokens, palette, code formatting
+  Views/AccountCard.swift                  The card. No state, no timer, no store
+  AccountListView.swift                    Shell. Replaced in PR 7
+OpenFactorTests/PaletteTests.swift         Contrast asserted, not eyeballed
 OpenFactorTests/                           Empty folder. Its sources are Tests/ above
 docs/audits/A1.md                          Gate A1 findings and disposition
 docs/PROJECT.md                            The project file in plain language
@@ -103,6 +110,13 @@ would be to weaken what they assert.
   generator would make `brew install` a prerequisite for opening the project. The cost is
   paid back by `docs/PROJECT.md` and a CI job asserting the settings it describes
 - Bundle identifier `com.openfactor.dev`, fixed by the App Store Connect record
+- The account palette is deeper than Step Two's because every entry must carry white text
+  at 4.5 to 1 or better. That is asserted by `PaletteTests`, at both gradient stops and in
+  both schemes, so darkening a colour is the only way to add one that fails
+- No view hardcodes a colour, radius, or spacing. They all come from `Tokens`, which is
+  what makes a light mode regression hard to introduce
+- Card gradients only ever darken from the base, so the base is always the worst case for
+  contrast and the tests only have to prove two stops
 
 ## Decisions still open
 
@@ -150,16 +164,24 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 6, design tokens and the account card, per `docs/UI_SPEC.md`. Tokens for colour, type,
-and spacing defined once for both light and dark, the ten entry account palette with each
-entry contrast checked against the text drawn on it, and the card view itself driven by
-static preview data so it can be reviewed without a store.
+PR 7, the account list and live countdown. `AccountCard` exists and takes a `Model`; PR 7
+builds the view model that fills it from the store and keeps it current.
 
-Nothing in `AccountListView.swift` is meant to survive PR 6 and PR 7. It is a shell that
-proves the app launches and reads the Keychain.
+Three things that are already decided and should not be relitigated:
 
-Suggested effort: **Medium**, and Opus 5 is the right seat for it. Fable 5 earns its keep
-again at gate A2, PR 16, and PR 17.
+- **One timer for the whole list, never one per row.** Every visible code recomputes on a
+  single shared tick.
+- **The list must not decrypt secrets it is not showing.** `records()` gives metadata only;
+  a secret is read for one account at the moment its code is generated.
+- **F3 from the A1 audit lands here.** One record whose generator metadata cannot be read
+  currently fails the whole list. PR 7 is where that becomes a per record "this account
+  needs a newer version" instead. See `docs/audits/A1.md`.
+
+Also in scope per the roadmap: search by issuer and name, the top bar, and tap to copy with
+an expiring pasteboard entry.
+
+Suggested effort: **Medium**, Opus 5. Fable 5 earns its keep again at gate A2, PR 16, and
+PR 17.
 
 Still worth doing at any time: a genuinely cold adversarial review of `Sources/` from a
 fresh session, since the A1 review shared this session's context. See the honesty note at
