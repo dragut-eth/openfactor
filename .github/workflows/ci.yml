@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  style:
+    name: Style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The project style forbids em dashes everywhere, including code, comments,
+      # documentation, and commit messages. The character is written here as an escape
+      # so that this file does not fail its own check.
+      - name: No em dashes
+        run: |
+          DASH=$(printf '\xe2\x80\x94')
+          if git grep -n -I -- "$DASH"; then
+            echo "Found an em dash. Use a comma, a colon, parentheses, or two sentences."
+            exit 1
+          fi
+          echo "No em dashes found."
+
+      - name: No trailing whitespace
+        run: |
+          if git grep -n -I -- ' $'; then
+            echo "Found trailing whitespace."
+            exit 1
+          fi
+          echo "No trailing whitespace found."
+
+  test:
+    name: Build and test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode_26.app
+
+      - name: Swift version
+        run: swift --version
+
+      # OpenFactorCore does not exist until PR 1. Remove this guard, and the condition on
+      # the step below, once Package.swift is committed.
+      - name: Check for the package
+        id: package
+        run: |
+          if [ -f Package.swift ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No Package.swift yet, skipping tests. This is expected until PR 1."
+          fi
+
+      - name: Test
+        if: steps.package.outputs.exists == 'true'
+        run: swift test
