@@ -64,8 +64,19 @@ both as translucent pill buttons. No frame overlay, no instructions.
 
 - Add a scanning frame and a one line hint. The bare camera gives no feedback about
   whether anything is happening.
-- Add import from a photo, since services often show the QR on the same phone.
-- Handle the camera denied path with a clear route to Settings and to manual entry.
+- Add import from a photo, since services often show the QR on the same phone. It goes
+  through `PhotosPicker`, so the app never gets access to the photo library itself and
+  never asks for it.
+- Handle the camera denied path with a clear route to Settings and to manual entry, rather
+  than a black screen.
+- **A scan does not save. It confirms first,** showing the issuer, the account name, and a
+  live code. A QR code is unreadable to a human, so this is the only chance to see what was
+  actually in it, and the code can be checked against what the service is showing while the
+  enrollment page is still open. After that page closes, a wrongly imported account is
+  discovered at a login. The reference saves immediately; this costs one tap and buys the
+  only verification opportunity the flow has.
+- An image holding more than one QR code is refused rather than guessed at. Which account
+  gets added should not be a coin toss.
 
 ## Screen 4: Manual setup
 

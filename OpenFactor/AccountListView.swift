@@ -7,11 +7,15 @@ struct AccountListView: View {
 
     @State private var model: AccountListViewModel
     @State private var copied: UUID?
+    @State private var isAdding = false
+
+    private let store: any SecretStore
 
     /// The single timer for the whole screen. Ten accounts do not get ten timers.
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     init(store: any SecretStore) {
+        self.store = store
         _model = State(initialValue: AccountListViewModel(store: store))
     }
 
@@ -23,6 +27,20 @@ struct AccountListView: View {
                 .background(Tokens.Surface.background)
                 .onAppear { model.load(at: Date()) }
                 .onReceive(tick) { model.tick(at: $0) }
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            isAdding = true
+                        } label: {
+                            Label("Add account", systemImage: "plus")
+                        }
+                    }
+                }
+                .sheet(isPresented: $isAdding) {
+                    AddAccountView(store: store) {
+                        model.load(at: Date())
+                    }
+                }
         }
     }
 
@@ -35,11 +53,14 @@ struct AccountListView: View {
                 description: Text(loadFailure)
             )
         } else if model.rows.isEmpty && model.unreadable.isEmpty {
-            ContentUnavailableView(
-                "No accounts yet",
-                systemImage: "lock.shield",
-                description: Text("Accounts you add will appear here.")
-            )
+            ContentUnavailableView {
+                Label("No accounts yet", systemImage: "lock.shield")
+            } description: {
+                Text("Scan the QR code a service shows you when you turn on two factor authentication.")
+            } actions: {
+                Button("Add an account") { isAdding = true }
+                    .buttonStyle(.borderedProminent)
+            }
         } else if model.visibleRows.isEmpty && model.isSearching {
             ContentUnavailableView.search
         } else {

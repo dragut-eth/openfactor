@@ -49,6 +49,7 @@ This is why the app target exists at all right now. The interface came second.
 | `IPHONEOS_DEPLOYMENT_TARGET` | `18.0` | The documented minimum. Xcode defaults new projects to the SDK version, which would have restricted the app to iOS 26.5 and newer |
 | `TEST_HOST` | the app | See above |
 | Local package `relativePath` | `.` | Xcode wrote `../OpenFactor`, which only resolves if the checkout folder happens to be named `OpenFactor`. Anyone cloning into `openfactor` on a case sensitive filesystem, or into a renamed fork, would have got a broken project |
+| `INFOPLIST_KEY_NSCameraUsageDescription` | set | The camera is used to scan setup codes. A missing usage string is not a warning, it is a crash the first time the app asks, and only on a real device where nobody is looking |
 
 ## Folder layout
 
@@ -90,3 +91,6 @@ weaken what they assert.
   out keeps a personal team identifier out of a public repository.
 - **No capabilities.** No push, no background modes, no App Groups, and above all no
   network entitlement to notice the absence of.
+- **No photo library usage string, deliberately.** Importing a picture of a QR code goes
+  through `PhotosPicker`, which runs out of process and hands back only the one image the
+  user chose. The app never gets access to the library, so it does not ask for any.

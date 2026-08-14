@@ -50,6 +50,9 @@ jobs:
           check "IPHONEOS_DEPLOYMENT_TARGET = 18.0;"
           check "TEST_HOST = "
           check "relativePath = .;"
+          # A missing usage string is not a warning, it is a crash the first time the app
+          # touches the camera, and only on a real device.
+          check "INFOPLIST_KEY_NSCameraUsageDescription"
 
   package:
     name: Package tests

@@ -3,16 +3,18 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 7.
+**Last updated:** 2026-08-14, end of PR 8.
 
 ## Where things stand
 
-PR 7 is complete. The app is usable: accounts load from the Keychain, codes generate and
-roll over on one shared timer, search filters, and tapping a card copies its code to a
-clipboard entry that expires with the code and never leaves the device.
+PR 8 is complete. Accounts can be added by scanning a QR code or importing a picture of
+one, which closes the loop: add, see the code, copy it.
 
-**Audit finding F3 is closed.** One record this version cannot read no longer takes the
-whole list down with it.
+**The live camera path is the one thing not verified.** The simulator has no camera. The
+photo import path, the permission denied path, parsing, confirmation, and saving were all
+exercised end to end on the simulator, and the decoder has a test that generates a real QR
+image and reads it back. But nobody has yet pointed a phone at a real code. That needs a
+device run before it can be called done.
 
 | Phase | Status |
 | --- | --- |
@@ -25,8 +27,9 @@ whole list down with it.
 | PR 5, Xcode project and app shell | Done |
 | PR 6, design tokens and the card | Done |
 | PR 7, account list and live countdown | Done |
-| PR 8, add account by QR scan | **Next** |
-| PR 9 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 8, add account by QR scan | Done, camera untested on device |
+| PR 9, manual setup | **Next** |
+| PR 10 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
 [docs/audits/A1.md](docs/audits/A1.md) and fully closed, with a `/security-review` addendum
@@ -57,6 +60,10 @@ OpenFactor/                                App target
   AccountListViewModel.swift               Rows, ticking, search, copying
   AccountListView.swift                    The root screen and the one timer
   CodeClipboard.swift                      The only place codes leave the app
+  Scanning/QRDecoder.swift                 Reads QR codes out of an imported image
+  Scanning/CameraScannerView.swift         The live camera, and permission state
+  Scanning/AddAccountViewModel.swift       Scan, confirm, save. All the judgement
+  Scanning/AddAccountView.swift            The add sheet
 OpenFactorTests/PaletteTests.swift         Contrast asserted, not eyeballed
 OpenFactorTests/                           Empty folder. Its sources are Tests/ above
 docs/audits/A1.md                          Gate A1 findings and disposition
@@ -130,6 +137,11 @@ would be to weaken what they assert.
   verified: an already expired entry is unreadable, and without `localOnly` the code does
   reach the host clipboard
 - `records()` reports unreadable accounts alongside readable ones rather than failing
+- A scan never saves directly. It confirms first, showing a live code that can be checked
+  against the service while the enrollment page is still open
+- An image with more than one QR code is refused rather than guessed at
+- Photo import goes through `PhotosPicker`, so the app never gets photo library access and
+  never asks for it. The only usage string is for the camera
 
 ## Decisions still open
 
@@ -177,20 +189,21 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 8, adding an account by QR scan. The parser it feeds has been done and fuzzed since
-PR 3, so this is camera plumbing and permission handling rather than anything subtle:
+PR 9, manual setup, for services that print a secret instead of showing a QR code:
 
-- `AVFoundation` scanner with a frame and a hint, feeding `OTPAuthURI.account(from:)`
-- Import a QR from a photo, since services often show the code on the same phone
-- The camera denied path routed to Settings and to manual entry
+- Secret Key, Account Name, Email or Username, matching the reference
+- An Advanced disclosure, collapsed: algorithm, digits, period, and TOTP versus HOTP
+- Inline validation using the typed errors the parser already produces
+- A live code preview before saving, the same confirmation the scan flow now has
 
-Deferred deliberately from PR 7, both because they need somewhere to go that does not
-exist yet: the **add button** arrives with PR 8, and the **settings gear** with PR 11.
-Shipping dead buttons that do nothing is worse than a screen without them.
+**F4 from the audit belongs here or nowhere.** Counter based accounts can be created once
+manual setup exposes the choice, and right now nothing can advance a counter. Whatever
+implements it must use checked arithmetic at `UInt64.max`, persist the new counter before
+showing the code, and do both through one store call rather than a metadata update. See
+`docs/audits/A1.md`.
 
-Also still open from the audit: **F4** sets the rules for whichever pull request implements
-counter based advancement, and PR 9 is the likely home. Counter based accounts currently
-show their code with no countdown and no way to advance.
+**Before PR 9, run PR 8 on a real device once.** Point it at a genuine enrollment QR code.
+It is the only part of the add flow a simulator cannot exercise.
 
 ### Testing the app against a real Keychain
 
