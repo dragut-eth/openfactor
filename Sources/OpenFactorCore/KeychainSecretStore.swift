@@ -70,7 +70,7 @@ public struct KeychainSecretStore: SecretStore {
         _ account: OTPAccount,
         color: AccountColor
     ) throws(SecretStoreError) -> AccountRecord {
-        let existing = try records()
+        let existing = try records().readable
         let record = AccountRecord(
             id: UUID(),
             metadata: AccountMetadata(
@@ -126,7 +126,7 @@ public struct KeychainSecretStore: SecretStore {
 
     // MARK: - Reading
 
-    public func records() throws(SecretStoreError) -> [AccountRecord] {
+    public func records() throws(SecretStoreError) -> StoredRecords {
         var query = baseQuery()
         query[kSecMatchLimit as String] = kSecMatchLimitAll
         query[kSecReturnAttributes as String] = true
@@ -138,7 +138,7 @@ public struct KeychainSecretStore: SecretStore {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
 
         if status == errSecItemNotFound {
-            return []
+            return StoredRecords(readable: [])
         }
 
         guard status == errSecSuccess, let items = result as? [[String: Any]] else {
@@ -147,16 +147,23 @@ public struct KeychainSecretStore: SecretStore {
 
         // A plain loop rather than compactMap, because the rethrowing version widens the
         // error type back to `any Error` and loses the typed throws on this method.
-        var records: [AccountRecord] = []
+        var readable: [AccountRecord] = []
+        var unreadable: [UUID] = []
+
         for item in items {
-            if let record = try record(from: item) {
-                records.append(record)
+            switch decode(item) {
+            case let .readable(record): readable.append(record)
+            case let .unreadable(id): unreadable.append(id)
+            case .foreign: continue
             }
         }
 
-        return records.sorted {
-            ($0.metadata.sortIndex, $0.metadata.name) < ($1.metadata.sortIndex, $1.metadata.name)
-        }
+        return StoredRecords(
+            readable: readable.sorted {
+                ($0.metadata.sortIndex, $0.metadata.name) < ($1.metadata.sortIndex, $1.metadata.name)
+            },
+            unreadable: unreadable
+        )
     }
 
     public func secret(for id: UUID) throws(SecretStoreError) -> Data {
@@ -217,23 +224,31 @@ public struct KeychainSecretStore: SecretStore {
         }
     }
 
-    private func record(from item: [String: Any]) throws(SecretStoreError) -> AccountRecord? {
+    /// What one Keychain item turned out to be.
+    private enum DecodedItem {
+        case readable(AccountRecord)
+        case unreadable(id: UUID)
+        /// Not one of ours, or written by something else under the same service name.
+        case foreign
+    }
+
+    private func decode(_ item: [String: Any]) -> DecodedItem {
         guard let rawID = item[kSecAttrAccount as String] as? String,
             let id = UUID(uuidString: rawID)
         else {
-            // Not one of ours, or written by something else under the same service name.
-            // Skipped rather than treated as an error, so one strange item cannot stop
-            // the list from loading.
-            return nil
+            return .foreign
         }
 
         guard let json = item[kSecAttrGeneric as String] as? Data,
             let metadata = try? JSONDecoder().decode(AccountMetadata.self, from: json)
         else {
-            throw SecretStoreError.unreadableMetadata(id: id)
+            // Reported, never skipped and never repaired. A record this version cannot
+            // read is one a newer version probably can, and rewriting it here would
+            // destroy an account that was never broken.
+            return .unreadable(id: id)
         }
 
-        return AccountRecord(id: id, metadata: metadata)
+        return .readable(AccountRecord(id: id, metadata: metadata))
     }
 
     // MARK: - Status codes

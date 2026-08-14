@@ -178,23 +178,35 @@ struct AccountCardModelTests {
             (remaining: 0.0, fraction: 0.0),
         ]
     )
-    func fractionTracksRemaining(remaining: TimeInterval, fraction: Double) {
-        #expect(abs(model(remaining: remaining).fractionRemaining - fraction) < 0.001)
+    func fractionTracksRemaining(remaining: TimeInterval, fraction: Double) throws {
+        let actual = try #require(model(remaining: remaining).fractionRemaining)
+        #expect(abs(actual - fraction) < 0.001)
     }
 
     /// A clock that jumps, or a period that changed under the app, must not produce a ring
     /// drawn outside its own circle.
     @Test("The ring cannot be drawn beyond full or below empty", arguments: [-100.0, -1.0, 31.0, 10_000.0])
-    func fractionIsClamped(remaining: TimeInterval) {
-        let fraction = model(remaining: remaining).fractionRemaining
+    func fractionIsClamped(remaining: TimeInterval) throws {
+        let fraction = try #require(model(remaining: remaining).fractionRemaining)
         #expect(fraction >= 0 && fraction <= 1)
     }
 
     /// The core refuses to build a configuration with a period of zero, so this can only
     /// happen through a bug. It still must not divide by it.
-    @Test("A period of zero does not divide by zero")
+    @Test("A period of zero draws no ring rather than dividing by zero")
     func zeroPeriodIsSafe() {
-        #expect(model(remaining: 10, period: 0).fractionRemaining == 0)
+        #expect(model(remaining: 10, period: 0).fractionRemaining == nil)
+    }
+
+    /// A counter based account has nothing to count down, so it gets no ring at all
+    /// rather than one that never moves.
+    @Test("No countdown means no ring")
+    func noCountdownMeansNoRing() {
+        var subject = model(remaining: 10)
+        subject.secondsRemaining = nil
+
+        #expect(subject.fractionRemaining == nil)
+        #expect(subject.isExpiring == false)
     }
 
     @Test(

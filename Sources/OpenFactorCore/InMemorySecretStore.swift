@@ -48,15 +48,17 @@ public final class InMemorySecretStore: SecretStore, @unchecked Sendable {
         return record
     }
 
-    public func records() throws(SecretStoreError) -> [AccountRecord] {
+    public func records() throws(SecretStoreError) -> StoredRecords {
         lock.lock()
         defer { lock.unlock() }
 
-        return entries
-            .map { AccountRecord(id: $0.key, metadata: $0.value.metadata) }
-            .sorted {
-                ($0.metadata.sortIndex, $0.metadata.name) < ($1.metadata.sortIndex, $1.metadata.name)
-            }
+        return StoredRecords(
+            readable: entries
+                .map { AccountRecord(id: $0.key, metadata: $0.value.metadata) }
+                .sorted {
+                    ($0.metadata.sortIndex, $0.metadata.name) < ($1.metadata.sortIndex, $1.metadata.name)
+                }
+        )
     }
 
     public func secret(for id: UUID) throws(SecretStoreError) -> Data {

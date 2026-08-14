@@ -26,7 +26,10 @@ public protocol SecretStore: Sendable {
     func add(_ account: OTPAccount, color: AccountColor) throws(SecretStoreError) -> AccountRecord
 
     /// Everything needed to draw the list, sorted, and with no secret material in it.
-    func records() throws(SecretStoreError) -> [AccountRecord]
+    ///
+    /// Records this version cannot decode are reported alongside the ones it can, rather
+    /// than failing the read. See ``StoredRecords``.
+    func records() throws(SecretStoreError) -> StoredRecords
 
     /// The secret for one account, for the instant a code is generated.
     func secret(for id: UUID) throws(SecretStoreError) -> Data
@@ -45,7 +48,7 @@ extension SecretStore {
     /// This is the only place metadata and secret are put back together, and the result
     /// is a transient ``OTPAccount`` that is expected to be discarded immediately.
     public func account(for id: UUID) throws(SecretStoreError) -> OTPAccount {
-        guard let record = try records().first(where: { $0.id == id }) else {
+        guard let record = try records().readable.first(where: { $0.id == id }) else {
             throw SecretStoreError.notFound
         }
 
@@ -62,11 +65,20 @@ extension SecretStore {
     /// The convenience worth having: the secret is read, used, and goes out of scope in
     /// one expression, so no caller has a reason to hold one.
     public func code(for id: UUID, at date: Date) throws(SecretStoreError) -> String {
-        guard let record = try records().first(where: { $0.id == id }) else {
+        guard let record = try records().readable.first(where: { $0.id == id }) else {
             throw SecretStoreError.notFound
         }
 
-        let secret = try secret(for: id)
+        return try code(for: record, at: date)
+    }
+
+    /// The code for a record the caller already holds.
+    ///
+    /// The list has its records already, and going back through ``records()`` for each one
+    /// would query the Keychain once per account per refresh. This reads exactly one item:
+    /// the secret, for the instant it is used.
+    public func code(for record: AccountRecord, at date: Date) throws(SecretStoreError) -> String {
+        let secret = try secret(for: record.id)
 
         switch record.metadata.generator {
         case let .totp(configuration):

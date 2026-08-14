@@ -31,8 +31,12 @@ treatment is adapted where noted.
 
 **Interactions**
 
-- Tap a card: copy the code to the pasteboard, with a brief confirmation. The pasteboard
-  entry is marked as expiring, so it does not linger or sync to other devices.
+- Tap a card: copy the code to the pasteboard, with a brief confirmation. The entry is
+  written with `localOnly` and an `expirationDate` set to the moment the code itself stops
+  working, so it neither outlives its usefulness nor travels to the user's other devices.
+  Both were verified rather than assumed: an entry written with an expiry already past is
+  unreadable, and an entry written without `localOnly` does reach the host clipboard while
+  one written with it does not. See `CodeClipboardTests`.
 - Search filters by issuer and label.
 
 ## Screen 2: Settings (modal sheet)

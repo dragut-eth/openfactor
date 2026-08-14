@@ -155,7 +155,7 @@ struct KeychainSecretStoreTests {
 
         try first.add(account(), color: .blue)
 
-        #expect(try first.records().count == 1)
-        #expect(try second.records().isEmpty)
+        #expect(try first.records().readable.count == 1)
+        #expect(try second.records().readable.isEmpty)
     }
 }

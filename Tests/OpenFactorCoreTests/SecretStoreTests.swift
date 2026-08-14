@@ -27,7 +27,7 @@ struct SecretStoreTests {
         let store = kind.make()
         defer { store.cleanUp() }
 
-        #expect(try store.records().isEmpty)
+        #expect(try store.records().readable.isEmpty)
     }
 
     @Test("An added account comes back in the list", arguments: StoreUnderTest.testable)
@@ -36,7 +36,7 @@ struct SecretStoreTests {
         defer { store.cleanUp() }
 
         let record = try store.add(Self.account(), color: .purple)
-        let records = try store.records()
+        let records = try store.records().readable
 
         #expect(records.count == 1)
         #expect(records.first == record)
@@ -57,7 +57,7 @@ struct SecretStoreTests {
         let second = try store.add(Self.account(), color: .red)
 
         #expect(first.id != second.id)
-        #expect(try store.records().count == 2)
+        #expect(try store.records().readable.count == 2)
     }
 
     @Test("New accounts go to the end of the list", arguments: StoreUnderTest.testable)
@@ -70,7 +70,7 @@ struct SecretStoreTests {
             #expect(record.metadata.sortIndex == index)
         }
 
-        #expect(try store.records().map(\.metadata.name) == ["user0", "user1", "user2", "user3", "user4"])
+        #expect(try store.records().readable.map(\.metadata.name) == ["user0", "user1", "user2", "user3", "user4"])
     }
 
     @Test("The list comes back in sort order", arguments: StoreUnderTest.testable)
@@ -84,7 +84,7 @@ struct SecretStoreTests {
         first.metadata.sortIndex = second.metadata.sortIndex + 1
         try store.update(first)
 
-        #expect(try store.records().map(\.metadata.name) == ["second", "first"])
+        #expect(try store.records().readable.map(\.metadata.name) == ["second", "first"])
     }
 
     // MARK: - Secrets
@@ -162,7 +162,7 @@ struct SecretStoreTests {
 
         for generator in generators {
             let record = try store.add(Self.account(generator: generator), color: .blue)
-            let stored = try store.records().first { $0.id == record.id }
+            let stored = try store.records().readable.first { $0.id == record.id }
 
             #expect(stored?.metadata.generator == generator)
         }
@@ -183,7 +183,7 @@ struct SecretStoreTests {
         record.metadata.color = .teal
         try store.update(record)
 
-        let stored = try #require(try store.records().first)
+        let stored = try #require(try store.records().readable.first)
         #expect(stored.metadata.name == "renamed")
         #expect(stored.metadata.issuer == "Elsewhere")
         #expect(stored.metadata.color == .teal)
@@ -221,7 +221,7 @@ struct SecretStoreTests {
         let record = try store.add(Self.account(), color: .blue)
         try store.delete(id: record.id)
 
-        #expect(try store.records().isEmpty)
+        #expect(try store.records().readable.isEmpty)
         #expect(throws: SecretStoreError.notFound) {
             try store.secret(for: record.id)
         }
@@ -237,7 +237,7 @@ struct SecretStoreTests {
 
         try store.delete(id: removed.id)
 
-        #expect(try store.records().map(\.id) == [kept.id])
+        #expect(try store.records().readable.map(\.id) == [kept.id])
     }
 
     @Test("Deleting an account that is gone fails", arguments: StoreUnderTest.testable)

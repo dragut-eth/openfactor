@@ -14,18 +14,27 @@ struct AccountCard: View {
         var issuer: String
         var name: String
         var code: String
-        var secondsRemaining: TimeInterval
+
+        /// How long this code stays valid, or `nil` for a counter based account.
+        ///
+        /// Counter based codes do not expire on a clock. They advance when the user asks
+        /// for the next one, so a countdown would be a lie. Those accounts get no ring at
+        /// all rather than a ring that never moves.
+        var secondsRemaining: TimeInterval?
+
         var period: Int
         var color: AccountColor
 
-        /// How much of the current code's life is left, from 1 down to 0.
-        var fractionRemaining: Double {
-            guard period > 0 else { return 0 }
+        /// How much of the current code's life is left, from 1 down to 0, or `nil` when
+        /// there is nothing to count down.
+        var fractionRemaining: Double? {
+            guard let secondsRemaining, period > 0 else { return nil }
             return min(max(secondsRemaining / Double(period), 0), 1)
         }
 
         var isExpiring: Bool {
-            secondsRemaining <= Tokens.Ring.warningThreshold
+            guard let secondsRemaining else { return false }
+            return secondsRemaining <= Tokens.Ring.warningThreshold
         }
     }
 
@@ -54,10 +63,9 @@ struct AccountCard: View {
 
             Spacer(minLength: Tokens.Spacing.medium)
 
-            CountdownRing(
-                fractionRemaining: model.fractionRemaining,
-                isExpiring: model.isExpiring
-            )
+            if let fractionRemaining = model.fractionRemaining {
+                CountdownRing(fractionRemaining: fractionRemaining, isExpiring: model.isExpiring)
+            }
         }
         .padding(Tokens.Spacing.large)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -65,9 +73,17 @@ struct AccountCard: View {
         .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(model.issuer), \(model.name)")
-        .accessibilityValue(
-            "Code \(CodeFormatting.spokenDigits(model.code)), \(Int(model.secondsRemaining.rounded())) seconds remaining"
-        )
+        .accessibilityValue(accessibilityValue)
+    }
+
+    private var accessibilityValue: String {
+        let spoken = CodeFormatting.spokenDigits(model.code)
+
+        guard let secondsRemaining = model.secondsRemaining else {
+            return "Code \(spoken)"
+        }
+
+        return "Code \(spoken), \(Int(secondsRemaining.rounded())) seconds remaining"
     }
 }
 

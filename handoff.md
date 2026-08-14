@@ -3,16 +3,16 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 6.
+**Last updated:** 2026-08-14, end of PR 7.
 
 ## Where things stand
 
-PR 6 is complete. The visual language exists: design tokens, the ten entry account
-palette with every variant contrast checked by test, and the account card itself, driven by
-static data and verified in both colour schemes on the simulator.
+PR 7 is complete. The app is usable: accounts load from the Keychain, codes generate and
+roll over on one shared timer, search filters, and tapping a card copies its code to a
+clipboard entry that expires with the code and never leaves the device.
 
-CI is green on `main` for the first time, all three jobs, and the hosted job really does
-run the Keychain tests on the runner rather than skipping them.
+**Audit finding F3 is closed.** One record this version cannot read no longer takes the
+whole list down with it.
 
 | Phase | Status |
 | --- | --- |
@@ -24,8 +24,9 @@ run the Keychain tests on the runner rather than skipping them.
 | Gate A1, audit the core | Done and fully closed |
 | PR 5, Xcode project and app shell | Done |
 | PR 6, design tokens and the card | Done |
-| PR 7, account list and live countdown | **Next** |
-| PR 8 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 7, account list and live countdown | Done |
+| PR 8, add account by QR scan | **Next** |
+| PR 9 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
 [docs/audits/A1.md](docs/audits/A1.md) and fully closed, with a `/security-review` addendum
@@ -44,6 +45,7 @@ Sources/OpenFactorCore/
   OTPGenerator.swift, OTPAccount.swift     What an account is. OTPAccount is transient
   OTPAuthURI.swift, ...Serialization.swift Import and export, plus OTPAuthURIError
   SecretStore.swift, SecretStoreError.swift  The storage contract
+  StoredRecords.swift                      What a read returns, readable and not
   KeychainSecretStore.swift                One Keychain item per account
   InMemorySecretStore.swift                For previews and tests. Never used by the app
   AccountMetadata.swift, AccountColor.swift  What is stored beside a secret
@@ -52,7 +54,9 @@ OpenFactor.xcodeproj                       See docs/PROJECT.md, checked in delib
 OpenFactor/                                App target
   Design/                                  Tokens, palette, code formatting
   Views/AccountCard.swift                  The card. No state, no timer, no store
-  AccountListView.swift                    Shell. Replaced in PR 7
+  AccountListViewModel.swift               Rows, ticking, search, copying
+  AccountListView.swift                    The root screen and the one timer
+  CodeClipboard.swift                      The only place codes leave the app
 OpenFactorTests/PaletteTests.swift         Contrast asserted, not eyeballed
 OpenFactorTests/                           Empty folder. Its sources are Tests/ above
 docs/audits/A1.md                          Gate A1 findings and disposition
@@ -117,6 +121,15 @@ would be to weaken what they assert.
   what makes a light mode regression hard to introduce
 - Card gradients only ever darken from the base, so the base is always the worst case for
   contrast and the tests only have to prove two stops
+- One timer for the whole list, in the view, ticking the view model once a second. Codes
+  are regenerated only when the counter changes, which a test proves by counting Keychain
+  reads rather than by inspection
+- The view model holds names, colours, and six digits. Never a secret. Asserted by
+  reflecting over a row rather than by trusting the comment
+- Copied codes are written `localOnly` with an expiry equal to the code's own. Both
+  verified: an already expired entry is unreadable, and without `localOnly` the code does
+  reach the host clipboard
+- `records()` reports unreadable accounts alongside readable ones rather than failing
 
 ## Decisions still open
 
@@ -164,21 +177,27 @@ sharing a model share their blind spots.
 
 ## Next step
 
-PR 7, the account list and live countdown. `AccountCard` exists and takes a `Model`; PR 7
-builds the view model that fills it from the store and keeps it current.
+PR 8, adding an account by QR scan. The parser it feeds has been done and fuzzed since
+PR 3, so this is camera plumbing and permission handling rather than anything subtle:
 
-Three things that are already decided and should not be relitigated:
+- `AVFoundation` scanner with a frame and a hint, feeding `OTPAuthURI.account(from:)`
+- Import a QR from a photo, since services often show the code on the same phone
+- The camera denied path routed to Settings and to manual entry
 
-- **One timer for the whole list, never one per row.** Every visible code recomputes on a
-  single shared tick.
-- **The list must not decrypt secrets it is not showing.** `records()` gives metadata only;
-  a secret is read for one account at the moment its code is generated.
-- **F3 from the A1 audit lands here.** One record whose generator metadata cannot be read
-  currently fails the whole list. PR 7 is where that becomes a per record "this account
-  needs a newer version" instead. See `docs/audits/A1.md`.
+Deferred deliberately from PR 7, both because they need somewhere to go that does not
+exist yet: the **add button** arrives with PR 8, and the **settings gear** with PR 11.
+Shipping dead buttons that do nothing is worse than a screen without them.
 
-Also in scope per the roadmap: search by issuer and name, the top bar, and tap to copy with
-an expiring pasteboard entry.
+Also still open from the audit: **F4** sets the rules for whichever pull request implements
+counter based advancement, and PR 9 is the likely home. Counter based accounts currently
+show their code with no countdown and no way to advance.
+
+### Testing the app against a real Keychain
+
+`xcodebuild test` runs on a **throwaway clone** of the simulator, so anything written to
+the Keychain during a test is gone afterward and the app on the real simulator will not see
+it. Pass `-parallel-testing-enabled NO` to run on the device itself. This cost an hour to
+work out; it is not obvious from any error message.
 
 Suggested effort: **Medium**, Opus 5. Fable 5 earns its keep again at gate A2, PR 16, and
 PR 17.
