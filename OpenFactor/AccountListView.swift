@@ -355,11 +355,17 @@ extension View {
 private struct CardButtonLabel: View {
     let systemImage: String
 
+    /// Scaled on the same curve as the card's ring, which is what it stands in for. Fixed
+    /// at the token, it read as the smaller sibling of the countdown on a card beside it,
+    /// and the two are the same control in different clothes: the place a card tells you
+    /// about its code. The glyph scales with it rather than rattling around inside.
+    @ScaledMetric(relativeTo: .body) private var size = Tokens.Ring.size
+
     var body: some View {
         Image(systemName: systemImage)
-            .font(.system(size: 15, weight: .semibold))
+            .font(.system(size: size * 0.52, weight: .semibold))
             .foregroundStyle(Tokens.OnCard.primary)
-            .frame(width: Tokens.Ring.size, height: Tokens.Ring.size)
+            .frame(width: size, height: size)
             .background(Tokens.OnCard.primary.opacity(0.18), in: Circle())
     }
 }

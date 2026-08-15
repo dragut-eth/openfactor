@@ -71,7 +71,13 @@ struct WatchCodeView: View {
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
 
-                    ring(at: context.date)
+                    // No ring for a counter based account. There is nothing counting
+                    // down, so a depleting circle beside "On iPhone" is an animation
+                    // that means nothing, and next to a code that is not there it reads
+                    // as the watch failing to fetch one.
+                    if case .totp = record.metadata.generator {
+                        ring(at: context.date)
+                    }
                 }
 
                 VStack(spacing: 0) {

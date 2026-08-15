@@ -116,9 +116,15 @@ The done screen says the file it just read holds secret keys in the clear and su
 deleting it.
 
 **A sheet you abandon has Cancel on the left, a sheet you close has Done on the right.**
-Add, edit and erase are abandoned, so they carry a leading Cancel. Settings and import are
-closed, so they carry a trailing Done. Import had Done in the cancellation slot, which put
-the same word on the opposite side from Settings.
+Add, edit and erase are abandoned, so they carry a leading Cancel. Settings is closed, so
+it carries a trailing Done.
+
+**Import is both, and the word follows the stage.** The preview is a sheet you abandon
+until the one control that writes, at the bottom of the form, has been used, so it carries
+Cancel. After accounts are added it is a sheet you close, so it carries Done. It said Done
+throughout, which is the same failure as a silent default: a person who scrolls past the
+Add button reads Done as "the import finished" and leaves with nothing imported and no
+sign that anything was missed.
 
 **One sheet, driven by an enum, not one per section.** Two `.sheet` modifiers on sibling
 sections of the same `Form` conflict: SwiftUI supports one presentation per view, and the
@@ -265,7 +271,14 @@ both as translucent pill buttons. No frame overlay, no instructions.
 - **Counter based accounts get a next code button in the list, not a countdown ring.**
   Their codes advance when asked for rather than with the clock, so a ring would be a lie.
   The counter is persisted before the new code is shown, for the reasons in
-  `docs/audits/A1.md` under F4.
+  `docs/audits/A1.md` under F4. The button is the same size as the ring and scales on the
+  same curve, because the two are the same thing in different clothes, the place a card
+  tells you about its code. Fixed at the token while the ring scaled, it read as a lesser
+  control on a card sitting beside a time based one.
+- **The watch draws no ring for a counter based account**, where it used to draw a live
+  one beside the words "On iPhone". Nothing was counting down, so the animation meant
+  nothing, and next to a code that is not there a moving ring reads as the watch failing
+  to fetch one rather than as a code that only the phone can advance.
 
 ## Screen 5: Edit mode
 

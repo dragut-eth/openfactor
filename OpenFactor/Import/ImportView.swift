@@ -34,11 +34,20 @@ struct ImportView: View {
             .navigationTitle("Import accounts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Trailing, like Settings. The rule across the app: a sheet you abandon
-                // has Cancel on the left, a sheet you close has Done on the right. This
-                // one had Done in the cancellation slot, which put it on the wrong side.
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                // The word follows the stage, because the wrong one here is a data loss
+                // bug with a friendly face: "Done" over a preview reads as "the import is
+                // finished" when nothing has been written yet, and the one control that
+                // writes is at the bottom of the form. Until then leaving is a cancel, and
+                // it sits on the leading edge like every other cancel in the app. Once
+                // accounts are actually added it becomes Done, on the trailing edge.
+                if case .finished = model.stage {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
+                } else {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
                 }
             }
             .fileImporter(
