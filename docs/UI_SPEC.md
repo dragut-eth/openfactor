@@ -227,33 +227,41 @@ Not a pass at the end. The rules the interface follows.
 
 ## App icon
 
-The icon is the app at its smallest size: six account cards on the black canvas,
-nothing else. It makes no metaphorical claim. No lock, no shield, no key. Those are
-promises, and an unaudited tool should not make promises. It also keeps distance
-from every neighbor on the shelf: the lock is Microsoft's, the keyhole is
-1Password's, the shields belong to Authy and Aegis, the star to Google, and the
-ring to Step Two. What remains is the truthful option, a picture of what is inside.
+*Swapped to the current artwork after PR 13. The previous design, six account cards on
+black, is kept in the repository history rather than described here as though it were
+still the icon.*
 
-Six tiles because a code has six digits, in two rows of three because that is how
-codes are printed, 123 over 456. The grid is 2 by 3 and not 2 by 2 or 3 by 3 on
-purpose: four colored squares is Microsoft's flag, and nine reads as a launcher.
+The icon is an isometric cube, its three visible faces divided into two by two facets,
+twelve facets in the six card colours used twice each. Same canvas as before: #1B1B21
+falling to #08080B on the diagonal, with a faint radial glow at the upper left.
 
-Color does the work that shape cannot. At 29 px, thin geometry collapses but hue
-survives, so the icon degrades into a spectrum chip that is still recognizably this
-app. The six colors are the card palette in hue order: red, orange, green, teal,
-indigo, pink. Gray is excluded because it spends a slot without saying anything.
-The icon colors run slightly more vivid than the in-app cards, which are contrast
-tuned for white text; the icon carries no text.
+Colour does the work that shape cannot. At 29 px thin geometry collapses but hue survives,
+so the icon degrades into a spectrum chip that is still recognizably this app. The six
+colours are the card palette: red, orange, green, teal, indigo, pink. Grey is excluded
+because it spends a facet without saying anything. The icon colours run slightly more vivid
+than the in app cards, which are contrast tuned for white text; the icon carries no text.
 
-One light source at the upper left. The canvas falls from #1B1B21 to #08080B on the
-diagonal, and every tile gradient is angled a few degrees off vertical toward that
-same light, which is what makes six shapes read as one object instead of six
-stickers.
+It keeps distance from every neighbour on the shelf. The lock is Microsoft's, the keyhole
+1Password's, the shields belong to Authy and Aegis, the star to Google, and the ring to
+Step Two. It also makes no security claim: no lock, no shield, no key. Those are promises,
+and an unaudited tool should not make promises.
 
-Geometry, in the 1024 canvas: tiles of 184 with corner radius 52, gutters of 60,
-grid centered at 512, 512. The whole grid sits inside the inscribed circle with
-margin to spare, so the same artwork survives the watchOS circular mask when the
-watch target arrives in PR 14.
+**It does carry a shape association the previous icon did not,** and that is worth stating
+rather than leaving for someone else to notice. A cube with mixed colour facets reads as a
+puzzle, and specifically as a Rubik's Cube, which is a strongly associated commercial
+product. The rendering here is two facets per edge rather than the classic three, and the
+European trade mark on the cube's shape was annulled in 2019, so this is a question to ask
+before the App Store submission in PR 18 rather than a known problem. It is recorded here
+so the submission does not meet it cold.
+
+One light source at the upper left, as before: the left face is darkened 8 percent, the
+right face 20 percent, and every facet gradient is angled a few degrees off vertical toward
+the same light. That is what makes twelve shapes read as one object.
+
+Geometry, in the 1024 canvas: apex at 512, 96, centre vertex at 512, 512, bottom at
+512, 928, with the widest points at 152 and 872. Every vertex is within 416 of the centre,
+comfortably inside the 512 radius inscribed circle, so the same artwork survives the
+watchOS circular mask when the watch target arrives in PR 14.
 
 The source of truth is docs/design/icon.svg. The 1024 PNG in the asset catalog is
 rendered from it, and any SVG renderer at 1024 by 1024 reproduces it exactly.

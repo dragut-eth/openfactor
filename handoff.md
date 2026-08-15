@@ -258,6 +258,20 @@ sharing a model share their blind spots.
 - RFC 6238 Appendix B uses a **different seed per algorithm**, 20, 32, and 64 bytes.
   Running the whole table against the 20 byte seed is the usual way to get it wrong.
 
+## Polish landed after PR 13
+
+Small items Xavier raised while testing the sync build, before PR 14 starts.
+
+- **The app icon was swapped to the cube artwork.** `docs/UI_SPEC.md` describes it, and
+  records one thing the previous icon did not have to answer for: a mixed colour cube reads
+  as a Rubik's Cube, which is a question for the App Store submission in PR 18 rather than
+  a known problem.
+- **The context menu no longer lifts the row, only the card.** The row is full width and
+  square cornered, so lifting it showed a bright margin down each side in light mode where
+  the row's background sat either side of the inset card. `contentShape` already named a
+  shape for the drag preview and not for the context menu preview; it now names both, which
+  is the fix for the same underlying cause in the other direction.
+
 ## Next step
 
 **Gate A2, and it is a stop rather than a formality.** Sync is the only feature that lets

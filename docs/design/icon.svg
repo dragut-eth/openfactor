@@ -28,15 +28,31 @@
     </linearGradient>
   </defs>
 
-  <!-- Charcoal-to-black gradient canvas, lit from upper left; iOS applies the corner mask -->
   <rect width="1024" height="1024" fill="url(#bg)"/>
   <rect width="1024" height="1024" fill="url(#glow)"/>
 
-  <!-- Six digits, six accounts, all gradients falling with the same light -->
-  <rect x="176" y="298" width="184" height="184" rx="52" fill="url(#red)"/>
-  <rect x="420" y="298" width="184" height="184" rx="52" fill="url(#orange)"/>
-  <rect x="664" y="298" width="184" height="184" rx="52" fill="url(#green)"/>
-  <rect x="176" y="542" width="184" height="184" rx="52" fill="url(#teal)"/>
-  <rect x="420" y="542" width="184" height="184" rx="52" fill="url(#indigo)"/>
-  <rect x="664" y="542" width="184" height="184" rx="52" fill="url(#pink)"/>
+  <!-- Scrambled cube, 2x2 facets per face, six colors twice each.
+       Apex (512,96), center vertex (512,512), bottom (512,928). -->
+
+  <!-- Top face -->
+  <polygon points="512,96 685.9,196.5 512,296.9 338.1,196.5" fill="url(#orange)"/>
+  <polygon points="698.1,203.5 872,304 698.1,404.5 524.2,304" fill="url(#green)"/>
+  <polygon points="325.9,203.5 499.8,304 325.9,404.5 152,304" fill="url(#red)"/>
+  <polygon points="512,311.1 685.9,411.5 512,512 338.1,411.5" fill="url(#indigo)"/>
+
+  <!-- Right face -->
+  <polygon points="872,304 698.1,404.5 698.1,605.3 872,504.8" fill="url(#pink)"/>
+  <polygon points="685.9,411.5 512,512 512,712.8 685.9,612.3" fill="url(#teal)"/>
+  <polygon points="872,519 698.1,619.5 698.1,820.3 872,720" fill="url(#indigo)"/>
+  <polygon points="685.9,626.5 512,727 512,928 685.9,827.3" fill="url(#green)"/>
+
+  <!-- Left face -->
+  <polygon points="152,304 325.9,404.5 325.9,605.3 152,504.8" fill="url(#pink)"/>
+  <polygon points="338.1,411.5 512,512 512,712.8 338.1,612.3" fill="url(#orange)"/>
+  <polygon points="152,519 325.9,619.5 325.9,820.3 152,720" fill="url(#teal)"/>
+  <polygon points="338.1,626.5 512,727 512,928 338.1,827.3" fill="url(#red)"/>
+
+  <!-- One light, upper left -->
+  <polygon points="152,304 512,512 512,928 152,720" fill="#000000" opacity="0.08"/>
+  <polygon points="872,304 872,720 512,928 512,512" fill="#000000" opacity="0.20"/>
 </svg>

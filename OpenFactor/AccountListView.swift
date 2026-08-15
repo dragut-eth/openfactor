@@ -201,11 +201,13 @@ struct AccountListView: View {
                 CopiedBadge()
             }
         }
-        // Without this the drag preview is a rectangle, and the card's rounded corners
-        // reveal its opaque backing as a dark notch. Naming the shape makes the lifted
-        // card exactly the card.
+        // Both lifts, or neither. Without a named shape the system lifts the whole row,
+        // which is full width and square cornered: the drag preview shows a dark notch at
+        // each corner, and the context menu shows a bright margin down each side where the
+        // row's own background sits either side of the inset card. Naming the shape makes
+        // the lifted thing exactly the card in both cases.
         .contentShape(
-            .dragPreview,
+            [.dragPreview, .contextMenuPreview],
             RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
         )
         // A system context menu, for the lift and the card preview behind it, which an
