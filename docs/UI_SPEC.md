@@ -232,6 +232,42 @@ context menu is now a shortcut into a screen that holds everything, rather than 
 to reach the colour at all. One grid of swatches, used inline by the edit screen and wrapped
 in a sheet by the shortcut, so the two cannot drift apart.
 
+## Screens 6 and 7: the watch
+
+**Read only, and that is a security property rather than a scope cut.** The watch shows the
+list and one code. It cannot add, edit, delete, or copy. The smallest device with the
+weakest lock gets the fewest capabilities.
+
+It holds its own copy of the secrets and works with the phone off, absent, or out of range.
+Those copies arrive through iCloud Keychain in the shared access group, not over
+WatchConnectivity, which would have meant a second transport for secret material.
+
+**The list is not a resized phone card.** A card is a coloured rectangle carrying white
+text; at this size that would be a colour swatch with unreadable writing on it. So the
+screen stays the black it already is and the colour moves to the type: issuer in the
+account's colour, account name in white beneath it.
+
+The palette inverts for the same reason. The phone's entries are dark enough for white text
+to sit on them, which is precisely the wrong thing against black. `WatchPalette` holds the
+vivid variants, chosen to clear contrast against black rather than under white. Only the
+issuer is coloured. The account name and the code are white, because a code read at a glance
+in bad light needs contrast more than it needs identity.
+
+**No code appears in the list.** The phone shows every code at once, because a phone is held
+deliberately and put away. A watch is on a wrist that is visible to whoever is standing next
+to you. One code, when you ask for it, is the whole difference.
+
+**The code screen is the code, a countdown ring, the issuer and the account, and the way
+back.** Nothing else. The ring turns red for the last five seconds, as on the phone, because
+a code you are halfway through typing is about to stop working.
+
+**The empty state is load bearing, and it is written for the person whose accounts are
+merely late.** An empty watch and a broken watch look identical. iCloud Keychain took close
+to half an hour to carry seven accounts across during PR 14, arriving one at a time with no
+error reported anywhere, and that latency fooled the people building it twice in a row. So
+the screen says nothing has arrived yet and names the likely reason, and deliberately does
+not send anyone off to re-check settings that are already correct.
+
 ## Design tokens
 
 Defined once in the app and never hardcoded at a call site, so a design change is a one

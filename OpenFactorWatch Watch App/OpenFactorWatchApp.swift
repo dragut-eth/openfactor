@@ -28,7 +28,7 @@ struct OpenFactorWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            WatchAccessProofView(store: store)
+            WatchAccountListView(store: store)
         }
     }
 }

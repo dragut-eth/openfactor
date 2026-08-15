@@ -41,6 +41,16 @@
 			path = "OpenFactorWatch Watch App";
 			sourceTree = "<group>";
 		};
+		50AB00000000000000000001 /* OpenFactorShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OpenFactorShared;
+			sourceTree = "<group>";
+		};
+		50AB00000000000000000002 /* OpenFactorShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OpenFactorShared;
+			sourceTree = "<group>";
+		};
 		50AC3C9A302F852300379FC2 /* OpenFactor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = OpenFactor;
@@ -102,6 +112,7 @@
 			isa = PBXGroup;
 			children = (
 				50CF0RE0000000000000A1 /* OpenFactorCoreTests */,
+				50AB00000000000000000002 /* OpenFactorShared */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -113,6 +124,7 @@
 				50AC3CA8302F852400379FC2 /* OpenFactorTests */,
 				50AC3CB2302F852400379FC2 /* OpenFactorUITests */,
 				50AA00000000000000000008 /* OpenFactorWatch Watch App */,
+				50AB00000000000000000001 /* OpenFactorShared */,
 				50AC3C99302F852300379FC2 /* Products */,
 				5082E0C9303011C8005440A4 /* Recovered References */,
 			);
@@ -146,6 +158,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				50AA00000000000000000008 /* OpenFactorWatch Watch App */,
+				50AB00000000000000000002 /* OpenFactorShared */,
 			);
 			name = "OpenFactorWatch Watch App";
 			packageProductDependencies = (
@@ -168,6 +181,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				50AB00000000000000000001 /* OpenFactorShared */,
 				50AC3C9A302F852300379FC2 /* OpenFactor */,
 			);
 			name = OpenFactor;
@@ -531,8 +545,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconLight AppIconAuto";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenFactor/OpenFactor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -577,8 +591,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconLight AppIconAuto";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenFactor/OpenFactor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

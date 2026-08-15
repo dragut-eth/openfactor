@@ -29,6 +29,15 @@ reach. `migrateToDefaultAccessGroup()` is the fix and it runs at launch. The les
 keeping: the phone could not have shown this, and no test in the suite could have either,
 because both had access to both groups. It took the one device that does not.
 
+**The watch interface exists.** List and code screen, read only, built after the access
+group was proved rather than before. `WatchPalette` inverts the card palette, because the
+phone's colours are built to sit behind white text and that is exactly wrong against black.
+`PaletteColor` and `CodeFormatting` moved to `OpenFactorShared`, a folder both app targets
+synchronise, so the colour maths is not written twice.
+
+Still to do in PR 14: the complications decision, which the roadmap deliberately left open,
+and running the watch through accessibility text sizes the way the phone was in PR 12.
+
 **Gate A2 is done and its follow up has landed.** The report is
 `docs/audits/A2.md`, findings F8 to F18. It found no path by which a secret leaves the
 device beyond what the switch is documented to do, and confirmed `setSynchronizable(_:)`
