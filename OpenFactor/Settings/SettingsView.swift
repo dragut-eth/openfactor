@@ -38,8 +38,21 @@ struct SettingsView: View {
     /// than showing rows that no longer match what is stored.
     var onAccountsChanged: () -> Void = {}
 
-    @State private var isErasing = false
-    @State private var isImporting = false
+    /// One presentation, not one per section.
+    ///
+    /// Two `.sheet` modifiers on sibling sections of the same `Form` conflict: SwiftUI
+    /// supports one presentation per view, and the second tore the first down the instant
+    /// it appeared, taking the settings sheet with it and dropping the user back to the
+    /// list. Driving a single sheet from an enum is the shape that does not have that
+    /// failure mode.
+    @State private var sheet: Sheet?
+
+    private enum Sheet: String, Identifiable {
+        case importing
+        case erasing
+
+        var id: String { rawValue }
+    }
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -78,6 +91,20 @@ struct SettingsView: View {
                 backupSection
                 eraseSection
                 aboutSection
+            }
+            .sheet(item: $sheet) { which in
+                switch which {
+                case .importing:
+                    ImportView(store: store) {
+                        onAccountsChanged()
+                        refreshSyncState()
+                    }
+                case .erasing:
+                    EraseAccountsView(store: store) {
+                        onAccountsChanged()
+                        refreshSyncState()
+                    }
+                }
             }
             .task { refreshSyncState() }
             .navigationTitle("Settings")
@@ -252,17 +279,11 @@ struct SettingsView: View {
 
     private var backupSection: some View {
         Section {
-            Button("Import accounts…") { isImporting = true }
+            Button("Import accounts…") { sheet = .importing }
         } header: {
             Text("Backup")
         } footer: {
             Text("Reads a Step Two export or an unencrypted Aegis vault.")
-        }
-        .sheet(isPresented: $isImporting) {
-            ImportView(store: store) {
-                onAccountsChanged()
-                refreshSyncState()
-            }
         }
     }
 
@@ -271,7 +292,7 @@ struct SettingsView: View {
     private var eraseSection: some View {
         Section {
             Button(role: .destructive) {
-                isErasing = true
+                sheet = .erasing
             } label: {
                 Text("Erase all accounts")
             }
@@ -282,12 +303,6 @@ struct SettingsView: View {
                 because the Keychain outlives it.
                 """
             )
-        }
-        .sheet(isPresented: $isErasing) {
-            EraseAccountsView(store: store) {
-                onAccountsChanged()
-                refreshSyncState()
-            }
         }
     }
 

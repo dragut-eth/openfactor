@@ -109,6 +109,12 @@ vault until a test caught it.
 The done screen says the file it just read holds secret keys in the clear and suggests
 deleting it, which is advice a Step Two export already gives about itself.
 
+**One sheet, driven by an enum, not one per section.** Two `.sheet` modifiers on sibling
+sections of the same `Form` conflict: SwiftUI supports one presentation per view, and the
+second tore the first down as it appeared, taking the settings sheet with it and dropping
+the user back to the account list. Reported from a device, reproduced in the simulator,
+fixed by presenting a single sheet from the view that owns the whole form.
+
 **Erase all accounts**, in its own section at the bottom, away from anything routine,
 because a destructive action sharing a section with a colour picker invites the wrong tap.
 
