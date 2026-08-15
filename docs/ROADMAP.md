@@ -189,8 +189,7 @@ PR 5 as planned.
 
 ## Phase 2: iOS app
 
-Screens and behavior are specified in `docs/UI_SPEC.md`, derived from the Step Two
-reference screenshots. Feature parity is the goal, with the adaptations listed there.
+Screens and behavior are specified in `docs/UI_SPEC.md`.
 
 ### PR 5: Xcode project and app shell
 
