@@ -258,10 +258,26 @@ Keychain carries them between devices.
 
 Three consequences, and the first is why this cannot wait for PR 14:
 
-- **A Keychain item lives in the group it was written to.** Every secret stored today is in
-  the app's default group. Introducing a shared group later means migrating them, and a
-  migration that goes wrong looks like "my accounts vanished". Doing it while there is one
-  user and one device is nearly free.
+- **A Keychain item lives in the group it was written to.** Every secret stored before the
+  shared group was declared is in the app's bundle group. Introducing a shared group later
+  means migrating them, and a migration that goes wrong looks like "my accounts vanished".
+
+  **PR 13 declared the group and shipped no migration, and that was a bug.** The reasoning
+  was that the only user had said their data need not be preserved, which was a wrong
+  reading: it meant do not work around my data, not do not write the feature. The symptom
+  appeared the first time the watch app ran. The phone showed six accounts and the watch
+  showed one, with no error anywhere, because a query naming no access group searches every
+  group the app can reach and the phone can reach both. Only the watch, which shares just
+  the one group, could see the difference.
+
+  `migrateToDefaultAccessGroup()` is the correction. It moves each item with
+  `SecItemUpdate`, which can change `kSecAttrAccessGroup` in place, so no secret is
+  decrypted and no crash can lose an account. That the API permits this is proved by test
+  rather than assumed. The target group is discovered by writing a valueless probe and
+  reading back where it landed, because no public API answers the question and hardcoding
+  the name would put the team identifier in the source and give the group two homes that
+  could disagree. It runs at every launch, is idempotent, and costs one query once there is
+  nothing left to move.
 - **The watch will require iCloud sync to be on.** A shared access group shares between apps
   on one device; getting anything to a second device is iCloud Keychain's job. The watch
   cannot work with sync off, and the interface has to say so rather than ship a watch app
@@ -269,13 +285,19 @@ Three consequences, and the first is why this cannot wait for PR 14:
 - **The watch becomes a device holding your secrets.** That belongs in the threat model
   next to the sync entry, not left implicit.
 
-Still unverified, and the first thing PR 14 does: the watch target's only screen reads the
-Keychain and reports what it found, rather than drawing a list that would be empty for
-several possible reasons. Everything else in the watch plan rests on the answer.
+**Verified on 2026-08-14, on a real Apple Watch Ultra paired to a real iPhone.** The watch
+app read an account that was created on the phone, and named its issuer. Nothing was
+transferred between the two devices by this app: the phone wrote to the shared access
+group, iCloud Keychain carried the item, and the watch read it from the same group.
 
-Gate A2 improved the odds without settling it. Apple's documentation states that watchOS 7
-and later synchronizes keychain items, which was the part most likely to be false. What
-remains unproven is the access group itself.
+This was the load bearing assumption of the entire watch design and it had been open since
+PR 5. It was proved before any of the watch interface was written, by a target whose only
+screen reads the Keychain and reports what it found, precisely so that a wrong answer would
+be legible rather than showing up later as an empty list with several possible causes.
+
+Gate A2 had already improved the odds without settling it, by finding Apple's statement
+that watchOS 7 and later synchronizes keychain items. That was the half most likely to be
+false. The access group half is now observed rather than reasoned.
 
 ### The Xcode project file
 

@@ -210,6 +210,124 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         return changed
     }
 
+    /// Moves every account into the access group new items are written to.
+    ///
+    /// **A Keychain item lives in the group it was written to.** Accounts saved before the
+    /// shared group was declared are still in the app's bundle group, and they stay there
+    /// forever unless something moves them. The phone does not notice, because a query that
+    /// names no group searches every group the app can reach. The watch notices immediately,
+    /// because the shared group is the only one it has in common with the phone. The symptom
+    /// is a watch that shows some of your accounts and no error, which is the worst shape a
+    /// bug can take in an authenticator.
+    ///
+    /// PR 13 declared the group and shipped no migration, on the reading that the only user
+    /// did not need their data preserved. That was the wrong reading of the answer and this
+    /// is the correction.
+    ///
+    /// **No secret is read.** `SecItemUpdate` can change `kSecAttrAccessGroup` in place,
+    /// which is verified by test rather than assumed, so an account moves without being
+    /// decrypted and without a window in which a crash would lose it.
+    ///
+    /// Safe to run at every launch: it is idempotent, and once everything is in the right
+    /// group it costs one attribute query.
+    ///
+    /// - Returns: how many accounts were moved.
+    @discardableResult
+    public func migrateToDefaultAccessGroup() throws(SecretStoreError) -> Int {
+        // A store pinned to an explicit group has nothing to migrate: its queries only ever
+        // see that group, so there is no elsewhere to move things from.
+        guard accessGroup == nil else { return 0 }
+
+        let target = try defaultAccessGroup()
+
+        var query = baseQuery()
+        query[kSecMatchLimit as String] = kSecMatchLimitAll
+        query[kSecReturnAttributes as String] = true
+        query[kSecReturnData as String] = false
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        if status == errSecItemNotFound {
+            return 0
+        }
+
+        guard status == errSecSuccess, let items = result as? [[String: Any]] else {
+            throw error(for: status)
+        }
+
+        var moved = 0
+
+        for item in items {
+            guard let rawID = item[kSecAttrAccount as String] as? String,
+                let id = UUID(uuidString: rawID),
+                let group = item[kSecAttrAccessGroup as String] as? String,
+                group != target
+            else {
+                continue
+            }
+
+            var find = baseQuery()
+            find[kSecAttrAccount as String] = id.uuidString
+            find[kSecAttrAccessGroup as String] = group
+            // Pinned rather than left as Any, because an update has to name one item.
+            find[kSecAttrSynchronizable as String] =
+                (item[kSecAttrSynchronizable as String] as? Bool) ?? false
+
+            let status = SecItemUpdate(
+                find as CFDictionary,
+                [kSecAttrAccessGroup as String: target] as CFDictionary
+            )
+
+            guard status == errSecSuccess else {
+                throw error(for: status)
+            }
+
+            moved += 1
+        }
+
+        return moved
+    }
+
+    /// The access group a new item lands in, which is the first entry of the app's
+    /// `keychain-access-groups` entitlement.
+    ///
+    /// Found by writing a valueless probe and reading back where it went, because no public
+    /// API answers the question. Deliberately not hardcoded: the group name contains the
+    /// team identifier, the entitlement is the one place it is written down, and a constant
+    /// here could disagree with it.
+    ///
+    /// The probe carries no secret, and is deleted whatever happens.
+    private func defaultAccessGroup() throws(SecretStoreError) -> String {
+        let id = UUID().uuidString
+        let probe: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "\(service).accessgroup.probe",
+            kSecAttrAccount as String: id,
+            kSecUseDataProtectionKeychain as String: true,
+        ]
+
+        defer { SecItemDelete(probe as CFDictionary) }
+
+        let added = SecItemAdd(probe as CFDictionary, nil)
+        guard added == errSecSuccess else {
+            throw error(for: added)
+        }
+
+        var query = probe
+        query[kSecReturnAttributes as String] = true
+
+        var result: CFTypeRef?
+        let found = SecItemCopyMatching(query as CFDictionary, &result)
+        guard found == errSecSuccess,
+            let group = (result as? [String: Any])?[kSecAttrAccessGroup as String] as? String
+        else {
+            throw error(for: found)
+        }
+
+        return group
+    }
+
     public func syncState() throws(SecretStoreError) -> SyncState {
         var query = baseQuery()
         query[kSecMatchLimit as String] = kSecMatchLimitAll

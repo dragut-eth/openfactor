@@ -23,6 +23,16 @@ struct OpenFactorApp: App {
     var body: some Scene {
         WindowGroup {
             AccountListView(store: store)
+                // Accounts saved before the shared access group was declared are still in
+                // the app's bundle group. The phone reads them either way, so nothing looks
+                // wrong here; the watch cannot see them at all. Idempotent and cheap once
+                // there is nothing left to move, so it runs at every launch rather than
+                // behind a flag that could itself be wrong.
+                //
+                // A failure is not surfaced. Nothing is lost by it, the accounts stay
+                // exactly where they are and the phone still shows them, and an alert at
+                // launch about Keychain access groups would alarm without informing.
+                .task { try? store.migrateToDefaultAccessGroup() }
                 .preferredColorScheme(
                     (AppearancePreference(rawValue: appearance) ?? .system).colorScheme
                 )

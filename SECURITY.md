@@ -125,7 +125,9 @@ know and does not claim to. The interface names the prerequisite instead. Gate A
 
 ### The watch is a device holding your secrets
 
-*Relevant from PR 14, and a direct consequence of the design chosen in PR 13.* The watch
+*Verified on real hardware on 2026-08-14, and a direct consequence of the design chosen in
+PR 13.* This is no longer a description of intent. A paired Apple Watch has been observed
+reading an account created on the phone. The watch
 does not receive secrets from the phone. It reads the same synced Keychain items, through a
 shared access group, which is why it keeps working with the phone off or absent. The
 consequence is worth stating plainly rather than leaving implicit in an architecture

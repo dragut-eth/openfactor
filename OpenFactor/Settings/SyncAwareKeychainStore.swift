@@ -75,4 +75,9 @@ struct SyncAwareKeychainStore: SynchronizableSecretStore {
     func syncState() throws(SecretStoreError) -> SyncState {
         try store.syncState()
     }
+
+    @discardableResult
+    func migrateToDefaultAccessGroup() throws(SecretStoreError) -> Int {
+        try store.migrateToDefaultAccessGroup()
+    }
 }

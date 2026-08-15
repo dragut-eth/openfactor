@@ -7,6 +7,19 @@ first when picking the work back up.
 
 ## Where things stand
 
+**The watch reads the phone's accounts. Verified on hardware on 2026-08-14**, on a real
+Apple Watch Ultra: the watch app named an account created on the phone, carried by iCloud
+Keychain through the shared access group. That assumption had been open since PR 5 and
+everything in the watch design rested on it.
+
+**Running it found a real bug in PR 13, and Xavier found it, not the tests.** The watch
+showed one account where the phone showed six. PR 13 declared the shared access group and
+shipped no migration, so accounts saved before it are still in the app's bundle group. The
+phone never noticed, because a query naming no group searches every group the app can
+reach. `migrateToDefaultAccessGroup()` is the fix and it runs at launch. The lesson worth
+keeping: the phone could not have shown this, and no test in the suite could have either,
+because both had access to both groups. It took the one device that does not.
+
 **Gate A2 is done and its follow up has landed.** The report is
 `docs/audits/A2.md`, findings F8 to F18. It found no path by which a secret leaves the
 device beyond what the switch is documented to do, and confirmed `setSynchronizable(_:)`

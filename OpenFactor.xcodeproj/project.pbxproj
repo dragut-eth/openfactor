@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		50D16262302F862B00211D42 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50D16261302F862B00211D42 /* OpenFactorCore */; };
 		50AA0000000000000000000B /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50AA0000000000000000000A /* OpenFactorCore */; };
+		50D16262302F862B00211D42 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50D16261302F862B00211D42 /* OpenFactorCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,13 +29,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		50AA00000000000000000009 /* OpenFactorWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenFactorWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		50AC3C98302F852300379FC2 /* OpenFactor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenFactor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		50AC3CA5302F852400379FC2 /* OpenFactorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenFactorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		50AC3CAF302F852400379FC2 /* OpenFactorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenFactorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		50AA00000000000000000009 /* OpenFactorWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenFactorWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		50AA00000000000000000008 /* OpenFactorWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "OpenFactorWatch Watch App";
+			sourceTree = "<group>";
+		};
 		50AC3C9A302F852300379FC2 /* OpenFactor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = OpenFactor;
@@ -46,25 +51,28 @@
 			path = OpenFactorTests;
 			sourceTree = "<group>";
 		};
+		50AC3CB2302F852400379FC2 /* OpenFactorUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OpenFactorUITests;
+			sourceTree = "<group>";
+		};
 		50CF0RE0000000000000A1 /* OpenFactorCoreTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = OpenFactorCoreTests;
 			path = Tests/OpenFactorCoreTests;
 			sourceTree = "<group>";
 		};
-		50AC3CB2302F852400379FC2 /* OpenFactorUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = OpenFactorUITests;
-			sourceTree = "<group>";
-		};
-		50AA00000000000000000008 /* OpenFactorWatch Watch App */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "OpenFactorWatch Watch App";
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		50AA00000000000000000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				50AA0000000000000000000B /* OpenFactorCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		50AC3C95302F852300379FC2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -87,17 +95,17 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		50AA00000000000000000006 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				50AA0000000000000000000B /* OpenFactorCore in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5082E0C9303011C8005440A4 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				50CF0RE0000000000000A1 /* OpenFactorCoreTests */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		50AC3C8F302F852300379FC2 = {
 			isa = PBXGroup;
 			children = (
@@ -106,6 +114,7 @@
 				50AC3CB2302F852400379FC2 /* OpenFactorUITests */,
 				50AA00000000000000000008 /* OpenFactorWatch Watch App */,
 				50AC3C99302F852300379FC2 /* Products */,
+				5082E0C9303011C8005440A4 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -123,6 +132,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		50AA00000000000000000001 /* OpenFactorWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50AA00000000000000000002 /* Build configuration list for PBXNativeTarget "OpenFactorWatch Watch App" */;
+			buildPhases = (
+				50AA00000000000000000005 /* Sources */,
+				50AA00000000000000000006 /* Frameworks */,
+				50AA00000000000000000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				50AA00000000000000000008 /* OpenFactorWatch Watch App */,
+			);
+			name = "OpenFactorWatch Watch App";
+			packageProductDependencies = (
+				50AA0000000000000000000A /* OpenFactorCore */,
+			);
+			productName = "OpenFactorWatch Watch App";
+			productReference = 50AA00000000000000000009 /* OpenFactorWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
 		50AC3C97302F852300379FC2 /* OpenFactor */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 50AC3CB9302F852400379FC2 /* Build configuration list for PBXNativeTarget "OpenFactor" */;
@@ -193,29 +225,6 @@
 			productReference = 50AC3CAF302F852400379FC2 /* OpenFactorUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		50AA00000000000000000001 /* OpenFactorWatch Watch App */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 50AA00000000000000000002 /* Build configuration list for PBXNativeTarget "OpenFactorWatch Watch App" */;
-			buildPhases = (
-				50AA00000000000000000005 /* Sources */,
-				50AA00000000000000000006 /* Frameworks */,
-				50AA00000000000000000007 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				50AA00000000000000000008 /* OpenFactorWatch Watch App */,
-			);
-			name = "OpenFactorWatch Watch App";
-			packageProductDependencies = (
-				50AA0000000000000000000A /* OpenFactorCore */,
-			);
-			productName = "OpenFactorWatch Watch App";
-			productReference = 50AA00000000000000000009 /* OpenFactorWatch.app */;
-			productType = "com.apple.product-type.application";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -226,6 +235,9 @@
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
+					50AA00000000000000000001 = {
+						CreatedOnToolsVersion = 26.6;
+					};
 					50AC3C97302F852300379FC2 = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -236,9 +248,6 @@
 					50AC3CAE302F852400379FC2 = {
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = 50AC3C97302F852300379FC2;
-					};
-					50AA00000000000000000001 = {
-						CreatedOnToolsVersion = 26.6;
 					};
 				};
 			};
@@ -252,7 +261,7 @@
 			mainGroup = 50AC3C8F302F852300379FC2;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				50D16260302F862B00211D42 /* XCLocalSwiftPackageReference "../OpenFactor" */,
+				50D16260302F862B00211D42 /* XCLocalSwiftPackageReference "." */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 50AC3C99302F852300379FC2 /* Products */;
@@ -268,6 +277,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		50AA00000000000000000007 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		50AC3C96302F852300379FC2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -289,16 +305,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		50AA00000000000000000007 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		50AA00000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXSourcesBuildPhase section */
 		50AC3C94302F852300379FC2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -314,13 +330,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		50AC3CAB302F852400379FC2 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		50AA00000000000000000005 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -343,6 +352,66 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		50AA00000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "OpenFactorWatch Watch App/OpenFactorWatch.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HST4KH9P2X;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.openfactor.dev;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev.watchkitapp;
+				PRODUCT_NAME = OpenFactorWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		50AA00000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "OpenFactorWatch Watch App/OpenFactorWatch.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HST4KH9P2X;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.openfactor.dev;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev.watchkitapp;
+				PRODUCT_NAME = OpenFactorWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
 		50AC3CB7302F852400379FC2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -462,12 +531,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = OpenFactor/OpenFactor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "OpenFactor uses the camera only to scan setup codes. Nothing is recorded, and no image leaves your device.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -483,8 +554,6 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				CODE_SIGN_ENTITLEMENTS = OpenFactor/OpenFactor.entitlements;
-				INFOPLIST_KEY_NSCameraUsageDescription = "OpenFactor uses the camera only to scan setup codes. Nothing is recorded, and no image leaves your device.";
 				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -506,12 +575,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = OpenFactor/OpenFactor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "OpenFactor uses the camera only to scan setup codes. Nothing is recorded, and no image leaves your device.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -527,8 +598,6 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				CODE_SIGN_ENTITLEMENTS = OpenFactor/OpenFactor.entitlements;
-				INFOPLIST_KEY_NSCameraUsageDescription = "OpenFactor uses the camera only to scan setup codes. Nothing is recorded, and no image leaves your device.";
 				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -643,67 +712,18 @@
 			};
 			name = Release;
 		};
-		50AA00000000000000000003 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "OpenFactorWatch Watch App/OpenFactorWatch.entitlements";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
-				INFOPLIST_KEY_WKApplication = YES;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.openfactor.dev;
-				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev.watchkitapp;
-				PRODUCT_NAME = OpenFactorWatch;
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "watchos watchsimulator";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 11.0;
-			};
-			name = Debug;
-		};
-		50AA00000000000000000004 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "OpenFactorWatch Watch App/OpenFactorWatch.entitlements";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
-				INFOPLIST_KEY_WKApplication = YES;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.openfactor.dev;
-				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev.watchkitapp;
-				PRODUCT_NAME = OpenFactorWatch;
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "watchos watchsimulator";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 11.0;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		50AA00000000000000000002 /* Build configuration list for PBXNativeTarget "OpenFactorWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				50AA00000000000000000003 /* Debug */,
+				50AA00000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		50AC3C93302F852300379FC2 /* Build configuration list for PBXProject "OpenFactor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -740,30 +760,21 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		50AA00000000000000000002 /* Build configuration list for PBXNativeTarget "OpenFactorWatch Watch App" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				50AA00000000000000000003 /* Debug */,
-				50AA00000000000000000004 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		50D16260302F862B00211D42 /* XCLocalSwiftPackageReference "../OpenFactor" */ = {
+		50D16260302F862B00211D42 /* XCLocalSwiftPackageReference "." */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = .;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		50D16261302F862B00211D42 /* OpenFactorCore */ = {
+		50AA0000000000000000000A /* OpenFactorCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = OpenFactorCore;
 		};
-		50AA0000000000000000000A /* OpenFactorCore */ = {
+		50D16261302F862B00211D42 /* OpenFactorCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = OpenFactorCore;
 		};
