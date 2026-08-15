@@ -60,6 +60,10 @@ Rate on the App Store, Send Feedback. Each row has a colored rounded icon. `Done
 | Add **Appearance** (System, Light, Dark) | The palette was built for both schemes from the start, so honouring a preference costs nothing |
 | iCloud row explains in plain words what is synced and that Apple cannot read it | Sync is the one thing that leaves the device, so it gets an explanation, not just a toggle |
 
+**App icon: Dark, Light, Automatic.** Duplicating part of the system's own icon appearance
+control on purpose. That one applies to every app at once, and someone who wants their
+authenticator to look a particular way should not have to make every other icon match.
+
 **iCloud sync, as built in PR 13 and reworded at gate A2.** A single switch, off by
 default, under a `Sync` heading, with a footer that changes with its state rather than a
 fixed line of marketing. It is the only place in the app where the security trade is
@@ -310,23 +314,39 @@ size the system asks for. The artwork is full bleed and square, with no pre roun
 corners and no padding, because the system applies its own mask and rounding a second
 time would show.
 
-All three iOS 18 appearances are declared:
+**The dark canvas is the primary icon**, so it is what the App Store shows and what an
+untouched install gets. The first version made the light one primary, reasoning that a white
+canvas was safer against an unknown background. That was a fudge: the background is not
+unknown, the Any Appearance slot is specifically the light appearance slot. The better
+argument runs the other way. The App Store's own chrome is near white, so a white canvas
+loses its silhouette there and floats, while the charcoal one holds an edge and reads as an
+object.
 
-- **Any Appearance.** `AppIcon-1024.png`, the light canvas. It is the default because
-  it is the one the system falls back to wherever appearance is not known, and a white
-  canvas is the safer thing to be wrong with on an unknown background.
-- **Dark.** `AppIcon-1024-Dark.png`, the charcoal canvas.
-- **Tinted.** `AppIcon-1024-Tinted.png`, a grayscale rendition the system colours with
-  the user's chosen tint. Derived from the light PNG with `sips`, so there is no third
-  piece of artwork to keep in step:
+**Three icon sets, because the choice is offered rather than assumed:**
 
-  ```bash
-  sips --matchTo "/System/Library/ColorSync/Profiles/Generic Gray Profile.icc" \
-    AppIcon-1024.png --out AppIcon-1024-Tinted.png
-  ```
+| Set | Contents |
+| --- | --- |
+| `AppIcon` | The primary. Dark artwork in Any and Dark, so it is dark whatever the system is doing |
+| `AppIconLight` | The light artwork, for someone who wants it light |
+| `AppIconAuto` | Light in Any, dark in Dark, so it follows the system |
 
-Swapping which appearance is the default is a two line change in `Contents.json`: move
-the `dark` appearances entry onto the other filename.
+The tinted rendition belongs to the primary only, and is derived from the **dark** artwork
+with `sips`. Deriving it from the light one, as the first version did, was wrong: tinted home
+screens are dark, and the system drives the tint from luminance, so a near white canvas
+becomes a solid slab of the user's colour with the cube as a hole in it. Light element on
+dark ground is what a tinted icon has to be.
+
+```bash
+sips --matchTo "/System/Library/ColorSync/Profiles/Generic Gray Profile.icc" \
+  AppIcon-1024.png --out AppIcon-1024-Tinted.png
+```
+
+**Changing the icon shows a system alert that cannot be suppressed.** iOS puts up "You have
+changed the icon" every time `setAlternateIconName` is called. Apps that hide it swizzle a
+private method, which this one will not do: a security tool that reaches for private API to
+avoid a dialog has its priorities the wrong way round, and the alert is honest, since
+something did change on the home screen. The setting therefore does nothing when the chosen
+icon is already the current one, so that opening this screen never raises an alert.
 
 ## Consequences for the data model
 

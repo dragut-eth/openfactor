@@ -69,4 +69,51 @@ enum PreferenceKey {
     /// accounts stored there is nothing to derive it from, and the answer still has to be
     /// remembered so the next account added inherits it.
     static let syncEnabled = "syncEnabled"
+
+    /// Which app icon the user chose. See ``AppIconPreference``.
+    static let appIcon = "appIcon"
+}
+
+
+/// Which app icon is on the home screen.
+///
+/// iOS already offers a global icon appearance control, in the home screen's Customize
+/// panel, and this duplicates part of it deliberately: that one applies to every app at
+/// once, and someone who wants their authenticator to look a particular way should not have
+/// to make every other icon match.
+///
+/// The dark icon is the primary, so it is what the App Store shows and what an untouched
+/// install gets. The other two are alternates.
+enum AppIconPreference: String, CaseIterable, Identifiable {
+
+    /// The primary icon, dark in every appearance.
+    case dark
+
+    /// Light in every appearance.
+    case light
+
+    /// Follows the system: light artwork in light appearance, dark in dark.
+    case automatic
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .dark: "Dark"
+        case .light: "Light"
+        case .automatic: "Automatic"
+        }
+    }
+
+    /// The asset catalog name, or `nil` for the primary icon.
+    ///
+    /// `nil` is not "no icon": it is how `setAlternateIconName` is told to go back to the
+    /// one built into the app.
+    var alternateIconName: String? {
+        switch self {
+        case .dark: nil
+        case .light: "AppIconLight"
+        case .automatic: "AppIconAuto"
+        }
+    }
 }

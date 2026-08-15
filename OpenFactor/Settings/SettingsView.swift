@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
     @AppStorage(PreferenceKey.appearance) private var appearance = AppearancePreference.system.rawValue
     @AppStorage(PreferenceKey.syncEnabled) private var syncEnabled = false
+    @AppStorage(PreferenceKey.appIcon) private var appIcon = AppIconPreference.dark.rawValue
 
     @State private var syncFailure: String?
 
@@ -43,6 +44,13 @@ struct SettingsView: View {
 
                     Picker("Appearance", selection: $appearance) {
                         ForEach(AppearancePreference.allCases) { Text($0.label).tag($0.rawValue) }
+                    }
+
+                    Picker("App icon", selection: $appIcon) {
+                        ForEach(AppIconPreference.allCases) { Text($0.label).tag($0.rawValue) }
+                    }
+                    .onChange(of: appIcon) { _, new in
+                        AppIconChanger.apply(AppIconPreference(rawValue: new) ?? .dark)
                     }
                 } footer: {
                     if sortOrder != AccountSortOrder.manual.rawValue {

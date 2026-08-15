@@ -308,6 +308,13 @@ sharing a model share their blind spots.
 
 Small items Xavier raised while testing the sync build, before PR 14 starts.
 
+- **The app icon default is dark, and the icon is now a setting**, offering Dark, Light,
+  and Automatic. Two earlier judgements were reversed, both recorded in `docs/UI_SPEC.md`:
+  the primary is the dark artwork rather than the light one, and the tinted rendition is
+  derived from the dark artwork rather than the light one. The second was a real bug, not a
+  preference: a tinted icon built from a white canvas renders as a slab of the user's tint
+  with the cube punched out of it.
+
 - **The app icon is final.** A two by two assembly of coloured pieces with one corner
   piece taken out. Seven pieces are visible in a full assembly from this angle, so removing
   one leaves six, the six digits of a code, and the missing piece is the second factor.
