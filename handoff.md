@@ -3,7 +3,7 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, after gate A2 and its follow up.
+**Last updated:** 2026-08-14, PR 14 started.
 
 ## Where things stand
 
@@ -304,12 +304,33 @@ Small items Xavier raised while testing the sync build, before PR 14 starts.
 
 ## Next step
 
-**PR 14, the watchOS app.** Read only, and it starts by proving the access group assumption
-rather than assuming it. That stub is also the second device the two open findings need, so
-running the F8 and F13 experiment is part of PR 14 rather than a separate errand.
+**PR 14 is started, and it is waiting on one thing: the watchOS platform.**
 
-If Xavier has an iPad or a second iPhone on the same Apple Account, the experiment can run
-before PR 14 instead, which would settle F8 and F13 sooner and cheaper.
+The watch target exists, compiles, and links `OpenFactorCore`, verified against
+`watchsimulator`. What it cannot do yet is build for a real Apple Watch, because Xcode 26
+downloads platforms separately from SDKs and watchOS is not installed on this machine. That
+is a multi gigabyte download and it is Xavier's to start:
+
+```
+xcodebuild -downloadPlatform watchOS
+```
+
+**Nothing else is blocked by it.** The first version of the target made the phone app depend
+on the watch app, which meant every build of the iOS app failed at scheme resolution,
+including CI. That dependency was removed on purpose and `docs/PROJECT.md` records why. The
+phone app and the whole test suite build exactly as before.
+
+**The one screen in the watch app is deliberately not the real interface.**
+`WatchAccessProofView` reads the Keychain and reports what it found: a count, the issuers,
+and a plain statement when it finds nothing. It exists because the whole watch design rests
+on an assumption nobody has tested, that a watch app in the same access group sees the
+phone's synced items, and building the real list first would have meant learning the answer
+from an empty screen with several possible causes. It shows no codes, because a screen made
+to be photographed into a bug report should not have a working second factor on it.
+
+Once it runs on Xavier's Ultra, three things resolve at once: the access group question open
+since PR 5, and gate A2's F8 and F13, which needed a second device. Then the real list and
+code screens get built.
 
 ## What gate A2 was for, kept for reference
 

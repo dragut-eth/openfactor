@@ -269,9 +269,13 @@ Three consequences, and the first is why this cannot wait for PR 14:
 - **The watch becomes a device holding your secrets.** That belongs in the threat model
   next to the sync entry, not left implicit.
 
-Still unverified, and the first thing PR 14 has to prove: that a watchOS app declaring the
-same group actually sees the phone's synced items. Everything else in the watch plan rests
-on it.
+Still unverified, and the first thing PR 14 does: the watch target's only screen reads the
+Keychain and reports what it found, rather than drawing a list that would be empty for
+several possible reasons. Everything else in the watch plan rests on the answer.
+
+Gate A2 improved the odds without settling it. Apple's documentation states that watchOS 7
+and later synchronizes keychain items, which was the part most likely to be false. What
+remains unproven is the access group itself.
 
 ### The Xcode project file
 

@@ -30,6 +30,7 @@ it is true.
 | `OpenFactor` | The iOS app. SwiftUI, no storyboard |
 | `OpenFactorTests` | Unit tests, **hosted by the app** |
 | `OpenFactorUITests` | Template placeholder, empty, not run in CI |
+| `OpenFactorWatch Watch App` | The watchOS app. Read only, added in PR 14 |
 
 ### Why hosting matters
 
@@ -50,6 +51,11 @@ This is why the app target exists at all right now. The interface came second.
 | `TEST_HOST` | the app | See above |
 | `CODE_SIGN_ENTITLEMENTS` | `OpenFactor/OpenFactor.entitlements` | Declares one shared Keychain access group, `$(AppIdentifierPrefix)com.openfactor.shared`. The watch app has its own bundle identifier and would otherwise look in its own group and find nothing. The group is named only here: the app writes without specifying one, and the Keychain uses the first entitlement group as the default, which keeps the team identifier out of the source |
 | Local package `relativePath` | `.` | Xcode wrote `../OpenFactor`, which only resolves if the checkout folder happens to be named `OpenFactor`. Anyone cloning into `openfactor` on a case sensitive filesystem, or into a renamed fork, would have got a broken project |
+| Watch `PRODUCT_BUNDLE_IDENTIFIER` | `com.openfactor.dev.watchkitapp` | A watch app's identifier has to be the companion app's with a suffix, or the pairing is not recognized |
+| Watch `INFOPLIST_KEY_WKCompanionAppBundleIdentifier` | `com.openfactor.dev` | Names the phone app it belongs to |
+| Watch `INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp` | `YES` | The watch app has to work with the phone off, absent, or out of range. That requirement is what ruled out asking the phone for each code, and it is why the watch holds its own copy of the secrets |
+| Watch `CODE_SIGN_ENTITLEMENTS` | `OpenFactorWatch Watch App/OpenFactorWatch.entitlements` | Declares the same shared Keychain access group as the phone. This is the entire mechanism by which the watch sees the phone's accounts, so it is the one setting that, if wrong, produces a watch app that runs perfectly and shows nothing |
+| Watch `WATCHOS_DEPLOYMENT_TARGET` | `11.0` | Matches the package |
 | `INFOPLIST_KEY_NSCameraUsageDescription` | set | The camera is used to scan setup codes. A missing usage string is not a warning, it is a crash the first time the app asks, and only on a real device where nobody is looking |
 
 ## Folder layout
@@ -81,6 +87,23 @@ the second synchronised folder was added to the project file directly.
 CI runs both jobs. If you find yourself making the Keychain tests pass under `swift test`,
 stop: they are supposed to skip there, and the only way to make them pass would be to
 weaken what they assert.
+
+## The watch app is not embedded in the phone app yet
+
+An App Store build ships the watch app inside the phone app, through an `Embed Watch
+Content` copy phase and a target dependency. Both were written in PR 14 and then removed
+again, deliberately, and this records why so nobody re-adds them without knowing.
+
+The moment the phone target depends on the watch target, building the phone app requires
+the full watchOS platform to be installed, not just its SDK. Xcode 26 downloads platforms
+separately, and without it every build of the iOS app fails at scheme resolution, including
+in CI, including for anyone cloning the repository to read it. That is a heavy prerequisite
+to impose on a project whose pitch is that it has no dependencies.
+
+Until then the watch app is built and installed on its own, which
+`INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp` already supports and which is enough to
+answer the question PR 14 exists to answer. The embed phase returns in PR 18, where
+installing the platform is unavoidable anyway.
 
 ## Not configured yet
 
