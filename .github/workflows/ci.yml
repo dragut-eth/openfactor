@@ -73,6 +73,9 @@ jobs:
           # A missing usage string is not a warning, it is a crash the first time the app
           # touches the camera, and only on a real device.
           check "INFOPLIST_KEY_NSCameraUsageDescription"
+          # Same failure shape as the camera string: absent, the Face ID prompt is a
+          # crash, not a warning, and only on a real device.
+          check "INFOPLIST_KEY_NSFaceIDUsageDescription"
           # The watch app sees the phone's accounts only because both targets declare the
           # same access group. Get this wrong and the watch runs perfectly and shows
           # nothing, which is the hardest kind of bug to attribute.

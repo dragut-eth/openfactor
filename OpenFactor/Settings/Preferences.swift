@@ -72,6 +72,14 @@ enum PreferenceKey {
 
     /// Which app icon the user chose. See ``AppIconPreference``.
     static let appIcon = "appIcon"
+
+    /// Whether the interface is behind Face ID, Touch ID, or the passcode. Off by default:
+    /// everything in this app is opted into, not imposed.
+    static let appLockEnabled = "appLockEnabled"
+
+    /// How long the app can be away before returning locks it, in seconds. Zero means any
+    /// time away at all.
+    static let appLockGraceSeconds = "appLockGraceSeconds"
 }
 
 
@@ -114,6 +122,26 @@ enum AppIconPreference: String, CaseIterable, Identifiable {
         case .dark: nil
         case .light: "AppIconLight"
         case .automatic: "AppIconAuto"
+        }
+    }
+}
+
+/// How long the app may be in the background before coming back locked.
+///
+/// Three values rather than a slider, because the differences that matter are categorical:
+/// hand the phone over and it is locked, pocket it between codes and it is not.
+enum AppLockGrace: Int, CaseIterable, Identifiable {
+    case immediately = 0
+    case oneMinute = 60
+    case fiveMinutes = 300
+
+    var id: Int { rawValue }
+
+    var label: String {
+        switch self {
+        case .immediately: "Immediately"
+        case .oneMinute: "After 1 minute"
+        case .fiveMinutes: "After 5 minutes"
         }
     }
 }

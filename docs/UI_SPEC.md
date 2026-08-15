@@ -60,6 +60,27 @@ Rate on the App Store, Send Feedback. Each row has a colored rounded icon. `Done
 | Add **Appearance** (System, Light, Dark) | The palette was built for both schemes from the start, so honouring a preference costs nothing |
 | iCloud row explains in plain words what is synced and that Apple cannot read it | Sync is the one thing that leaves the device, so it gets an explanation, not just a toggle |
 
+**App Lock: a toggle and a grace period, under a Security header.** Off by default, since
+everything in this app is opted into. The grace period offers Immediately, 1 minute, and
+5 minutes, three categorical values rather than a slider, and the picker only appears while
+the lock is on. The toggle refuses to enable on a device with no passcode, with the footer
+saying why, because a lock that cannot lock is a false claim with a switch on it.
+
+The footer states what the lock is with no flattery: a gate that keeps codes off the screen
+when someone else holds the unlocked phone, while the secrets stay protected by the
+Keychain either way. The overclaim would have been easy and it is the one SECURITY.md
+forbids.
+
+**The lock screen** is a surface, a lock mark, and one Unlock button. It names no account
+and shows nothing of what is behind it, because it is also what the app switcher
+photographs while locked. Face ID raises itself once per locked spell; after that the
+button re-raises it, so a cancelled prompt does not loop.
+
+**The snapshot cover is not a setting.** The moment the app stops being active, a blank
+surface covers everything, including sheets, including manual entry with a half typed
+secret in it. It exists because iOS photographs the app for the switcher, and that
+photograph must never contain a code. Lock or no lock, everyone gets this.
+
 **App icon: Dark, Light, Automatic.** Duplicating part of the system's own icon appearance
 control on purpose. That one applies to every app at once, and someone who wants their
 authenticator to look a particular way should not have to make every other icon match.

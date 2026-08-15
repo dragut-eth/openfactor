@@ -50,10 +50,35 @@ rest and absent from unencrypted backups for the same reason the secrets are.
 
 ### Attacker with your unlocked device
 
-*Planned.* App Lock, if you have enabled it, requires Face ID, Touch ID, or your passcode
-before any code is shown, and codes are hidden when the app goes to the background. With
-App Lock off, an unlocked phone means full access. This is the single most important
-setting in the app.
+*Implemented in PR 15.* Two defences, one always on and one opted into.
+
+**The app switcher never contains a code, for anyone.** iOS photographs the app as it
+leaves the foreground and shows that photograph to whoever flicks through the switcher.
+OpenFactor covers itself the moment it stops being active, so the photograph is a blank
+surface. This is not part of App Lock and obeys no setting, because the leak it closes
+does not care about settings. Verified empirically: the pre fix snapshot was captured
+showing a full settings screen, and the post fix snapshot is blank.
+
+**App Lock, off by default,** requires Face ID, Touch ID, or the device passcode before
+anything is shown, on launch and on return from the background after a configurable grace
+period. A clock that moved backwards while the app was away counts as expired, because it
+is indistinguishable from tampering and the cost of being wrong is one prompt.
+
+**What App Lock is, stated exactly.** A gate in front of the interface, enforced by this
+app's code, not encryption. The secrets are protected by the device Keychain with the lock
+on or off, and an attacker who can run code as this app is already past both. What the
+lock defends is the borrowed phone: handed over unlocked for a call, left on a desk,
+snatched while open. The settings footer says this in as many words, because a user
+deciding whether they need it deserves the real shape of it.
+
+**It fails closed.** If the device passcode is removed after the lock was enabled, there
+is nothing left to authenticate against, and the app stays locked with an explanation
+rather than quietly opening. The lock also cannot be enabled on a device with no passcode,
+since a lock that cannot lock is a false claim with a switch on it.
+
+**The watch has no App Lock,** deliberately. Its lock is the one watchOS already has:
+wrist detection plus the watch passcode, which locks the watch the moment it leaves the
+arm. An app level lock on top would add a second prompt without adding a second barrier.
 
 ### Attacker with your iCloud account
 

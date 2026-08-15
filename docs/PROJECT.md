@@ -59,6 +59,7 @@ This is why the app target exists at all right now. The interface came second.
 | Watch `CODE_SIGN_ENTITLEMENTS` | `OpenFactorWatch Watch App/OpenFactorWatch.entitlements` | Declares the same shared Keychain access group as the phone. This is the entire mechanism by which the watch sees the phone's accounts, so it is the one setting that, if wrong, produces a watch app that runs perfectly and shows nothing |
 | Watch `WATCHOS_DEPLOYMENT_TARGET` | `11.0` | Matches the package |
 | Complication has **no** `CODE_SIGN_ENTITLEMENTS` | absent | The complication never reads the Keychain, and the absence of the entitlement is what guarantees it. A live code on a watch face is a second factor shown to anyone who glances at your wrist. Adding an entitlement here reverses a security decision |
+| `INFOPLIST_KEY_NSFaceIDUsageDescription` | set | App Lock authenticates with `LocalAuthentication`. Absent, the Face ID prompt is a crash, not a warning, and only on a real device |
 | `INFOPLIST_KEY_NSCameraUsageDescription` | set | The camera is used to scan setup codes. A missing usage string is not a warning, it is a crash the first time the app asks, and only on a real device where nobody is looking |
 
 ## Folder layout

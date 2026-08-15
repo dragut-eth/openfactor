@@ -140,6 +140,8 @@ either a finding about what the entry transmits or a plain statement that it is 
 | PR 12, polish and accessibility | Done |
 | PR 13, iCloud Keychain sync | Done |
 | Gate A2, audit of sync | Done. Nine of eleven findings fixed, F8 and F13 need two devices |
+| PR 14, watchOS app | Feature complete, awaiting the warm A2 re-verification |
+| PR 15, app lock | Built: engine tested, snapshot cover verified. Face ID needs Xavier's device |
 | PR 14 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
@@ -357,7 +359,22 @@ Small items Xavier raised while testing the sync build, before PR 14 starts.
   shape for the drag preview and not for the context menu preview; it now names both, which
   is the fix for the same underlying cause in the other direction.
 
-## Next step
+## PR 15, in progress on pr-15-app-lock
+
+The lock is three parts, deliberately separated: `AppLockEngine`, a pure value type holding
+every decision, eleven tests; `AppLockController`, thin, feeding it real dates and running
+`LocalAuthentication`; and `PrivacyShield`, the one place in the app that touches UIKit
+windows, because the lock screen and the snapshot cover must sit above sheets, and a
+SwiftUI overlay at the root does not.
+
+The snapshot cover was verified empirically, and the before and after are worth keeping:
+the resume flash under the old build showed a full readable settings screen, and under the
+new build it shows a blank card. The screenshots are in the session scratchpad.
+
+What only Xavier can verify: Face ID unlock on his phone, the grace periods, and that the
+toggle refuses politely in the simulator style when no passcode exists.
+
+## Next step, before PR 15 started
 
 **PR 14 is started, and it is waiting on one thing: the watchOS platform.**
 

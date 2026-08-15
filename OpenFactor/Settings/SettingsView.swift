@@ -19,6 +19,11 @@ struct SettingsView: View {
     @AppStorage(PreferenceKey.appearance) private var appearance = AppearancePreference.system.rawValue
     @AppStorage(PreferenceKey.syncEnabled) private var syncEnabled = false
     @AppStorage(PreferenceKey.appIcon) private var appIcon = AppIconPreference.dark.rawValue
+    @AppStorage(PreferenceKey.appLockEnabled) private var appLockEnabled = false
+    @AppStorage(PreferenceKey.appLockGraceSeconds) private var appLockGrace = AppLockGrace.immediately.rawValue
+
+    /// Set when the toggle was refused because the device cannot authenticate.
+    @State private var appLockUnavailable = false
 
     @State private var syncFailure: String?
 
@@ -58,6 +63,8 @@ struct SettingsView: View {
                     }
                 }
 
+                appLockSection
+
                 if let syncing = store as? any SynchronizableSecretStore {
                     syncSection(syncing)
                 }
@@ -72,6 +79,54 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private var appLockSection: some View {
+        Section {
+            Toggle("App Lock", isOn: appLockBinding)
+
+            if appLockEnabled {
+                Picker("Require after", selection: $appLockGrace) {
+                    ForEach(AppLockGrace.allCases) { Text($0.label).tag($0.rawValue) }
+                }
+            }
+        } header: {
+            Text("Security")
+        } footer: {
+            // Honest about what it is. The lock is a gate in front of the interface; the
+            // secrets are protected by the device's Keychain with it on or off, and saying
+            // otherwise here would be the overclaim SECURITY.md forbids.
+            Text(
+                appLockUnavailable
+                    ? """
+                    App Lock needs a device passcode, and this device has none. Set one in \
+                    iOS Settings first.
+                    """
+                    : """
+                    Requires Face ID, Touch ID, or your passcode before anything is shown. \
+                    Your secrets are protected by this device's Keychain either way; App \
+                    Lock keeps codes off the screen when someone else is holding your \
+                    unlocked phone.
+                    """
+            )
+        }
+    }
+
+    /// Refuses to enable on a device that cannot authenticate, because a lock that cannot
+    /// lock is a false claim with a switch on it.
+    private var appLockBinding: Binding<Bool> {
+        Binding(
+            get: { appLockEnabled },
+            set: { wanted in
+                if wanted && !AppLockAvailability.canAuthenticate {
+                    appLockUnavailable = true
+                    return
+                }
+
+                appLockUnavailable = false
+                appLockEnabled = wanted
+            }
+        )
     }
 
     private func syncSection(_ store: any SynchronizableSecretStore) -> some View {

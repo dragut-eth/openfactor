@@ -20,6 +20,11 @@ struct OpenFactorApp: App {
     /// disagree. The entitlement is the single place it is written down.
     private let store = SyncAwareKeychainStore()
 
+    /// The lock and the snapshot cover. See `PrivacyShield` for why they live in their
+    /// own window rather than in this view tree.
+    @State private var lock = AppLockController()
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             AccountListView(store: store)
@@ -33,9 +38,30 @@ struct OpenFactorApp: App {
                 // exactly where they are and the phone still shows them, and an alert at
                 // launch about Keychain access groups would alarm without informing.
                 .task { try? store.migrateToDefaultAccessGroup() }
+                .onChange(of: scenePhase, initial: true) { _, phase in
+                    lock.scenePhaseChanged(to: phase)
+                    updateShield(for: phase)
+                }
+                .onChange(of: lock.isLocked) {
+                    updateShield(for: scenePhase)
+                }
                 .preferredColorScheme(
                     (AppearancePreference(rawValue: appearance) ?? .system).colorScheme
                 )
+        }
+    }
+
+    /// While locked the lock screen wins whatever the phase, because it hides the
+    /// interface just as thoroughly as the cover and it is what belongs in the system's
+    /// snapshot. The cover appears for everyone else the moment the app is not active,
+    /// lock setting or none: the app switcher photograph must never contain a code.
+    private func updateShield(for phase: ScenePhase) {
+        if lock.isLocked {
+            PrivacyShield.update(.locked, controller: lock)
+        } else if phase != .active {
+            PrivacyShield.update(.cover, controller: lock)
+        } else {
+            PrivacyShield.update(nil, controller: lock)
         }
     }
 }
