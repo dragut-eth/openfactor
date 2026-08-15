@@ -255,58 +255,69 @@ Not a pass at the end. The rules the interface follows.
 
 ## App icon
 
-*Swapped to the current artwork after PR 13. The previous design, six account cards on
-black, is kept in the repository history rather than described here as though it were
-still the icon.*
+The icon is the app made physical: a two by two assembly of colored pieces, built
+from the card palette, with one corner piece taken out.
 
-The icon is an isometric cube, its three visible faces divided into two by two facets,
-twelve facets in the six card colours used twice each. Same canvas as before: #1B1B21
-falling to #08080B on the diagonal, with a faint radial glow at the upper left.
+Count the pieces and you get the design's reason. A full two by two shows seven
+pieces from this angle, the eighth is hidden at the back. Take one out and exactly
+six remain in view. Six pieces, six digits of a one-time code. The extracted piece
+is the second factor, the one only you hold. What the world sees is an incomplete
+puzzle.
 
-Colour does the work that shape cannot. At 29 px thin geometry collapses but hue survives,
-so the icon degrades into a spectrum chip that is still recognizably this app. The six
-colours are the card palette: red, orange, green, teal, indigo, pink. Grey is excluded
-because it spends a facet without saying anything. The icon colours run slightly more vivid
-than the in app cards, which are contrast tuned for white text; the icon carries no text.
+The colors are the account card palette, red, orange, green, teal, indigo, pink,
+and each appears exactly twice across the twelve visible faces. The extracted piece
+carried a green face and a pink face away, and the two faces it exposed give one
+green and one pink back. Gray is excluded; it spends a face without saying anything.
+The icon colors run slightly more vivid than the in-app cards, which are contrast
+tuned for white text. The icon carries no text.
 
-It keeps distance from every neighbour on the shelf. The lock is Microsoft's, the keyhole
-1Password's, the shields belong to Authy and Aegis, the star to Google, and the ring to
-Step Two. It also makes no security claim: no lock, no shield, no key. Those are promises,
-and an unaudited tool should not make promises.
+The icon makes no metaphorical claim. No lock, no shield, no key, and no promise,
+because an unaudited tool should not make promises. It also keeps its distance from
+every neighbor on the shelf: the lock is Microsoft's, the keyhole is 1Password's,
+the shields belong to Authy and Aegis, the star to Google, the ring to Step Two.
+It keeps distance from the Rubik's Cube as well: two by two rather than three by
+three, this palette rather than theirs, seams of open canvas rather than black
+plastic.
 
-**It does carry a shape association the previous icon did not,** and that is worth stating
-rather than leaving for someone else to notice. A cube with mixed colour facets reads as a
-puzzle, and specifically as a Rubik's Cube, which is a strongly associated commercial
-product. The rendering here is two facets per edge rather than the classic three, and the
-European trade mark on the cube's shape was annulled in 2019, so this is a question to ask
-before the App Store submission in PR 18 rather than a known problem. It is recorded here
-so the submission does not meet it cold.
+Hue survives small sizes where shape dies. At 29 px the icon degrades into a
+stepped polychrome block that is still recognizably this app, and the missing
+corner keeps the silhouette asymmetric where a full cube would be a symmetric blob.
 
-One light source at the upper left, as before: the left face is darkened 8 percent, the
-right face 20 percent, and every facet gradient is angled a few degrees off vertical toward
-the same light. That is what makes twelve shapes read as one object.
+One light source at the upper left. Right-facing faces carry 20 percent shade,
+left-facing faces 8 percent, top faces none, and the faces exposed by the notch
+follow the same rule.
 
-Geometry, in the 1024 canvas: apex at 512, 96, centre vertex at 512, 512, bottom at
-512, 928, with the widest points at 152 and 872. Every vertex is within 416 of the centre,
-comfortably inside the 512 radius inscribed circle, so the same artwork survives the
-watchOS circular mask when the watch target arrives in PR 14.
+There are two appearances of one object. The dark appearance sets the assembly on
+a charcoal canvas falling from #1B1B21 to #08080B. The light appearance sets it on
+white falling to #E9E9EE. The seams between faces are the canvas showing through,
+dark in dark, white in light. Nothing about the object changes.
 
-The source of truth is docs/design/icon.svg. The 1024 PNG in the asset catalog is
-rendered from it, and any SVG renderer at 1024 by 1024 reproduces it exactly.
+Geometry, in the 1024 canvas before scaling: apex at 512, 96, center vertex at
+512, 512, bottom at 512, 928, horizontal extremes at x 152 and 872, and the whole
+assembly scaled to 90 percent about the canvas center. Its farthest point sits
+about 375 px from center against an inscribed-circle radius of 512, so the same
+artwork survives the watchOS circular mask when the watch target arrives in PR 14.
+
+The sources of truth are docs/design/icon-dark.svg and docs/design/icon-light.svg.
+The 1024 PNGs in the asset catalog are rendered from them, and any SVG renderer at
+1024 by 1024 reproduces them exactly.
 
 ### How it is installed
 
-The asset catalog uses the single size format: one 1024 by 1024 image at
-`OpenFactor/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`, from which Xcode
-derives every size the system asks for. The artwork is full bleed and square, with no
-pre rounded corners and no padding, because the system applies its own mask and
-rounding a second time would show.
+The asset catalog uses the single size format: one 1024 by 1024 image per appearance
+in `OpenFactor/Assets.xcassets/AppIcon.appiconset`, from which Xcode derives every
+size the system asks for. The artwork is full bleed and square, with no pre rounded
+corners and no padding, because the system applies its own mask and rounding a second
+time would show.
 
-Two of the three iOS 18 appearances are declared:
+All three iOS 18 appearances are declared:
 
-- **Default.** The artwork as rendered.
+- **Any Appearance.** `AppIcon-1024.png`, the light canvas. It is the default because
+  it is the one the system falls back to wherever appearance is not known, and a white
+  canvas is the safer thing to be wrong with on an unknown background.
+- **Dark.** `AppIcon-1024-Dark.png`, the charcoal canvas.
 - **Tinted.** `AppIcon-1024-Tinted.png`, a grayscale rendition the system colours with
-  the user's chosen tint. Derived from the same PNG with `sips`, so there is no second
+  the user's chosen tint. Derived from the light PNG with `sips`, so there is no third
   piece of artwork to keep in step:
 
   ```bash
@@ -314,10 +325,8 @@ Two of the three iOS 18 appearances are declared:
     AppIcon-1024.png --out AppIcon-1024-Tinted.png
   ```
 
-- **Dark** is deliberately absent. An appearance that is not declared falls back to the
-  default, which is exactly what is wanted here: the canvas is already near black, so the
-  dark variant would be the same artwork. Declaring it would mean committing a second file
-  byte for byte identical to the first, which a reviewer would rightly stop to question.
+Swapping which appearance is the default is a two line change in `Contents.json`: move
+the `dark` appearances entry onto the other filename.
 
 ## Consequences for the data model
 

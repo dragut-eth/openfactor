@@ -286,10 +286,16 @@ sharing a model share their blind spots.
 
 Small items Xavier raised while testing the sync build, before PR 14 starts.
 
-- **The app icon was swapped to the cube artwork.** `docs/UI_SPEC.md` describes it, and
-  records one thing the previous icon did not have to answer for: a mixed colour cube reads
-  as a Rubik's Cube, which is a question for the App Store submission in PR 18 rather than
-  a known problem.
+- **The app icon is final.** A two by two assembly of coloured pieces with one corner
+  piece taken out. Seven pieces are visible in a full assembly from this angle, so removing
+  one leaves six, the six digits of a code, and the missing piece is the second factor.
+  Two appearances of the same object, light and dark, plus a tinted rendition derived from
+  the light one. `docs/UI_SPEC.md` has the design and the installation, and
+  `docs/design/icon-dark.svg` and `icon-light.svg` are the sources of truth.
+
+  The Rubik's Cube question raised against the previous artwork is answered rather than
+  deferred: two by two rather than three by three, this palette rather than theirs, and
+  seams of open canvas rather than black plastic.
 - **The context menu no longer lifts the row, only the card.** The row is full width and
   square cornered, so lifting it showed a bright margin down each side in light mode where
   the row's background sat either side of the inset card. `contentShape` already named a
