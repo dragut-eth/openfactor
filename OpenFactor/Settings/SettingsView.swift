@@ -49,6 +49,7 @@ struct SettingsView: View {
 
     private enum Sheet: String, Identifiable {
         case importing
+        case exporting
         case erasing
 
         var id: String { rawValue }
@@ -99,6 +100,8 @@ struct SettingsView: View {
                         onAccountsChanged()
                         refreshSyncState()
                     }
+                case .exporting:
+                    ExportView(store: store)
                 case .erasing:
                     EraseAccountsView(store: store) {
                         onAccountsChanged()
@@ -279,11 +282,21 @@ struct SettingsView: View {
 
     private var backupSection: some View {
         Section {
+            Button("Export accounts…") { sheet = .exporting }
             Button("Import accounts…") { sheet = .importing }
         } header: {
             Text("Backup")
         } footer: {
-            Text("Reads a labelled text export, or an unencrypted Aegis vault.")
+            // Export is named first and described first, because it is the one that has to
+            // happen before it is needed. Import reads three things now, and the sentence
+            // says which without turning into a list of file extensions.
+            Text(
+                """
+                Export writes every account into one encrypted file, and asks you to confirm \
+                it is you first. Import reads that file back, a labelled text export, or an \
+                unencrypted Aegis vault.
+                """
+            )
         }
     }
 

@@ -29,4 +29,19 @@ enum CodeClipboard {
             ]
         )
     }
+
+    /// Copies a backup passphrase, on its way to a password manager.
+    ///
+    /// **A different thing from copying a code, which is why it is a different function.** A
+    /// code is short lived and single use; a passphrase opens an archive holding every
+    /// secret its owner has, and it does not expire on its own. The same two narrowings
+    /// apply and matter more: local to this device, and cleared by the system shortly.
+    ///
+    /// Two minutes is long enough to switch apps and paste, short enough that it is gone
+    /// before the phone is put down. The alternative, not offering this at all, would push
+    /// people to retype twenty four characters by hand into the one field where a typo is
+    /// unrecoverable, or to screenshot it, which is worse than the clipboard in every way.
+    static func copy(passphrase: String) {
+        copy(passphrase, expiring: Date().addingTimeInterval(120))
+    }
 }

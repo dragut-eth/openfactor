@@ -11,6 +11,7 @@ struct ImportView: View {
     @State private var model: ImportViewModel
     @State private var isPickingFile = false
     @State private var includeConflicts = false
+    @State private var passphrase = ""
 
     private let onImported: () -> Void
 
@@ -26,6 +27,8 @@ struct ImportView: View {
             Group {
                 switch model.stage {
                 case .choosing: chooser
+                case let .locked(_, failure): locked(failure)
+                case .unlocking: unlocking
                 case let .reviewing(preview): review(preview)
                 case let .finished(added, skipped): finished(added: added, skipped: skipped)
                 case let .failed(message): failure(message)
@@ -68,14 +71,69 @@ struct ImportView: View {
             } footer: {
                 Text(
                     """
-                    OpenFactor can read two kinds of file. A text or RTF export that lists \
-                    accounts with **Account Name** and **Secret Key** labels, and an \
+                    OpenFactor can read an archive it exported, a text or RTF export that \
+                    lists accounts with **Account Name** and **Secret Key** labels, and an \
                     unencrypted Aegis vault. Nothing is added until you have seen what the \
                     file contains.
                     """
                 )
             }
         }
+    }
+
+    /// The passphrase screen, which exists only for OpenFactor archives.
+    ///
+    /// Deliberately says nothing encouraging about how many attempts are left or how close a
+    /// passphrase looked, because there is no such information: the reader cannot tell a
+    /// wrong passphrase from an altered file, and pretending otherwise on this screen would
+    /// be the app's most consequential lie.
+    private func locked(_ failure: String?) -> some View {
+        Form {
+            Section {
+                SecureField("Passphrase", text: $passphrase)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.go)
+                    .onSubmit { open() }
+
+                Button("Open archive") { open() }
+                    .disabled(passphrase.isEmpty)
+            } header: {
+                Text("This archive is encrypted")
+            } footer: {
+                Text(
+                    """
+                    Type the passphrase exactly as OpenFactor showed it. The hyphens, spacing \
+                    and capitalisation do not matter.
+                    """
+                )
+            }
+
+            if let failure {
+                Section {
+                    Text(failure).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var unlocking: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            // Named rather than left as a spinner, because the wait is deliberate: it is
+            // the work factor that makes guessing the passphrase expensive, and a person
+            // who knows that is not a person watching an app hang.
+            Text("Deriving the key. This takes a moment on purpose.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+    }
+
+    private func open() {
+        guard !passphrase.isEmpty else { return }
+        Task { await model.unlock(with: passphrase) }
     }
 
     private func review(_ preview: ImportViewModel.Preview) -> some View {

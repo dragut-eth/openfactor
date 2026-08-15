@@ -119,6 +119,33 @@ deleting it.
 Add, edit and erase are abandoned, so they carry a leading Cancel. Settings is closed, so
 it carries a trailing Done.
 
+**Export is three screens, and the middle one is the point.** What the file is, before
+anything is generated. Then the passphrase, which has to be acknowledged with a toggle
+before the archive can be written, because the format's rule is that no archive is written
+whose passphrase the user has not been shown and confirmed they have stored. Then the file,
+with a share sheet. Face ID or the passcode is asked for between the first and second,
+whether or not App Lock is on: writing every secret to a file is categorically different
+from reading one code, and should not be two taps away on a phone handed over unlocked.
+Import is deliberately not gated, because it reveals nothing.
+
+The passphrase screen offers a generated one by default and the user's own behind a
+segmented control. The custom path shows what is wrong with a weak passphrase rather than a
+strength bar, and the archive cannot be written until the estimator is satisfied. The
+footer says plainly that OpenFactor keeps no copy and that a lost passphrase means the
+archive cannot be opened by anyone.
+
+**The file does not outlive the screen.** It is written with the strongest protection class
+iOS offers and deleted when the sheet goes away, whichever way it went away. No history of
+exports is kept. The file name carries a date and nothing else: no device name, no account
+count, no issuer, because a file name is visible in every share sheet and every screenshot
+of one.
+
+**Importing an archive asks for the passphrase and says nothing encouraging.** No attempt
+counter, no "close", no distinction between a wrong passphrase and an altered file, because
+the reader genuinely cannot tell which it is. The wait while keys are derived is named
+rather than left as a spinner: it is the work factor that makes guessing expensive, and a
+person who knows that is not a person watching an app hang.
+
 **Import is both, and the word follows the stage.** The preview is a sheet you abandon
 until the one control that writes, at the bottom of the form, has been used, so it carries
 Cancel. After accounts are added it is a sheet you close, so it carries Done. It said Done

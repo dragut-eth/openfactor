@@ -215,6 +215,81 @@ struct ImportViewModelTests {
         #expect(preview.source == "Text export")
     }
 
+    // MARK: - OpenFactor archives
+
+    /// The whole point of the export existing. An archive the app cannot read back is a file
+    /// that looks like a backup and is not one, and the failure surfaces at a restore.
+    @Test("An OpenFactor archive is recognised, unlocked, and previewed")
+    @MainActor
+    func readsItsOwnArchive() async throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let passphrase = "YZTR-THFW-WT6E-OXIV-73XD-QCDM"
+        let archive = try BackupArchive.write(
+            [
+                ImportedAccount(
+                    account: try account("GitHub", secret: Base32.decode("GEZDGNBVGY3TQOJQ")),
+                    color: .indigo,
+                    sortIndex: 0
+                )
+            ],
+            passphrase: passphrase,
+            mode: .generated
+        )
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("openfactor")
+        try archive.write(to: url)
+
+        let model = ImportViewModel(store: store)
+        model.read(url)
+
+        guard case .locked = model.stage else {
+            Issue.record("expected the archive to be recognised, got \(model.stage)")
+            return
+        }
+
+        await model.unlock(with: passphrase)
+
+        guard case let .reviewing(preview) = model.stage else {
+            Issue.record("expected a preview, got \(model.stage)")
+            return
+        }
+        #expect(preview.source == "OpenFactor archive")
+        #expect(preview.importable.count == 1)
+        #expect(preview.importable.first?.imported.color == .indigo)
+    }
+
+    /// A wrong passphrase returns to the same screen rather than throwing the file away, and
+    /// says the only true thing there is to say: it cannot tell a wrong passphrase from an
+    /// altered file.
+    @Test("A wrong passphrase leaves the archive where it was")
+    @MainActor
+    func wrongPassphraseKeepsTheArchive() async throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let archive = try BackupArchive.write(
+            [], passphrase: "YZTR-THFW-WT6E-OXIV-73XD-QCDM", mode: .generated
+        )
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("openfactor")
+        try archive.write(to: url)
+
+        let model = ImportViewModel(store: store)
+        model.read(url)
+        await model.unlock(with: "AAAA-BBBB-CCCC-DDDD-EEEE-FFFF")
+
+        guard case let .locked(_, failure) = model.stage else {
+            Issue.record("expected to stay on the passphrase screen, got \(model.stage)")
+            return
+        }
+        #expect(failure?.contains("no way to tell which") == true)
+    }
+
     @Test("An encrypted Aegis vault fails with the message that names the fix")
     @MainActor
     func explainsEncryptedVaults() async throws {

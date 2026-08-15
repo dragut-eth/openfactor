@@ -14,6 +14,12 @@ final class ImportViewModel {
 
     enum Stage: Equatable {
         case choosing
+        /// An OpenFactor archive, recognised but not yet opened. The bytes are held because
+        /// the file was picked from a security scoped URL that is no longer accessible by
+        /// the time a passphrase has been typed.
+        case locked(Data, failure: String?)
+        /// Deriving keys, which takes long enough on the wrong passphrase to need saying.
+        case unlocking
         case reviewing(Preview)
         case finished(added: Int, skipped: Int)
         case failed(String)
@@ -83,6 +89,13 @@ final class ImportViewModel {
             return
         }
 
+        // An OpenFactor archive is recognised here rather than in `preview`, because it is
+        // the one format that cannot be read without asking the person for something first.
+        if looksLikeOpenFactorArchive(data) {
+            stage = .locked(data, failure: nil)
+            return
+        }
+
         do {
             stage = .reviewing(try preview(from: data))
         } catch let error as AegisImport.FileError {
@@ -108,6 +121,49 @@ final class ImportViewModel {
         let result = LabelledTextImport.read(text)
         guard !result.isEmpty else { throw ImportFailure.unreadable }
         return try classify(result, source: "Text export")
+    }
+
+    /// Whether this is one of ours, decided by the field the format says to look at first.
+    ///
+    /// Only the `format` string, and only whether it is present with the right value. Every
+    /// other judgement about the file belongs to the reader, which refuses far more
+    /// carefully than a sniff can and does it before deriving any key.
+    private func looksLikeOpenFactorArchive(_ data: Data) -> Bool {
+        guard
+            looksLikeJSON(data),
+            let root = try? JSONSerialization.jsonObject(with: data),
+            let object = root as? [String: Any]
+        else {
+            return false
+        }
+        return object["format"] as? String == BackupArchive.format
+    }
+
+    /// Opens an archive with the passphrase somebody typed.
+    ///
+    /// **Off the main actor**, because this is up to four PBKDF2 derivations at 600,000
+    /// iterations and the wrong passphrase is the path that pays for all four. Left on the
+    /// main actor it would freeze the interface for around a second, on the screen where a
+    /// worried person is most likely to tap again and assume it is broken.
+    func unlock(with passphrase: String) async {
+        guard case let .locked(data, _) = stage else { return }
+        stage = .unlocking
+
+        let outcome = await Task.detached(priority: .userInitiated) {
+            Result { try BackupArchive.read(data, passphrase: passphrase) }
+        }.value
+
+        switch outcome {
+        case let .success(result):
+            do {
+                stage = .reviewing(try classify(result, source: "OpenFactor archive"))
+            } catch {
+                stage = .failed("Your accounts could not be read from this device.")
+            }
+        case let .failure(error):
+            let message = (error as? BackupError)?.description ?? BackupError.couldNotOpen.description
+            stage = .locked(data, failure: message)
+        }
     }
 
     /// Both formats can begin with `{`, which is how the first version of this got it
