@@ -53,16 +53,22 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
     /// Whether items are offered to iCloud Keychain.
     public let synchronizable: Bool
 
-    /// The Keychain access group items are written to and read from.
+    /// The Keychain access group items are written to and read from, or `nil` to use the
+    /// default.
     ///
-    /// Named explicitly rather than left to the default, which is derived from the bundle
-    /// identifier. The watch app has its own bundle identifier and would therefore look in
-    /// its own group and find nothing, so both targets declare this one and iCloud
-    /// Keychain carries items between them.
+    /// **The app passes `nil`, and that is the design rather than an omission.** A shared
+    /// group is required: the watch app has its own bundle identifier and would otherwise
+    /// look in its own group and find nothing. But the group is declared in the app's
+    /// `keychain-access-groups` entitlement, and the Keychain uses the first entry in that
+    /// list as the default for anything written without one, so the entitlement is the
+    /// single place the group is written down. Naming it here too would hardcode the team
+    /// identifier into a public repository and give the group two homes that could
+    /// disagree. The hosted test `usesTheSharedAccessGroup` asserts the resulting items
+    /// really are in the shared group.
     ///
-    /// `nil` means the default group, which is what tests use: a test process has no
-    /// entitlement for a shared group, and asking for one it does not hold fails every
-    /// call with `errSecMissingEntitlement`.
+    /// Tests that construct a store directly also pass `nil`, for a different reason: a
+    /// test process holds no entitlement for a shared group, and asking for one it does
+    /// not hold fails every call with `errSecMissingEntitlement`. Gate A2, F18.
     public let accessGroup: String?
 
     public init(
@@ -145,7 +151,15 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
     /// - Returns: how many accounts were changed, for the caller to report or ignore.
     @discardableResult
     public func setSynchronizable(_ shouldSync: Bool) throws(SecretStoreError) -> Int {
+        // Which items still need converting is asked of the Keychain, not worked out here.
+        // An earlier version listed everything and read each item's sync flag out of the
+        // returned attributes, which meant a flag that failed to bridge defaulted to
+        // "local". Turning sync on then failed loudly, because the update matched nothing,
+        // but turning sync off skipped the item in silence: it stayed in iCloud Keychain
+        // while the switch and every sentence around it said device only. The failure that
+        // understates exposure must not be the quiet one. Gate A2, F14.
         var query = baseQuery()
+        query[kSecAttrSynchronizable as String] = !shouldSync
         query[kSecMatchLimit as String] = kSecMatchLimitAll
         query[kSecReturnAttributes as String] = true
         // The one thing this must not ask for. Converting an account does not require
@@ -155,6 +169,9 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
 
+        // Nothing left to convert. Reached on an empty store and on a second run, which is
+        // what makes this idempotent: a partial failure means the whole thing gets run
+        // again, and the second run picks up exactly the remainder.
         if status == errSecItemNotFound {
             return 0
         }
@@ -173,16 +190,9 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
                 continue
             }
 
-            // Already in the wanted state. Skipping keeps this idempotent, which matters
-            // because a partial failure means the whole thing gets run again.
-            let isSynchronized = (item[kSecAttrSynchronizable as String] as? Bool) ?? false
-            if isSynchronized == shouldSync {
-                continue
-            }
-
             var find = baseQuery()
             find[kSecAttrAccount as String] = id.uuidString
-            find[kSecAttrSynchronizable as String] = isSynchronized
+            find[kSecAttrSynchronizable as String] = !shouldSync
 
             let changes: [String: Any] = [
                 kSecAttrSynchronizable as String: shouldSync,
@@ -198,6 +208,43 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         }
 
         return changed
+    }
+
+    public func syncState() throws(SecretStoreError) -> SyncState {
+        var query = baseQuery()
+        query[kSecMatchLimit as String] = kSecMatchLimitAll
+        query[kSecReturnAttributes as String] = true
+        query[kSecReturnData as String] = false
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        if status == errSecItemNotFound {
+            return SyncState(synced: [], local: [])
+        }
+
+        guard status == errSecSuccess, let items = result as? [[String: Any]] else {
+            throw error(for: status)
+        }
+
+        var synced: Set<UUID> = []
+        var local: Set<UUID> = []
+
+        for item in items {
+            guard let rawID = item[kSecAttrAccount as String] as? String,
+                let id = UUID(uuidString: rawID)
+            else {
+                continue
+            }
+
+            if item[kSecAttrSynchronizable as String] as? Bool == true {
+                synced.insert(id)
+            } else {
+                local.insert(id)
+            }
+        }
+
+        return SyncState(synced: synced, local: local)
     }
 
     public func delete(id: UUID) throws(SecretStoreError) {

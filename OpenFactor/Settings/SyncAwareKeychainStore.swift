@@ -71,4 +71,8 @@ struct SyncAwareKeychainStore: SynchronizableSecretStore {
     func setSynchronizable(_ shouldSync: Bool) throws(SecretStoreError) -> Int {
         try store.setSynchronizable(shouldSync)
     }
+
+    func syncState() throws(SecretStoreError) -> SyncState {
+        try store.syncState()
+    }
 }

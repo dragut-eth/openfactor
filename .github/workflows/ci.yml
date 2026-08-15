@@ -24,6 +24,26 @@ jobs:
           fi
           echo "No em dashes found."
 
+      # SECURITY.md tells people the app makes no network requests and that this is
+      # verified rather than asserted. Until gate A2 nothing verified it. The claim is the
+      # foundation of the whole "nothing is stored online" pitch, so it is checked on every
+      # push rather than re-established by hand at each audit. Gate A2, F16.
+      - name: No network code, and no logging of anything
+        run: |
+          if git grep -n -I -E \
+            'URLSession|NSURLConnection|import Network|CFSocket|Foundation\.URL\(string' \
+            -- 'Sources/*.swift' 'OpenFactor/*.swift' 'OpenFactorTests/*.swift' \
+            | grep -v 'URL(string: "https://github.com'; then
+            echo "Found something that can reach the network. The app makes no requests."
+            exit 1
+          fi
+          if git grep -n -I -E '\bprint\(|NSLog\(|os_log|Logger\(' \
+            -- 'Sources/*.swift' 'OpenFactor/*.swift'; then
+            echo "Found logging. A code or an account name must never reach a log."
+            exit 1
+          fi
+          echo "No network code and no logging found."
+
       - name: No trailing whitespace
         run: |
           if git grep -n -I -- ' $'; then

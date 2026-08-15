@@ -154,8 +154,28 @@ side effect of setting a flag.
 `SecItemUpdate` on each one to change the two attributes. Read, delete, re-add would have
 been the obvious shape and is wrong three times over: it decrypts every secret, it holds
 them all in memory at once, and a crash between the delete and the add loses an account
-outright. It is idempotent, skipping items already in the wanted state, because a partial
-failure means the whole thing gets run again.
+outright.
+
+**Which items still need converting is a question for the Keychain, not a flag this code
+reads.** The listing query pins `kSecAttrSynchronizable` to the state being converted away
+from, so it returns exactly the unconverted items and there is nothing to parse. The first
+version listed everything and read each item's flag out of the returned attributes,
+defaulting to "local" when the read failed. That made the two failures asymmetric: turning
+sync on failed loudly, because the update then matched nothing, while turning sync off
+skipped the item in silence and left it in iCloud Keychain with the interface saying device
+only. In a security tool the quiet failure must not be the one that understates exposure.
+Gate A2, F14.
+
+This also makes the idempotency structural rather than conditional: a second run simply
+finds fewer items, and finds none once the work is done.
+
+**`syncState()` exists so the interface can describe where secrets are by looking.** It
+returns the identifiers of the synced and local accounts, reading attributes and no data.
+The delete confirmation uses it to say whether a deletion reaches other devices, and the
+settings screen uses it to describe storage rather than reading back the switch the user
+chose. The two genuinely disagree: a conversion killed part way leaves a mixture, and an
+account synced from another device arrives whatever this device's switch says. Gate A2,
+F9 and F12.
 
 **Every query matches both synced and unsynced items,** via
 `kSecAttrSynchronizableAny`. Without it, turning sync on would make every existing account
@@ -186,6 +206,15 @@ needs an entitlement, entitlements come from code signing, and that bundle is un
 The macOS legacy Keychain accepts writes from an unsigned process and ignores
 `kSecAttrAccessible` entirely, which makes it worse than useless as a stand in, since
 asserting against it would pass while proving nothing.
+
+**One state this has not been shown to repair.** Within a device, re-running the conversion
+finishes a half done one, and that is now tested. Across two devices, gate A2 raised a case
+the argument does not obviously cover: turn sync off on device A, its items become local,
+device B's copies stay synced and may re-arrive on A. A would then hold a local item and a
+synced item with the same service and UUID, which the Keychain permits because the sync flag
+is part of the primary key, and turning sync on again would update the local twin toward a
+primary key that already exists. Whether that happens is unknown, and settling it needs two
+devices. Written down rather than assumed away. Gate A2, F13.
 
 **Merging is iCloud Keychain's, and this app does not second guess it.** An item is
 identified by its service and its account attribute, which here is the account's UUID, and

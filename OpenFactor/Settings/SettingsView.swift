@@ -3,12 +3,16 @@ import SwiftUI
 
 /// Settings.
 ///
-/// **Only what works appears here.** The roadmap has rows coming for iCloud sync, an app
-/// lock, and export, and none of them are in this list, because a settings screen is a
-/// description of what an app does. A row saying "App Lock" tells a reader their codes
-/// are behind Face ID, and a disabled row saying "coming soon" tells them the app is
-/// nearly there. Neither is true today, and for a security tool that is not a harmless
-/// exaggeration. The rows arrive with the features.
+/// **Only what works appears here.** The roadmap has rows coming for an app lock and for
+/// export, and neither is in this list, because a settings screen is a description of what
+/// an app does. A row saying "App Lock" tells a reader their codes are behind Face ID, and
+/// a disabled row saying "coming soon" tells them the app is nearly there. Neither is true
+/// today, and for a security tool that is not a harmless exaggeration. The rows arrive with
+/// the features, which is how the sync row arrived in PR 13.
+///
+/// The same rule applies inside a row's own text. The sync footer named Apple Watch before
+/// there was a watch app, which taught a reader that their watch already held their
+/// secrets. Gate A2 called that an aspirational footer, and it was right.
 struct SettingsView: View {
 
     @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
@@ -16,6 +20,11 @@ struct SettingsView: View {
     @AppStorage(PreferenceKey.syncEnabled) private var syncEnabled = false
 
     @State private var syncFailure: String?
+
+    /// Where the accounts actually are, read from the Keychain rather than inferred from
+    /// the switch. Gate A2, F12: "on this device only" is the strongest sentence in the
+    /// app and it was the one sentence asserted without looking.
+    @State private var syncState: SyncState?
 
     let store: any SecretStore
 
@@ -46,6 +55,7 @@ struct SettingsView: View {
                 }
                 aboutSection
             }
+            .task { refreshSyncState() }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -73,16 +83,21 @@ struct SettingsView: View {
             Text(
                 syncEnabled
                     ? """
-                    Your accounts are in iCloud Keychain, which is end to end encrypted. \
-                    Apple cannot read them. Turning this off keeps them on this device and \
-                    stops them reaching your other ones.
+                    Your accounts are offered to iCloud Keychain, which is end to end \
+                    encrypted. Apple cannot read them. This requires iCloud Keychain to be \
+                    on in iOS Settings, and OpenFactor cannot check whether it is or \
+                    whether anything has arrived elsewhere. Turning this off stops this \
+                    device offering them. It may also remove them from your other devices, \
+                    which is not something OpenFactor controls.
                     """
                     : """
-                    Puts your accounts in iCloud Keychain so they reach your other devices, \
-                    including Apple Watch. It is end to end encrypted and Apple cannot read \
-                    it. In exchange, your accounts become readable whenever this device is \
-                    unlocked rather than only on this device, because a synced item cannot \
-                    be device only.
+                    Offers your accounts to iCloud Keychain, so they reach the other \
+                    devices signed in to your Apple Account where OpenFactor is installed, \
+                    without anyone doing anything on those devices. It is end to end \
+                    encrypted and Apple cannot read it, and it requires iCloud Keychain to \
+                    be on in iOS Settings. In exchange, your accounts become readable \
+                    whenever this device is unlocked rather than only on this device, \
+                    because a synced item cannot be device only.
                     """
             )
         }
@@ -99,11 +114,23 @@ struct SettingsView: View {
                     try store.setSynchronizable(shouldSync)
                     syncEnabled = shouldSync
                     syncFailure = nil
+                    refreshSyncState()
                 } catch {
                     syncFailure = Self.message(for: error)
                 }
             }
         )
+    }
+
+    /// Reads where the accounts are. A failure leaves it unknown rather than guessed, and
+    /// the About footer then says nothing about location.
+    private func refreshSyncState() {
+        guard let store = store as? any SynchronizableSecretStore else {
+            syncState = nil
+            return
+        }
+
+        syncState = try? store.syncState()
     }
 
     /// Conversion runs account by account, so a failure part way through leaves some
@@ -114,6 +141,34 @@ struct SettingsView: View {
             return "Unlock your device and try again."
         }
         return "Sync could not be changed. Some accounts may not have moved, so try again."
+    }
+
+    /// Says where the accounts are, in the order of how surprising it is.
+    ///
+    /// The mixed case is not an error to be repaired. It is what a half finished
+    /// conversion looks like and also what a device holds when an account arrives from
+    /// elsewhere, and the reasoning for describing rather than repairing is in
+    /// `SECURITY.md`. Not knowing is its own case: better to say nothing about location
+    /// than to assert the strongest claim in the app on a failed query.
+    static func storageSummary(_ state: SyncState?) -> String {
+        let common =
+            "There is no OpenFactor account and no server, and the app makes no network "
+            + "requests of its own. You can read the source and check that."
+
+        guard let state else {
+            return "OpenFactor keeps your accounts in the Keychain. \(common)"
+        }
+
+        if state.isMixed {
+            return "Some of your accounts are in iCloud Keychain and some are on this "
+                + "device only. \(common)"
+        }
+
+        if state.synced.isEmpty {
+            return "OpenFactor stores your accounts on this device only. \(common)"
+        }
+
+        return "Your accounts are in iCloud Keychain as well as on this device. \(common)"
     }
 
     private var aboutSection: some View {
@@ -137,23 +192,11 @@ struct SettingsView: View {
             // The one claim this screen makes, and it is checkable rather than
             // reassuring: the source is right there.
             //
-            // It changes with the sync switch on purpose. "On this device only" was true
-            // before sync existed and became a lie the moment someone turned it on, and a
-            // security claim that quietly stops being true is worse than none at all.
-            Text(
-                syncEnabled
-                    ? """
-                    OpenFactor keeps your accounts in the Keychain and, while sync is on, in \
-                    iCloud Keychain. There is no OpenFactor account and no server, and the \
-                    app makes no network requests of its own. You can read the source and \
-                    check that.
-                    """
-                    : """
-                    OpenFactor stores your accounts on this device only. There is no \
-                    OpenFactor account and no server, and the app makes no network requests. \
-                    You can read the source and check that.
-                    """
-            )
+            // It describes where the accounts are, read from the Keychain, not where the
+            // switch says they should be. Those disagree more often than they look like
+            // they would: a conversion can fail part way, and an account synced from
+            // another device arrives here whatever this device's switch says. Gate A2, F12.
+            Text(Self.storageSummary(syncState))
         }
     }
 

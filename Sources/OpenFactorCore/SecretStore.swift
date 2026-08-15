@@ -146,4 +146,44 @@ public protocol SynchronizableSecretStore: SecretStore {
     /// Turns sync on or off for every stored account, and returns how many changed.
     @discardableResult
     func setSynchronizable(_ shouldSync: Bool) throws(SecretStoreError) -> Int
+
+    /// Which accounts are currently offered to iCloud Keychain and which are not.
+    ///
+    /// Exists so the interface can describe where secrets are by looking, rather than by
+    /// reading back the setting the user chose. The two can disagree: a conversion that
+    /// failed part way leaves a mixture, and an account synced from another device arrives
+    /// here whatever this device's own switch says. Gate A2, F9 and F12.
+    ///
+    /// Reads no secret material. The query asks for attributes and sets `kSecReturnData`
+    /// to false, like every other listing in this file.
+    func syncState() throws(SecretStoreError) -> SyncState
+}
+
+/// Where each stored account sits with respect to iCloud Keychain.
+///
+/// Identifiers rather than counts, because the two questions the interface asks are
+/// different shapes: the delete confirmation needs to know about one account, and the
+/// settings screen needs to know whether the whole set agrees with itself.
+public struct SyncState: Sendable, Equatable {
+
+    /// Accounts offered to iCloud Keychain.
+    public let synced: Set<UUID>
+
+    /// Accounts held on this device only.
+    public let local: Set<UUID>
+
+    public init(synced: Set<UUID>, local: Set<UUID>) {
+        self.synced = synced
+        self.local = local
+    }
+
+    /// Whether the stored accounts are all in the same state.
+    ///
+    /// A mixture is not corruption and is not always an error: it is what a half finished
+    /// conversion looks like, and also what a device holds when an account arrives from
+    /// elsewhere while sync is off here. It is a reason to describe the situation honestly
+    /// rather than to repair it, see `SECURITY.md`.
+    public var isMixed: Bool {
+        !synced.isEmpty && !local.isEmpty
+    }
 }

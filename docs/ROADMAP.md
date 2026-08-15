@@ -38,7 +38,7 @@ They are gates, not suggestions. Each one is marked inline in the plan below, an
 | Gate | After | What gets looked at | Who |
 | --- | --- | --- | --- |
 | **A1** | PR 4 | The whole of `OpenFactorCore`: Base32, HOTP, TOTP, URI parsing, Keychain storage | Independent model review, plus a public call for eyes |
-| **A2** | PR 13 | iCloud Keychain sync, and the sync section of the threat model | Independent model review |
+| **A2** | PR 13 | iCloud Keychain sync, and the sync section of the threat model | Independent model review. **Done**, see `docs/audits/A2.md` |
 | **A3** | PR 16 | The export format and its cryptography, before any user has a backup in it | Paid professional review if fundable, independent model review otherwise |
 | **A4** | PR 17 | The complete threat model against the finished app | Paid professional review or a funded open source audit programme |
 | **A5** | Before each release | Diff since the last audited tag | Independent model review, escalating to professional if the diff touches secrets |

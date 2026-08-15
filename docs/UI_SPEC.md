@@ -60,17 +60,31 @@ Rate on the App Store, Send Feedback. Each row has a colored rounded icon. `Done
 | Add **Appearance** (System, Light, Dark) | The palette was built for both schemes from the start, so honouring a preference costs nothing |
 | iCloud row explains in plain words what is synced and that Apple cannot read it | Sync is the one thing that leaves the device, so it gets an explanation, not just a toggle |
 
-**iCloud sync, as built in PR 13.** A single switch, off by default, under a `Sync`
-heading, with a footer that changes with its state rather than a fixed line of marketing.
-Off, it says what turning it on would do and what it costs: accounts reach your other
-devices including the watch, it is end to end encrypted, Apple cannot read it, and in
-exchange your accounts become readable whenever this device is unlocked rather than only on
-this device. On, it says where they are, that Apple cannot read them, and what switching
-off would do.
+**iCloud sync, as built in PR 13 and reworded at gate A2.** A single switch, off by
+default, under a `Sync` heading, with a footer that changes with its state rather than a
+fixed line of marketing. It is the only place in the app where the security trade is
+spelled out at the moment someone makes it, which is why it names the cost in the same
+breath as the benefit rather than a screen away in a document nobody opens.
 
-The footer is the only place in the app where the security trade is spelled out at the
-moment someone makes it, which is why it names the cost in the same breath as the benefit
-rather than a screen away in a document nobody opens.
+Three things the first wording got wrong, all in the same direction, all corrected:
+
+- **It said "puts", and the app can only offer.** Marking an item synchronizable hands it
+  to iCloud Keychain; whether anything leaves depends on iCloud Keychain being on in iOS
+  Settings, which there is no public API to check. The footer now says "offers", names the
+  prerequisite, and says the app cannot verify delivery. The user this protects is the one
+  who believes their accounts are backed up, loses the phone, and finds nothing on the new
+  one.
+- **It promised Apple Watch, and there is no watch app.** An aspirational footer breaks the
+  same rule as an aspirational row, and worse: it teaches someone their watch already holds
+  their secrets. The mention returns when the watch does.
+- **It claimed turning sync off stops the accounts reaching other devices.** Nobody has
+  observed that, and Apple's documentation points the other way. It now says turning off
+  stops this device offering them and may remove them elsewhere, which is what is actually
+  known.
+
+The off state footer also says what the on state does to other devices before the switch is
+touched: the accounts reach every device signed in to the Apple Account where OpenFactor is
+installed, with nobody doing anything on those devices.
 
 The switch writes the preference only after the Keychain work succeeds, so it never claims
 a state the Keychain disagrees with. On failure it stays where it was and a line of red
@@ -89,6 +103,20 @@ until PR 8 and the settings gear out until PR 11.
 touch the stored positions, so switching away and back returns the arrangement someone made
 by hand. Dragging is offered only while the order is theirs to set, since a drag into a list
 that sorts itself would either be ignored or would silently change the setting.
+
+**The About footer describes the Keychain, not the switch.** It reads the stored accounts'
+actual sync state and says one of four things: on this device only, in iCloud Keychain as
+well, a mixture, or, if the query fails, nothing about location at all. "On this device
+only" is the strongest security sentence in the app, and it used to be the one sentence
+asserted without looking. A mixture is not an error to be repaired, see `SECURITY.md`, but
+it is something to say out loud.
+
+**The delete confirmation names the blast radius.** Deleting is the only irreversible act in
+the app, and under sync it reaches every device. The alert reads the account's sync state
+and says "from this device" or "from this device and from your other devices" accordingly.
+If that read fails it uses the wider warning, because overstating the consequence of an
+irreversible act is the safe direction to be wrong in. The person this protects is the one
+keeping a second device precisely as their fallback.
 
 **Preferences live in `UserDefaults`, secrets do not.** A sort order and a colour scheme
 reveal nothing, not even that any accounts exist. Anything that would say which services

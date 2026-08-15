@@ -259,6 +259,108 @@ struct KeychainSecretStoreTests {
 
     /// Two stores with different service names must not see each other's accounts. This
     /// is what keeps a test, or a future second target, from reading the real app's data.
+
+    /// The assertion behind "try again". Gate A2, F13 found it missing: the idempotency
+    /// test only re-ran a fully converted store, which proves the no-op case and says
+    /// nothing about the case the claim actually exists for, a conversion that stopped
+    /// half way. This builds that state by hand and checks the re-run finishes the job
+    /// without disturbing what was already done.
+    @Test("Re-running a half finished conversion converts exactly the remainder")
+    func repairsAPartialConversion() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        for issuer in ["GitHub", "Fastmail", "Proton"] {
+            try store.add(
+                OTPAccount(
+                    issuer: issuer,
+                    name: "octocat",
+                    secret: Data("12345678901234567890".utf8),
+                    generator: .totp(.standard)
+                ),
+                color: .blue
+            )
+        }
+
+        let before = try store.records().readable
+        #expect(before.count == 3)
+
+        // Convert one item by hand, which is what a conversion killed part way leaves.
+        let first = try #require(before.first)
+        let converted = SecItemUpdate(
+            [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: store.service,
+                kSecAttrAccount as String: first.id.uuidString,
+                kSecUseDataProtectionKeychain as String: true,
+                kSecAttrSynchronizable as String: false,
+            ] as CFDictionary,
+            [
+                kSecAttrSynchronizable as String: true,
+                kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+            ] as CFDictionary
+        )
+        #expect(converted == errSecSuccess)
+
+        // The re-run touches the two that are left, and not the one already done.
+        #expect(try store.setSynchronizable(true) == 2)
+
+        let state = try store.syncState()
+        #expect(state.synced.count == 3)
+        #expect(state.local.isEmpty)
+
+        // And nothing lost its metadata or its secret on the way through.
+        let after = try store.records().readable
+        #expect(Set(after.map(\.metadata.issuer)) == ["GitHub", "Fastmail", "Proton"])
+        #expect(try store.secret(for: first.id) == Data("12345678901234567890".utf8))
+    }
+
+    @Test("The sync state reports which accounts are where")
+    func reportsSyncState() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        #expect(try store.syncState() == SyncState(synced: [], local: []))
+
+        let record = try store.add(account(), color: .blue)
+        var state = try store.syncState()
+        #expect(state.local == [record.id])
+        #expect(state.synced.isEmpty)
+        #expect(!state.isMixed)
+
+        try store.setSynchronizable(true)
+        state = try store.syncState()
+        #expect(state.synced == [record.id])
+        #expect(state.local.isEmpty)
+        #expect(!state.isMixed)
+    }
+
+    /// A mixture is not corruption, and the interface has to be able to see it: it is what
+    /// a half finished conversion looks like, and what a device holds when an account
+    /// arrives from elsewhere while its own switch is off. Gate A2, F12.
+    @Test("A half converted store reports as mixed")
+    func reportsAMixedStore() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let first = try store.add(account(), color: .blue)
+        try store.setSynchronizable(true)
+        let second = try store.add(
+            OTPAccount(
+                issuer: "Fastmail",
+                name: "octocat",
+                secret: Data("12345678901234567890".utf8),
+                generator: .totp(.standard)
+            ),
+            color: .green
+        )
+
+        let state = try store.syncState()
+        #expect(state.synced == [first.id])
+        #expect(state.local == [second.id])
+        #expect(state.isMixed)
+    }
+
     @Test("Stores with different service names are isolated")
     func servicesAreIsolated() throws {
         let first = makeStore()

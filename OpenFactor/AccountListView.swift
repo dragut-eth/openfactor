@@ -19,6 +19,11 @@ struct AccountListView: View {
     @State private var recolouring: AccountListViewModel.Row?
     @State private var pendingDeletion: AccountListViewModel.Row?
 
+    /// Whether the account about to be deleted is in iCloud Keychain, read at the moment
+    /// the alert is raised rather than inferred from the sync preference. The two can
+    /// disagree, and this is the one dialog in the app where being wrong is permanent.
+    @State private var pendingDeletionIsSynced = false
+
     private let store: any SecretStore
 
     /// The single timer for the whole screen. Ten accounts do not get ten timers.
@@ -86,14 +91,42 @@ struct AccountListView: View {
                 } message: { _ in
                     // The only irreversible thing in the app, so the consequence is named
                     // rather than left to be inferred from the word "remove".
+                    //
+                    // The blast radius depends on whether the account is synced, and it
+                    // used to say "from this device" either way. Deleting a synchronizable
+                    // item removes it everywhere, so the person most likely to be misled
+                    // was the one keeping a second device precisely as their fallback.
+                    // Gate A2, F9.
                     Text(
-                        """
-                        Its secret is deleted from this device and cannot be recovered. \
-                        If this is your only way to sign in, you will lose access to the account.
-                        """
+                        pendingDeletionIsSynced
+                            ? """
+                            Its secret is deleted from this device and from your other \
+                            devices, and cannot be recovered. If this is your only way to \
+                            sign in, you will lose access to the account.
+                            """
+                            : """
+                            Its secret is deleted from this device and cannot be recovered. \
+                            If this is your only way to sign in, you will lose access to the account.
+                            """
                     )
                 }
         }
+    }
+
+    /// Raises the delete confirmation, having first asked the Keychain where this
+    /// account actually lives.
+    ///
+    /// A failure here is not worth blocking a deletion over, so it falls back to the
+    /// wider warning. Overstating the consequence of an irreversible act is the safe
+    /// direction to be wrong in.
+    private func askToDelete(_ row: AccountListViewModel.Row) {
+        if let store = store as? any SynchronizableSecretStore {
+            pendingDeletionIsSynced = (try? store.syncState())?.synced.contains(row.id) ?? true
+        } else {
+            pendingDeletionIsSynced = false
+        }
+
+        pendingDeletion = row
     }
 
     @ToolbarContentBuilder
@@ -167,7 +200,9 @@ struct AccountListView: View {
             .onDelete { offsets in
                 // Routed through the same confirmation as everything else. A swipe is a
                 // convenient gesture, not a decision to lose an account.
-                pendingDeletion = offsets.compactMap { model.visibleRows[$0] }.first
+                if let row = offsets.compactMap({ model.visibleRows[$0] }).first {
+                    askToDelete(row)
+                }
             }
 
             // Accounts this version cannot read. Shown rather than hidden: an account
@@ -245,7 +280,7 @@ struct AccountListView: View {
     private func menu(for row: AccountListViewModel.Row) -> some View {
         Button { recolouring = row } label: { Label("Change colour", systemImage: "paintpalette") }
         Button { editing = row } label: { Label("Edit details", systemImage: "pencil") }
-        Button(role: .destructive) { pendingDeletion = row } label: {
+        Button(role: .destructive) { askToDelete(row) } label: {
             Label("Remove \(row.record.metadata.displayIssuer)", systemImage: "trash")
         }
     }

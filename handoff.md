@@ -3,11 +3,31 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 13.
+**Last updated:** 2026-08-14, after gate A2 and its follow up.
 
 ## Where things stand
 
-PR 13 is complete and awaiting gate A2. Sync is built, off by default, and the two
+**Gate A2 is done and its follow up has landed.** The report is
+`docs/audits/A2.md`, findings F8 to F18. It found no path by which a secret leaves the
+device beyond what the switch is documented to do, and confirmed `setSynchronizable(_:)`
+reads no secret on any branch. Every finding was a sentence the interface or the documents
+asserted that the code or Apple's documentation could not back.
+
+Nine of eleven are fixed: F9 through F12 and F14 through F18. Two remain open because they
+need a second device on the same Apple Account, and both are in the experiment at the end of
+the report:
+
+- **F8, what turning sync off does to copies elsewhere.** Apple's `kSecAttrSynchronizable`
+  documentation says updates through that key affect all copies, which is the opposite of
+  what this project first expected. The interface no longer claims either way.
+- **F13, a two device state that may defeat the repair claim.** Off on A, copies re-arrive
+  from B, A holds a local and a synced item with the same UUID. Whether turning sync back on
+  then wedges is unknown. The single device half of the repair claim is now tested.
+
+**Do not let either harden into fact by being repeated.** Both are written as unknown in
+`SECURITY.md` and `docs/ARCHITECTURE.md`.
+
+PR 13 is complete. Sync is built, off by default, and the two
 documents that make claims about it, `SECURITY.md` and `docs/ARCHITECTURE.md`, were
 rewritten to say what the code does rather than what was planned.
 
@@ -29,8 +49,10 @@ Proving it that way found a real bug and is the reason `SyncAwareKeychainStore` 
 first version made the root view's identity depend on the preference, so flipping sync
 rebuilt the view tree and dismissed the settings sheet the instant the switch was touched.
 
-**Three claims in the sync documentation are reasoned, not observed,** because they need a
-second device and there is one. That turning sync off on this device leaves the copies on
+**Two claims in the sync documentation are still reasoned, not observed,** because they need
+a second device and there is one. Gate A2 settled the third: Apple's documentation says
+watchOS 7 and later synchronizes keychain items, so the watch design stands, and what is left
+to prove there is the access group itself in PR 14. That turning sync off on this device leaves the copies on
 another device alone; that the merge behaviour is what iCloud Keychain's service plus
 account keying implies; and that a watchOS target in the same access group actually sees
 the phone's items. All three are written down as unverified, in `SECURITY.md` and
@@ -68,7 +90,8 @@ either a finding about what the entry transmits or a plain statement that it is 
 | PR 10, edit mode | Done |
 | PR 11, settings sheet | Done |
 | PR 12, polish and accessibility | Done |
-| PR 13, iCloud Keychain sync | Done. **Gate A2 next** |
+| PR 13, iCloud Keychain sync | Done |
+| Gate A2, audit of sync | Done. Nine of eleven findings fixed, F8 and F13 need two devices |
 | PR 14 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
@@ -110,8 +133,9 @@ OpenFactor/                                App target
   Views/EditAccountView.swift              Renaming, and the colour grid
   Settings/SettingsView.swift              Only rows whose features exist
   Settings/Preferences.swift               Sort order and appearance, in UserDefaults
-OpenFactorTests/PaletteTests.swift         Contrast asserted, not eyeballed
-OpenFactorTests/                           Empty folder. Its sources are Tests/ above
+OpenFactorTests/                           App only tests, eight files. Palette contrast,
+                                           add and manual setup, settings, clipboard,
+                                           edit, and the sync aware store
 docs/audits/A1.md                          Gate A1 findings and disposition
 docs/PROJECT.md                            The project file in plain language
 docs/POLISH.md                             Polish items, for PR 12
@@ -126,7 +150,7 @@ Run the suite two ways, and CI runs both:
 - `swift test`, under a second, no simulator, Keychain tests **skip**
 - `xcodebuild test -project OpenFactor.xcodeproj -scheme OpenFactor -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:OpenFactorTests`, about 25 seconds, Keychain tests **run**
 
-Same files both times. `OpenFactorTests` is an empty folder whose sources are
+The shared core suites run twice. `OpenFactorTests` also holds app only suites whose sources are
 `Tests/OpenFactorCoreTests`, attached as a second synchronised folder. Do not "fix" the
 skip under `swift test`: it is correct, and the only way to make those tests pass there
 would be to weaken what they assert.
@@ -274,7 +298,16 @@ Small items Xavier raised while testing the sync build, before PR 14 starts.
 
 ## Next step
 
-**Gate A2, and it is a stop rather than a formality.** Sync is the only feature that lets
+**PR 14, the watchOS app.** Read only, and it starts by proving the access group assumption
+rather than assuming it. That stub is also the second device the two open findings need, so
+running the F8 and F13 experiment is part of PR 14 rather than a separate errand.
+
+If Xavier has an iPad or a second iPhone on the same Apple Account, the experiment can run
+before PR 14 instead, which would settle F8 and F13 sooner and cheaper.
+
+## What gate A2 was for, kept for reference
+
+**It was a stop rather than a formality.** Sync is the only feature that lets
 secret material off the device, and the interface now makes explicit promises about it in
 the settings footer. Those promises have to be true, not reassuring.
 

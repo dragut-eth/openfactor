@@ -59,12 +59,27 @@ setting in the app.
 
 *Implemented as of PR 13, and only relevant if you turn sync on. Off by default.* Sync uses
 iCloud Keychain, which is end
-to end encrypted. The keys are derived from your device passcodes and never leave your
-devices, so Apple cannot read the synced items and neither can someone who obtains your
-iCloud password alone. An attacker who obtains your iCloud password **and** a device
-passcode can add a device to the circle of trust and receive your secrets. Two factor
-authentication on your Apple Account is therefore part of this app's security, not
-separate from it.
+to end encrypted, and Apple cannot read the synced items. Neither can someone who obtains
+your iCloud password alone.
+
+**The keys are escrowed with Apple, and saying otherwise would overstate this.** An earlier
+version of this paragraph said the keys never leave your devices. Apple's platform security
+documentation describes an escrowed copy, guarded by hardware security modules that verify
+your device passcode without Apple seeing it, allow ten attempts, and destroy the record
+after that. "Apple cannot read them" survives this; "never leave your devices" does not, and
+the escrow is what makes recovery possible when every device is lost.
+
+That gives an attacker two routes, and both need more than your iCloud password:
+
+- **Join the circle of trust.** Your iCloud password plus one of your device passcodes adds
+  a device that then receives your secrets.
+- **Recover through escrow.** Your iCloud password, control of your trusted phone number,
+  and a device passcode guessable inside ten attempts recovers the keychain with none of
+  your devices present.
+
+Two factor authentication on your Apple Account is therefore part of this app's security
+rather than separate from it, and so is your device passcode. A long alphanumeric passcode
+is the one thing you control that defends the escrow route directly. Gate A2, F15.
 
 **Turning sync on and off never reads a secret.** The conversion updates each Keychain
 item in place, so no secret is decrypted, no secret enters this app's memory, and there is
@@ -72,20 +87,41 @@ no moment when an account exists only as a variable that a crash could lose. The
 implementation, reading each account out and writing it back, would have all three
 problems.
 
-**What turning sync off does, precisely.** The accounts stay on this device and stop being
-offered to iCloud Keychain, and their protection class goes back to device only. What
-happens to the copies already sitting on your other devices is not something this app
-controls or can promise, so the interface does not claim it either way. If you want an
-account gone from another device, delete it there. Establishing the exact propagation
-behaviour is an open item for gate A2.
+**What turning sync off does, precisely, and what is still unknown.** The accounts stay on
+this device, stop being offered to iCloud Keychain, and go back to the device only
+protection class.
 
-**Your device preference and the Keychain can disagree.** The switch is remembered per
-device in `UserDefaults`, and it is written only after the Keychain work succeeds. If the
-app is killed part way through a conversion, some accounts are converted and some are not,
-and the switch will read the old value. Running it again fixes it, because the conversion
-is idempotent by design. The app does not silently reconcile the two at launch on purpose:
-a synced account arriving from another device would look like a disagreement, and
-"resolving" it would quietly pull that account out of sync everywhere.
+What happens to the copies on your other devices is **not established**, and this document
+previously expected them to be left alone. Gate A2 found that Apple's documentation for
+`kSecAttrSynchronizable` points the other way: updating or deleting an item through that
+key affects all copies. Nobody has observed which happens, so the interface now says only
+that turning sync off may remove them elsewhere and that OpenFactor does not control it. If
+you want an account gone from another device, the reliable move is to delete it there.
+Settling this needs two devices and is the first step of the experiment recorded in
+`docs/audits/A2.md`. Gate A2, F8.
+
+**Your device preference and the Keychain can disagree, and the app says so rather than
+repairing it.** The switch is remembered per device in `UserDefaults` and is written only
+after the Keychain work succeeds. Three ways the two come apart: a conversion killed part
+way leaves a mixture; an account synced from another device arrives here whatever this
+device's switch says; and once sync has ever been on, copies may exist elsewhere regardless
+of what the switch reads now.
+
+Running the conversion again repairs the first case, because it is idempotent by design.
+The app deliberately does not reconcile at launch: an arrived account is indistinguishable
+from a half converted one, and "resolving" it would quietly pull that account out of sync
+on every device.
+
+That argument justifies not repairing. It does not justify not telling, which is what gate
+A2 found. The settings screen now reads the Keychain rather than the switch when it says
+where your accounts are, and says plainly when the two states are mixed. The delete
+confirmation reads it too, because whether a deletion reaches your other devices is the one
+thing in this app that cannot be undone. Gate A2, F9 and F12.
+
+**Sync is a request, not a delivery.** Marking an item synchronizable offers it to iCloud
+Keychain. If iCloud Keychain is off in iOS Settings, the conversion still succeeds and
+nothing leaves the device. There is no public API to check that setting, so the app cannot
+know and does not claim to. The interface names the prerequisite instead. Gate A2, F10.
 
 ### The watch is a device holding your secrets
 
@@ -99,6 +135,10 @@ lost watch the way you would treat a lost phone.
 It also means the watch app needs sync on. With sync off there is nothing for it to read,
 and it will say that rather than showing an empty list.
 
+Nothing in the interface mentions the watch until the watch app exists. The sync footer
+named it before PR 14 had started, which taught a reader their watch already held their
+secrets. Gate A2, F11.
+
 We do not use CloudKit for secrets. A CloudKit private database is encrypted, but with a
 key Apple holds unless the encrypted fields API is used, and that is a weaker guarantee
 than iCloud Keychain gives for free.
@@ -106,7 +146,14 @@ than iCloud Keychain gives for free.
 ### Attacker on the network
 
 There is no network code. The app makes no requests, so there is nothing to intercept.
-This is verified in CI rather than asserted, see PR 17.
+This is verified in CI rather than asserted: the style job greps the whole source tree for
+`URLSession`, the `Network` framework, raw sockets, and logging, and fails the build if any
+appears. Until gate A2 this sentence said the same thing while CI checked nothing, which is
+exactly the plan laundered into a fact that the *planned* marker exists to prevent. Gate
+A2, F16.
+
+iCloud Keychain traffic is the operating system's, not this app's, which is why the
+interface says the app makes no network requests "of its own".
 
 ### Malicious or compromised dependency
 
@@ -146,8 +193,9 @@ rather than leaving this paragraph as the last word.
   helps.
 - A malicious Xcode toolchain or a compromised Apple platform.
 - Shoulder surfing, screen recording by another app you installed, and physical coercion.
-- Your own choice to export secrets in plaintext, which the app permits behind an explicit
-  warning because an authenticator you cannot leave is its own kind of trap.
+- *Planned.* Your own choice to export secrets in plaintext, which the app will permit
+  behind an explicit warning because an authenticator you cannot leave is its own kind of
+  trap. There is no export of any kind until PR 16. Gate A2, F17.
 
 ## Practices in this repository
 
