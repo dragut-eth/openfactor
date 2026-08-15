@@ -142,6 +142,34 @@ is the same arithmetic and there is one of it.
 **One timer for the whole list,** never one per row. Every visible code recomputes on a
 single shared tick.
 
+## Reading other apps' exports
+
+Importers live in the core, beside the `otpauth://` parser, for the same reason it does:
+they are hostile input readers that produce secrets, and that is the part of the project
+meant to be audited on its own.
+
+**They return a result rather than writing anything.** No importer touches the Keychain. It
+reports what it found, what it refused and why, and the interface asks before anything is
+saved. Adding forty accounts is a different act from adding one.
+
+**One bad record never fails a file.** A file of ten with one unusable secret imports nine
+and names the tenth. Aborting punishes the user for another app's data; dropping it silently
+hands them an authenticator with a hole they discover at a login.
+
+**Step Two's export is read best effort, and says so.** It is not an interchange format, it
+is a report written for a human, with English labels and prose. A localised export produces
+no accounts rather than wrong ones, which is the correct way for a reader of an uncontrolled
+document to fail. `RichTextReader` recovers the text with just enough RTF to handle the
+constructs that appear: `\uN` code points, `\'XX` code page bytes, and skipping the font
+and colour tables. It is deliberately not a general RTF parser, and `NSAttributedString` was
+rejected for the job: it would read the file correctly and would mean handing an attacker
+supplied document to a large rich text engine inside an app holding second factors.
+
+**Aegis is read strictly**, because Aegis publishes its format. Encrypted vaults are refused
+by name, since they use scrypt and providing it would mean a dependency. The refusal names
+the fix, which is to export unencrypted, rather than failing with something the user cannot
+act on.
+
 ## Storage and sync
 
 *Storage exists as of PR 4. Sync exists as of PR 13.*

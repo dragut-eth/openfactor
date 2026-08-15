@@ -21,6 +21,12 @@ let package = Package(
     ],
     targets: [
         .target(name: "OpenFactorCore"),
-        .testTarget(name: "OpenFactorCoreTests", dependencies: ["OpenFactorCore"]),
+        .testTarget(
+            name: "OpenFactorCoreTests",
+            dependencies: ["OpenFactorCore"],
+            // Read through #filePath rather than Bundle.module, because these sources are
+            // also compiled into the app test target, where Bundle.module does not exist.
+            exclude: ["Fixtures"]
+        ),
     ]
 )
