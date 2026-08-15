@@ -62,4 +62,11 @@ enum AppearancePreference: String, CaseIterable, Identifiable {
 enum PreferenceKey {
     static let sortOrder = "sortOrder"
     static let appearance = "appearance"
+
+    /// Whether accounts are offered to iCloud Keychain.
+    ///
+    /// A preference rather than something derived from the Keychain, because with no
+    /// accounts stored there is nothing to derive it from, and the answer still has to be
+    /// remembered so the next account added inherits it.
+    static let syncEnabled = "syncEnabled"
 }

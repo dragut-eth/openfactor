@@ -32,15 +32,16 @@ There is no revocation short of re enrolling with the service.
 
 ### Attacker with your locked device
 
-*Implemented, not yet verified by test.* Secrets live in the Keychain with
+*Implemented and verified by test.* Secrets live in the Keychain with
 `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. They are encrypted with a key derived from
 your device passcode and the Secure Enclave, and are unreadable while the device is locked.
 An attacker with the hardware and no passcode should get nothing.
 
-The test that asserts this protection class cannot run in the current test setup, because
-reaching the data protection Keychain requires an entitlement that an unsigned test bundle
-does not have. The test is written and skipped, and runs once the app target exists. Until
-then, treat this paragraph as a description of intent rather than of verified behaviour.
+**Turning sync on weakens this,** and there is no way to have both. A synchronizable
+Keychain item cannot be device only, by definition, so switching sync on moves every
+account to `kSecAttrAccessibleWhenUnlocked`. Still unreadable while the device is locked,
+still tied to your passcode, but no longer pinned to this one piece of hardware. That is
+the actual price of sync, and the settings screen says so in words before you pay it.
 
 Your account names are protected too. The issuer and account name cannot generate a code,
 but they say which services you use and under which email address, so they are stored in
@@ -56,13 +57,47 @@ setting in the app.
 
 ### Attacker with your iCloud account
 
-*Planned, and only relevant if you turn sync on.* Sync uses iCloud Keychain, which is end
+*Implemented as of PR 13, and only relevant if you turn sync on. Off by default.* Sync uses
+iCloud Keychain, which is end
 to end encrypted. The keys are derived from your device passcodes and never leave your
 devices, so Apple cannot read the synced items and neither can someone who obtains your
 iCloud password alone. An attacker who obtains your iCloud password **and** a device
 passcode can add a device to the circle of trust and receive your secrets. Two factor
 authentication on your Apple Account is therefore part of this app's security, not
 separate from it.
+
+**Turning sync on and off never reads a secret.** The conversion updates each Keychain
+item in place, so no secret is decrypted, no secret enters this app's memory, and there is
+no moment when an account exists only as a variable that a crash could lose. The obvious
+implementation, reading each account out and writing it back, would have all three
+problems.
+
+**What turning sync off does, precisely.** The accounts stay on this device and stop being
+offered to iCloud Keychain, and their protection class goes back to device only. What
+happens to the copies already sitting on your other devices is not something this app
+controls or can promise, so the interface does not claim it either way. If you want an
+account gone from another device, delete it there. Establishing the exact propagation
+behaviour is an open item for gate A2.
+
+**Your device preference and the Keychain can disagree.** The switch is remembered per
+device in `UserDefaults`, and it is written only after the Keychain work succeeds. If the
+app is killed part way through a conversion, some accounts are converted and some are not,
+and the switch will read the old value. Running it again fixes it, because the conversion
+is idempotent by design. The app does not silently reconcile the two at launch on purpose:
+a synced account arriving from another device would look like a disagreement, and
+"resolving" it would quietly pull that account out of sync everywhere.
+
+### The watch is a device holding your secrets
+
+*Relevant from PR 14, and a direct consequence of the design chosen in PR 13.* The watch
+does not receive secrets from the phone. It reads the same synced Keychain items, through a
+shared access group, which is why it keeps working with the phone off or absent. The
+consequence is worth stating plainly rather than leaving implicit in an architecture
+document: **your paired watch holds your secrets, and it can generate your codes.** Treat a
+lost watch the way you would treat a lost phone.
+
+It also means the watch app needs sync on. With sync off there is nothing for it to read,
+and it will say that rather than showing an empty list.
 
 We do not use CloudKit for secrets. A CloudKit private database is encrypted, but with a
 key Apple holds unless the encrypted fields API is used, and that is a weaker guarantee

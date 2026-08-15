@@ -1,3 +1,4 @@
+import OpenFactorCore
 import SwiftUI
 
 /// Settings.
@@ -12,6 +13,11 @@ struct SettingsView: View {
 
     @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
     @AppStorage(PreferenceKey.appearance) private var appearance = AppearancePreference.system.rawValue
+    @AppStorage(PreferenceKey.syncEnabled) private var syncEnabled = false
+
+    @State private var syncFailure: String?
+
+    let store: any SecretStore
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -35,6 +41,9 @@ struct SettingsView: View {
                     }
                 }
 
+                if let syncing = store as? any SynchronizableSecretStore {
+                    syncSection(syncing)
+                }
                 aboutSection
             }
             .navigationTitle("Settings")
@@ -45,6 +54,66 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private func syncSection(_ store: any SynchronizableSecretStore) -> some View {
+        Section {
+            Toggle("iCloud sync", isOn: syncBinding(store))
+
+            if let syncFailure {
+                Text(syncFailure).foregroundStyle(.red)
+            }
+        } header: {
+            Text("Sync")
+        } footer: {
+            // The one feature that lets secret material off the device, so it explains
+            // itself rather than being a switch with a name. Both halves are true and both
+            // matter: Apple genuinely cannot read it, and it genuinely weakens how the
+            // secrets are protected on this device.
+            Text(
+                syncEnabled
+                    ? """
+                    Your accounts are in iCloud Keychain, which is end to end encrypted. \
+                    Apple cannot read them. Turning this off keeps them on this device and \
+                    stops them reaching your other ones.
+                    """
+                    : """
+                    Puts your accounts in iCloud Keychain so they reach your other devices, \
+                    including Apple Watch. It is end to end encrypted and Apple cannot read \
+                    it. In exchange, your accounts become readable whenever this device is \
+                    unlocked rather than only on this device, because a synced item cannot \
+                    be device only.
+                    """
+            )
+        }
+    }
+
+    private func syncBinding(_ store: any SynchronizableSecretStore) -> Binding<Bool> {
+        Binding(
+            get: { syncEnabled },
+            set: { shouldSync in
+                do {
+                    // The stored accounts are converted first. Flipping the preference
+                    // before the work succeeds would leave the switch claiming something
+                    // the Keychain does not agree with.
+                    try store.setSynchronizable(shouldSync)
+                    syncEnabled = shouldSync
+                    syncFailure = nil
+                } catch {
+                    syncFailure = Self.message(for: error)
+                }
+            }
+        )
+    }
+
+    /// Conversion runs account by account, so a failure part way through leaves some
+    /// converted and some not. Saying "nothing changed" would be a comforting lie. The
+    /// operation is idempotent, so the honest advice really is to try again.
+    private static func message(for error: any Error) -> String {
+        if case SecretStoreError.deviceLocked = error {
+            return "Unlock your device and try again."
+        }
+        return "Sync could not be changed. Some accounts may not have moved, so try again."
     }
 
     private var aboutSection: some View {
@@ -67,12 +136,23 @@ struct SettingsView: View {
         } footer: {
             // The one claim this screen makes, and it is checkable rather than
             // reassuring: the source is right there.
+            //
+            // It changes with the sync switch on purpose. "On this device only" was true
+            // before sync existed and became a lie the moment someone turned it on, and a
+            // security claim that quietly stops being true is worse than none at all.
             Text(
-                """
-                OpenFactor stores your accounts on this device only. There is no OpenFactor \
-                account and no server, and the app makes no network requests. You can read \
-                the source and check that.
-                """
+                syncEnabled
+                    ? """
+                    OpenFactor keeps your accounts in the Keychain and, while sync is on, in \
+                    iCloud Keychain. There is no OpenFactor account and no server, and the \
+                    app makes no network requests of its own. You can read the source and \
+                    check that.
+                    """
+                    : """
+                    OpenFactor stores your accounts on this device only. There is no \
+                    OpenFactor account and no server, and the app makes no network requests. \
+                    You can read the source and check that.
+                    """
             )
         }
     }
@@ -90,5 +170,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(store: InMemorySecretStore())
 }

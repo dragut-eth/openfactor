@@ -286,14 +286,20 @@ wait. Anything touching correctness or security is fixed immediately, wherever w
   existing secret into it.** Decided here rather than in PR 14 because a Keychain item lives
   in the group it was written to, and introducing a shared group after people have accounts
   is a migration whose failure mode is "my accounts vanished". See `docs/ARCHITECTURE.md`
-- A settings toggle that flips items to `kSecAttrSynchronizable`
+- A settings toggle that flips items to `kSecAttrSynchronizable`, converting them **in
+  place** so that no secret is ever decrypted, held in memory, or exposed to a crash
+  between a delete and an add
 - Plain language explanation in the UI of exactly what leaves the device and who can read
-  it, which is to say Apple cannot
-- What turning sync **off** means has to be defined, not left to fall out of the code: does
-  it stop syncing, or also pull secrets back to device only, and what happens to the copies
-  already on another device
-- Conflict and duplicate handling on merge: the same account added on two devices, renamed
-  on both, deleted on one
+  it, which is to say Apple cannot, and what it costs, which is the device only protection
+  class
+- What turning sync **off** means, defined rather than left to fall out of the code:
+  accounts stay here, stop being offered to iCloud Keychain, and go back to device only.
+  What happens to copies already on another device is not something this app controls, so
+  it does not claim it either way. See `SECURITY.md`
+- Conflict and duplicate handling on merge, **documented rather than solved**: the same
+  service enrolled twice is two accounts, a rename is last writer wins, a delete
+  propagates. A resolution layer was rejected because it would mean a second source of
+  truth about which accounts exist. See `docs/ARCHITECTURE.md`
 - `SECURITY.md` updated with the sync threat model, including that the watch becomes a
   device holding secrets
 
@@ -306,7 +312,13 @@ reassuring.
 - Independent review of the sync code and of the sync section of the threat model
 - Verify against Apple's current documentation that the guarantees claimed for iCloud
   Keychain are the guarantees it actually gives, rather than what this repository asserts
-- Confirm the merge path cannot duplicate, drop, or cross wire an account
+- Confirm the merge behaviour described in `docs/ARCHITECTURE.md` is what actually
+  happens, rather than what this repository assumes, and that nothing can cross wire a
+  secret onto another account's metadata
+- Confirm that turning sync off behaves on a second device the way the interface implies,
+  which is the one claim here written from reasoning rather than from observation
+- Confirm the device preference and the Keychain cannot disagree in a way that misleads,
+  given the app deliberately does not reconcile them at launch
 - Tag and record findings
 
 ### PR 14: watchOS app

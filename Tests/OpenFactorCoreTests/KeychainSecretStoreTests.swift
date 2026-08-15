@@ -169,6 +169,94 @@ struct KeychainSecretStoreTests {
         #expect(label?.contains("GitHub") != true)
     }
 
+    // MARK: - Turning sync on and off
+
+    /// The claim this method makes about itself: an account can be converted without its
+    /// secret being read, so the secret never enters this process and there is no moment
+    /// where it exists only in memory.
+    @Test("Turning sync on converts accounts in place and keeps the secret intact")
+    func syncConversionPreservesSecrets() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let record = try store.add(account(), color: .blue)
+        let secretBefore = try store.secret(for: record.id)
+
+        #expect(try store.setSynchronizable(true) == 1)
+
+        let item = try #require(rawItem(from: store))
+        #expect(item[kSecAttrSynchronizable as String] as? Bool == true)
+        #expect(try store.secret(for: record.id) == secretBefore)
+        #expect(try store.records().readable.count == 1, "The account must still be listed")
+    }
+
+    /// A synchronizable item cannot be device only, by definition. Turning sync on
+    /// therefore weakens the protection class, and that has to be visible rather than a
+    /// side effect nobody wrote down.
+    @Test("Turning sync on weakens the protection class, and off restores it")
+    func syncChangesTheProtectionClass() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        try store.add(account(), color: .blue)
+
+        try store.setSynchronizable(true)
+        var item = try #require(rawItem(from: store))
+        #expect(item[kSecAttrAccessible as String] as? String == (kSecAttrAccessibleWhenUnlocked as String))
+
+        try store.setSynchronizable(false)
+        item = try #require(rawItem(from: store))
+        #expect(
+            item[kSecAttrAccessible as String] as? String
+                == (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String),
+            "Turning sync off must put the stronger class back, not leave it weakened"
+        )
+        #expect(item[kSecAttrSynchronizable as String] as? Bool != true)
+    }
+
+    /// A partial failure means the whole conversion runs again, so running it twice must
+    /// be harmless and must not report work it did not do.
+    @Test("Converting twice changes nothing the second time")
+    func syncConversionIsIdempotent() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        try store.add(account(), color: .blue)
+
+        #expect(try store.setSynchronizable(true) == 1)
+        #expect(try store.setSynchronizable(true) == 0, "Nothing was left to convert")
+        #expect(try store.records().readable.count == 1)
+    }
+
+    @Test("Converting an empty store is not an error")
+    func syncConversionWithNoAccounts() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        #expect(try store.setSynchronizable(true) == 0)
+    }
+
+    @Test("Every account is converted, not just the first")
+    func syncConversionCoversEveryAccount() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        for index in 0..<5 {
+            try store.add(
+                OTPAccount(
+                    issuer: "Service \(index)",
+                    name: "someone",
+                    secret: Data("12345678901234567890".utf8),
+                    generator: .totp(.standard)
+                ),
+                color: .blue
+            )
+        }
+
+        #expect(try store.setSynchronizable(true) == 5)
+        #expect(try store.records().readable.count == 5)
+    }
+
     /// Two stores with different service names must not see each other's accounts. This
     /// is what keeps a test, or a future second target, from reading the real app's data.
     @Test("Stores with different service names are isolated")

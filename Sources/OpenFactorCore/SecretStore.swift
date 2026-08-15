@@ -133,3 +133,17 @@ extension SecretStore {
         }
     }
 }
+
+
+/// A store that can put its accounts in iCloud Keychain, or take them back out.
+///
+/// Deliberately separate from ``SecretStore`` rather than a method on it. Only a Keychain
+/// backed store can sync, and giving ``InMemorySecretStore`` a method that pretends to
+/// would make the interface show a switch that does nothing. Code that offers sync asks
+/// for this protocol, and a store that cannot provide it simply does not offer the choice.
+public protocol SynchronizableSecretStore: SecretStore {
+
+    /// Turns sync on or off for every stored account, and returns how many changed.
+    @discardableResult
+    func setSynchronizable(_ shouldSync: Bool) throws(SecretStoreError) -> Int
+}

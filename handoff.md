@@ -3,9 +3,39 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, end of PR 12.
+**Last updated:** 2026-08-14, end of PR 13.
 
 ## Where things stand
+
+PR 13 is complete and awaiting gate A2. Sync is built, off by default, and the two
+documents that make claims about it, `SECURITY.md` and `docs/ARCHITECTURE.md`, were
+rewritten to say what the code does rather than what was planned.
+
+**The one thing worth knowing before touching it again:** switching sync never reads a
+secret. `setSynchronizable(_:)` lists accounts with `kSecReturnData` explicitly false and
+calls `SecItemUpdate` on each one. Read, delete, re-add is the obvious shape and is wrong
+three times over: it decrypts every secret, holds them all in memory at once, and a crash
+between the delete and the add loses an account outright. If a future change makes that
+method read data, that is the regression to catch.
+
+**The switch itself has not been operated by a human.** Synthetic taps do not reach a
+SwiftUI `Toggle` in this simulator harness, the same limitation that made the long press
+untestable in PR 12. The path behind it was proved instead, by a temporary button calling
+the identical binding: the Keychain items converted, the preference flipped, and the list
+still read them back afterwards. That leaves the switch's own behaviour as the one thing
+Xavier should check on device before A2.
+
+Proving it that way found a real bug and is the reason `SyncAwareKeychainStore` exists. The
+first version made the root view's identity depend on the preference, so flipping sync
+rebuilt the view tree and dismissed the settings sheet the instant the switch was touched.
+
+**Three claims in the sync documentation are reasoned, not observed,** because they need a
+second device and there is one. That turning sync off on this device leaves the copies on
+another device alone; that the merge behaviour is what iCloud Keychain's service plus
+account keying implies; and that a watchOS target in the same access group actually sees
+the phone's items. All three are written down as unverified, in `SECURITY.md` and
+`docs/ARCHITECTURE.md`, and all three are on gate A2. Do not let them harden into fact by
+being repeated.
 
 PR 12 is complete and merged. Fourteen items from Xavier's device testing, plus the
 accessibility pass, all recorded in [docs/POLISH.md](docs/POLISH.md). The app icon landed
@@ -38,7 +68,7 @@ either a finding about what the entry transmits or a plain statement that it is 
 | PR 10, edit mode | Done |
 | PR 11, settings sheet | Done |
 | PR 12, polish and accessibility | Done |
-| PR 13, iCloud Keychain sync | **In progress.** Access group done, sync next |
+| PR 13, iCloud Keychain sync | Done. **Gate A2 next** |
 | PR 14 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
@@ -181,9 +211,14 @@ would be to weaken what they assert.
 
 ## Decisions still open
 
-- Whether the watch needs a shared `keychain-access-groups` entitlement to see the phone's
-  accounts. Likely yes, unverified. Settle before PR 14, and PR 13 should not assume
-  otherwise. See `docs/ARCHITECTURE.md`
+- Whether a watchOS target in the shared `keychain-access-groups` group actually sees the
+  phone's synced items. The entitlement is in place and the phone writes to the group, so
+  the decision is made; what is missing is the proof. First thing PR 14 does, before
+  anything is built on top of it
+- Whether the device preference and the Keychain should ever be reconciled at launch.
+  Deliberately not done, because an account arriving from another device looks identical to
+  a disagreement, and "fixing" it would pull that account out of sync everywhere. Revisit
+  only with evidence that the divergence confuses people in practice
 - The encrypted export format. Decided in PR 16
 
 ## Effort and model, by pull request
@@ -225,28 +260,26 @@ sharing a model share their blind spots.
 
 ## Next step
 
-**PR 13, iCloud Keychain sync.** The first change to the security posture since PR 4, and
-the reason gate A2 sits immediately after it.
+**Gate A2, and it is a stop rather than a formality.** Sync is the only feature that lets
+secret material off the device, and the interface now makes explicit promises about it in
+the settings footer. Those promises have to be true, not reassuring.
 
-It is not a feature that gets added on top. Turning sync on **weakens the protection class
-on every secret**, from `WhenUnlockedThisDeviceOnly` to `WhenUnlocked`, because a
-synchronizable Keychain item cannot be device only by definition. `SecretAccessibility`
-already names both classes so the weakening is a visible decision rather than a side effect
-of setting a flag, which is the whole reason it was written that way in PR 4.
+Run it cold, on a fresh session, with a model that has not just written the code. Fable 5,
+as with A1. What it is for:
 
-Three things to settle before writing much of it:
+1. **The three unverified claims listed above.** They are the weakest part of this PR. Each
+   is written from reasoning about how iCloud Keychain works, and reasoning about Apple's
+   Keychain has been wrong in this project before.
+2. **Check the claims against Apple's current documentation,** rather than against what
+   this repository asserts about end to end encryption and what Apple can read.
+3. **`setSynchronizable(_:)` specifically.** It is the only method that touches every
+   account at once. Confirm no path through it reads secret data, and that a failure part
+   way through leaves a state that running it again repairs.
+4. **The settings footer text.** Read it as a user would, and ask whether anything in it is
+   more comforting than the code justifies.
 
-1. **Does the watch need a shared `keychain-access-groups` entitlement?** Open since PR 5
-   and still unverified. A watchOS target has its own bundle identifier and therefore its
-   own default access group, and iCloud Keychain syncs within a group rather than across
-   them. If the answer is yes, it changes what PR 13 writes and where, and retrofitting it
-   after people have secrets stored is a migration rather than an edit. Settle it first.
-2. **What happens to existing accounts when sync is turned on, and off again.** Items have
-   to be rewritten with the new class, and turning it off has to have a defined meaning:
-   does it stop syncing, or does it also pull them back to device only, and what happens to
-   the copies already on the other device.
-3. **Merge behaviour.** Two devices, the same account added on both, the same account
-   renamed on both. Duplicates, conflicts, and deletions that come back.
+After A2, **PR 14, the watchOS app.** Read only, and it starts by proving the access group
+assumption rather than assuming it.
 
 Suggested effort: **High**, and it is the strongest case yet for a second model at the gate.
 

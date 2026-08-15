@@ -60,8 +60,26 @@ Rate on the App Store, Send Feedback. Each row has a colored rounded icon. `Done
 | Add **Appearance** (System, Light, Dark) | The palette was built for both schemes from the start, so honouring a preference costs nothing |
 | iCloud row explains in plain words what is synced and that Apple cannot read it | Sync is the one thing that leaves the device, so it gets an explanation, not just a toggle |
 
-**A row appears when its feature does.** There is no row for iCloud sync, the app lock, or
-export, because a settings screen is a description of what an app does. A row reading "App
+**iCloud sync, as built in PR 13.** A single switch, off by default, under a `Sync`
+heading, with a footer that changes with its state rather than a fixed line of marketing.
+Off, it says what turning it on would do and what it costs: accounts reach your other
+devices including the watch, it is end to end encrypted, Apple cannot read it, and in
+exchange your accounts become readable whenever this device is unlocked rather than only on
+this device. On, it says where they are, that Apple cannot read them, and what switching
+off would do.
+
+The footer is the only place in the app where the security trade is spelled out at the
+moment someone makes it, which is why it names the cost in the same breath as the benefit
+rather than a screen away in a document nobody opens.
+
+The switch writes the preference only after the Keychain work succeeds, so it never claims
+a state the Keychain disagrees with. On failure it stays where it was and a line of red
+text appears under it. That text does not say "nothing changed", because conversion runs
+account by account and a failure part way through leaves some converted. It says to try
+again, which is sound advice: the operation is idempotent.
+
+**A row appears when its feature does.** There is no row for the app lock or export,
+because a settings screen is a description of what an app does. A row reading "App
 Lock" tells someone their codes are behind Face ID, and a greyed one reading "coming soon"
 tells them the app is nearly there. Neither is true yet, and in a security tool that is not
 a harmless exaggeration. This is the same rule that kept the add button out of the top bar

@@ -137,25 +137,76 @@ single shared tick.
 
 ## Storage and sync
 
-*Storage exists as of PR 4. Sync arrives in PR 13.*
+*Storage exists as of PR 4. Sync exists as of PR 13.*
 
 Secrets are Keychain items with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` by default.
 Turning on sync flips them to synchronizable, which puts them in iCloud Keychain, end to
 end encrypted with keys Apple does not hold.
 
 **Sync requires weakening the protection class.** A synchronizable item cannot be
-`ThisDeviceOnly`, by definition, so PR 13 has to move those items to
+`ThisDeviceOnly`, by definition, so turning sync on moves those items to
 `kSecAttrAccessibleWhenUnlocked`. `SecretAccessibility` names both classes and documents
 the trade at the point of use, so the weakening is a visible decision rather than a
 side effect of setting a flag.
 
-**The protection class is not yet verified by test.** Reaching the data protection
-Keychain needs an entitlement, entitlements come from code signing, and a `swift test`
-bundle is unsigned, so those tests are written and skipped. The macOS legacy Keychain
-accepts writes from an unsigned process and ignores `kSecAttrAccessible` entirely, which
-makes it worse than useless as a stand in: asserting against it would pass while proving
-nothing. The tests run once a host application target exists in PR 5. Until they do, this
-is an open item on gate A1.
+**Switching sync converts items in place and never reads a secret.**
+`setSynchronizable(_:)` lists accounts with `kSecReturnData` explicitly false, then calls
+`SecItemUpdate` on each one to change the two attributes. Read, delete, re-add would have
+been the obvious shape and is wrong three times over: it decrypts every secret, it holds
+them all in memory at once, and a crash between the delete and the add loses an account
+outright. It is idempotent, skipping items already in the wanted state, because a partial
+failure means the whole thing gets run again.
+
+**Every query matches both synced and unsynced items,** via
+`kSecAttrSynchronizableAny`. Without it, turning sync on would make every existing account
+appear to vanish, since the default for an unspecified `kSecAttrSynchronizable` in a query
+is false rather than either.
+
+**Only the interface knows whether sync is on.** `KeychainSecretStore` takes the setting at
+construction and applies it to new items; it does not read `UserDefaults`, because a
+security core that reaches for global mutable state is one an auditor has to chase.
+
+The connection between the preference and the store is `SyncAwareKeychainStore`, in the app
+target, which builds a `KeychainSecretStore` per call from the current preference. Per call
+rather than per launch, because an account added after the switch moves has to be written
+the way the switch says. The first attempt kept one store and rebuilt the view tree when
+the preference changed, which worked and also dismissed the settings sheet out from under
+the switch the user had just touched. Reading the preference at the call site removes the
+stale copy instead of papering over it.
+
+**Sync is a separate protocol.** `SynchronizableSecretStore` refines `SecretStore` rather
+than adding a method to it. Only a Keychain backed store can sync, and giving
+`InMemorySecretStore` a method that pretends to would put a switch in the settings screen
+that does nothing. Code that offers sync asks for the narrower protocol, and a store that
+cannot provide it does not get asked.
+
+**The protection class is verified by test** as of PR 5, in the app hosted test target.
+It cannot be checked from a `swift test` bundle: reaching the data protection Keychain
+needs an entitlement, entitlements come from code signing, and that bundle is unsigned.
+The macOS legacy Keychain accepts writes from an unsigned process and ignores
+`kSecAttrAccessible` entirely, which makes it worse than useless as a stand in, since
+asserting against it would pass while proving nothing.
+
+**Merging is iCloud Keychain's, and this app does not second guess it.** An item is
+identified by its service and its account attribute, which here is the account's UUID, and
+that determines what merges and what does not. Three cases, described as they actually
+behave rather than as anyone would like them to:
+
+- **The same service enrolled separately on two devices** produces two UUIDs and therefore
+  two accounts, both shown. They are genuinely two enrollments with two different secrets,
+  so collapsing them would be wrong, and the interface has no basis for guessing that a
+  `GitHub` from one device is the same thing as a `GitHub` from another.
+- **The same account renamed on two devices** is one item written twice, and the later
+  write wins. Not a merge, a replacement, and nothing is lost but a name.
+- **An account deleted on one device** is deleted on the others. That is what sync means,
+  and it is why deleting asks for confirmation.
+
+Sort positions collide the same way, since each device assigns the next index it can see,
+so the list sort has to be stable rather than assume positions are unique. Building a
+conflict resolution layer on top of this was considered and rejected: it would mean a
+second source of truth about which accounts exist, and the failure mode of getting that
+wrong is losing a second factor. Gate A2 should confirm this description against the
+behaviour rather than take it on trust.
 
 The watch reads the same synchronizable Keychain items rather than receiving secrets over
 WatchConnectivity. A bespoke transfer channel is another place for secret material to
@@ -167,7 +218,7 @@ Recorded here so they are not silently defaulted.
 
 ### A shared Keychain access group for the watch
 
-**Decided: yes, and it lands in PR 13 rather than PR 14.**
+**Decided: yes, and it landed in PR 13 rather than PR 14.**
 
 The watch is read only, shows a list and a code, and must work with the phone off or absent.
 That rules out asking the phone for a code on demand, and it rules out handing secrets over
@@ -189,8 +240,9 @@ Three consequences, and the first is why this cannot wait for PR 14:
 - **The watch becomes a device holding your secrets.** That belongs in the threat model
   next to the sync entry, not left implicit.
 
-Still unverified, and worth proving with a throwaway target before PR 13 depends on it:
-that a watchOS app declaring the same group actually sees the phone's synced items.
+Still unverified, and the first thing PR 14 has to prove: that a watchOS app declaring the
+same group actually sees the phone's synced items. Everything else in the watch plan rests
+on it.
 
 ### The Xcode project file
 

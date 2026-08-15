@@ -41,7 +41,7 @@ import Security
 /// `kSecAttrLabel` is deliberately set to a constant rather than to the account name. On
 /// macOS that field is what Keychain Access lists, and there is no reason for a passer by
 /// at someone's desk to read off which services they use.
-public struct KeychainSecretStore: SecretStore {
+public struct KeychainSecretStore: SynchronizableSecretStore {
 
     /// Groups this app's items. Constant, and part of the primary key with the account
     /// identifier, so two accounts can never collide.
@@ -128,6 +128,76 @@ public struct KeychainSecretStore: SecretStore {
         guard status == errSecSuccess else {
             throw error(for: status)
         }
+    }
+
+    /// Turns iCloud Keychain sync on or off for every account.
+    ///
+    /// **No secret is read to do this.** The items are updated in place, so the secret
+    /// material never leaves the Keychain, never lands in this process's memory, and there
+    /// is no window in which an account exists only as a variable. Rewriting each item by
+    /// reading it, deleting it and adding it back would have all three of those problems,
+    /// and a crash in the middle of one would lose an account outright.
+    ///
+    /// Turning sync on also weakens the protection class, from device only to
+    /// `WhenUnlocked`, because a synchronizable item cannot be device only by definition.
+    /// That is the real cost of sync and it is why the interface has to say so.
+    ///
+    /// - Returns: how many accounts were changed, for the caller to report or ignore.
+    @discardableResult
+    public func setSynchronizable(_ shouldSync: Bool) throws(SecretStoreError) -> Int {
+        var query = baseQuery()
+        query[kSecMatchLimit as String] = kSecMatchLimitAll
+        query[kSecReturnAttributes as String] = true
+        // The one thing this must not ask for. Converting an account does not require
+        // knowing its secret.
+        query[kSecReturnData as String] = false
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        if status == errSecItemNotFound {
+            return 0
+        }
+
+        guard status == errSecSuccess, let items = result as? [[String: Any]] else {
+            throw error(for: status)
+        }
+
+        let target: SecretAccessibility = shouldSync ? .whenUnlocked : .whenUnlockedThisDeviceOnly
+        var changed = 0
+
+        for item in items {
+            guard let rawID = item[kSecAttrAccount as String] as? String,
+                let id = UUID(uuidString: rawID)
+            else {
+                continue
+            }
+
+            // Already in the wanted state. Skipping keeps this idempotent, which matters
+            // because a partial failure means the whole thing gets run again.
+            let isSynchronized = (item[kSecAttrSynchronizable as String] as? Bool) ?? false
+            if isSynchronized == shouldSync {
+                continue
+            }
+
+            var find = baseQuery()
+            find[kSecAttrAccount as String] = id.uuidString
+            find[kSecAttrSynchronizable as String] = isSynchronized
+
+            let changes: [String: Any] = [
+                kSecAttrSynchronizable as String: shouldSync,
+                kSecAttrAccessible as String: target.attribute,
+            ]
+
+            let updated = SecItemUpdate(find as CFDictionary, changes as CFDictionary)
+            guard updated == errSecSuccess else {
+                throw error(for: updated)
+            }
+
+            changed += 1
+        }
+
+        return changed
     }
 
     public func delete(id: UUID) throws(SecretStoreError) {

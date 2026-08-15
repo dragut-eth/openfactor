@@ -18,7 +18,7 @@ struct OpenFactorApp: App {
     /// without one. Naming it in code would mean hardcoding the team identifier, which does
     /// not belong in a public repository, and would give the group two homes that could
     /// disagree. The entitlement is the single place it is written down.
-    private let store = KeychainSecretStore()
+    private let store = SyncAwareKeychainStore()
 
     var body: some Scene {
         WindowGroup {
