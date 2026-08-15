@@ -84,6 +84,31 @@ surface covers everything, including sheets, including manual entry with a half 
 secret in it. It exists because iOS photographs the app for the switcher, and that
 photograph must never contain a code. Lock or no lock, everyone gets this.
 
+**Import accounts**, under a `Backup` header, and **the preview is the whole design.**
+Nothing reaches the Keychain until the person has seen what the file holds and agreed.
+Adding forty accounts at once is a different act from adding one, and the scan confirmation
+that answers a single QR code does not answer it.
+
+Four states: choose a file, review what it contains, done, or a failure that names the
+cause. The review counts four things and lists each:
+
+- **Will be added.** Not already here.
+- **Already here.** Same secret and the same settings, so it would be a second card
+  generating identical codes. Skipped.
+- **Conflicting.** Same secret, different settings, so it would generate *different* codes.
+  Off by default with a toggle, because only the user knows which is right. Gate A3's second
+  review is why this category exists: the secret alone is not the account.
+- **Cannot be read.** Named individually with a reason, since those accounts stay in the
+  other app and the user needs to know which ones.
+
+**The format is decided by the file's contents, not its extension.** A Step Two export saved
+as `.txt` is still one. The first version of that sniff was wrong in a way worth recording:
+RTF opens with `{\rtf`, JSON with `{`, so every Step Two file was read as a broken Aegis
+vault until a test caught it.
+
+The done screen says the file it just read holds secret keys in the clear and suggests
+deleting it, which is advice a Step Two export already gives about itself.
+
 **Erase all accounts**, in its own section at the bottom, away from anything routine,
 because a destructive action sharing a section with a colour picker invites the wrong tap.
 

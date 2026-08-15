@@ -34,11 +34,12 @@ struct SettingsView: View {
 
     let store: any SecretStore
 
-    /// Called after accounts are erased, so the list behind reloads instead of showing
-    /// rows for accounts that no longer exist.
-    var onAccountsErased: () -> Void = {}
+    /// Called after accounts are added or removed here, so the list behind reloads rather
+    /// than showing rows that no longer match what is stored.
+    var onAccountsChanged: () -> Void = {}
 
     @State private var isErasing = false
+    @State private var isImporting = false
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -74,6 +75,7 @@ struct SettingsView: View {
                 if let syncing = store as? any SynchronizableSecretStore {
                     syncSection(syncing)
                 }
+                backupSection
                 eraseSection
                 aboutSection
             }
@@ -248,6 +250,22 @@ struct SettingsView: View {
         return "Your accounts are in iCloud Keychain as well as on this device. \(common)"
     }
 
+    private var backupSection: some View {
+        Section {
+            Button("Import accounts…") { isImporting = true }
+        } header: {
+            Text("Backup")
+        } footer: {
+            Text("Reads a Step Two export or an unencrypted Aegis vault.")
+        }
+        .sheet(isPresented: $isImporting) {
+            ImportView(store: store) {
+                onAccountsChanged()
+                refreshSyncState()
+            }
+        }
+    }
+
     /// Its own section, at the bottom, away from anything routine. A destructive action
     /// sharing a section with a colour picker invites the wrong tap.
     private var eraseSection: some View {
@@ -267,7 +285,7 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $isErasing) {
             EraseAccountsView(store: store) {
-                onAccountsErased()
+                onAccountsChanged()
                 refreshSyncState()
             }
         }
