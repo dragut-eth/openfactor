@@ -14,7 +14,7 @@ import SwiftUI
 /// for body text, and `PaletteTests` asserts that every entry clears it, in both colour
 /// schemes and at both ends of the gradient. That rules out the bright yellows and light
 /// oranges an authenticator would otherwise reach for, and it is why the palette here is
-/// deeper than Step Two's.
+/// deeper than the one that inspired it.
 ///
 /// This is not a design preference. A code that cannot be read at arm's length in
 /// sunlight is a broken feature in an app whose entire job is showing you six digits.

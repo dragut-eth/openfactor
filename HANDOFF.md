@@ -14,7 +14,7 @@ first when picking the work back up.
 | Gate A2, audit of sync | Done, twice. Original eleven findings closed except F8 and F13's two device half; three new findings from the re-verification, all fixed |
 | PR 14, watchOS app | Feature complete on `pr-14-watch`, re-verified, pushed |
 | PR 15, app lock | Built on `pr-15-app-lock`, pushed. Face ID needs a real device |
-| PR 16, export and import | Format audited **three** times and fixed. On `pr-16-import-export`: erase, both importers, and the import preview are built. Encrypted export and the passphrase screen are what remain |
+| PR 16, export and import | Format audited **three** times and fixed. On `pr-16-import-export`: erase, both importers, and the import preview are built. Neither reader carries a brand name: the labelled text reader is named and described by the shape it matches. Encrypted export and the passphrase screen are what remain |
 | PR 17 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **What only Xavier can verify in PR 15:** Face ID and passcode unlock, the grace periods,
@@ -121,6 +121,13 @@ bundle group. The phone reads every group it can reach, so it looked correct; th
 tests run inside the app, so they looked correct too. Only the watch, which shares exactly
 one group, could see it. `migrateToDefaultAccessGroup()` is the fix.
 
+**A comment can be the bug.** The labelled text reader defaulted sha1, 6 and 30 when a
+label was absent, under a comment claiming it did the opposite. Both audits read the comment
+and moved on. An absent label in a human readable report means the parse failed, not that
+the writer meant the default, so the reader now refuses and names the setting it could not
+find. Aegis defaults on purpose, and says why in the same words, because the two look
+inconsistent side by side.
+
 **Three findings across two audits were the same mistake:** a check whose name promised
 more than it did. A2's F13 found the idempotency test only re-running a finished
 conversion, F21 found the migration test asserting the no-op path, and F19 found a CI grep
@@ -143,6 +150,12 @@ Sources/OpenFactorCore/
   KeychainSecretStore.swift                One Keychain item per account
   InMemorySecretStore.swift                For previews and tests. Never used by the app
   AccountMetadata.swift, AccountColor.swift  What is stored beside a secret
+  Import/ImportResult.swift                What a reader returns: accounts and refusals
+  Import/LabelledTextImport.swift          Text or RTF listing accounts under English
+                                           labels. Named for its shape, not for an app
+  Import/RichTextReader.swift              Just enough RTF to recover the text. Not a
+                                           parser, and must not grow into one
+  Import/AegisImport.swift                 Aegis vaults. Strict, and refuses encrypted
 Tests/OpenFactorCoreTests/                 The shared core suites, 17k fuzz iterations
 OpenFactor.xcodeproj                       See docs/PROJECT.md, checked in deliberately
 OpenFactor/                                App target
@@ -158,6 +171,8 @@ OpenFactor/                                App target
   Scanning/AddAccountView.swift            The add sheet
   Scanning/ManualSetupViewModel.swift      Validation, preview, saving
   Scanning/ManualSetupView.swift           The form, with Advanced collapsed
+  Import/ImportViewModel.swift             Format sniff, the preview, and every judgement
+  Import/ImportView.swift                  Choose, review, confirm. Writes nothing early
   Views/EditAccountView.swift              Renaming, and the colour grid
   Settings/SettingsView.swift              Only rows whose features exist
   Settings/Preferences.swift               Preferences, in UserDefaults. Never secrets

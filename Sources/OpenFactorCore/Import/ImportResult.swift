@@ -63,7 +63,19 @@ public struct ImportRefusal: Sendable, Equatable {
         case unsupportedDigits(Int)
         case unsupportedPeriod(Int)
         case unsupportedType(String)
+
+        /// A field that changes the generated code is absent. Never defaulted: a document
+        /// that normally writes every field is telling us the parse failed, not that the
+        /// default applies.
+        case missingSetting(Setting)
+
         case malformed
+
+        public enum Setting: Sendable, Equatable {
+            case algorithm
+            case digits
+            case period
+        }
 
         /// Written for the person reading the import preview, not for a log.
         public var description: String {
@@ -80,6 +92,12 @@ public struct ImportRefusal: Sendable, Equatable {
                 "a \(seconds) second period is not supported"
             case let .unsupportedType(type):
                 "OpenFactor does not support \(type) accounts"
+            case let .missingSetting(setting):
+                switch setting {
+                case .algorithm: "the file does not say which algorithm this code uses"
+                case .digits: "the file does not say how many digits this code has"
+                case .period: "the file does not say how often this code changes"
+                }
             case .malformed:
                 "the record is incomplete"
             }

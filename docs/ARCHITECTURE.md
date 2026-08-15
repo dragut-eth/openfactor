@@ -156,10 +156,20 @@ saved. Adding forty accounts is a different act from adding one.
 and names the tenth. Aborting punishes the user for another app's data; dropping it silently
 hands them an authenticator with a hole they discover at a login.
 
-**Step Two's export is read best effort, and says so.** It is not an interchange format, it
-is a report written for a human, with English labels and prose. A localised export produces
-no accounts rather than wrong ones, which is the correct way for a reader of an uncontrolled
-document to fail. `RichTextReader` recovers the text with just enough RTF to handle the
+**The labelled text export is read best effort, and says so.** `LabelledTextImport` is named
+for the shape it matches, not for any app: a text or RTF document listing accounts under
+seven English labels, **Account Name**, **Secret Key**, **Issuer**, **Algorithm**,
+**Digits**, **Period**, **Type**. It performs no signature check, so any file in that shape
+reads. It is not an interchange format, it is a report written for a human, with English
+labels and prose, and a localised export produces no accounts rather than wrong ones, which
+is the correct way for a reader of an uncontrolled document to fail.
+
+**Nothing that changes a code is defaulted there.** An earlier version filled in sha1, 6 and
+30 when a label was absent. In a human readable report every field is always written, so an
+absent one means the parse failed, and defaulting turns that into an account that silently
+generates the wrong codes. A missing algorithm, digit count or period is now a refusal that
+names which setting was not found. Aegis is the opposite case and defaults on purpose: it
+publishes a schema in which an absent field genuinely means the documented default. `RichTextReader` recovers the text with just enough RTF to handle the
 constructs that appear: `\uN` code points, `\'XX` code page bytes, and skipping the font
 and colour tables. It is deliberately not a general RTF parser, and `NSAttributedString` was
 rejected for the job: it would read the file correctly and would mean handing an attacker

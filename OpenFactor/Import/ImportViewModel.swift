@@ -64,9 +64,9 @@ final class ImportViewModel {
 
     /// Reads a file the user picked, detecting the format from its contents.
     ///
-    /// **The extension is a hint, never the decision.** A Step Two export saved as `.txt`
-    /// is still a Step Two export, and a file named `.json` that is not an Aegis vault must
-    /// not be read as one.
+    /// **The extension is a hint, never the decision.** A labelled text export saved as
+    /// `.txt` is still one, and a file named `.json` that is not an Aegis vault must not be
+    /// read as one.
     func read(_ url: URL) {
         let needsRelease = url.startAccessingSecurityScopedResource()
         defer { if needsRelease { url.stopAccessingSecurityScopedResource() } }
@@ -88,30 +88,30 @@ final class ImportViewModel {
         } catch let error as AegisImport.FileError {
             stage = .failed(error.description)
         } catch {
-            stage = .failed("That file is not an export OpenFactor can read.")
+            stage = .failed("OpenFactor could not find any accounts in that file.")
         }
     }
 
     private func preview(from data: Data) throws -> Preview {
         // Aegis first, because a JSON vault is unambiguous: it either decodes or it does
-        // not. Step Two's reader accepts anything and finds nothing in most of it, so
+        // not. The labelled reader accepts anything and finds nothing in most of it, so
         // trying it first would swallow a malformed vault.
         if looksLikeJSON(data) {
             let result = try AegisImport.read(data)
-            return try classify(result, source: "Aegis")
+            return try classify(result, source: "Aegis vault")
         }
 
         guard let text = String(data: data, encoding: .utf8) else {
             throw ImportFailure.unreadable
         }
 
-        let result = StepTwoImport.read(text)
+        let result = LabelledTextImport.read(text)
         guard !result.isEmpty else { throw ImportFailure.unreadable }
-        return try classify(result, source: "Step Two")
+        return try classify(result, source: "Text export")
     }
 
     /// Both formats can begin with `{`, which is how the first version of this got it
-    /// wrong: RTF opens with `{\rtf` and every Step Two export was sniffed as a broken
+    /// wrong: RTF opens with `{\rtf` and every labelled text export was sniffed as a broken
     /// Aegis vault. The signature is checked before the brace.
     private func looksLikeJSON(_ data: Data) -> Bool {
         let head = data.prefix(512)

@@ -40,8 +40,8 @@ struct ImportView: View {
             }
             .fileImporter(
                 isPresented: $isPickingFile,
-                // Both readers take text, and the format is decided by looking inside. A
-                // Step Two export saved as .txt is still a Step Two export.
+                // Both readers take text, and the format is decided by looking inside. An
+                // export saved under the wrong extension is still that export.
                 allowedContentTypes: [.json, .rtf, .plainText, .data]
             ) { result in
                 if case let .success(url) = result { model.read(url) }
@@ -56,8 +56,10 @@ struct ImportView: View {
             } footer: {
                 Text(
                     """
-                    OpenFactor can read a Step Two export and an unencrypted Aegis vault. \
-                    Nothing is added until you have seen what the file contains.
+                    OpenFactor can read two kinds of file. A text or RTF export that lists \
+                    accounts with **Account Name** and **Secret Key** labels, and an \
+                    unencrypted Aegis vault. Nothing is added until you have seen what the \
+                    file contains.
                     """
                 )
             }

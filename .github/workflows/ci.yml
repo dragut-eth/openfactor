@@ -50,9 +50,12 @@ jobs:
           fi
           echo "No network code and no logging found."
 
+      # RTF fixtures are excluded because in RTF a trailing space is not whitespace: it
+      # is the delimiter that terminates a control word, so `\u8232 ` at the end of a line
+      # carries meaning. The fixtures are captured exports and are kept byte exact.
       - name: No trailing whitespace
         run: |
-          if git grep -n -I -- ' $'; then
+          if git grep -n -I -- ' $' -- ':!*.rtf'; then
             echo "Found trailing whitespace."
             exit 1
           fi

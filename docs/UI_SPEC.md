@@ -1,8 +1,8 @@
 # UI Specification
 
-Derived from Step Two as the product reference: the feature set was chosen against it, and
-the visual treatment is adapted where noted. Sync, the watch, the app lock and the backup
-format are this project's own.
+Derived from the app credited in the README as the product reference: the feature set was
+chosen against it, and the visual treatment is adapted where noted. Sync, the watch, the app
+lock and the backup format are this project's own.
 
 Reference screenshots are kept locally in `assets/`, which is gitignored and never
 committed.
@@ -101,13 +101,19 @@ cause. The review counts four things and lists each:
 - **Cannot be read.** Named individually with a reason, since those accounts stay in the
   other app and the user needs to know which ones.
 
-**The format is decided by the file's contents, not its extension.** A Step Two export saved
-as `.txt` is still one. The first version of that sniff was wrong in a way worth recording:
-RTF opens with `{\rtf`, JSON with `{`, so every Step Two file was read as a broken Aegis
-vault until a test caught it.
+**The format is decided by the file's contents, not its extension.** A text export saved as
+`.txt` is still one. The first version of that sniff was wrong in a way worth recording: RTF
+opens with `{\rtf`, JSON with `{`, so every RTF export was read as a broken Aegis vault
+until a test caught it.
+
+**Neither reader is named after the app that produced the file.** The labelled reader is
+described by its shape, a text or RTF export listing accounts under **Account Name** and
+**Secret Key** labels, because that is what it actually matches and because a brand name in
+the interface would claim a relationship this project does not have. The preview reports
+`Text export` or `Aegis vault` under *Found in*.
 
 The done screen says the file it just read holds secret keys in the clear and suggests
-deleting it, which is advice a Step Two export already gives about itself.
+deleting it.
 
 **One sheet, driven by an enum, not one per section.** Two `.sheet` modifiers on sibling
 sections of the same `Form` conflict: SwiftUI supports one presentation per view, and the
@@ -443,7 +449,8 @@ tuned for white text. The icon carries no text.
 The icon makes no metaphorical claim. No lock, no shield, no key, and no promise,
 because an unaudited tool should not make promises. It also keeps its distance from
 every neighbor on the shelf: the lock is Microsoft's, the keyhole is 1Password's,
-the shields belong to Authy and Aegis, the star to Google, the ring to Step Two.
+the shields belong to Authy and Aegis, the star to Google, the ring to the app
+named in the README.
 It keeps distance from the Rubik's Cube as well: two by two rather than three by
 three, this palette rather than theirs, seams of open canvas rather than black
 plastic.

@@ -2,9 +2,9 @@ import Foundation
 
 /// Enough RTF to read a document that happens to be written in it.
 ///
-/// **This is not an RTF parser and must not grow into one.** Step Two's export is a report
-/// for a human that happens to be saved as RTF, and all this needs to do is recover the
-/// text. `NSAttributedString` would read it properly, and is the wrong tool here: it is a
+/// **This is not an RTF parser and must not grow into one.** The exports this reads are
+/// reports for a human that happen to be saved as RTF, and all this needs to do is recover
+/// the text. `NSAttributedString` would read it properly, and is the wrong tool here: it is a
 /// large rich text engine, and handing an attacker supplied file to one in an app that
 /// holds second factors buys a great deal of attack surface to read a list of labels.
 ///

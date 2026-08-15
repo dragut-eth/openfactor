@@ -5,7 +5,7 @@ import Testing
 
 /// Reading an Aegis vault.
 ///
-/// Unlike the Step Two reader, this one is strict: Aegis publishes its format, so an
+/// Unlike the labelled text reader, this one is strict: Aegis publishes its format, so an
 /// unfamiliar value is a real disagreement rather than a document that got reworded.
 @Suite("Aegis import")
 struct AegisImportTests {

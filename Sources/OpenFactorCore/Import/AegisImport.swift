@@ -2,7 +2,7 @@ import Foundation
 
 /// Reads an Aegis Authenticator vault.
 ///
-/// Unlike Step Two's export, this **is** an interchange format with a published
+/// Unlike the labelled text reader, this **is** a published interchange format with a
 /// specification, so this reader is strict rather than best effort.
 ///
 /// **Encrypted vaults are refused, by name.** Aegis encrypts with scrypt, which this
@@ -86,6 +86,11 @@ public enum AegisImport {
             return .failure(.secretNotBase32)
         }
 
+        // Defaulting is correct here and wrong in the labelled text reader, which is worth
+        // stating because the two look inconsistent side by side. Aegis publishes a schema
+        // with documented defaults, so an absent field means the default. The other format
+        // is a human readable report that always writes every field, so an absent one means
+        // the parse failed.
         let algorithmText = entry.info.algo ?? "SHA1"
         guard let algorithm = OTPAlgorithm(rawValue: algorithmText.uppercased()) else {
             return .failure(.unsupportedAlgorithm(algorithmText))

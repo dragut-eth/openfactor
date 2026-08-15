@@ -283,7 +283,7 @@ struct SettingsView: View {
         } header: {
             Text("Backup")
         } footer: {
-            Text("Reads a Step Two export or an unencrypted Aegis vault.")
+            Text("Reads a labelled text export, or an unencrypted Aegis vault.")
         }
     }
 

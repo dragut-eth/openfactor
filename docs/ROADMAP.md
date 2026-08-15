@@ -372,7 +372,8 @@ claim rather than an intention.
 - Export gated behind Face ID or the passcode, since producing a file containing every
   secret is categorically different from reading one code. Import is not gated: it reveals
   nothing
-- Import of the same format, plus **Aegis plain JSON** and **Step Two's RTF export**, and
+- Import of the same format, plus **Aegis plain JSON** and **labelled text or RTF exports**
+  (the shape Step Two writes, matched by its labels rather than by its name), and
   export as Aegis plain JSON
 - **The plain `otpauth://` export was dropped.** Aegis JSON is a better escape hatch, since
   other apps actually import it, and a second plaintext path is a second thing to warn

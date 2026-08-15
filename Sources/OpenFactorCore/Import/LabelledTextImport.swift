@@ -1,15 +1,24 @@
 import Foundation
 
-/// Reads Step Two's export.
+/// Reads an export that lists accounts as labelled fields.
 ///
-/// **A convenience importer, best effort by design, and it says so.** The file is not an
-/// interchange format: it is a report Step Two writes for a human, with English labels and
-/// prose paragraphs, and its authors can reword any sentence tomorrow without considering
-/// it a breaking change. Nothing here is a contract with them.
+/// **Named for its shape, not for any app.** This reader performs no signature check and
+/// looks for no product marker: it finds seven English labels or it finds nothing. Any file
+/// carrying those labels is read, and a file from the app the format was observed in would
+/// not be read if the labels changed. Calling it by a brand would be inaccurate in both
+/// directions.
+///
+/// **Best effort by design, and it says so.** The shape is not a published interchange
+/// format. It is a report written for a human, with English labels and prose paragraphs,
+/// and whoever writes it may reword a sentence tomorrow without considering it a breaking
+/// change. Nothing here is a contract with anyone.
 ///
 /// That is exactly why it fails loudly and per account. A parser that guesses at a document
 /// it does not control will one day guess wrong, and the wrong guess in an authenticator is
 /// a code that looks right and is rejected forever.
+///
+/// Plain text works as well as RTF: a file with no control words passes through
+/// ``RichTextReader`` unchanged.
 ///
 /// The shape, per account, with fields separated by `U+2028` and a blank separator between
 /// accounts:
@@ -28,7 +37,7 @@ import Foundation
 /// The whole account list is one RTF paragraph, so splitting on newlines yields one
 /// enormous line. `Period` is prose, not a number. And any non-ASCII in a label arrives as
 /// an RTF escape, so a scanner that does not decode them renames the account.
-public enum StepTwoImport {
+public enum LabelledTextImport {
 
     /// The labels this reader understands. English only, which is a real limitation: a
     /// localised export will produce no accounts rather than wrong ones, which is the
@@ -46,8 +55,8 @@ public enum StepTwoImport {
     /// Reads the contents of an exported file.
     ///
     /// Takes the raw text so the caller decides how the bytes were obtained. Never throws:
-    /// a file that is not a Step Two export simply yields nothing, which the interface
-    /// reports as "no accounts found" rather than as a failure.
+    /// a file carrying none of these labels simply yields nothing, which the interface
+    /// reports as no accounts found rather than as a failure.
     public static func read(_ contents: String) -> ImportResult {
         let text = RichTextReader.plainText(from: contents)
 
@@ -120,21 +129,32 @@ public enum StepTwoImport {
             return .failure(.secretNotBase32)
         }
 
-        // Absent means the default rather than a refusal only for values that cannot change
-        // a code. Everything below that can change one is read strictly.
-        let algorithmText = fields[Label.algorithm] ?? "sha1"
+        // **Nothing that changes a code is defaulted here.** An earlier version filled in
+        // sha1, 6 and 30 when a label was absent, with a comment claiming it did the
+        // opposite. That is defensible in the `otpauth://` parser, where the specification
+        // says an absent parameter means the default. It is not defensible in a document
+        // that always writes all seven fields: absence there means the parse failed, not
+        // that the default applies, and the consequence would be an eight digit account
+        // imported as six, generating codes rejected forever, discovered at a login.
+        guard let algorithmText = fields[Label.algorithm] else {
+            return .failure(.missingSetting(.algorithm))
+        }
         guard let algorithm = OTPAlgorithm(rawValue: algorithmText.uppercased()) else {
             return .failure(.unsupportedAlgorithm(algorithmText))
         }
 
-        let digitsText = fields[Label.digits] ?? "6"
+        guard let digitsText = fields[Label.digits] else {
+            return .failure(.missingSetting(.digits))
+        }
         guard let digitsvalue = Int(digitsText) else { return .failure(.malformed) }
         guard let digits = OTPDigits(rawValue: digitsvalue) else {
             return .failure(.unsupportedDigits(digitsvalue))
         }
 
         // "30 seconds", so the number is taken from the front rather than the whole string.
-        let periodText = fields[Label.period] ?? "30"
+        guard let periodText = fields[Label.period] else {
+            return .failure(.missingSetting(.period))
+        }
         guard let period = leadingInteger(periodText) else { return .failure(.malformed) }
 
         let configuration: TOTPConfiguration
@@ -164,8 +184,8 @@ public enum StepTwoImport {
         return digits.isEmpty ? nil : Int(digits)
     }
 
-    /// Maps Step Two's colour names onto ours. Several coincide, so an import can carry a
-    /// person's colours across rather than turning ten cards blue.
+    /// Maps the file's colour names onto ours. Several coincide, so an import can carry a
+    /// person's colours across rather than turning every card blue.
     ///
     /// Cosmetic, so anything unrecognised, including their "Default color", falls back
     /// rather than failing the account.

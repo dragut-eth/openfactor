@@ -193,26 +193,26 @@ struct ImportViewModelTests {
 
     // MARK: - Files
 
-    /// The extension is a hint. A Step Two export saved as .txt is still one, and a .json
-    /// that is not a vault must not be read as one.
+    /// The extension is a hint. An RTF export saved as .txt is still one, and a .json that
+    /// is not a vault must not be read as one.
     @Test("The format is decided by contents, not by the file extension")
     @MainActor
     func detectsFormatFromContents() async throws {
         let store = makeStore()
         defer { store.cleanUp() }
 
-        let stepTwo = """
+        let labelled = """
             {\\rtf1\\ansi Account Name: GitHub\\uc0\\u8232 Secret Key: GEZDGNBVGY3TQOJQ\\u8232 }
             """
 
         let model = ImportViewModel(store: store)
-        model.read(try write(stepTwo, extension: "txt"))
+        model.read(try write(labelled, extension: "txt"))
 
         guard case let .reviewing(preview) = model.stage else {
             Issue.record("expected a preview, got \(model.stage)")
             return
         }
-        #expect(preview.source == "Step Two")
+        #expect(preview.source == "Text export")
     }
 
     @Test("An encrypted Aegis vault fails with the message that names the fix")
