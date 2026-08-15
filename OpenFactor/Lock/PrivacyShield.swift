@@ -20,28 +20,26 @@ import UIKit
 @MainActor
 enum PrivacyShield {
 
-    /// What the shield is showing.
-    enum Content: Equatable {
-        /// Blank surface, for the moment the system takes its snapshot.
-        case cover
-        /// The lock screen.
-        case locked
-    }
-
     private static var window: UIWindow?
 
-    /// Shows the given content, or tears the window down when there is nothing to show.
-    static func update(_ content: Content?, controller: AppLockController) {
-        guard let content else {
+    /// Covers everything with a blank surface, or uncovers it.
+    ///
+    /// Cover only: the lock screen is not drawn here. While locked, the lock screen is the
+    /// app's root view, so there is nothing behind it to hide and no second copy to keep
+    /// in step. This also killed a real bug: an earlier version created this window during
+    /// a locked cold launch, mid transition, and the window latched the wrong orientation
+    /// and drew the lock screen sideways. The cover has no such moment, because it is only
+    /// ever shown by an app that was just active and settled.
+    ///
+    /// The window and its content are built once and kept, then hidden rather than torn
+    /// down. Replacing the root controller per change with a clear background had a one
+    /// frame gap during the swap where the interface showed through, which is exactly the
+    /// flash this window exists to prevent.
+    static func setCovered(_ covered: Bool) {
+        guard covered else {
             window?.isHidden = true
-            window = nil
             return
         }
-
-        let host = UIHostingController(
-            rootView: ShieldView(content: content, controller: controller)
-        )
-        host.view.backgroundColor = .clear
 
         if window == nil {
             guard
@@ -53,27 +51,19 @@ enum PrivacyShield {
             let shield = UIWindow(windowScene: scene)
             // Above alerts, because an alert can carry account names in its title.
             shield.windowLevel = .alert + 1
+            shield.rootViewController = UIHostingController(rootView: CoverView())
             window = shield
         }
 
-        window?.rootViewController = host
         window?.isHidden = false
     }
 }
 
-private struct ShieldView: View {
-    let content: PrivacyShield.Content
-    let controller: AppLockController
-
+/// The blank surface the app switcher photographs.
+private struct CoverView: View {
     var body: some View {
-        switch content {
-        case .cover:
-            Tokens.Surface.background
-                .ignoresSafeArea()
-
-        case .locked:
-            LockScreenView(controller: controller)
-        }
+        Tokens.Surface.background
+            .ignoresSafeArea()
     }
 }
 
