@@ -11,11 +11,18 @@ is how they check they got it right.
 This document is normative. Where the code and this page disagree, the page is correct and
 the code is a defect.
 
-**Revised after gate A3**, which found that the previous test vector was produced by
-feeding the key derivation the displayed passphrase, hyphens included, contradicting this
-document's own rule that hyphens are not part of it. Every implementation that had reached
-those bytes would have contained the bug the rule exists to prevent. The vector below is
-regenerated and the passphrase entry algorithm is now specified rather than described.
+**Revised three times, by three independent reviews, all of the same section.** The first
+found the test vector had been produced by feeding the key derivation the displayed
+passphrase, hyphens included, contradicting this document's own rule. The second found that
+the fix for that had made the `passphrase` field authoritative, so one edited byte could
+brick an archive. The third found that the fix for *that*, deriving two candidate keys from
+one input, rests on a false premise: AES-GCM does not commit to its key, and a ciphertext
+authenticating under both derived keys was constructed and demonstrated.
+
+Each repair introduced the next defect. The current text is written with that history in
+mind: the reader now requires the plaintext to parse as well as the tag to verify, the
+`passphrase` field is optional and advisory so nothing about recovery depends on it, and the
+argument for uniqueness is stated narrowly enough to be true.
 
 ## What an archive is for, and what it is not
 
@@ -55,9 +62,18 @@ A UTF-8 JSON object. Whitespace and key order are not significant.
 ```
 
 All base64 is standard, with padding, per RFC 4648 section 4. Not the URL safe alphabet.
+Writers emit exactly that. **Readers are lenient**: they accept the URL safe alphabet,
+missing padding, and embedded whitespace, because none of those can change the decoded bytes
+and a recovery path should not fail on a mail client that wrapped a line.
 
-`format` identifies the version and is the only field a reader must understand before
-anything else. A reader that does not recognise the value must refuse the file and say so,
+**Unknown top level fields must be ignored, not rejected**, exactly as in the payload. This
+is what makes later additions possible without a new version, and the padding option
+described below depends on it.
+
+`format` is compared **byte for byte**, since the same string is bound as additional
+authenticated data: a reader that case folds the comparison and then authenticates with the
+file's spelling fails the tag. It identifies the version and is the only field a reader must
+understand before anything else. A reader that does not recognise the value must refuse the file and say so,
 rather than attempt it.
 
 ### What a reader must refuse
@@ -65,18 +81,29 @@ rather than attempt it.
 Refuse, with a message naming the reason, and before deriving any key:
 
 - a `format` this reader does not implement
-- a `passphrase` value other than `generated` or `custom`
 - a `kdf.algorithm` other than `PBKDF2-HMAC-SHA256`
 - a `cipher.algorithm` other than `AES-256-GCM`
 - a `kdf.salt` that is not 32 bytes, a `cipher.nonce` that is not 12, a `cipher.tag` that
   is not 16
 - a `kdf.iterations` outside 100,000 to 10,000,000 inclusive
-- **any of these fields missing, null, or of the wrong JSON type.** Nothing here has a
-  default. A reader that supplies one for `passphrase` in particular has silently chosen
-  which rule to try first, which is a decision the file was supposed to make
-- **a `ciphertext` longer than 8 MiB, or a decoded payload longer than 8 MiB.** Roughly
-  fifty thousand accounts, far past any real archive and short of anything that hurts a
-  phone. Every attacker controlled length needs a bound, not only the iteration count
+- **any of these fields missing, null, or of the wrong JSON type**, with the sole exception
+  of `passphrase`, which is optional and advisory. Nothing else here has a default
+
+`passphrase` is deliberately outside that list. It orders two attempts that a reader makes
+anyway, so nothing about recovery may depend on it: a reader that finds it absent,
+misspelled, differently cased, or of the wrong type **must** proceed, trying the canonical
+form first. Refusing on it would mean one byte of unauthenticated cleartext, editable by
+anyone, could destroy the only copy of somebody's secrets, and no attacker is served by that
+except one who wants the owner never to recover.
+- **sizes beyond these, in this order**, because a reader that must decode in order to
+  learn how much it decoded has already spent whatever the file asked for:
+  1. a `ciphertext` **string** longer than 11,184,812 characters, checked before decoding
+  2. **decoded** ciphertext longer than 8 MiB
+
+  GCM plaintext is the same length as its ciphertext, so no third bound is needed. Eight
+  mebibytes is roughly fifty thousand accounts: far past any real archive, short of
+  anything that hurts a phone. Every attacker controlled length needs a bound, not only the
+  iteration count
 
 These are checked rather than assumed even though a wrong value would fail the
 authentication tag anyway, because a reader that ignores a field it consumes works by
@@ -91,8 +118,12 @@ one**.
 
 **Canonical form**, used for generated passphrases:
 
-1. Uppercase using ASCII case mapping only, never a locale aware one, so that a Turkish
-   locale cannot turn `i` into `İ`.
+1. Map `U+0061` to `U+007A` onto `U+0041` to `U+005A`, and leave every other code point
+   unchanged. **Do not use the platform's uppercase function.** Most perform full Unicode
+   case mapping, which differs from ASCII mapping at seventeen code points, `ß` to `SS` and
+   the `ﬀ` ligatures among them, and a locale aware one turns `i` into `İ` in Turkish. Two
+   honest implementations using two different uppercase functions derive two different
+   keys.
 2. Keep only characters in the RFC 4648 Base32 alphabet, `A` to `Z` and `2` to `7`. Discard
    everything else.
 
@@ -108,16 +139,33 @@ given. No stripping, no case folding, no Unicode normalisation.
 **The reader algorithm, which is not optional:**
 
 ```
-try the form named by the passphrase field
-if the tag verifies, done
-try the other form
-if the tag verifies, done
-otherwise refuse
+for each form, in the order the passphrase hint suggests,
+    then the other, then NFC and NFD of the verbatim form:
+        derive the key
+        verify the tag; if it fails, continue
+        parse the plaintext as the payload object; if it fails, continue
+        done
+refuse, naming both possible causes
 ```
 
-At most two derivations. The user supplies one input, so at most one of the two can match
-the key, and there is no ambiguity to resolve. Two readers following this open exactly the
-same set of archives whatever the header says.
+**The parse step is not a convenience, it is load bearing.** AES-GCM does not commit to its
+key: given two keys, a single ciphertext and tag that authenticate under both can be
+constructed by solving one linear equation. Since this algorithm derives more than one key
+from one typed input, an attacker who authors a file can make it verify under two of them.
+That was demonstrated against an earlier revision of this page with a working archive, so it
+is measured rather than theoretical. Requiring the plaintext to parse as the payload object
+reduces the attack to producing two plaintexts that are both valid payloads, which the
+keystream difference makes infeasible.
+
+An earlier revision justified this algorithm by claiming that at most one derivation can
+match the key. **That claim is false**, and it is the sentence the collision falsified. The
+correct argument is narrower: when two forms produce the same bytes, as they do for an
+already canonical input, the attempts are trivially identical; when they differ, uniqueness
+rests on the tag *and* on the plaintext parsing, which is why both conditions are required.
+
+At most four derivations, and only a wrong passphrase reaches the fourth. Two readers
+following this open exactly the same set of archives, whatever the hint says and whether or
+not it is present.
 
 **Why the field is a hint and not an instruction.** An earlier revision made it
 authoritative, and that turned one byte of unauthenticated cleartext into a way to destroy
@@ -131,12 +179,20 @@ format.
 they generated the passphrase. A writer that mislabels merely costs a reader one extra
 derivation.
 
-**A hazard on the verbatim path.** Two keyboards can encode the same non-ASCII passphrase
-differently, composed on one platform and decomposed on another, same glyphs and different
-bytes, therefore a different key. This format does not normalise, because normalising would
-silently change a passphrase a user typed. A writer should warn when a custom passphrase
-contains non-ASCII characters, and a reader whose two attempts both fail **may** try the NFC
-and NFD forms of the verbatim rule before refusing.
+**Two hazards on the verbatim path, both handled by the attempt list above rather than left
+to each reader.**
+
+Two keyboards can encode the same non-ASCII passphrase differently, composed on one platform
+and decomposed on another: same glyphs, different bytes, different key. The format does not
+normalise the stored form, because that would silently change a passphrase a user typed, so
+NFC and NFD are attempted instead. A writer should also warn when a custom passphrase
+contains non-ASCII characters.
+
+A custom passphrase saved to a file and read back acquires a leading byte order mark or a
+trailing newline, and the verbatim rule cannot rescue what the canonical rule strips. So the
+verbatim form is taken after removing **one** leading `U+FEFF` and any trailing `CR` or
+`LF`, and nothing else. Those cannot be a deliberate part of a passphrase in a way any
+editor would preserve, and the alternative is an everyday, ASCII only, permanent lockout.
 
 ### Deriving the key
 
@@ -162,6 +218,10 @@ job. The ceiling exists because the one direction that does cost something is up
 `iterations` of two billion makes a phone grind for an hour before printing the same refusal
 message, which is a free denial of service on precisely the recovery path. Ten million
 leaves writers sixteen times the current headroom.
+
+**The reader performs up to four derivations**, so the worst case is four times the ceiling,
+and it lands on the wrong passphrase path, which is the one a worried user hits repeatedly.
+That is the multiplier the ceiling has to be chosen against, not a single run.
 
 Writers use 600,000, the OWASP recommendation for PBKDF2-HMAC-SHA256 at the time of writing.
 
@@ -226,11 +286,13 @@ zero was the kind of comfortable sentence this project exists to avoid.
 Two consequences, both binding on writers:
 
 - **The generator is the default and stays the default.** Necessary, and not sufficient.
-- **A writer must refuse a custom passphrase below a stated strength**, or must not offer
-  the custom path at all. `"password"` is otherwise a conforming archive holding every
-  secret its owner has, permanently, because version 1 is forever. OpenFactor requires at
-  least 12 characters and refuses passphrases on a common-password list; another
-  implementation may set a different bar, but it must set one.
+- **A writer must refuse a custom passphrase weaker than 2^40 guesses** under an offline
+  strength estimator, or must not offer the custom path at all. Stated as resistance rather
+  than as a length, because a length is not a strength: `"password1234"` is twelve
+  characters and finished in under a second. `"password"` would otherwise be a conforming
+  archive holding every secret its owner has, permanently, because version 1 is forever.
+  Where an implementation also imposes a length, that length counts **Unicode scalar
+  values**; OpenFactor requires at least 12 alongside the strength test.
 
 ### The generated passphrase
 
@@ -310,7 +372,18 @@ reported by its position in the array, counting from one.
   unknown fields rule. It is not an error.
 - `secret` is decoded leniently as to form and strictly as to content: lower case is
   accepted, internal spaces and hyphens are ignored, `=` padding is optional. Any character
-  outside the Base32 alphabet refuses the account.
+  outside the Base32 alphabet refuses the account. Case folding here uses **ASCII mapping
+  only**, for the same reason the passphrase rule does: a locale aware uppercase turns `i`
+  into a character outside the alphabet and loses the account on a Turkish device.
+- **A `secret` must decode to at least 10 bytes**, which is RFC 4226's minimum, and its
+  character count after removing separators and padding must be 0, 2, 4, 5 or 7 modulo 8.
+  Anything else refuses the account. Without the first rule an empty secret passes every
+  other test here and generates codes under an empty key, which look correct and are
+  rejected forever. Without the second, a length that is not valid Base32 is either refused
+  or silently truncated depending on the reader, and a truncated secret is the same failure.
+- **Enumerated values are matched byte for byte**, and writers emit exactly the spellings
+  listed above: `totp`, `hotp`, `SHA1`, `SHA256`, `SHA512`, and the colour names. A writer
+  emitting `sha1` produces an archive a strict reader refuses, permanently.
 - An empty `accounts` array is **valid**. It imports nothing and is not an error.
 - `counter` must be an integer from 0 to 2^53 - 1. A reader whose JSON parser represents
   numbers as doubles must refuse any value it cannot hold exactly, rather than importing a
@@ -323,11 +396,11 @@ others that share no code with it. Salt and nonce are fixed here for reproducibi
 real archive generates both from the system CSPRNG and never reuses either**, as required
 above.
 
-| | |
-| --- | --- |
-**This passphrase is published in a public document. Never use it to protect anything.**
-It exists so implementations can check themselves.
+**This passphrase is published in a public document. Never use it to protect anything.** It
+exists so implementations can check themselves.
 
+| Parameter | Value |
+| --- | --- |
 | `passphrase` mode | `generated` |
 | Passphrase, as displayed to the user | `YZTR-THFW-WT6E-OXIV-73XD-QCDM` |
 | Passphrase, canonicalised, and this is what the KDF receives | `YZTRTHFWWT6EOXIV73XDQCDM`, 24 characters |
@@ -415,6 +488,27 @@ Tag, base64:
 This passphrase is deliberately weak, to demonstrate the rule rather than the policy. A
 conforming writer would refuse it under the custom-mode strength requirement above.
 
+### A payload that exercises the lenient secret rules
+
+The vectors above both carry a clean, canonical secret. These are the forms a real export
+produces, and a reader must accept all of them as **the same 20 byte secret**:
+
+| `secret` as written | Why it appears |
+| --- | --- |
+| `GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ` | Canonical |
+| `gezdgnbvgy3tqojqgezdgnbvgy3tqojq` | Lower case, which real exports contain |
+| `GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ` | Grouped for transcription |
+| `GEZD-GNBV-GY3T-QOJQ-GEZD-GNBV-GY3T-QOJQ` | Hyphenated the same way |
+
+And these must each **refuse the account**, not import a damaged one:
+
+| `secret` | Why it is refused |
+| --- | --- |
+| `""` | Decodes to nothing and would generate codes under an empty key |
+| `GEZDGNBV1` | `1` is not in the alphabet, and the length is not valid Base32 |
+| `GEZDGNBVG` | Nine characters is 1 modulo 8, which no valid Base32 produces |
+| `GEZDGNBV` | Valid Base32, but five bytes, under the ten byte minimum |
+
 ### What must fail
 
 A reader that only proves it can open things has proved half of what matters.
@@ -471,13 +565,18 @@ it is produced says what the file is: reusable authentication secrets, in the cl
 - **No metadata outside the ciphertext**, beyond what decryption needs. No account names, no
   issuers, no colours. Two things are visible to anyone holding the file and unable to open
   it. **The length reveals the approximate number of accounts**, at roughly 150 bytes each,
-  and the format does not pad to hide it. **The `passphrase` field reveals which kind of
+  and the format does not pad to hide it. **The `passphrase` field, when present, reveals which kind of
   passphrase protects it**, which tells an attacker whether guessing is worth attempting at
   all: `custom` is a human's choice and possibly cheap, `generated` is 120 bits and never
-  worth trying. That is a real signal and it is the price of the field being there;
-  it stays because a reader that tries the likely rule first is faster for everyone, and
-  because the field is only a hint, so removing it would change nothing an attacker cannot
-  work out by trying. Saying it hides the count
+  worth trying. Someone holding a thousand stolen archives discards every `generated` one
+  instantly and spends the whole budget on the rest. That is a free triage oracle, and it is
+  not answered by saying an attacker could work it out by trying, because trying is the
+  expensive thing the field lets them skip. It buys one saved derivation, about 65
+  milliseconds, on the recovery path. **The field is therefore optional**, and a writer that
+  would rather not publish the signal omits it, at that cost.
+- **`kdf.iterations` fingerprints the vintage of the software that wrote the archive.**
+  Minor, and listed because the alternative is a list that claims to be complete and is
+  not. Saying it hides the count
   would be a claim the file cannot back. Padding remains available later as an additive
   change, since an unknown field is ignored by existing readers.
 - **No timestamp and no device name.** Neither helps recovery, and both say something about
