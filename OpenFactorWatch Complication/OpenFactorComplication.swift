@@ -84,11 +84,63 @@ struct ComplicationView: View {
         }
     }
 
-    /// A nod to the app icon, drawn rather than shipped as an image so it inherits the
-    /// complication tint instead of fighting it.
+    /// The extracted piece, which is also the watch app's icon.
+    ///
+    /// Drawn rather than shipped as an image, because a complication is a template: the
+    /// system tints it with the watch face's colour, so what we supply is shape and
+    /// opacity, not colour. The three faces are told apart by opacity alone, following the
+    /// icon's light rule, which is what keeps it reading as a solid with a light on it
+    /// rather than a flat hexagon.
     private var mark: some View {
-        Image(systemName: "square.grid.2x2")
-            .font(.title3)
-            .widgetAccentable()
+        ZStack {
+            CubeletFace(.top).fill(.white)
+            CubeletFace(.left).fill(.white.opacity(0.72))
+            CubeletFace(.right).fill(.white.opacity(0.45))
+        }
+        .aspectRatio(0.866, contentMode: .fit)
+        .widgetAccentable()
+        .padding(2)
+    }
+}
+
+/// One face of the piece, in the icon's exact proportions.
+///
+/// The geometry falls out beautifully in unit terms, which is worth writing down because
+/// it makes the shape auditable against `docs/design/icon-watch.svg` by arithmetic: the
+/// bounding box has a width to height ratio of root three over two, the side vertices sit
+/// at one quarter and three quarters of the height, and every other point is a midpoint or
+/// a corner. The 0.866 aspect ratio applied by the caller is that root three over two.
+struct CubeletFace: Shape {
+
+    enum Face {
+        case top, left, right
+    }
+
+    let face: Face
+
+    init(_ face: Face) {
+        self.face = face
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let quarter = rect.minY + rect.height * 0.25
+        let threeQuarters = rect.minY + rect.height * 0.75
+
+        let north = CGPoint(x: rect.midX, y: rect.minY)
+        let east = CGPoint(x: rect.maxX, y: quarter)
+        let west = CGPoint(x: rect.minX, y: quarter)
+        let centre = CGPoint(x: rect.midX, y: rect.midY)
+        let south = CGPoint(x: rect.midX, y: rect.maxY)
+
+        let corners: [CGPoint] = switch face {
+        case .top: [north, east, centre, west]
+        case .left: [west, centre, south, CGPoint(x: rect.minX, y: threeQuarters)]
+        case .right: [east, centre, south, CGPoint(x: rect.maxX, y: threeQuarters)]
+        }
+
+        var path = Path()
+        path.addLines(corners)
+        path.closeSubpath()
+        return path
     }
 }

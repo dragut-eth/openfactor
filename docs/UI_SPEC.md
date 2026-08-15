@@ -376,12 +376,51 @@ dark in dark, white in light. Nothing about the object changes.
 Geometry, in the 1024 canvas before scaling: apex at 512, 96, center vertex at
 512, 512, bottom at 512, 928, horizontal extremes at x 152 and 872, and the whole
 assembly scaled to 90 percent about the canvas center. Its farthest point sits
-about 375 px from center against an inscribed-circle radius of 512, so the same
-artwork survives the watchOS circular mask when the watch target arrives in PR 14.
+about 375 px from center against an inscribed-circle radius of 512, so the artwork
+would survive a circular mask. The watch does not use it, see below, but the
+headroom stays deliberate: it is what keeps the assembly clear of the squircle's
+corners.
 
 The sources of truth are docs/design/icon-dark.svg and docs/design/icon-light.svg.
 The 1024 PNGs in the asset catalog are rendered from them, and any SVG renderer at
 1024 by 1024 reproduces them exactly.
+
+### The watch icon is the extracted piece
+
+Xavier's idea, and it completes the design rather than shrinking it. The phone
+shows the assembly with a piece missing; the watch shows the piece. The story the
+icon tells is that the extracted piece is the second factor, the one only you
+hold, and the watch is the device you hold on your body. Two devices, one idea,
+split the way the idea itself splits.
+
+The colours are not a choice, except one. The assembly's spec records that the
+extracted piece carried a green face and a pink face away, so green and pink are
+canon: this is the piece, not a piece. Only the third face, never visible while it
+sat in the assembly, is free, and it is indigo. Pink sits on the right, indigo on
+the left, and the shading stays with the side rather than the colour, because the
+light does not move: nothing on top, 8 percent on the left, 20 percent on the
+right.
+
+The geometry matches the assembly exactly, slope 0.57763 and edge ratio 1.1547.
+Scale was set by eye on the watch itself: at 88 percent of the mask radius the
+piece read as a hexagon filling the disc, so it sits at 70 percent, every vertex
+360 from centre, and the air around it is what makes it read as an object rather
+than a tiling. One piece with three faces also survives 44 px where twelve facets
+would mush.
+
+watchOS takes a single image, no appearances, so the dark canvas is the only
+canvas. The source of truth is docs/design/icon-watch.svg, same rules as the
+others.
+
+**The complication is the same piece, drawn as a template.** The system tints
+complications with the watch face's colour, so it is supplied as shape and opacity
+rather than colour: three white faces at 100, 72, and 45 percent, which is the
+icon's light rule restated in opacity. On a plain face it reads as shades of grey,
+on a coloured face as shades of that colour, and in both it stays a solid with a
+light on it rather than a flat hexagon. The shape is drawn in code, in unit terms
+that make it auditable against the SVG by arithmetic: the bounding box is root
+three over two, side vertices at one and three quarters of the height, everything
+else a corner or a midpoint.
 
 ### How it is installed
 

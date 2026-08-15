@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1B1B21"/>
+      <stop offset="1" stop-color="#08080B"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.28" cy="0.18" r="1.0">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#4BB35A"/><stop offset="1" stop-color="#1D6F2B"/>
+    </linearGradient>
+    <linearGradient id="indigo" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#6A6AE8"/><stop offset="1" stop-color="#33339B"/>
+    </linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#E94A86"/><stop offset="1" stop-color="#991245"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+
+<g transform="translate(102.4 102.4) scale(0.8)">
+
+  <!-- The extracted piece, alone. The green and pink faces are the ones it carried away
+       from the assembly; the indigo face was never visible while it sat in the cube.
+       Gradients are the main icon's, verbatim: bounding box units, so a face here shows
+       the same run a single facet shows there. Slope 0.57763 and edge ratio 1.1547 match
+       the assembly exactly. Scaled to 80 percent about centre, so every vertex is 360.2
+       from centre, 70 percent of the mask. At 88 the piece read as a hexagon filling the
+       disc; the air around it is what makes it read as an object. -->
+
+  <!-- Top -->
+  <polygon points="512,61.6 902,286.9 512,512 122,286.9" fill="url(#green)"/>
+
+  <!-- Left, in the 8 percent shade the light rule gives every left face -->
+  <polygon points="122,286.9 512,512 512,962.4 122,737.1" fill="url(#indigo)"/>
+  <polygon points="122,286.9 512,512 512,962.4 122,737.1" fill="#000000" opacity="0.08"/>
+
+  <!-- Right, in the 20 percent -->
+  <polygon points="902,286.9 512,512 512,962.4 902,737.1" fill="url(#pink)"/>
+  <polygon points="902,286.9 512,512 512,962.4 902,737.1" fill="#000000" opacity="0.20"/>
+</g>
+</svg>

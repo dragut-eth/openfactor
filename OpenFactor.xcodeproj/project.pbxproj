@@ -8,8 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		50AA0000000000000000000B /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50AA0000000000000000000A /* OpenFactorCore */; };
-		50D16262302F862B00211D42 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50D16261302F862B00211D42 /* OpenFactorCore */; };
 		50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 50ACFFFFFFFFFFFF00000009 /* OpenFactorComplication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		50D16262302F862B00211D42 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50D16261302F862B00211D42 /* OpenFactorCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,6 +35,20 @@
 			remoteInfo = "OpenFactorWatch Complication";
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		50ACFFFFFFFFFFFF0000000C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		50AA00000000000000000009 /* OpenFactorWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenFactorWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -75,32 +89,18 @@
 			path = OpenFactorUITests;
 			sourceTree = "<group>";
 		};
+		50ACFFFFFFFFFFFF00000008 /* OpenFactorWatch Complication */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "OpenFactorWatch Complication";
+			sourceTree = "<group>";
+		};
 		50CF0RE0000000000000A1 /* OpenFactorCoreTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = OpenFactorCoreTests;
 			path = Tests/OpenFactorCoreTests;
 			sourceTree = "<group>";
 		};
-		50ACFFFFFFFFFFFF00000008 /* OpenFactorWatch Complication */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "OpenFactorWatch Complication";
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		50ACFFFFFFFFFFFF0000000C /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		50AA00000000000000000006 /* Frameworks */ = {
@@ -451,6 +451,7 @@
 		50AA00000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "OpenFactorWatch Watch App/OpenFactorWatch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -481,6 +482,7 @@
 		50AA00000000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "OpenFactorWatch Watch App/OpenFactorWatch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -819,9 +821,12 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = HST4KH9P2X;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
 				INFOPLIST_FILE = "OpenFactorComplication-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks @executable_path/../../Frameworks";
+				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev.watchkitapp.complication;
 				PRODUCT_NAME = OpenFactorComplication;
@@ -844,9 +849,12 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = HST4KH9P2X;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
 				INFOPLIST_FILE = "OpenFactorComplication-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks @executable_path/../../Frameworks";
+				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev.watchkitapp.complication;
 				PRODUCT_NAME = OpenFactorComplication;

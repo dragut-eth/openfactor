@@ -35,6 +35,13 @@ phone's colours are built to sit behind white text and that is exactly wrong aga
 `PaletteColor` and `CodeFormatting` moved to `OpenFactorShared`, a folder both app targets
 synchronise, so the colour maths is not written twice.
 
+**The watch has its own icon, and it is the extracted piece.** Xavier's idea: the phone
+shows the assembly with a piece missing, the watch shows the piece, and the piece is the
+second factor you hold. Green and pink are the faces the spec says it carried away, indigo
+is the one free face. Source of truth `docs/design/icon-watch.svg`, geometry matched to the
+assembly to the fourth decimal, and the complication draws the same piece as a white
+template shape the watch face tints.
+
 **The complication decision is made: it launches the app and shows nothing.** Xavier's call,
 and the design makes it structural rather than a promise. The extension has no Keychain
 entitlement, so it cannot show a code even if asked, and that absence is asserted in
