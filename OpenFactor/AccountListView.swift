@@ -361,8 +361,23 @@ private struct CardButtonLabel: View {
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.system(size: size * 0.52, weight: .semibold))
+            // Bold rather than semibold, and a little larger, because the ring beside it is
+            // a 4.5 point stroke and a hairline glyph inside a disc of the same size reads
+            // as the lighter, lesser control. This takes the glyph's own stroke from 1.75
+            // points to 2.25.
+            .font(.system(size: size * 0.56, weight: .bold))
             .foregroundStyle(Tokens.OnCard.primary)
+            // Raised, because centred and looking centred are different things here.
+            //
+            // Reported as "it doesn't feel centred", and it was worth measuring rather than
+            // nudging until it looked right: rendering the symbol offscreen and taking its
+            // bounding box put it dead centre, within a tenth of a point. The alpha
+            // weighted centroid is what disagrees. This glyph is a ring broken by a gap at
+            // the top with an arrowhead on one end, and the gap removes more ink than the
+            // arrowhead adds, so its mass sits 0.83 points below the middle of its box at
+            // this size. An eye centres on mass, not on bounds. The fraction below is that
+            // measurement, so it holds as the whole control scales.
+            .offset(y: -size * 0.028)
             // The layout frame is the ring's frame, so the two sit on the same centre.
             .frame(width: size, height: size)
             // The disc is drawn larger, and the difference is the whole reason this looked
