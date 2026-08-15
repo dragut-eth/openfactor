@@ -48,6 +48,7 @@ This is why the app target exists at all right now. The interface came second.
 | `PRODUCT_BUNDLE_IDENTIFIER` | `com.openfactor.dev` | Matches the App Store Connect record. The default Keychain access group derives from it, so changing it after release would make every stored secret unreadable and silently lose users their accounts |
 | `IPHONEOS_DEPLOYMENT_TARGET` | `18.0` | The documented minimum. Xcode defaults new projects to the SDK version, which would have restricted the app to iOS 26.5 and newer |
 | `TEST_HOST` | the app | See above |
+| `CODE_SIGN_ENTITLEMENTS` | `OpenFactor/OpenFactor.entitlements` | Declares one shared Keychain access group, `$(AppIdentifierPrefix)com.openfactor.shared`. The watch app has its own bundle identifier and would otherwise look in its own group and find nothing. The group is named only here: the app writes without specifying one, and the Keychain uses the first entitlement group as the default, which keeps the team identifier out of the source |
 | Local package `relativePath` | `.` | Xcode wrote `../OpenFactor`, which only resolves if the checkout folder happens to be named `OpenFactor`. Anyone cloning into `openfactor` on a case sensitive filesystem, or into a renamed fork, would have got a broken project |
 | `INFOPLIST_KEY_NSCameraUsageDescription` | set | The camera is used to scan setup codes. A missing usage string is not a warning, it is a crash the first time the app asks, and only on a real device where nobody is looking |
 
@@ -83,10 +84,6 @@ weaken what they assert.
 
 ## Not configured yet
 
-- **No entitlements file.** The app uses the default Keychain access group. A shared
-  `keychain-access-groups` entitlement is likely needed before the watch app in PR 14,
-  since a watchOS target has its own bundle identifier and therefore its own access group.
-  Unverified, see `handoff.md`.
 - **No signing team in the project file.** Simulator builds do not need one, and leaving it
   out keeps a personal team identifier out of a public repository.
 - **No capabilities.** No push, no background modes, no App Groups, and above all no

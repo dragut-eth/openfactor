@@ -73,6 +73,33 @@ struct KeychainSecretStoreTests {
         )
     }
 
+    /// The whole watch design rests on this. A Keychain item lives in the group it was
+    /// written to, the watch app has its own bundle identifier and therefore its own
+    /// default group, and iCloud Keychain syncs within a group rather than across them. If
+    /// secrets stop landing in the shared group, the watch silently shows an empty list.
+    ///
+    /// Nothing names the group in code: the entitlement declares exactly one, and the
+    /// Keychain uses the first entitlement group for anything written without one. This
+    /// asserts that indirection actually works, rather than trusting it.
+    @Test("Secrets are written to the shared access group the watch will read")
+    func usesTheSharedAccessGroup() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        try store.add(account(), color: .blue)
+        let item = try #require(rawItem(from: store))
+        let group = item[kSecAttrAccessGroup as String] as? String
+
+        #expect(
+            group?.hasSuffix("com.openfactor.shared") == true,
+            """
+            Secrets landed in \(group ?? "no group") rather than the shared group. \
+            Check OpenFactor.entitlements: the first group in it is the one the Keychain \
+            writes to by default.
+            """
+        )
+    }
+
     @Test("Sync is off unless it is asked for")
     func doesNotSyncByDefault() throws {
         let store = makeStore()

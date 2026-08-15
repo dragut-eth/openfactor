@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  One shared Keychain group, named explicitly rather than left to the default.
+
+	  The default group is derived from the bundle identifier, so the watch app, which has
+	  its own bundle identifier, would look in its own group and find nothing. Naming a
+	  group both targets declare is what lets iCloud Keychain carry an account from the
+	  phone to the wrist.
+
+	  It has to be set before anyone has accounts, because a Keychain item lives in the
+	  group it was written to and moving one afterwards is a migration whose failure mode
+	  reads as "my accounts vanished".
+	-->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.openfactor.shared</string>
+	</array>
+</dict>
+</plist>

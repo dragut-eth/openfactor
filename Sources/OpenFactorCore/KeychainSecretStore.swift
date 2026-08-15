@@ -50,17 +50,31 @@ public struct KeychainSecretStore: SecretStore {
     /// When the operating system will allow these items to be read.
     public let accessibility: SecretAccessibility
 
-    /// Whether items are offered to iCloud Keychain. Off until PR 13 turns it on.
+    /// Whether items are offered to iCloud Keychain.
     public let synchronizable: Bool
+
+    /// The Keychain access group items are written to and read from.
+    ///
+    /// Named explicitly rather than left to the default, which is derived from the bundle
+    /// identifier. The watch app has its own bundle identifier and would therefore look in
+    /// its own group and find nothing, so both targets declare this one and iCloud
+    /// Keychain carries items between them.
+    ///
+    /// `nil` means the default group, which is what tests use: a test process has no
+    /// entitlement for a shared group, and asking for one it does not hold fails every
+    /// call with `errSecMissingEntitlement`.
+    public let accessGroup: String?
 
     public init(
         service: String = "app.openfactor.accounts",
         accessibility: SecretAccessibility = .whenUnlockedThisDeviceOnly,
-        synchronizable: Bool = false
+        synchronizable: Bool = false,
+        accessGroup: String? = nil
     ) {
         self.service = service
         self.accessibility = accessibility
         self.synchronizable = synchronizable
+        self.accessGroup = accessGroup
     }
 
     // MARK: - Writing
@@ -185,7 +199,7 @@ public struct KeychainSecretStore: SecretStore {
 
     /// The fields that identify this app's items, shared by every query and write.
     private func baseAttributes(id: UUID) -> [String: Any] {
-        [
+        var attributes: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: id.uuidString,
@@ -193,10 +207,16 @@ public struct KeychainSecretStore: SecretStore {
             // still the default and does not honour kSecAttrAccessible.
             kSecUseDataProtectionKeychain as String: true,
         ]
+
+        if let accessGroup {
+            attributes[kSecAttrAccessGroup as String] = accessGroup
+        }
+
+        return attributes
     }
 
     private func baseQuery() -> [String: Any] {
-        [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecUseDataProtectionKeychain as String: true,
@@ -204,6 +224,12 @@ public struct KeychainSecretStore: SecretStore {
             // make every existing account appear to vanish.
             kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
         ]
+
+        if let accessGroup {
+            query[kSecAttrAccessGroup as String] = accessGroup
+        }
+
+        return query
     }
 
     private func query(id: UUID) -> [String: Any] {

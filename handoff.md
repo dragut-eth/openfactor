@@ -38,7 +38,7 @@ either a finding about what the entry transmits or a plain statement that it is 
 | PR 10, edit mode | Done |
 | PR 11, settings sheet | Done |
 | PR 12, polish and accessibility | Done |
-| PR 13, iCloud Keychain sync | **Next**, then gate A2 |
+| PR 13, iCloud Keychain sync | **In progress.** Access group done, sync next |
 | PR 14 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **Next audit gate: A2, after PR 13.** A1 is recorded in
