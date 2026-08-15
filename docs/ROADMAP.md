@@ -350,10 +350,35 @@ gets the fewest capabilities.
 
 ### PR 16: Encrypted export and import
 
-- Export as an encrypted archive, passphrase derived with a strong KDF
-- Plain `otpauth://` export behind an explicit warning, since users need an escape hatch
-- Import of the same format, plus other apps' plain URI lists
-- The format documented in `docs/BACKUP_FORMAT.md` so it can be decrypted without this app
+**The format is written and audited before the code.** `docs/BACKUP_FORMAT.md` exists as of
+this PR and is the artefact gate A3 reviews. It carries a test vector produced by three
+implementations sharing no code, which is what makes "decryptable without this app" a tested
+claim rather than an intention.
+
+- Export as an encrypted archive: PBKDF2-HMAC-SHA256 at 600,000 iterations, AES-256-GCM,
+  JSON envelope. PBKDF2 rather than Argon2id **on purpose**, because universal availability
+  is what makes an archive recoverable by a stranger's implementation, and because the
+  generated passphrase, not the KDF, is where the strength actually lives
+- **The app generates the passphrase**, 120 bits in Base32 groups, with the user's own as
+  the fallback. Base32 because that alphabet was designed to be transcribed by hand
+- Export gated behind Face ID or the passcode, since producing a file containing every
+  secret is categorically different from reading one code. Import is not gated: it reveals
+  nothing
+- Import of the same format, plus **Aegis plain JSON** and **Step Two's RTF export**, and
+  export as Aegis plain JSON
+- **The plain `otpauth://` export was dropped.** Aegis JSON is a better escape hatch, since
+  other apps actually import it, and a second plaintext path is a second thing to warn
+  about and get wrong
+- Aegis **encrypted** vaults are refused by name, not silently: they use scrypt, which this
+  project cannot provide without a dependency. The message says to export unencrypted
+- Duplicates are skipped on **secret**, not on name. The secret is the account; a
+  re-enrolment is genuinely a different one
+- An import preview before anything is written: how many found, how many will import, which
+  will not and why. Built here, and it is also what PR 16a needs for forty accounts at once
+- **Erase all accounts**, in the app, behind Face ID and a typed confirmation. Deleting the
+  app does not clear the Keychain, and with sync on anything cleared returns, so without
+  this there is no way to start over. It says plainly that erasing removes the accounts from
+  synced devices too
 
 ### PR 16a: Import from Google Authenticator
 
@@ -388,6 +413,8 @@ repeated `OtpParameters` (secret, name, issuer, algorithm, digits, type, counter
   one, and the scan confirmation screen does not answer it
 - Recognise the `otpauth-migration` scheme even before it is supported, so the error names
   what the code actually is rather than saying it is not a setup code
+- The import preview from PR 16 is a prerequisite, not a nicety: forty accounts arriving at
+  once is the case it was designed for
 
 #### Gate A3: audit the export format
 
