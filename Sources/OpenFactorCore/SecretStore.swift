@@ -172,9 +172,17 @@ public struct SyncState: Sendable, Equatable {
     /// Accounts held on this device only.
     public let local: Set<UUID>
 
-    public init(synced: Set<UUID>, local: Set<UUID>) {
+    /// Accounts whose sync state could not be read.
+    ///
+    /// Kept apart from `local` rather than folded into it, because "on this device only"
+    /// is the reassuring answer and an unreadable flag must never quietly produce it.
+    /// Gate A2, F20.
+    public let unknown: Set<UUID>
+
+    public init(synced: Set<UUID>, local: Set<UUID>, unknown: Set<UUID> = []) {
         self.synced = synced
         self.local = local
+        self.unknown = unknown
     }
 
     /// Whether the stored accounts are all in the same state.
@@ -185,5 +193,11 @@ public struct SyncState: Sendable, Equatable {
     /// rather than to repair it, see `SECURITY.md`.
     public var isMixed: Bool {
         !synced.isEmpty && !local.isEmpty
+    }
+
+    /// Whether anything about the arrangement is unreadable, in which case the interface
+    /// should say it does not know rather than pick the comforting answer.
+    public var hasUnknown: Bool {
+        !unknown.isEmpty
     }
 }

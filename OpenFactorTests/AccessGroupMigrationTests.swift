@@ -159,19 +159,89 @@ struct AccessGroupMigrationEndToEndTests {
         )
     }
 
-    @Test("Accounts left in the old group are moved, and their secrets survive")
+    /// The group a new item lands in, and the group items landed in before the shared one
+    /// was declared. Discovered at runtime, so no team identifier appears in the source.
+    private func groups(service: String) throws -> (target: String, legacy: String) {
+        let id = UUID().uuidString
+        let probe: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: id,
+            kSecUseDataProtectionKeychain as String: true,
+        ]
+        #expect(SecItemAdd(probe as CFDictionary, nil) == errSecSuccess)
+
+        var result: CFTypeRef?
+        var query = probe
+        query[kSecReturnAttributes as String] = true
+        #expect(SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess)
+        SecItemDelete(probe as CFDictionary)
+
+        let target = try #require(
+            (result as? [String: Any])?[kSecAttrAccessGroup as String] as? String
+        )
+        let prefix = try #require(target.split(separator: ".").first)
+        let bundle = try #require(Bundle.main.bundleIdentifier)
+        return (target, "\(prefix).\(bundle)")
+    }
+
+    /// The assertion the migration exists for, and the one that was missing.
+    ///
+    /// The first version of this test asserted the migration returned zero, which is the
+    /// no op path, under a name claiming the load bearing one. It would have passed
+    /// against a migration that did nothing at all. Gate A2, F21, and the same shape of
+    /// gap A2 found in the idempotency test at F13.
+    @Test("An account in the old group is moved, and its secret survives")
     func movesLegacyAccounts() throws {
         let store = makeStore()
         defer { store.cleanUp() }
 
-        // Two accounts written normally, which land in the shared group.
+        let (target, legacy) = try groups(service: store.service)
+        try #require(legacy != target)
+
+        // One account written the way a build before PR 13 wrote it, into the app's bundle
+        // group, and one written the way this build does.
+        let stranded = UUID()
+        let secret = Data("12345678901234567890".utf8)
+        #expect(
+            SecItemAdd(
+                [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: store.service,
+                    kSecAttrAccount as String: stranded.uuidString,
+                    kSecAttrAccessGroup as String: legacy,
+                    kSecUseDataProtectionKeychain as String: true,
+                    kSecValueData as String: secret,
+                ] as CFDictionary,
+                nil
+            ) == errSecSuccess
+        )
+        let native = try store.add(account(issuer: "GitHub"), color: .blue)
+
+        // Exactly the stranded one moves.
+        #expect(try store.migrateToDefaultAccessGroup() == 1)
+
+        let placements = try store.placements()
+        #expect(placements[stranded]?.accessGroup == target)
+        #expect(placements[native.id]?.accessGroup == target)
+
+        // The secret came through the move untouched, which is the whole point of doing it
+        // with SecItemUpdate rather than read, delete, add.
+        #expect(try store.secret(for: stranded) == secret)
+
+        // And a second run finds nothing left to do.
+        #expect(try store.migrateToDefaultAccessGroup() == 0)
+    }
+
+    @Test("A store with nothing stranded reports nothing moved")
+    func nothingToMigrate() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
         let first = try store.add(account(issuer: "GitHub"), color: .blue)
         try store.add(account(issuer: "Fastmail"), color: .green)
 
-        // Nothing to do, and saying so cheaply is the common case.
         #expect(try store.migrateToDefaultAccessGroup() == 0)
-
-        // Everything still readable, and the secret untouched.
         #expect(try store.records().readable.count == 2)
         #expect(try store.secret(for: first.id) == Data("12345678901234567890".utf8))
     }

@@ -257,33 +257,57 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         }
 
         var moved = 0
+        var failures = 0
 
         for item in items {
             guard let rawID = item[kSecAttrAccount as String] as? String,
                 let id = UUID(uuidString: rawID),
-                let group = item[kSecAttrAccessGroup as String] as? String,
-                group != target
+                let group = item[kSecAttrAccessGroup as String] as? String
             else {
+                failures += 1
+                continue
+            }
+
+            guard group != target else { continue }
+
+            // Pinned rather than left as Any, because an update has to name one item.
+            // Read strictly: an unreadable sync flag is refused, not defaulted. Defaulting
+            // it is the pattern gate A2 removed from `setSynchronizable` in F14, and it
+            // came straight back here. Wrong either way, and wrong quietly: the update
+            // would match nothing, the item would stay in the old group, and the only
+            // symptom is a watch missing accounts. Gate A2, F20.
+            guard let synchronizable = item[kSecAttrSynchronizable as String] as? Bool else {
+                failures += 1
                 continue
             }
 
             var find = baseQuery()
             find[kSecAttrAccount as String] = id.uuidString
             find[kSecAttrAccessGroup as String] = group
-            // Pinned rather than left as Any, because an update has to name one item.
-            find[kSecAttrSynchronizable as String] =
-                (item[kSecAttrSynchronizable as String] as? Bool) ?? false
+            find[kSecAttrSynchronizable as String] = synchronizable
 
             let status = SecItemUpdate(
                 find as CFDictionary,
                 [kSecAttrAccessGroup as String: target] as CFDictionary
             )
 
+            // One stuck account must not strand the rest, so the loop finishes and reports.
+            // Aborting on the first failure left every later account in the old group, and
+            // the caller could not tell that from a clean run.
             guard status == errSecSuccess else {
-                throw error(for: status)
+                failures += 1
+                continue
             }
 
             moved += 1
+        }
+
+        // Reported rather than swallowed. The caller decides what to do, but it can no
+        // longer fail to notice: an account left behind is invisible on the phone, which
+        // reads every group it can reach, and shows up only as a watch with fewer accounts
+        // than it should have and no error anywhere. Gate A2, F20.
+        if failures > 0 {
+            throw SecretStoreError.migrationIncomplete(moved: moved, failed: failures)
         }
 
         return moved
@@ -379,7 +403,7 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
 
         if status == errSecItemNotFound {
-            return SyncState(synced: [], local: [])
+            return SyncState(synced: [], local: [], unknown: [])
         }
 
         guard status == errSecSuccess, let items = result as? [[String: Any]] else {
@@ -388,6 +412,7 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
 
         var synced: Set<UUID> = []
         var local: Set<UUID> = []
+        var unknown: Set<UUID> = []
 
         for item in items {
             guard let rawID = item[kSecAttrAccount as String] as? String,
@@ -396,14 +421,18 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
                 continue
             }
 
-            if item[kSecAttrSynchronizable as String] as? Bool == true {
-                synced.insert(id)
-            } else {
-                local.insert(id)
+            // Strict for the same reason as the migration: "local" is the reassuring
+            // answer, and an unreadable flag must not quietly produce it. Unknown items
+            // are counted apart so the interface can say it does not know rather than
+            // claim device only. Gate A2, F20.
+            switch item[kSecAttrSynchronizable as String] as? Bool {
+            case true: synced.insert(id)
+            case false: local.insert(id)
+            case nil: unknown.insert(id)
             }
         }
 
-        return SyncState(synced: synced, local: local)
+        return SyncState(synced: synced, local: local, unknown: unknown)
     }
 
     public func delete(id: UUID) throws(SecretStoreError) {

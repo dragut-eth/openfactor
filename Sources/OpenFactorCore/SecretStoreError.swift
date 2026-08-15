@@ -41,6 +41,14 @@ public enum SecretStoreError: Error, Equatable, Sendable {
     /// Anything else the Keychain reported, carrying the raw status so a bug report can
     /// name it exactly.
     case keychain(status: Int32)
+
+    /// Some accounts could not be moved into the shared access group.
+    ///
+    /// Its own case rather than a generic failure, because the consequence is specific:
+    /// what is left behind stays invisible on the phone, which reads every group it can
+    /// reach, and surfaces only as a watch with fewer accounts than it should have.
+    /// Gate A2, F20.
+    case migrationIncomplete(moved: Int, failed: Int)
 }
 
 extension SecretStoreError: CustomStringConvertible {
@@ -58,6 +66,9 @@ extension SecretStoreError: CustomStringConvertible {
             return "This account's codes change on a timer, so there is no next code to ask for."
         case .counterExhausted:
             return "This account has run out of codes and needs to be set up again."
+        case let .migrationIncomplete(moved, failed):
+            return "Moved \(moved) accounts, and \(failed) could not be moved."
+
         case let .keychain(status):
             let message = SecCopyErrorMessageString(status, nil) as String? ?? "no description"
             return "The Keychain returned error \(status): \(message)."

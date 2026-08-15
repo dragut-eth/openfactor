@@ -55,6 +55,22 @@ human is the real watch at a large text size, which is a settings change on the 
 PR 14 is feature complete. What remains before it merges is the warm A2 re-verification
 Xavier planned, now that the branch is finished.
 
+**The A2 re-verification is done and its three new findings are fixed.** The report is the
+dated section at the end of `docs/audits/A2.md`, commit `5125a61`. Nine of the original
+eleven confirmed fixed, F8 and F13's two device half still open and still recorded as
+unproven. The three new ones, all fixed in PR 15:
+
+- **F19**, the CI network grep named three directories and the project grew three more in
+  the same PR that wrote it. It now sweeps every Swift file and excludes, so new folders
+  are covered by default rather than by remembering.
+- **F20**, `migrateToDefaultAccessGroup` failed silent in the understating direction:
+  swallowed at the call site, aborting on the first error, and reintroducing the
+  parse-and-default pattern F14 existed to remove. It now reports what it could not move,
+  the app says so, and `SyncState` gained an `unknown` set so an unreadable flag cannot
+  round down to "on this device only".
+- **F21**, the migration end to end test asserted the no op path under a name claiming the
+  load bearing one. It now strands an account in the legacy group and proves it moves.
+
 **Gate A2 is done and its follow up has landed.** The report is
 `docs/audits/A2.md`, findings F8 to F18. It found no path by which a secret leaves the
 device beyond what the switch is documented to do, and confirmed `setSynchronizable(_:)`

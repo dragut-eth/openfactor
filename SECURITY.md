@@ -173,9 +173,12 @@ than iCloud Keychain gives for free.
 ### Attacker on the network
 
 There is no network code. The app makes no requests, so there is nothing to intercept.
-This is verified in CI rather than asserted: the style job greps the whole source tree for
-`URLSession`, the `Network` framework, raw sockets, and logging, and fails the build if any
-appears. Until gate A2 this sentence said the same thing while CI checked nothing, which is
+This is verified in CI rather than asserted: the style job greps every Swift file in the
+repository for `URLSession`, the `Network` framework, raw sockets, and logging, and fails
+the build if any appears. It sweeps and excludes rather than naming directories, because
+the first version named three and the project grew three more in the same pull request
+that wrote it, leaving the shared folder and both watch targets unchecked while this
+paragraph said the whole tree was covered. Gate A2, F19. Until gate A2 this sentence said the same thing while CI checked nothing, which is
 exactly the plan laundered into a fact that the *planned* marker exists to prevent. Gate
 A2, F16.
 

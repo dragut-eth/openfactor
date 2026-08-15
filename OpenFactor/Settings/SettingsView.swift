@@ -222,6 +222,13 @@ struct SettingsView: View {
             return "OpenFactor keeps your accounts in the Keychain. \(common)"
         }
 
+        // An unreadable sync state must not round down to the reassuring answer. Gate
+        // A2, F20.
+        if state.hasUnknown {
+            return "OpenFactor keeps your accounts in the Keychain. Where some of them "
+                + "are is unclear right now. \(common)"
+        }
+
         if state.isMixed {
             return "Some of your accounts are in iCloud Keychain and some are on this "
                 + "device only. \(common)"

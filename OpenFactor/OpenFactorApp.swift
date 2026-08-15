@@ -23,6 +23,12 @@ struct OpenFactorApp: App {
     /// The lock and the snapshot cover. See `PrivacyShield` for why they live in their
     /// own window rather than in this view tree.
     @State private var lock = AppLockController()
+
+    /// Set when the access group migration could not finish. See the alert below.
+    ///
+    /// Held as a flag rather than the error: reading through the store's existential
+    /// widens the typed throw, and the alert says the same thing whatever went wrong.
+    @State private var migrationFailed = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -45,11 +51,34 @@ struct OpenFactorApp: App {
                         // so it runs at every launch rather than behind a flag that could
                         // itself be wrong.
                         //
-                        // A failure is not surfaced. Nothing is lost by it, the accounts
-                        // stay exactly where they are and the phone still shows them, and
-                        // an alert at launch about Keychain access groups would alarm
-                        // without informing.
-                        .task { try? store.migrateToDefaultAccessGroup() }
+                        // A failure used to be swallowed here, on the reasoning that
+                        // nothing is lost by it. That reasoning was wrong in one direction
+                        // that matters: an account left in the old group is invisible on
+                        // this phone, which reads every group it can reach, and shows up
+                        // only as a watch with fewer accounts than it should have and no
+                        // error anywhere. That is the exact bug this migration exists to
+                        // fix, so failing to migrate must not be silent. Gate A2, F20.
+                        .task {
+                            do {
+                                try store.migrateToDefaultAccessGroup()
+                                migrationFailed = false
+                            } catch {
+                                migrationFailed = true
+                            }
+                        }
+                        .alert(
+                            "Some accounts were not moved",
+                            isPresented: $migrationFailed
+                        ) {
+                            Button("OK") { migrationFailed = false }
+                        } message: {
+                            Text(
+                                """
+                                They are safe and still on this phone, but they will not \
+                                reach your Apple Watch. Reopening OpenFactor tries again.
+                                """
+                            )
+                        }
                 }
             }
             .onChange(of: scenePhase, initial: true) { _, phase in
