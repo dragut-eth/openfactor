@@ -1,25 +1,36 @@
 import OpenFactorCore
 import SwiftUI
 
-/// Renaming an account.
+/// Everything about an account a person chose: its two labels and its colour.
 ///
-/// Only the two fields a person chose. The algorithm, digits, period, and counter came
-/// from the service and changing them here would not change what the service expects, it
-/// would just stop the codes matching. Those are set once, at enrolment.
+/// Only those. The algorithm, digits, period, and counter came from the service and
+/// changing them here would not change what the service expects, it would just stop the
+/// codes matching. Those are set once, at enrolment.
+///
+/// The colour lives here rather than only behind its own menu entry because "details" and
+/// "colour" were two destinations for one idea, which was fine while the only way in was a
+/// menu listing both, and stopped being fine when tapping a card in edit mode had to choose
+/// one of them. "Change colour" in the context menu is now a shortcut into a screen that
+/// holds everything, rather than the only way to reach the colour at all.
 struct EditAccountView: View {
     let record: AccountRecord
-    let onSave: (_ issuer: String?, _ name: String) -> Void
+    let onSave: (_ issuer: String?, _ name: String, _ color: AccountColor) -> Void
 
     @State private var issuer: String
     @State private var name: String
+    @State private var color: AccountColor
 
     @Environment(\.dismiss) private var dismiss
 
-    init(record: AccountRecord, onSave: @escaping (_ issuer: String?, _ name: String) -> Void) {
+    init(
+        record: AccountRecord,
+        onSave: @escaping (_ issuer: String?, _ name: String, _ color: AccountColor) -> Void
+    ) {
         self.record = record
         self.onSave = onSave
         _issuer = State(initialValue: record.metadata.issuer ?? "")
         _name = State(initialValue: record.metadata.name)
+        _color = State(initialValue: record.metadata.color)
     }
 
     var body: some View {
@@ -40,6 +51,10 @@ struct EditAccountView: View {
                 } footer: {
                     Text("These are just labels. Changing them does not affect the codes.")
                 }
+
+                Section("Colour") {
+                    AccountColorGrid(selected: color) { color = $0 }
+                }
             }
             .navigationTitle("Edit account")
             .navigationBarTitleDisplayMode(.inline)
@@ -49,7 +64,7 @@ struct EditAccountView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        onSave(issuer, name)
+                        onSave(issuer, name, color)
                         dismiss()
                     }
                 }
@@ -64,26 +79,14 @@ struct AccountColorPicker: View {
     let selected: AccountColor
     let onPick: (AccountColor) -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
-
-    private let columns = [GridItem(.adaptive(minimum: 76), spacing: Tokens.Spacing.medium)]
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: Tokens.Spacing.medium) {
-                    ForEach(AccountColor.allCases, id: \.self) { color in
-                        Button {
-                            onPick(color)
-                            dismiss()
-                        } label: {
-                            swatch(color)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(color.rawValue.capitalized)
-                        .accessibilityAddTraits(color == selected ? [.isSelected] : [])
-                    }
+                AccountColorGrid(selected: selected) { color in
+                    onPick(color)
+                    dismiss()
                 }
                 .padding(Tokens.Spacing.large)
             }
@@ -94,6 +97,35 @@ struct AccountColorPicker: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+        }
+    }
+}
+
+/// The swatches on their own, with no screen around them.
+///
+/// Extracted so the edit screen can hold the colour inline while the shortcut from the
+/// context menu still presents it as its own sheet. One grid, two frames around it, rather
+/// than two grids that could drift apart.
+struct AccountColorGrid: View {
+    let selected: AccountColor
+    let onPick: (AccountColor) -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private let columns = [GridItem(.adaptive(minimum: 76), spacing: Tokens.Spacing.medium)]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: Tokens.Spacing.medium) {
+            ForEach(AccountColor.allCases, id: \.self) { color in
+                Button {
+                    onPick(color)
+                } label: {
+                    swatch(color)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(color.rawValue.capitalized)
+                .accessibilityAddTraits(color == selected ? [.isSelected] : [])
             }
         }
     }
@@ -183,7 +215,7 @@ struct AccountColorStrip: View {
                 sortIndex: 0
             )
         ),
-        onSave: { _, _ in }
+        onSave: { _, _, _ in }
     )
 }
 

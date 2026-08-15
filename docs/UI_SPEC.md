@@ -209,6 +209,29 @@ implied by the Sort Accounts setting.
   counter came from the service at enrolment; changing them here would not change what the
   service expects, it would just stop the codes matching.
 
+**Edit mode is the three things iOS already provides, and nothing else.** A delete control
+on the left, a drag handle on the right, and a row that opens its details when tapped, which
+is how Reminders and Contacts behave.
+
+There was briefly a fourth thing, an ellipsis menu on each card. It was not decoration, it
+was covering a gap: in edit mode a long press is a drag, so the context menu is unreachable
+and Change colour and Edit details had nowhere to live. Filling that gap with a new control
+was the wrong instinct twice over. The ellipsis is a navigation bar idiom rather than an
+edit mode one, and it sat exactly where the countdown ring sits, so the ring appeared to
+mutate into a button. Tapping the row is what iOS users already reach for, and it removes a
+control instead of adding one.
+
+**Tapping a card means copy normally and edit while editing.** The meaning changes with the
+mode, which is the same split iOS uses, so the VoiceOver hint changes with it: "Copies the
+code" becomes "Opens details".
+
+**The edit screen holds the colour.** Previously "Edit details" and "Change colour" were two
+destinations for one idea, which was tolerable while the only way in was a menu offering
+both, and stopped being tolerable when a tap had to choose one of them. Change colour in the
+context menu is now a shortcut into a screen that holds everything, rather than the only way
+to reach the colour at all. One grid of swatches, used inline by the edit screen and wrapped
+in a sheet by the shortcut, so the two cannot drift apart.
+
 ## Design tokens
 
 Defined once in the app and never hardcoded at a call site, so a design change is a one

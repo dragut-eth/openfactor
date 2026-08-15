@@ -66,8 +66,11 @@ struct AccountListView: View {
                 }
                 .sheet(isPresented: $isShowingSettings) { SettingsView(store: store) }
                 .sheet(item: $editing) { row in
-                    EditAccountView(record: row.record) { issuer, name in
+                    EditAccountView(record: row.record) { issuer, name, colour in
                         model.rename(row, issuer: issuer, name: name)
+                        if colour != row.record.metadata.color {
+                            model.setColor(colour, for: row)
+                        }
                     }
                 }
                 .sheet(item: $recolouring) { row in
@@ -219,12 +222,15 @@ struct AccountListView: View {
 
     private func card(for row: AccountListViewModel.Row) -> some View {
         Button {
-            copy(row)
+            if editMode.isEditing {
+                editing = row
+            } else {
+                copy(row)
+            }
         } label: {
             AccountCard(model: row.card)
         }
         .buttonStyle(.plain)
-        .disabled(editMode.isEditing)
         // Follows the ring, which moves to the bottom of the card at accessibility sizes.
         .overlay(
             alignment: dynamicTypeSize.isAccessibilitySize ? .bottomTrailing : .topTrailing
@@ -249,19 +255,24 @@ struct AccountListView: View {
         // action sheet cannot reproduce. The cost is that iOS may append entries of its
         // own, including "Ask Siri". Accepted deliberately, see SECURITY.md.
         .contextMenu { menu(for: row) }
-        .accessibilityHint(editMode.isEditing ? "" : "Copies the code")
+        .accessibilityHint(editMode.isEditing ? "Opens details" : "Copies the code")
     }
 
+    /// Nothing sits on a card while editing.
+    ///
+    /// There used to be an ellipsis menu here, covering a gap: in edit mode a long press is
+    /// a drag, so the context menu is unreachable and its actions had nowhere else to live.
+    /// The gap is now filled the way iOS fills it, by making a tap on the row open its
+    /// details, which is what Reminders and Contacts do. That leaves edit mode as the three
+    /// things an iOS user already expects, a delete control, a drag handle, and a row that
+    /// opens when tapped, and it removes a control rather than restyling one.
+    ///
+    /// It also stopped the ring appearing to mutate into a button, since the ellipsis sat
+    /// in exactly the ring's place.
     @ViewBuilder
     private func accessory(for row: AccountListViewModel.Row) -> some View {
         if editMode.isEditing {
-            Menu {
-                menu(for: row)
-            } label: {
-                CardButtonLabel(systemImage: "ellipsis")
-            }
-            .padding(Tokens.Spacing.large)
-            .accessibilityLabel("Options for \(row.record.metadata.displayIssuer)")
+            EmptyView()
         } else if !row.isTimeBased && copied != row.id {
             // Counter based accounts have no ring, because nothing counts down. What they
             // need instead is a way to ask for the next code.
