@@ -265,7 +265,10 @@ secret material off the device, and the interface now makes explicit promises ab
 the settings footer. Those promises have to be true, not reassuring.
 
 Run it cold, on a fresh session, with a model that has not just written the code. Fable 5,
-as with A1. What it is for:
+as with A1. **The prompt is written and ready in `docs/audits/A2-prompt.md`**: paste it
+whole rather than describing the task from memory, since the point of the gate is a second
+opinion and a summary of what to look for would smuggle in the author's conclusions. What
+it is for:
 
 1. **The three unverified claims listed above.** They are the weakest part of this PR. Each
    is written from reasoning about how iCloud Keychain works, and reasoning about Apple's
