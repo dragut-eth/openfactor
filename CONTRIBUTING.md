@@ -14,7 +14,7 @@ than no code at all. If a change is getting long, split it.
 - [ ] Tests pass locally: `swift test`
 - [ ] New behavior in `OpenFactorCore` has tests in the same pull request
 - [ ] Documentation affected by the change is updated in the same pull request, never as a
-      follow up. That includes `README.md`, `handoff.md`, and anything under `docs/`
+      follow up. That includes `README.md`, `HANDOFF.md`, and anything under `docs/`
 - [ ] No new third party dependency, see below
 - [ ] No file grew past roughly 300 lines. Split instead
 

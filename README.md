@@ -8,7 +8,7 @@ Keychain sync, which Apple cannot read.
 
 > **Status: pre alpha.** The repository is being built in public from the first commit.
 > Nothing is shippable yet. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is planned
-> and [handoff.md](handoff.md) for where the work currently stands.
+> and [HANDOFF.md](HANDOFF.md) for where the work currently stands.
 
 ## Why another authenticator
 

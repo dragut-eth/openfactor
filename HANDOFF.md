@@ -161,7 +161,7 @@ docs/PROJECT.md                            The project file in plain language
 docs/POLISH.md                             Polish items, for PR 12
 docs/design/icon-dark.svg, icon-light.svg  The app icon, source of truth
 docs/design/icon-watch.svg                 The watch icon: the extracted piece
-LICENSE, README.md, SECURITY.md, CONTRIBUTING.md, handoff.md
+LICENSE, README.md, SECURITY.md, CONTRIBUTING.md, HANDOFF.md
 docs/ROADMAP.md, docs/ARCHITECTURE.md, docs/UI_SPEC.md
 .github/workflows/ci.yml                   Style checks, then build and test
 ```
@@ -214,9 +214,6 @@ would be to weaken what they assert.
   generator would make `brew install` a prerequisite for opening the project. The cost is
   paid back by `docs/PROJECT.md` and a CI job asserting the settings it describes
 - Bundle identifier `com.openfactor.dev`, fixed by the App Store Connect record
-- The account palette is deeper than Step Two's because every entry must carry white text
-  at 4.5 to 1 or better. That is asserted by `PaletteTests`, at both gradient stops and in
-  both schemes, so darkening a colour is the only way to add one that fails
 - No view hardcodes a colour, radius, or spacing. They all come from `Tokens`, which is
   what makes a light mode regression hard to introduce
 - Card gradients only ever darken from the base, so the base is always the worst case for
@@ -285,14 +282,6 @@ sharing a model share their blind spots.
 
 ## Notes for whoever works on this next
 
-- `assets/` holds Step Two reference screenshots. It is gitignored on purpose and must
-  never be committed. `docs/UI_SPEC.md` captures everything needed from it.
-- `README.md` has an Inspiration section stating what OpenFactor took from Step Two, that
-  its creator declined to license it, and that he has no involvement in or endorsement of
-  this project. **The App Store description and any other public copy must not imply an
-  association either.** Add that to the PR 18 checklist. Do not weaken the sentence about
-  no code, assets, or artwork being used: it is the substantive claim in that section and
-  it is verifiable against the source.
 - Do not push without asking Xavier. Branches are pushed only when he says so.
 - No em dashes anywhere. CI enforces this, as it does trailing whitespace.
 - The RFC vector tables are the authority. If a change breaks one, the change is wrong.

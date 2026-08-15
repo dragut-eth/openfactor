@@ -17,7 +17,7 @@ import Security
 /// So the tests that need a real Keychain are written, and skipped where they cannot run.
 /// They run against a host application target, which arrives in PR 5. Until then the
 /// protection class on stored secrets is **unverified by test**, and that is recorded in
-/// `handoff.md` and in the checklist for gate A1 rather than left to be discovered.
+/// `HANDOFF.md` and in the checklist for gate A1 rather than left to be discovered.
 enum KeychainAvailability {
 
     static let isUsable: Bool = {

@@ -12,7 +12,7 @@ import Testing
 /// for why the legacy Keychain is not an acceptable stand in.
 ///
 /// The protection class on a stored secret is the single most consequential line in this
-/// project, and until these run it is unverified. That is written down in `handoff.md`
+/// project, and until these run it is unverified. That is written down in `HANDOFF.md`
 /// and in the checklist for gate A1.
 @Suite("Keychain storage", .enabled(if: KeychainAvailability.isUsable))
 struct KeychainSecretStoreTests {

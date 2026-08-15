@@ -19,7 +19,7 @@ These are defaults chosen so work can start. Say the word and they change.
 
 ## Conventions applied to every PR
 
-- Docs (`README.md`, `handoff.md`, and anything else affected) are updated in the same
+- Docs (`README.md`, `HANDOFF.md`, and anything else affected) are updated in the same
   PR, never as a follow up.
 - No file grows past roughly 300 lines. Split instead.
 - Anything in `OpenFactorCore` ships with tests in the same PR.
@@ -33,7 +33,7 @@ Auditability is only a claim until somebody outside the project acts on it. Thes
 five points where the work stops and gets looked at by someone who did not write it.
 
 They are gates, not suggestions. Each one is marked inline in the plan below, and
-`handoff.md` always names the next one, so it survives being picked up months later.
+`HANDOFF.md` always names the next one, so it survives being picked up months later.
 
 | Gate | After | What gets looked at | Who |
 | --- | --- | --- | --- |
@@ -82,7 +82,7 @@ the last audited tag, which keeps the claim honest and the work small.
    ones that turned out to be nothing. An audit trail with only good news is not evidence.
 3. The audited commit is tagged, so a reader can see exactly what was reviewed rather than
    inferring it from a date.
-4. If a gate is skipped, the reason goes in `handoff.md` and in the README, where users
+4. If a gate is skipped, the reason goes in `HANDOFF.md` and in the README, where users
    can see it. Skipping quietly is the failure mode this whole section exists to prevent.
 
 ---
@@ -100,7 +100,7 @@ Independent of the mockups, so it can proceed now.
 - `README.md`: what OpenFactor is, what it deliberately does not do, build instructions
 - `SECURITY.md`: vulnerability reporting process, placeholder threat model
 - `CONTRIBUTING.md`: how to review, what a security sensitive change requires
-- `handoff.md`: running state of the project for the next session
+- `HANDOFF.md`: running state of the project for the next session
 - `docs/ROADMAP.md` (this file), `docs/ARCHITECTURE.md` skeleton
 - GitHub Actions workflow: build and test on macOS runner, SwiftLint or swift-format check
 
