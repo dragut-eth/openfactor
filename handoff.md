@@ -16,7 +16,8 @@ first when picking the work back up.
 | Gate A2, audit of sync | Done, twice. Original eleven findings closed except F8 and F13's two device half; three new findings from the re-verification, all fixed |
 | PR 14, watchOS app | Feature complete on `pr-14-watch`, re-verified, pushed |
 | PR 15, app lock | Built on `pr-15-app-lock`, pushed. Face ID needs a real device |
-| PR 16 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PR 16, export and import | Format written and pushed on `pr-16-backup-format`. **Gate A3 next.** No code yet, on purpose |
+| PR 17 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **What only Xavier can verify in PR 15:** Face ID and passcode unlock, the grace periods,
 and that no frame of the account list escapes before the lock screen on real hardware. The
@@ -28,6 +29,24 @@ Gate A2's F8, what turning sync off does to copies elsewhere, where this project
 documentation and Apple's point in opposite directions, and F13's two device half, a same
 UUID twin that may defeat the repair claim. The experiment is written at the end of
 `docs/audits/A2.md`. Xavier now has the watch, so it is runnable.
+
+### PR 16 is inverted, and that is the design
+
+The format was written before the implementation, because an archive in a user's hands makes
+version 1 permanent. `docs/BACKUP_FORMAT.md` is the artefact gate A3 audits, and the prompt
+is ready in `docs/audits/A3-prompt.md`.
+
+The document carries a test vector produced by three implementations sharing no code:
+CommonCrypto and Python's `hashlib` agree on the derived key, and Node's OpenSSL decrypts
+what CryptoKit sealed with the tag and AAD verified. The task set for the auditor is to
+write a fourth decryptor from the page alone and see whether it reaches those bytes. Every
+ambiguity they have to guess at is a finding.
+
+Settled with Xavier before writing it: PBKDF2 rather than Argon2id, argued rather than
+apologised for; the app generates the passphrase; the plain `otpauth://` export is dropped
+in favour of Aegis JSON; export is gated on Face ID and import is not; duplicates skip on
+secret; and erase all accounts joins this PR because deleting the app does not clear the
+Keychain.
 
 ### Three things learned the hard way, kept because they will recur
 
