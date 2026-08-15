@@ -117,8 +117,14 @@ public enum Base32 {
     ///
     /// Three allowances, each for a real reason:
     ///
-    /// - **Lowercase is uppercased.** RFC 4648 section 6 defines the alphabet as
-    ///   uppercase, but plenty of services print secrets in lowercase.
+    /// - **Lowercase is uppercased, by ASCII mapping only.** RFC 4648 section 6 defines the
+    ///   alphabet as uppercase, but plenty of services print secrets in lowercase. The
+    ///   mapping is written out rather than delegated to `uppercased()`, which performs full
+    ///   Unicode case mapping: `ß` becomes `SS`, two characters that *are* in the alphabet,
+    ///   so a secret containing it would decode to different bytes depending on which
+    ///   uppercase function an implementation happened to call. `docs/BACKUP_FORMAT.md`
+    ///   requires ASCII mapping here for that reason, and it is the right rule everywhere
+    ///   else too: a stray character should refuse a secret, never silently become one.
     /// - **Whitespace is removed.** Secrets are commonly displayed in groups of four,
     ///   like `abcd efgh ijkl`, and that is what lands on the pasteboard.
     /// - **Hyphens are removed,** for the services that group with dashes instead.
@@ -127,7 +133,18 @@ public enum Base32 {
     /// something to quietly skip, because skipping it would decode a different secret
     /// than the user believes they entered.
     static func normalize(_ text: String) -> [Character] {
-        Array(text.uppercased().filter { $0 != "-" && !$0.isWhitespace })
+        var characters: [Character] = []
+        characters.reserveCapacity(text.count)
+
+        for scalar in text.unicodeScalars {
+            if scalar == "-" || Character(scalar).isWhitespace { continue }
+
+            let value = scalar.value
+            let mapped = (value >= 0x61 && value <= 0x7A) ? value - 0x20 : value
+            characters.append(Character(Unicode.Scalar(mapped) ?? scalar))
+        }
+
+        return characters
     }
 
     /// Validates and removes trailing `=` padding.

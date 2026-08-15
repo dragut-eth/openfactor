@@ -38,9 +38,16 @@ public struct ImportedAccount: Sendable, Equatable {
     /// Cosmetic, so an unrecognised value becomes the default rather than failing.
     public let color: AccountColor
 
-    public init(account: OTPAccount, color: AccountColor) {
+    /// Where the source placed it in the list. Cosmetic in the same way the colour is, and
+    /// carried because an archive restoring somebody's whole setup should restore the order
+    /// they arranged it in. Formats without the concept leave it at the position in the
+    /// file, which is the same answer for every reader.
+    public let sortIndex: Int
+
+    public init(account: OTPAccount, color: AccountColor, sortIndex: Int = 0) {
         self.account = account
         self.color = color
+        self.sortIndex = sortIndex
     }
 }
 

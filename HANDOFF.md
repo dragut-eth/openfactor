@@ -14,7 +14,7 @@ first when picking the work back up.
 | Gate A2, audit of sync | Done, twice. Original eleven findings closed except F8 and F13's two device half; three new findings from the re-verification, all fixed |
 | PR 14, watchOS app | Feature complete on `pr-14-watch`, re-verified, pushed |
 | PR 15, app lock | Built on `pr-15-app-lock`, pushed. Face ID needs a real device |
-| PR 16, export and import | Format audited **three** times and fixed. On `pr-16-import-export`: erase, both importers, and the import preview are built. Neither reader carries a brand name: the labelled text reader is named and described by the shape it matches. Encrypted export and the passphrase screen are what remain |
+| PR 16, export and import | Format audited **three** times and fixed. On `pr-16-import-export`: erase, both importers, the import preview, and the whole encrypted archive in core, reproducing every published test vector value. Neither reader carries a brand name: the labelled text reader is named and described by the shape it matches. The export screen, the passphrase screen and the Aegis JSON export are what remain |
 | PR 17 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **What only Xavier can verify in PR 15:** Face ID and passcode unlock, the grace periods,
@@ -156,6 +156,13 @@ Sources/OpenFactorCore/
   Import/RichTextReader.swift              Just enough RTF to recover the text. Not a
                                            parser, and must not grow into one
   Import/AegisImport.swift                 Aegis vaults. Strict, and refuses encrypted
+  Backup/BackupArchive.swift               The encrypted archive, read and written
+  Backup/BackupPayload.swift               The accounts inside one
+  Backup/BackupPassphrase.swift            The exact bytes the KDF receives
+  Backup/PassphraseStrength.swift          The floor on the custom passphrase path
+  Backup/PBKDF2.swift                      CommonCrypto. CryptoKit has no password KDF
+  Backup/BackupBase64.swift                Strict out, lenient in
+  Backup/BackupError.swift                 Why an archive would not open
 Tests/OpenFactorCoreTests/                 The shared core suites, 17k fuzz iterations
 OpenFactor.xcodeproj                       See docs/PROJECT.md, checked in deliberately
 OpenFactor/                                App target
