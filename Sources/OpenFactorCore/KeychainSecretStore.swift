@@ -328,6 +328,47 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         return group
     }
 
+    /// Where each stored item physically sits: its access group and its sync state.
+    ///
+    /// **Diagnostic.** Added while chasing a watch that could see one account out of seven,
+    /// because every screen that could have shown the cause was on a device with access to
+    /// every group. Reads attributes only, never data.
+    public func placements() throws(SecretStoreError) -> [UUID: ItemPlacement] {
+        var query = baseQuery()
+        query[kSecMatchLimit as String] = kSecMatchLimitAll
+        query[kSecReturnAttributes as String] = true
+        query[kSecReturnData as String] = false
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        if status == errSecItemNotFound {
+            return [:]
+        }
+
+        guard status == errSecSuccess, let items = result as? [[String: Any]] else {
+            throw error(for: status)
+        }
+
+        var placements: [UUID: ItemPlacement] = [:]
+
+        for item in items {
+            guard let rawID = item[kSecAttrAccount as String] as? String,
+                let id = UUID(uuidString: rawID)
+            else {
+                continue
+            }
+
+            placements[id] = ItemPlacement(
+                accessGroup: item[kSecAttrAccessGroup as String] as? String ?? "unknown",
+                synchronized: item[kSecAttrSynchronizable as String] as? Bool == true,
+                accessible: item[kSecAttrAccessible as String] as? String ?? "unknown"
+            )
+        }
+
+        return placements
+    }
+
     public func syncState() throws(SecretStoreError) -> SyncState {
         var query = baseQuery()
         query[kSecMatchLimit as String] = kSecMatchLimitAll
@@ -528,6 +569,19 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
 ///
 /// Only the two values this app has a use for, rather than all of them, so that a
 /// weaker protection class cannot be selected by accident.
+/// Where one stored item physically sits. Diagnostic, see ``KeychainSecretStore/placements()``.
+public struct ItemPlacement: Sendable, Equatable {
+    public let accessGroup: String
+    public let synchronized: Bool
+    public let accessible: String
+
+    /// The group without its team prefix, which is the only part worth reading and the
+    /// only part safe to put on a screen that might be photographed.
+    public var groupSuffix: String {
+        accessGroup.split(separator: ".").dropFirst().joined(separator: ".")
+    }
+}
+
 public enum SecretAccessibility: Sendable, Equatable {
 
     /// Readable only while the device is unlocked, and never restored to another device.

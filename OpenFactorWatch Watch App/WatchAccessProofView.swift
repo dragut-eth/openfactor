@@ -29,6 +29,11 @@ struct WatchAccessProofView: View {
 
     @State private var result: Outcome?
 
+    /// Reads again whenever the app comes back to the front. A `task` runs once, so the
+    /// screen kept reporting the world as it was at first launch, which cost a round of
+    /// debugging and nearly sent the blame to the Keychain.
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
@@ -65,19 +70,32 @@ struct WatchAccessProofView: View {
                     }
 
                     ForEach(records.readable, id: \.id) { record in
-                        Text(record.metadata.displayIssuer)
-                            .font(.footnote)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(record.metadata.displayIssuer)
+                                .font(.footnote)
+                            Text(placements[record.id].map {
+                                "\($0.groupSuffix) | \($0.synchronized ? "synced" : "local")"
+                            } ?? "no placement")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .task {
-            do {
-                result = .found(try store.records())
-            } catch {
-                result = .failed(String(describing: error))
-            }
+        .task(id: scenePhase) { read() }
+    }
+
+    @State private var placements: [UUID: ItemPlacement] = [:]
+
+    private func read() {
+        do {
+            result = .found(try store.records())
+        } catch {
+            result = .failed(String(describing: error))
         }
+
+        placements = (try? (store as? KeychainSecretStore)?.placements()) as? [UUID: ItemPlacement] ?? [:]
     }
 }

@@ -12,6 +12,15 @@ Apple Watch Ultra: the watch app named an account created on the phone, carried 
 Keychain through the shared access group. That assumption had been open since PR 5 and
 everything in the watch design rested on it.
 
+**Then it cost an hour to a second cause that was not a bug at all: iCloud Keychain is
+slow.** After the migration landed, the watch still showed one account of seven, and two
+successive theories were wrong, first the access group, then the migration failing to
+propagate. Both were wrong. The items simply took close to half an hour to arrive, one at a
+time, with no error anywhere. The lesson is recorded in `docs/ARCHITECTURE.md` as a design
+constraint rather than an anecdote, because an empty watch and a broken watch look identical
+and the watch's empty state has to be written for the person whose accounts are merely still
+in flight.
+
 **Running it found a real bug in PR 13, and Xavier found it, not the tests.** The watch
 showed one account where the phone showed six. PR 13 declared the shared access group and
 shipped no migration, so accounts saved before it are still in the app's bundle group. The

@@ -237,6 +237,21 @@ second source of truth about which accounts exist, and the failure mode of getti
 wrong is losing a second factor. Gate A2 should confirm this description against the
 behaviour rather than take it on trust.
 
+**iCloud Keychain propagation is slow enough to be mistaken for failure.** Measured on real
+hardware on 2026-08-14: seven accounts marked synchronizable on an iPhone took close to half
+an hour to appear on a paired Apple Watch, arriving one at a time rather than together. No
+error is reported anywhere during that window, on either device.
+
+This is not a footnote, it is a design constraint on the watch. An empty watch and a broken
+watch look exactly alike, and the most likely reason a new user sees an empty one is that
+they turned sync on a few minutes ago. The watch's empty state has to say "nothing has
+arrived yet" rather than anything that reads as a failure, and it must not invite the user
+to go and re-check settings that are already correct.
+
+The trap is real rather than theoretical: while chasing this, the wrong conclusion was
+reached twice from the same evidence, once blaming the access group and once blaming the
+migration, with a diagnostic screen showing the correct state the whole time.
+
 The watch reads the same synchronizable Keychain items rather than receiving secrets over
 WatchConnectivity. A bespoke transfer channel is another place for secret material to
 leak, and iCloud Keychain already solves the problem correctly.
