@@ -115,6 +115,11 @@ the interface would claim a relationship this project does not have. The preview
 The done screen says the file it just read holds secret keys in the clear and suggests
 deleting it.
 
+**A sheet you abandon has Cancel on the left, a sheet you close has Done on the right.**
+Add, edit and erase are abandoned, so they carry a leading Cancel. Settings and import are
+closed, so they carry a trailing Done. Import had Done in the cancellation slot, which put
+the same word on the opposite side from Settings.
+
 **One sheet, driven by an enum, not one per section.** Two `.sheet` modifiers on sibling
 sections of the same `Form` conflict: SwiftUI supports one presentation per view, and the
 second tore the first down as it appeared, taking the settings sheet with it and dropping

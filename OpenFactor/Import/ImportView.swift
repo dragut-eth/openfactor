@@ -34,7 +34,10 @@ struct ImportView: View {
             .navigationTitle("Import accounts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                // Trailing, like Settings. The rule across the app: a sheet you abandon
+                // has Cancel on the left, a sheet you close has Done on the right. This
+                // one had Done in the cancellation slot, which put it on the wrong side.
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
