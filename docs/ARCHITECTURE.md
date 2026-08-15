@@ -24,7 +24,7 @@ through interface code. The app targets are deliberately thin.
 
 ## OpenFactorCore
 
-*Everything but `SecretStore` exists as of PR 3. Storage arrives in PR 4.*
+*All of this exists. Storage arrived in PR 4.*
 
 | Component | Responsibility |
 | --- | --- |
@@ -129,8 +129,15 @@ work everywhere else. The reasoning is repeated at the code.
 
 ## App targets
 
-*Planned, arriving in PR 5 onward.* SwiftUI, with view models over `SecretStore` and the
-generators. Screens and behavior are specified in [UI_SPEC.md](UI_SPEC.md).
+*The iOS app exists as of PR 5, the watch app as of PR 14.* SwiftUI, with view models over
+`SecretStore` and the generators. Screens and behavior are specified in
+[UI_SPEC.md](UI_SPEC.md).
+
+A third folder, `OpenFactorShared`, is compiled into both app targets. It holds the colour
+and contrast arithmetic and the digit grouping, which both apps need and neither should own
+twice. The watch's palette values differ from the phone's on purpose, because there the
+colour is text rather than background, but the arithmetic deciding whether either is legible
+is the same arithmetic and there is one of it.
 
 **One timer for the whole list,** never one per row. Every visible code recomputes on a
 single shared tick.

@@ -52,7 +52,7 @@ Rate on the App Store, Send Feedback. Each row has a colored rounded icon. `Done
 
 | Change | Reason |
 | --- | --- |
-| Add **App Lock** (Face ID, Touch ID, passcode) | The reference has no lock at all. A found unlocked phone should not hand over every second factor |
+| Add **App Lock** (Face ID, Touch ID, passcode) | A found unlocked phone should not hand over every second factor. iOS can already lock any app at the system level, so what this adds is the grace period and, more importantly, the app switcher cover that hides codes for everyone whether they enable the lock or not |
 | Add **Export and Import** | Users must be able to leave. An authenticator you cannot escape is a trap |
 | Add **About and Source**, linking to the GitHub repo and license | The whole point of the project |
 | Replace **Send Feedback** with **Report an Issue**, linking to GitHub Issues | No mail composer, no support inbox to run |

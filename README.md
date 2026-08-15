@@ -72,16 +72,19 @@ Sources/OpenFactorCore/        Base32, HOTP, TOTP, otpauth parsing, secret stora
                                No UI. This is the security sensitive code.
 Tests/OpenFactorCoreTests/     Including the published RFC vector tables and the fuzzing.
 OpenFactor.xcodeproj           The app project. See docs/PROJECT.md for what is in it.
-OpenFactor/                    iOS app target. Views and view models only.
+OpenFactor/                    iOS app target. Views, view models, and the app lock.
+OpenFactorShared/              The little both app targets need: colour and contrast
+                               arithmetic, and digit grouping. Compiled into each.
+OpenFactorWatch Watch App/     watchOS app. Read only: it shows the list and one code.
+OpenFactorWatch Complication/  Launches the app. Holds no data and no Keychain entitlement.
 OpenFactorTests/               Runs the suite above inside a real app, for the Keychain.
 docs/                          Architecture, roadmap, UI specification, audits.
 ```
 
-The watchOS target does not exist yet. It arrives in PR 14, per the roadmap.
-
 ## Building
 
-Requires Xcode 16 or later, targeting iOS 18 and watchOS 11.
+Requires Xcode 26 or later, targeting iOS 18 and watchOS 11. The project uses synchronised
+folder groups, which older Xcode versions cannot open.
 
 ```bash
 git clone https://github.com/dragut-eth/openfactor.git
@@ -91,6 +94,13 @@ swift test
 
 `swift test` runs the core suite, including the RFC vectors and the fuzzing, in under a
 second and without a simulator.
+
+The watch app builds from the same project, and needs the watchOS platform installed, which
+Xcode downloads separately from its SDK:
+
+```bash
+xcodebuild -project OpenFactor.xcodeproj -scheme 'OpenFactorWatch Watch App' -destination 'generic/platform=watchOS Simulator' build
+```
 
 The tests that assert how secrets are protected in the Keychain **skip** under
 `swift test`, because reaching the data protection Keychain needs an entitlement that an
@@ -120,8 +130,18 @@ section will name the audited commit and who reviewed it.
 review, the RFC vector tables re-verified against the IETF documents, and 17,000+ fuzz
 iterations. Two defects found and fixed, full findings in
 [docs/audits/A1.md](docs/audits/A1.md), and its one open item closed in PR 5 when the
-protection class tests first ran for real. It was a model review, not a human one, and it
-does not soften the warning above.
+protection class tests first ran for real.
+
+**Gate A2** ran on 2026-08-14 against iCloud Keychain sync, the only feature that lets
+secret material leave the device, and again after the watch app was finished. Fourteen
+findings across the two passes, in [docs/audits/A2.md](docs/audits/A2.md). None was a path
+by which a secret escapes; almost all were sentences the interface or these documents
+asserted that the code could not back, which for a security tool is its own kind of defect.
+Two remain open and are marked as such wherever they are relied on: what turning sync off
+does to copies on other devices, where Apple's documentation and this project's expectation
+disagree, and one merge case that needs two devices to settle.
+
+Both were model reviews, not human ones, and they do not soften the warning above.
 
 ## Documentation
 
