@@ -190,6 +190,11 @@ interface says the app makes no network requests "of its own".
 There are no third party dependencies. Nothing in the supply chain but Apple's own
 frameworks and this repository.
 
+Within Apple's frameworks, the cryptography comes from CryptoKit, with one exception
+arriving in PR 16: CryptoKit has no password based key derivation, so the backup format's
+PBKDF2 comes from CommonCrypto. Both are Apple's, neither is vendored, and the exception is
+named here rather than left for a reader to notice.
+
 ### Attacker who publishes a modified build
 
 Verify what you install. Reproducible build notes land in PR 18 so a third party can

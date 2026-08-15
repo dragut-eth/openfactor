@@ -106,9 +106,14 @@ struct WatchCodeView: View {
     ///
     /// A space rather than dashes, because dashes read as a code that failed rather than as
     /// one that has not arrived, and the wait is a single frame.
+    ///
+    /// Counter based accounts say where their code is rather than that it is unavailable.
+    /// The watch is read only, and advancing a counter is a write, so this is the one thing
+    /// it genuinely cannot do for you. "Unavailable" reads as breakage; naming the phone
+    /// tells you what to do next.
     private var placeholder: String {
         if case .totp = record.metadata.generator { return " " }
-        return "unavailable"
+        return "On iPhone"
     }
 
     private func ring(at date: Date) -> some View {

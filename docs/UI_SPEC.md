@@ -1,7 +1,12 @@
 # UI Specification
 
 Derived from Step Two reference screenshots (kept locally in `assets/`, which is
-gitignored and never committed). The feature set is copied deliberately. The visual
+gitignored and never committed). Step Two is the product reference, and the feature set was chosen against it deliberately.
+The wording here used to say the feature set was "copied", which stopped being true a long
+time ago: sync semantics, the watch design, the app lock, the backup format, the palette and
+the icon are all this project's own, and several exist because Step Two does not have them.
+An accurate sentence also happens to be the safer one under App Review guideline 4.1, but
+accuracy is the reason it changed. The visual
 treatment is adapted where noted.
 
 ## Screen 1: Account list (root)

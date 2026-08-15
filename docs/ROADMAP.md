@@ -344,6 +344,15 @@ gets the fewest capabilities.
 
 ### PR 15: App lock
 
+**App Lock ships off by default.** An independent review argued for on by default, and the
+argument is real: a borrowed unlocked phone is exactly the case the lock defends, and a
+default nobody changes protects nobody. It stays off for two reasons. Everything in this app
+is opted into rather than imposed, and the app switcher cover, which is the leak that
+affected every user, is already unconditional. Xavier's additional reason is the one that
+settles it: managed deployment may later need to *enforce* the lock through a configuration
+profile, and a feature whose default the user chose is a cleaner thing to override than one
+that was always on.
+
 - Face ID, Touch ID, and passcode fallback on launch and on return from background
 - Codes blurred until authenticated
 - Configurable grace period
@@ -371,8 +380,13 @@ claim rather than an intention.
   about and get wrong
 - Aegis **encrypted** vaults are refused by name, not silently: they use scrypt, which this
   project cannot provide without a dependency. The message says to export unencrypted
-- Duplicates are skipped on **secret**, not on name. The secret is the account; a
-  re-enrolment is genuinely a different one
+- Duplicates are matched on **secret**, not on name, because a re-enrolment produces a
+  genuinely different secret. But the secret alone is not the account: the same secret with
+  a different algorithm, digit count, period, type or counter is a different authenticator
+  and would generate different codes. An exact match is skipped silently; a secret that
+  matches while any code affecting parameter differs is surfaced in the import preview as a
+  conflict, for the user to resolve. Raised by an independent review after the rule was
+  first settled as secret alone
 - An import preview before anything is written: how many found, how many will import, which
   will not and why. Built here, and it is also what PR 16a needs for forty accounts at once
 - **Erase all accounts**, in the app, behind Face ID and a typed confirmation. Deleting the

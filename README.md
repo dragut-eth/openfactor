@@ -33,11 +33,14 @@ That is a preference for verification over trust, not a criticism of a very good
 
 ## Principles
 
-1. **Nothing is stored online.** No backend exists. There is nothing to breach, subpoena,
-   or shut down.
-2. **Sync only through iCloud Keychain,** which is end to end encrypted. Apple holds no
-   key to it. Sync is off until you turn it on, and the app explains what is synced before
-   you do.
+1. **No OpenFactor servers and no OpenFactor cloud.** No backend exists. There is nothing
+   to breach, subpoena, or shut down. If you turn on sync, encrypted copies do leave the
+   device, through Apple's infrastructure and not ours, which is the next point.
+2. **Sync only through iCloud Keychain,** which is end to end encrypted, and Apple cannot
+   read the synced items. The keys are escrowed with Apple in a form guarded by hardware
+   security modules, so "Apple holds no key" would be too strong a claim; `SECURITY.md`
+   sets out what that escrow does and does not mean. Sync is off until you turn it on, and
+   the app explains what is synced before you do.
 3. **No tracking of any kind.** No analytics, no crash reporting, no first launch ping,
    no anonymous telemetry. The app makes no network requests at all.
 4. **Auditable by humans and by AI.** Small files, one concept each, plain naming, and no
@@ -47,6 +50,11 @@ That is a preference for verification over trust, not a criticism of a very good
    Keychain. Every dependency is code you would otherwise have to trust on our word.
 
 ## What it deliberately will not do
+
+**There is no Mac app and no browser extension, on purpose.** A second factor is worth
+less the moment it lives on the machine asking for it. Reading a code off a phone or a
+watch is the separation doing its job, not friction to be designed away.
+
 
 - Store passwords. This is an authenticator, not a password manager.
 - Offer accounts, servers, or a web app.

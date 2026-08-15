@@ -15,6 +15,9 @@ struct ManualSetupView: View {
     @State private var isChoosingColour = false
 
     @Environment(\.dismiss) private var dismiss
+
+    /// Whether the secret is shown in the clear. Off by default, and never remembered.
+    @State private var isSecretRevealed = false
     @Environment(\.colorScheme) private var colorScheme
 
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -62,11 +65,34 @@ struct ManualSetupView: View {
     private var accountSection: some View {
         Section {
             LabeledContent("Secret key") {
-                TextField("Paste or type it", text: $model.secretText)
+                HStack(spacing: Tokens.Spacing.small) {
+                    // Secure entry, because this is the secret itself. A plain field is
+                    // readable over a shoulder and can reach the keyboard's learning,
+                    // which is a copy of the secret in a place nobody audits.
+                    Group {
+                        if isSecretRevealed {
+                            TextField("Paste or type it", text: $model.secretText)
+                        } else {
+                            SecureField("Paste or type it", text: $model.secretText)
+                        }
+                    }
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
+                    .textContentType(.oneTimeCode)
                     .multilineTextAlignment(.trailing)
                     .font(.body.monospaced())
+
+                    // Deliberate, because a mistyped secret fails at a login rather than
+                    // here, and checking it is the only defence against that.
+                    Button {
+                        isSecretRevealed.toggle()
+                    } label: {
+                        Image(systemName: isSecretRevealed ? "eye.slash" : "eye")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(isSecretRevealed ? "Hide the secret" : "Show the secret")
+                }
             }
 
             LabeledContent("Service") {

@@ -254,7 +254,17 @@ struct AccountListView: View {
         // A system context menu, for the lift and the card preview behind it, which an
         // action sheet cannot reproduce. The cost is that iOS may append entries of its
         // own, including "Ask Siri". Accepted deliberately, see SECURITY.md.
-        .contextMenu { menu(for: row) }
+        .contextMenu {
+            menu(for: row)
+        } preview: {
+            // The same card, without the code. iOS may hand this preview to system
+            // features we do not control, and "Ask Siri" is documented in SECURITY.md as
+            // an accepted risk. Accepting the menu is not the same as feeding a live
+            // second factor into it, and a preview showing the account is enough to know
+            // which card was lifted.
+            AccountCard(model: row.card.withoutCode)
+                .frame(width: 320)
+        }
         .accessibilityHint(editMode.isEditing ? "Opens details" : "Copies the code")
     }
 

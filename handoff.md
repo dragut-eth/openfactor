@@ -3,8 +3,6 @@
 Running state of the project. Updated in every pull request, before the commit. Read this
 first when picking the work back up.
 
-**Last updated:** 2026-08-14, PR 14 started.
-
 ## Where things stand
 
 **Last updated:** 2026-08-15, PR 15 built and awaiting Xavier's device pass.
@@ -29,6 +27,30 @@ Gate A2's F8, what turning sync off does to copies elsewhere, where this project
 documentation and Apple's point in opposite directions, and F13's two device half, a same
 UUID twin that may defeat the repair claim. The experiment is written at the end of
 `docs/audits/A2.md`. Xavier now has the watch, so it is runnable.
+
+### Gate A3 reported, and the format is not frozen yet
+
+**Verdict: not yet safe to make permanent**, on two blocking findings, both now fixed.
+`docs/audits/A3.md` has the full report, findings F22 to F32.
+
+F22 is the one worth remembering. The published test vector had been produced by feeding
+the key derivation the *displayed* passphrase, hyphens included, while the document's own
+rule says hyphens are not part of it, and the vector's caption claimed the stripped form had
+been used. Anyone following the rule would have failed to reach the published bytes and
+assumed their own error; anyone reaching them would have shipped the bug the rule exists to
+prevent. Two conforming readers, disagreeing forever about which archives open. Exactly what
+this gate was scheduled to catch.
+
+F24, the passphrase entry contradiction, was found independently by A3 and by a review
+Xavier commissioned elsewhere. The format now carries a `passphrase` mode field, so a reader
+never has to guess which canonicalisation produced the key.
+
+The vector was regenerated and re-verified from the *displayed* form through the
+canonicalisation, by CommonCrypto, Python and Node, so the check now exercises the rule
+instead of bypassing it.
+
+**Two open items remain**, unchanged by A3: gate A2's F8 and F13, which need the two device
+experiment. The watch exists now, so they are runnable.
 
 ### PR 16 is inverted, and that is the design
 

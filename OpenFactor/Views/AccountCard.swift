@@ -36,6 +36,18 @@ struct AccountCard: View {
             guard let secondsRemaining else { return false }
             return secondsRemaining <= Tokens.Ring.warningThreshold
         }
+
+        /// The same card with the digits masked, for the system context menu preview.
+        ///
+        /// iOS may hand that preview to features this app does not control, and the "Ask
+        /// Siri" entry documented in `SECURITY.md` is the known example. Keeping the menu
+        /// was a deliberate decision; handing a live second factor to it was not part of
+        /// that decision, and the preview only needs to say which card was lifted.
+        var withoutCode: Model {
+            var masked = self
+            masked.code = String(repeating: "•", count: max(code.count, 6))
+            return masked
+        }
     }
 
     let model: Model
