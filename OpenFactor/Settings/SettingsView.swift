@@ -34,6 +34,12 @@ struct SettingsView: View {
 
     let store: any SecretStore
 
+    /// Called after accounts are erased, so the list behind reloads instead of showing
+    /// rows for accounts that no longer exist.
+    var onAccountsErased: () -> Void = {}
+
+    @State private var isErasing = false
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -68,6 +74,7 @@ struct SettingsView: View {
                 if let syncing = store as? any SynchronizableSecretStore {
                     syncSection(syncing)
                 }
+                eraseSection
                 aboutSection
             }
             .task { refreshSyncState() }
@@ -239,6 +246,31 @@ struct SettingsView: View {
         }
 
         return "Your accounts are in iCloud Keychain as well as on this device. \(common)"
+    }
+
+    /// Its own section, at the bottom, away from anything routine. A destructive action
+    /// sharing a section with a colour picker invites the wrong tap.
+    private var eraseSection: some View {
+        Section {
+            Button(role: .destructive) {
+                isErasing = true
+            } label: {
+                Text("Erase all accounts")
+            }
+        } footer: {
+            Text(
+                """
+                Removes every account from this iPhone. Deleting the app does not do this, \
+                because the Keychain outlives it.
+                """
+            )
+        }
+        .sheet(isPresented: $isErasing) {
+            EraseAccountsView(store: store) {
+                onAccountsErased()
+                refreshSyncState()
+            }
+        }
     }
 
     private var aboutSection: some View {

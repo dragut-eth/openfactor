@@ -64,7 +64,9 @@ struct AccountListView: View {
                 .sheet(isPresented: $isAdding) {
                     AddAccountView(store: store) { model.load(at: Date()) }
                 }
-                .sheet(isPresented: $isShowingSettings) { SettingsView(store: store) }
+                .sheet(isPresented: $isShowingSettings) {
+                    SettingsView(store: store) { model.load(at: Date()) }
+                }
                 .sheet(item: $editing) { row in
                     EditAccountView(record: row.record) { issuer, name, colour in
                         model.rename(row, issuer: issuer, name: name)

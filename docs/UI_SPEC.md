@@ -84,6 +84,26 @@ surface covers everything, including sheets, including manual entry with a half 
 secret in it. It exists because iOS photographs the app for the switcher, and that
 photograph must never contain a code. Lock or no lock, everyone gets this.
 
+**Erase all accounts**, in its own section at the bottom, away from anything routine,
+because a destructive action sharing a section with a colour picker invites the wrong tap.
+
+It exists because there is otherwise no way to start over: deleting the app does not
+reliably clear the Keychain, and with sync on anything cleared returns. The footer says
+that, since "just delete the app" is what everyone assumes.
+
+Three defences, each answering a different way this goes wrong. **Face ID or the passcode**,
+whether or not App Lock is on, because someone holding an unlocked phone should not destroy
+every second factor with two taps. **A typed word**, `ERASE`, because a confirmation you can
+tap through is a confirmation you will tap through. And **a sentence naming what actually
+happens**, which changes with where the accounts are: when they are synced it says the
+erase reaches the other devices, including the watch. Gate A2's experiment showed a watch
+emptying fourteen minutes after sync was merely switched off, so an erase certainly does,
+and none of that is obvious from the word on the button.
+
+It removes records this version cannot decode as well as the ones it can. An erase that
+reports success and leaves a secret behind is the worst outcome available here, and it is
+the one case the tests are really about.
+
 **App icon: Dark, Light, Automatic.** Duplicating part of the system's own icon appearance
 control on purpose. That one applies to every app at once, and someone who wants their
 authenticator to look a particular way should not have to make every other icon match.

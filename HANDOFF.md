@@ -14,7 +14,7 @@ first when picking the work back up.
 | Gate A2, audit of sync | Done, twice. Original eleven findings closed except F8 and F13's two device half; three new findings from the re-verification, all fixed |
 | PR 14, watchOS app | Feature complete on `pr-14-watch`, re-verified, pushed |
 | PR 15, app lock | Built on `pr-15-app-lock`, pushed. Face ID needs a real device |
-| PR 16, export and import | Format written and pushed on `pr-16-backup-format`. **Gate A3 next.** No code yet, on purpose |
+| PR 16, export and import | Format written, audited at A3, findings fixed, merged to `main`. Implementation started on `pr-16-import-export`: erase all accounts is built, the importers are next |
 | PR 17 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **What only Xavier can verify in PR 15:** Face ID and passcode unlock, the grace periods,

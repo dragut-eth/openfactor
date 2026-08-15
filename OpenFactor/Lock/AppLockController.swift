@@ -110,4 +110,31 @@ enum AppLockAvailability {
     static var canAuthenticate: Bool {
         LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: nil)
     }
+
+    /// Asks the person to prove they are the owner, for an action that is not the lock.
+    ///
+    /// Erasing and exporting both need this whether or not App Lock is enabled: one
+    /// destroys every secret, the other writes them all to a file, and neither should be
+    /// two taps away on a phone someone handed over unlocked.
+    ///
+    /// **On a device with no passcode there is nothing to verify, and this returns true.**
+    /// Refusing would deny someone a backup, or the ability to wipe a phone they are
+    /// selling, on a device that is already wide open to anyone holding it. The caller
+    /// warns instead. Decided with Xavier during PR 16 planning.
+    @MainActor
+    static func authenticate(reason: String) async -> Bool {
+        let context = LAContext()
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil) else {
+            return true
+        }
+
+        do {
+            return try await context.evaluatePolicy(
+                .deviceOwnerAuthentication,
+                localizedReason: reason
+            )
+        } catch {
+            return false
+        }
+    }
 }

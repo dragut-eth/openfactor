@@ -391,7 +391,8 @@ claim rather than an intention.
 - **Erase all accounts**, in the app, behind Face ID and a typed confirmation. Deleting the
   app does not clear the Keychain, and with sync on anything cleared returns, so without
   this there is no way to start over. It says plainly that erasing removes the accounts from
-  synced devices too
+  synced devices too. **Built first**, because testing an import twice is impossible without
+  it
 
 ### PR 16a: Import from Google Authenticator
 
