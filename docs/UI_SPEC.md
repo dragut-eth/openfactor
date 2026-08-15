@@ -279,6 +279,16 @@ both as translucent pill buttons. No frame overlay, no instructions.
   one beside the words "On iPhone". Nothing was counting down, so the animation meant
   nothing, and next to a code that is not there a moving ring reads as the watch failing
   to fetch one rather than as a code that only the phone can advance.
+- **The watch sorts those accounts to the bottom and dims them**, with a phone glyph on
+  the row and one footnote under the list. It does not hide them. On a watch, absent is
+  indistinguishable from not synced yet, and this project has already spent half an hour
+  convinced sync was broken when iCloud Keychain was merely slow: a wearer counting four
+  rows against seven accounts would have no way to tell a decision from a bug. The case
+  that settles it is a person whose accounts are all counter based, for whom hiding turns
+  the list into "No accounts yet", which is false. Dimming is sixty percent, the weight
+  the system gives `.secondary`, applied to the whole row so the palette relationship is
+  scaled rather than rearranged. The ordering is asserted by test, including that the
+  wearer's own order survives inside each group.
 
 ## Screen 5: Edit mode
 

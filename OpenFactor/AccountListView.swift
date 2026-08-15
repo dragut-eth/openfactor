@@ -355,18 +355,30 @@ extension View {
 private struct CardButtonLabel: View {
     let systemImage: String
 
-    /// Scaled on the same curve as the card's ring, which is what it stands in for. Fixed
-    /// at the token, it read as the smaller sibling of the countdown on a card beside it,
-    /// and the two are the same control in different clothes: the place a card tells you
-    /// about its code. The glyph scales with it rather than rattling around inside.
+    /// Scaled on the same curve as the card's ring, which is what it stands in for. The two
+    /// are the same control in different clothes: the place a card tells you about its code.
     @ScaledMetric(relativeTo: .body) private var size = Tokens.Ring.size
 
     var body: some View {
         Image(systemName: systemImage)
             .font(.system(size: size * 0.52, weight: .semibold))
             .foregroundStyle(Tokens.OnCard.primary)
+            // The layout frame is the ring's frame, so the two sit on the same centre.
             .frame(width: size, height: size)
-            .background(Tokens.OnCard.primary.opacity(0.18), in: Circle())
+            // The disc is drawn larger, and the difference is the whole reason this looked
+            // like the smaller control. A stroked `Circle` straddles its path, so the ring
+            // reaches half a line width past the frame on every side and measures
+            // `size + lineWidth` across. Matching the frame matched the wrong number. A
+            // background view is centred on the frame and free to overflow it, so this
+            // grows the visible disc to the ring's outer edge without moving anything.
+            .background {
+                Circle()
+                    .fill(Tokens.OnCard.primary.opacity(0.18))
+                    .frame(
+                        width: size + Tokens.Ring.lineWidth,
+                        height: size + Tokens.Ring.lineWidth
+                    )
+            }
     }
 }
 

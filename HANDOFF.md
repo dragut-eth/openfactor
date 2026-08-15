@@ -185,6 +185,8 @@ OpenFactorShared/                          Compiled into both app targets
   PaletteColor.swift                       Colour and contrast arithmetic
   CodeFormatting.swift                     Digit grouping for transcription
   WatchPalette.swift                       The palette inverted for text on black
+  WatchList.swift                          Which accounts the watch can finish, and the
+                                           order it puts them in. Shown, never hidden
 OpenFactorWatch Watch App/                 watchOS target. Read only by design
   WatchAccountListView.swift               Tinted rows, and an empty state written for
                                            accounts that are merely still in flight

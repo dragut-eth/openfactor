@@ -47,7 +47,12 @@ struct WatchAccountListView: View {
                     .listRowBackground(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(WatchPalette.rowBackground(for: record.metadata.color).color)
+                            .opacity(WatchList.needsPhone(record) ? 0.6 : 1)
                     )
+                }
+
+                if rows.contains(where: WatchList.needsPhone) {
+                    phoneFootnote
                 }
             }
             // No title. The app's name at the top of its own list is a word the wearer
@@ -56,21 +61,54 @@ struct WatchAccountListView: View {
         .task(id: scenePhase) { load() }
     }
 
+    /// A row, dimmed and marked when its code lives on the phone.
+    ///
+    /// The glyph carries the meaning and the dimming carries the ranking. Sixty percent is
+    /// the weight the system gives `.secondary`, which is the same claim being made here:
+    /// still readable, not what you came for. It is applied to the whole row rather than to
+    /// the issuer alone, so the colour relationship the palette was checked for is scaled
+    /// rather than rearranged.
     private func row(_ record: AccountRecord) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(record.metadata.displayIssuer)
-                .font(.headline)
-                .foregroundStyle(WatchPalette.color(for: record.metadata.color))
+        let needsPhone = WatchList.needsPhone(record)
 
-            if !record.metadata.name.isEmpty {
-                Text(record.metadata.name)
+        return HStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(record.metadata.displayIssuer)
+                    .font(.headline)
+                    .foregroundStyle(WatchPalette.color(for: record.metadata.color))
+
+                if !record.metadata.name.isEmpty {
+                    Text(record.metadata.name)
+                        .font(.footnote)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+
+            if needsPhone {
+                Spacer(minLength: 0)
+                Image(systemName: "iphone")
                     .font(.footnote)
                     .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                    .accessibilityLabel("On iPhone")
             }
         }
+        .opacity(needsPhone ? 0.6 : 1)
         .padding(.vertical, 2)
+    }
+
+    /// One line, because a dimmed row and a small glyph are a hint rather than a sentence.
+    ///
+    /// It appears only when there is something for it to explain, and it says where the
+    /// code is rather than that this one is unavailable. "Unavailable" reads as breakage;
+    /// naming the phone tells the wearer what to do next, which is the same wording the
+    /// code screen uses for the same reason.
+    private var phoneFootnote: some View {
+        Text("Counter based codes advance on your iPhone.")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .listRowBackground(Color.clear)
     }
 
     /// **This wording is load bearing, and the first version of it was wrong.**
@@ -110,7 +148,7 @@ struct WatchAccountListView: View {
 
     private func load() {
         do {
-            rows = try store.records().readable
+            rows = WatchList.ordered(try store.records().readable)
             failure = nil
         } catch {
             rows = []
