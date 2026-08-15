@@ -29,9 +29,25 @@ enum WatchPalette {
         .gray: PaletteColor(hex: 0xB0_B4BA),
     ]
 
+    /// How strongly a row's background is tinted with its account colour.
+    ///
+    /// Enough that the list is not a column of identical grey slabs, and little enough that
+    /// the issuer, drawn in the full strength colour on top of it, stays legible. Both ends
+    /// of that are asserted in `WatchPaletteTests` rather than judged by eye.
+    static let rowTint = 0.16
+
     /// Falls back rather than failing, for the same reason the core decodes an unknown
     /// colour name as the default: a paint colour must never stop an account being shown.
+    static func entry(for color: AccountColor) -> PaletteColor {
+        entries[color] ?? entries[.gray]!
+    }
+
     static func color(for color: AccountColor) -> Color {
-        (entries[color] ?? entries[.gray]!).color
+        entry(for: color).color
+    }
+
+    /// A row's background: the account's colour, mostly black.
+    static func rowBackground(for color: AccountColor) -> PaletteColor {
+        entry(for: color).blended(with: .black, amount: 1 - rowTint)
     }
 }

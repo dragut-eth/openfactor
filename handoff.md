@@ -35,8 +35,13 @@ phone's colours are built to sit behind white text and that is exactly wrong aga
 `PaletteColor` and `CodeFormatting` moved to `OpenFactorShared`, a folder both app targets
 synchronise, so the colour maths is not written twice.
 
-Still to do in PR 14: the complications decision, which the roadmap deliberately left open,
-and running the watch through accessibility text sizes the way the phone was in PR 12.
+**The complication decision is made: it launches the app and shows nothing.** Xavier's call,
+and the design makes it structural rather than a promise. The extension has no Keychain
+entitlement, so it cannot show a code even if asked, and that absence is asserted in
+`docs/PROJECT.md` as a setting that matters. Its timeline is one entry that never refreshes.
+
+Still to do in PR 14: running the watch through accessibility text sizes the way the phone
+was in PR 12.
 
 **Gate A2 is done and its follow up has landed.** The report is
 `docs/audits/A2.md`, findings F8 to F18. It found no path by which a secret leaves the

@@ -31,6 +31,7 @@ it is true.
 | `OpenFactorTests` | Unit tests, **hosted by the app** |
 | `OpenFactorUITests` | Template placeholder, empty, not run in CI |
 | `OpenFactorWatch Watch App` | The watchOS app. Read only, added in PR 14 |
+| `OpenFactorWatch Complication` | The watch face complication. Launches the app, holds no data |
 
 ### Why hosting matters
 
@@ -57,6 +58,7 @@ This is why the app target exists at all right now. The interface came second.
 | Watch `INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp` | `YES` | The watch app has to work with the phone off, absent, or out of range. That requirement is what ruled out asking the phone for each code, and it is why the watch holds its own copy of the secrets |
 | Watch `CODE_SIGN_ENTITLEMENTS` | `OpenFactorWatch Watch App/OpenFactorWatch.entitlements` | Declares the same shared Keychain access group as the phone. This is the entire mechanism by which the watch sees the phone's accounts, so it is the one setting that, if wrong, produces a watch app that runs perfectly and shows nothing |
 | Watch `WATCHOS_DEPLOYMENT_TARGET` | `11.0` | Matches the package |
+| Complication has **no** `CODE_SIGN_ENTITLEMENTS` | absent | The complication never reads the Keychain, and the absence of the entitlement is what guarantees it. A live code on a watch face is a second factor shown to anyone who glances at your wrist. Adding an entitlement here reverses a security decision |
 | `INFOPLIST_KEY_NSCameraUsageDescription` | set | The camera is used to scan setup codes. A missing usage string is not a warning, it is a crash the first time the app asks, and only on a real device where nobody is looking |
 
 ## Folder layout
@@ -88,6 +90,17 @@ the second synchronised folder was added to the project file directly.
 CI runs both jobs. If you find yourself making the Keychain tests pass under `swift test`,
 stop: they are supposed to skip there, and the only way to make them pass would be to
 weaken what they assert.
+
+## Folders shared between targets
+
+`OpenFactorShared` holds the small amount of interface code both app targets need:
+`PaletteColor`, which is the colour and contrast maths, and `CodeFormatting`, which groups
+digits for transcription. It is attached to the phone and watch targets as a synchronised
+folder, the same mechanism that attaches the core's test sources to the app test target.
+
+It exists so those two are not written twice. The watch palette's values differ from the
+phone's on purpose, since the colour is text there rather than background, but the arithmetic
+that decides whether either is legible is the same arithmetic and there should be one of it.
 
 ## The watch app is not embedded in the phone app yet
 

@@ -31,6 +31,8 @@ struct PaletteColor: Sendable, Equatable {
         Color(.sRGB, red: red, green: green, blue: blue)
     }
 
+    static let black = PaletteColor(0, 0, 0)
+
     /// Relative luminance, per the WCAG 2.1 definition.
     ///
     /// https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
@@ -53,6 +55,17 @@ struct PaletteColor: Sendable, Equatable {
     }
 
     /// Moves a colour toward black, for the darker end of a card's gradient.
+    /// Mixes towards another colour. Used for the watch's tinted rows, which are the
+    /// account's colour laid over black rather than a separate set of values to maintain.
+    func blended(with other: PaletteColor, amount: Double) -> PaletteColor {
+        let t = max(0, min(1, amount))
+        return PaletteColor(
+            red + (other.red - red) * t,
+            green + (other.green - green) * t,
+            blue + (other.blue - blue) * t
+        )
+    }
+
     func darkened(by amount: Double) -> PaletteColor {
         PaletteColor(red * (1 - amount), green * (1 - amount), blue * (1 - amount))
     }

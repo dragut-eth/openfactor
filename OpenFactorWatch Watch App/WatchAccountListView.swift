@@ -31,13 +31,27 @@ struct WatchAccountListView: View {
 
                 ForEach(rows, id: \.id) { record in
                     NavigationLink {
+                        // Identity per account, or SwiftUI reuses the same destination
+                        // instance between pushes and the previous account's code stays on
+                        // screen until the next refresh lands. Showing one account's code
+                        // under another account's name is worse than a slow screen: it is
+                        // the kind of thing someone types into the wrong login.
                         WatchCodeView(store: store, record: record)
+                            .id(record.id)
                     } label: {
                         row(record)
                     }
+                    // A hint of the account's colour rather than a column of identical grey
+                    // slabs. Mostly black, so the issuer drawn in the full strength colour
+                    // on top of it stays legible. Both ends are asserted by test.
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(WatchPalette.rowBackground(for: record.metadata.color).color)
+                    )
                 }
             }
-            .navigationTitle("OpenFactor")
+            // No title. The app's name at the top of its own list is a word the wearer
+            // already knows, spending the most valuable strip of a very small screen.
         }
         .task(id: scenePhase) { load() }
     }

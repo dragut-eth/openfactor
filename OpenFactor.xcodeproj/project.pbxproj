@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		50AA0000000000000000000B /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50AA0000000000000000000A /* OpenFactorCore */; };
 		50D16262302F862B00211D42 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50D16261302F862B00211D42 /* OpenFactorCore */; };
+		50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 50ACFFFFFFFFFFFF00000009 /* OpenFactorComplication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,6 +27,13 @@
 			remoteGlobalIDString = 50AC3C97302F852300379FC2;
 			remoteInfo = OpenFactor;
 		};
+		50ACFFFFFFFFFFFF0000000F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 50AC3C90302F852300379FC2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50ACFFFFFFFFFFFF00000001;
+			remoteInfo = "OpenFactorWatch Complication";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +41,7 @@
 		50AC3C98302F852300379FC2 /* OpenFactor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenFactor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		50AC3CA5302F852400379FC2 /* OpenFactorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenFactorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		50AC3CAF302F852400379FC2 /* OpenFactorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenFactorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		50ACFFFFFFFFFFFF00000009 /* OpenFactorComplication.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpenFactorComplication.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -72,7 +81,26 @@
 			path = Tests/OpenFactorCoreTests;
 			sourceTree = "<group>";
 		};
+		50ACFFFFFFFFFFFF00000008 /* OpenFactorWatch Complication */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "OpenFactorWatch Complication";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		50ACFFFFFFFFFFFF0000000C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		50AA00000000000000000006 /* Frameworks */ = {
@@ -105,6 +133,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		50ACFFFFFFFFFFFF00000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -124,6 +159,7 @@
 				50AC3CA8302F852400379FC2 /* OpenFactorTests */,
 				50AC3CB2302F852400379FC2 /* OpenFactorUITests */,
 				50AA00000000000000000008 /* OpenFactorWatch Watch App */,
+				50ACFFFFFFFFFFFF00000008 /* OpenFactorWatch Complication */,
 				50AB00000000000000000001 /* OpenFactorShared */,
 				50AC3C99302F852300379FC2 /* Products */,
 				5082E0C9303011C8005440A4 /* Recovered References */,
@@ -137,6 +173,7 @@
 				50AC3CA5302F852400379FC2 /* OpenFactorTests.xctest */,
 				50AC3CAF302F852400379FC2 /* OpenFactorUITests.xctest */,
 				50AA00000000000000000009 /* OpenFactorWatch.app */,
+				50ACFFFFFFFFFFFF00000009 /* OpenFactorComplication.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -151,10 +188,12 @@
 				50AA00000000000000000005 /* Sources */,
 				50AA00000000000000000006 /* Frameworks */,
 				50AA00000000000000000007 /* Resources */,
+				50ACFFFFFFFFFFFF0000000C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				50ACFFFFFFFFFFFF0000000E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				50AA00000000000000000008 /* OpenFactorWatch Watch App */,
@@ -239,6 +278,28 @@
 			productReference = 50AC3CAF302F852400379FC2 /* OpenFactorUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		50ACFFFFFFFFFFFF00000001 /* OpenFactorWatch Complication */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50ACFFFFFFFFFFFF00000002 /* Build configuration list for PBXNativeTarget "OpenFactorWatch Complication" */;
+			buildPhases = (
+				50ACFFFFFFFFFFFF00000005 /* Sources */,
+				50ACFFFFFFFFFFFF00000006 /* Frameworks */,
+				50ACFFFFFFFFFFFF00000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				50ACFFFFFFFFFFFF00000008 /* OpenFactorWatch Complication */,
+			);
+			name = "OpenFactorWatch Complication";
+			packageProductDependencies = (
+			);
+			productName = OpenFactorComplication;
+			productReference = 50ACFFFFFFFFFFFF00000009 /* OpenFactorComplication.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -286,6 +347,7 @@
 				50AC3CA4302F852400379FC2 /* OpenFactorTests */,
 				50AC3CAE302F852400379FC2 /* OpenFactorUITests */,
 				50AA00000000000000000001 /* OpenFactorWatch Watch App */,
+				50ACFFFFFFFFFFFF00000001 /* OpenFactorWatch Complication */,
 			);
 		};
 /* End PBXProject section */
@@ -313,6 +375,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		50AC3CAD302F852400379FC2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50ACFFFFFFFFFFFF00000007 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -350,6 +419,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		50ACFFFFFFFFFFFF00000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -362,6 +438,12 @@
 			isa = PBXTargetDependency;
 			target = 50AC3C97302F852300379FC2 /* OpenFactor */;
 			targetProxy = 50AC3CB0302F852400379FC2 /* PBXContainerItemProxy */;
+		};
+		50ACFFFFFFFFFFFF0000000E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "OpenFactorWatch Complication";
+			target = 50ACFFFFFFFFFFFF00000001 /* OpenFactorWatch Complication */;
+			targetProxy = 50ACFFFFFFFFFFFF0000000F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -730,6 +812,56 @@
 			};
 			name = Release;
 		};
+		50ACFFFFFFFFFFFF00000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HST4KH9P2X;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
+				INFOPLIST_FILE = "OpenFactorComplication-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev.watchkitapp.complication;
+				PRODUCT_NAME = OpenFactorComplication;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		50ACFFFFFFFFFFFF00000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HST4KH9P2X;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = OpenFactor;
+				INFOPLIST_FILE = "OpenFactorComplication-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev.watchkitapp.complication;
+				PRODUCT_NAME = OpenFactorComplication;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -774,6 +906,15 @@
 			buildConfigurations = (
 				50AC3CC0302F852400379FC2 /* Debug */,
 				50AC3CC1302F852400379FC2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		50ACFFFFFFFFFFFF00000002 /* Build configuration list for PBXNativeTarget "OpenFactorWatch Complication" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				50ACFFFFFFFFFFFF00000003 /* Debug */,
+				50ACFFFFFFFFFFFF00000004 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

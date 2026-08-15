@@ -261,6 +261,18 @@ to you. One code, when you ask for it, is the whole difference.
 back.** Nothing else. The ring turns red for the last five seconds, as on the phone, because
 a code you are halfway through typing is about to stop working.
 
+**The complication launches the app and shows nothing.** Decided by Xavier, and it is the
+same call as codes being absent from the list, for the same reason: a watch face is readable
+by anyone standing next to you, glanced at over a shoulder, photographed across a table. A
+live code sitting there permanently is a second factor shown to the room all day.
+
+The design makes that structural rather than a promise. The complication is a separate
+extension with **no `keychain-access-groups` entitlement**, so it cannot reach the secrets
+even if a future change asked it to, and its timeline is a single entry with a `.never`
+refresh policy, so it has no reason to wake up at all. Anything that gives that target
+Keychain access is reversing a security decision and should be reviewed as one, not merged
+as a feature.
+
 **The empty state is load bearing, and it is written for the person whose accounts are
 merely late.** An empty watch and a broken watch look identical. iCloud Keychain took close
 to half an hour to carry seven accounts across during PR 14, arriving one at a time with no

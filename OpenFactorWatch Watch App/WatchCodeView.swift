@@ -19,12 +19,16 @@ struct WatchCodeView: View {
     @State private var code: String?
     @State private var now = Date()
 
+    /// Whether a read has been attempted yet, so the placeholder can tell "still loading"
+    /// apart from "this account cannot produce a code".
+    @State private var hasRead = false
+
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 6) {
             HStack(spacing: 10) {
-                Text(code.map(CodeFormatting.grouped) ?? "------")
+                Text(code.map(CodeFormatting.grouped) ?? (hasRead ? "unavailable" : " "))
                     .font(.system(size: 30, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)
@@ -35,20 +39,21 @@ struct WatchCodeView: View {
 
             VStack(spacing: 0) {
                 Text(record.metadata.displayIssuer)
-                    .font(.footnote)
+                    .font(.headline)
                     .foregroundStyle(WatchPalette.color(for: record.metadata.color))
 
                 if !record.metadata.name.isEmpty {
                     Text(record.metadata.name)
-                        .font(.caption2)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
             }
         }
-        .navigationTitle(record.metadata.displayIssuer)
-        .navigationBarTitleDisplayMode(.inline)
+        // No navigation title. It was the issuer, which is already named beneath the
+        // code, and on a screen this size the same word twice is the most expensive
+        // duplication there is.
         .onReceive(tick) { now = $0 }
         .task(id: now.timeIntervalSince1970.rounded()) { refresh() }
     }
@@ -87,6 +92,8 @@ struct WatchCodeView: View {
     }
 
     private func refresh() {
+        defer { hasRead = true }
+
         guard case let .totp(configuration) = record.metadata.generator else {
             code = nil
             return
