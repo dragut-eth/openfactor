@@ -273,6 +273,12 @@ refresh policy, so it has no reason to wake up at all. Anything that gives that 
 Keychain access is reversing a security decision and should be reviewed as one, not merged
 as a feature.
 
+**One thing on the watch is the platform's and is left alone.** Scrolled rows flash to full
+opacity for a frame during a push, as watchOS drops its own scroll edge treatment before the
+transition finishes. Checked against a stock watch app, which does the same, rather than
+assumed. Defeating it would mean drawing our own edge treatment and fighting the platform's,
+which is not worth it for a single frame.
+
 **The empty state is load bearing, and it is written for the person whose accounts are
 merely late.** An empty watch and a broken watch look identical. iCloud Keychain took close
 to half an hour to carry seven accounts across during PR 14, arriving one at a time with no
