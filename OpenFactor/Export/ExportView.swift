@@ -153,9 +153,8 @@ struct ExportView: View {
         } footer: {
             Text(
                 """
-                One hundred and twenty bits, from this device. The letters and digits avoid \
-                every pair that is easy to confuse by hand. The spacing is for reading: type \
-                it back in any grouping, or none at all.
+                One hundred and twenty bits, from this device. The spacing is for reading: \
+                type it back in any grouping, or none at all.
                 """
             )
         }
