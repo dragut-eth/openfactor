@@ -71,6 +71,12 @@ Refuse, with a message naming the reason, and before deriving any key:
 - a `kdf.salt` that is not 32 bytes, a `cipher.nonce` that is not 12, a `cipher.tag` that
   is not 16
 - a `kdf.iterations` outside 100,000 to 10,000,000 inclusive
+- **any of these fields missing, null, or of the wrong JSON type.** Nothing here has a
+  default. A reader that supplies one for `passphrase` in particular has silently chosen
+  which rule to try first, which is a decision the file was supposed to make
+- **a `ciphertext` longer than 8 MiB, or a decoded payload longer than 8 MiB.** Roughly
+  fifty thousand accounts, far past any real archive and short of anything that hurts a
+  phone. Every attacker controlled length needs a bound, not only the iteration count
 
 These are checked rather than assumed even though a wrong value would fail the
 authentication tag anyway, because a reader that ignores a field it consumes works by
@@ -79,32 +85,58 @@ steered by an edited field toward its weakest option.
 
 ### Passphrase entry, exactly
 
-The `passphrase` field records which rule produced the key, because the two rules are not
-interchangeable and a reader cannot infer which was used. **This field is why two conforming
-readers cannot disagree about which archives open.**
+Two rules produce a key, and **a reader tries both**. The `passphrase` field says which one
+the writer used, and it is a **hint that orders the attempts, never a gate that forbids
+one**.
 
-**`"generated"`.** The passphrase was produced by the generator described below and is
-displayed to the user in hyphenated groups. Given a typed or pasted string, a reader must:
+**Canonical form**, used for generated passphrases:
 
-1. remove every Unicode whitespace character and every ASCII hyphen-minus (`U+002D`)
-2. uppercase the result using ASCII case mapping only, never a locale aware one, so that a
-   Turkish locale cannot turn `i` into `İ`
-3. take the UTF-8 bytes of that result
+1. Uppercase using ASCII case mapping only, never a locale aware one, so that a Turkish
+   locale cannot turn `i` into `İ`.
+2. Keep only characters in the RFC 4648 Base32 alphabet, `A` to `Z` and `2` to `7`. Discard
+   everything else.
 
-**`"custom"`.** The user supplied their own passphrase. A reader must take the UTF-8 bytes
-of the input exactly as given: no stripping, no case folding, no Unicode normalisation.
+That second step is the whole rule, and it is deliberately blunt. It removes hyphens,
+whitespace under every competing definition of the word, en dashes and other dash lookalikes
+that smart punctuation substitutes, byte order marks, and anything else a passphrase picks
+up in transit. A correctly generated passphrase contains nothing but alphabet characters, so
+discarding the rest can never change a clean input, and it rescues every mangled one.
 
-A writer sets the field to match what it actually did. A writer that canonicalises a
-generated passphrase before deriving the key, as it must, and then labels the archive
-`custom`, has produced a file nobody can open.
+**Verbatim form**, used for custom passphrases: the UTF-8 bytes of the input exactly as
+given. No stripping, no case folding, no Unicode normalisation.
 
-**A hazard on the custom path.** Two keyboards can encode the same non-ASCII passphrase
+**The reader algorithm, which is not optional:**
+
+```
+try the form named by the passphrase field
+if the tag verifies, done
+try the other form
+if the tag verifies, done
+otherwise refuse
+```
+
+At most two derivations. The user supplies one input, so at most one of the two can match
+the key, and there is no ambiguity to resolve. Two readers following this open exactly the
+same set of archives whatever the header says.
+
+**Why the field is a hint and not an instruction.** An earlier revision made it
+authoritative, and that turned one byte of unauthenticated cleartext into a way to destroy
+the only copy of somebody's secrets: flip `generated` to `custom` in any text editor, and a
+conforming reader feeds the KDF different bytes than the writer did, forever. Authenticating
+the field does not help, since a flipped bit would then fail the tag instead. The only
+attacker served by that is one who wants the owner never to recover, and this is a recovery
+format.
+
+**Writers** set the field to match the rule they used, and canonicalise before deriving when
+they generated the passphrase. A writer that mislabels merely costs a reader one extra
+derivation.
+
+**A hazard on the verbatim path.** Two keyboards can encode the same non-ASCII passphrase
 differently, composed on one platform and decomposed on another, same glyphs and different
-bytes, therefore a different key. This format deliberately does not normalise, because
-normalising would silently change a passphrase a user typed. A writer should warn when a
-custom passphrase contains non-ASCII characters. A reader whose first attempt fails **may**
-additionally try the NFC and NFD forms as candidates; doing so changes no archive and can
-rescue a user who is locked out of their own recovery.
+bytes, therefore a different key. This format does not normalise, because normalising would
+silently change a passphrase a user typed. A writer should warn when a custom passphrase
+contains non-ASCII characters, and a reader whose two attempts both fail **may** try the NFC
+and NFD forms of the verbatim rule before refusing.
 
 ### Deriving the key
 
@@ -179,12 +211,26 @@ encrypted vault, and the consequence is that reading an Aegis vault requires fin
 scrypt implementation first. Choosing the weaker function with universal availability is a
 deliberate trade of theoretical strength for real recoverability.
 
-The trade is only defensible because of the passphrase. Against a human chosen passphrase,
-Argon2id buys a few orders of magnitude and a determined attacker still wins eventually.
-Against the 120 bit random passphrase this app generates, PBKDF2 at 600,000 iterations is
-not the weak link and neither would anything else be. **The passphrase carries the security
-of this format, not the KDF.** An archive protected by a passphrase the user invented is
-weaker than one protected by a generated passphrase, and no choice of KDF changes that.
+The trade is only defensible because of the generated passphrase. Against 120 bits of
+entropy, PBKDF2 at 600,000 iterations is not the weak link, and neither would Argon2id be.
+
+**On the custom path the trade is paid in full, and an earlier revision of this page denied
+it.** It said no choice of KDF changes the weakness of a human chosen passphrase. That is
+false. PBKDF2-HMAC-SHA256 at this work factor runs at thousands of guesses per second on one
+current consumer GPU, which finishes a large wordlist in about an hour and a common password
+in about a minute. Argon2id at standard memory settings moves that attack off the GPU
+entirely, two to three orders of magnitude out. The user who overrides the generator is
+precisely the user paying for PBKDF2's universal availability, and telling them the price is
+zero was the kind of comfortable sentence this project exists to avoid.
+
+Two consequences, both binding on writers:
+
+- **The generator is the default and stays the default.** Necessary, and not sufficient.
+- **A writer must refuse a custom passphrase below a stated strength**, or must not offer
+  the custom path at all. `"password"` is otherwise a conforming archive holding every
+  secret its owner has, permanently, because version 1 is forever. OpenFactor requires at
+  least 12 characters and refuses passphrases on a common-password list; another
+  implementation may set a different bar, but it must set one.
 
 ### The generated passphrase
 
@@ -279,6 +325,9 @@ above.
 
 | | |
 | --- | --- |
+**This passphrase is published in a public document. Never use it to protect anything.**
+It exists so implementations can check themselves.
+
 | `passphrase` mode | `generated` |
 | Passphrase, as displayed to the user | `YZTR-THFW-WT6E-OXIV-73XD-QCDM` |
 | Passphrase, canonicalised, and this is what the KDF receives | `YZTRTHFWWT6EOXIV73XDQCDM`, 24 characters |
@@ -317,14 +366,76 @@ Tag, base64:
 9rCMg60+9TYAwqaTdsgr6A==
 ```
 
-**Verified independently.** The key was derived from the displayed passphrase, through the
-canonicalisation above, by Apple's CommonCrypto and separately by Python's
-`hashlib.pbkdf2_hmac`, which agree. The ciphertext was sealed by CryptoKit and decrypted,
-with the tag verified and the AAD checked, by Node's OpenSSL binding. Three implementations
-sharing no code.
+### Inputs that must all reach the same key
 
-An implementer should reach exactly these bytes before trusting their reader with anything
-real.
+A vector with one clean input certifies a reader that only handles clean input. Each of
+these is a way a real person hands the passphrase back, and **every one must produce the
+generated key above**. A reader that opens the archive from the first line and refuses any
+of the rest has implemented a different format.
+
+| Input | Why it happens |
+| --- | --- |
+| `YZTR-THFW-WT6E-OXIV-73XD-QCDM` | As displayed |
+| `yztr-thfw-wt6e-oxiv-73xd-qcdm` | Copied through something that lowercased it. Also the Turkish locale trap: an implementation uppercasing with a locale turns this `i` into `İ` and fails |
+| `YZTR<en dash>THFW<en dash>WT6E<en dash>OXIV<en dash>73XD<en dash>QCDM` | iOS smart punctuation replaces typed hyphens with `U+2013` |
+| `<BOM>YZTR-THFW-WT6E-OXIV-73XD-QCDM<newline>` | Saved to a UTF-8 file and read back |
+| `YZTR-THFW-WT6E-OXIV-73XD-QCD<U+200B>M` | Pasted through a web page or messenger that inserts a zero width space |
+| `YZTR THFW WT6E OXIV 73XD QCDM` | Retyped with spaces instead of hyphens |
+| `YZTRTHFWWT6EOXIV73XDQCDM` | Already canonical |
+
+### A second vector, for the verbatim path
+
+Same salt, nonce, AAD and plaintext. Only the passphrase rule differs, and **this one is not
+canonicalised**: an implementation that applies the Base32 filter here will strip the spaces
+and the lower case and reach the wrong key.
+
+| | |
+| --- | --- |
+| `passphrase` mode | `custom` |
+| Passphrase, used exactly as written | `correct horse battery staple` |
+
+Derived key, hex:
+
+```
+613a4c3411394e24fffe6c51994307724572e574bcd98ea8cf457c64899bfbfe
+```
+
+Ciphertext, base64:
+
+```
+jxXW2I3FDYM2CqyCTNDj+b3Zuav2PAhE3rf17Q/9cRSx+jrk3SiK3h0ZOtTAi8cTT+EScWhxe58X6vLU7CvcKd5Pv/JeJguw0+X7U+/fkrcm289T3U/bEZ1xy2sV6WUoUW/hnNNnBuEXcwP8ALK/NZo15TyalQMCo7AvjCIQbUP7rbgakKY7PSU8qMtrUHcxa605jtifCA==
+```
+
+Tag, base64:
+
+```
+9OArOIi1DKg5MhDvaxBUpw==
+```
+
+This passphrase is deliberately weak, to demonstrate the rule rather than the policy. A
+conforming writer would refuse it under the custom-mode strength requirement above.
+
+### What must fail
+
+A reader that only proves it can open things has proved half of what matters.
+
+- The generated ciphertext under the **custom** key, and the custom ciphertext under the
+  **generated** key: both must fail the tag.
+- Either ciphertext with the **AAD omitted** or set to any other string: must fail.
+- Either ciphertext with **any single byte altered**, in the ciphertext or the tag: must
+  fail.
+- The generated passphrase **with the hyphens left in**, fed verbatim: must fail, and this
+  is the one that matters, because an earlier revision of this document published a vector
+  that made exactly that mistake pass.
+
+**Verified independently, three implementations sharing no code.** Both keys were derived by
+Apple's CommonCrypto and by Python's `hashlib.pbkdf2_hmac`, which agree to the byte. Both
+ciphertexts were sealed by CryptoKit and opened, with tags verified and AAD checked, by
+Node's OpenSSL binding. The seven inputs above were each run through the canonicalisation
+and confirmed to reach the same key.
+
+An implementer should reach exactly these bytes, pass every row of the table, and see every
+item under "what must fail" actually fail, before trusting their reader with anything real.
 
 ## Unencrypted export
 
@@ -358,8 +469,15 @@ it is produced says what the file is: reusable authentication secrets, in the cl
 - **No key file, no hardware key, no split secret.** Every one of them is a way to lose the
   archive, and this is a format whose purpose is recovery.
 - **No metadata outside the ciphertext**, beyond what decryption needs. No account names, no
-  issuers, no colours. **The length does reveal the approximate number of accounts**, at
-  roughly 150 bytes each, and the format does not pad to hide it. Saying it hides the count
+  issuers, no colours. Two things are visible to anyone holding the file and unable to open
+  it. **The length reveals the approximate number of accounts**, at roughly 150 bytes each,
+  and the format does not pad to hide it. **The `passphrase` field reveals which kind of
+  passphrase protects it**, which tells an attacker whether guessing is worth attempting at
+  all: `custom` is a human's choice and possibly cheap, `generated` is 120 bits and never
+  worth trying. That is a real signal and it is the price of the field being there;
+  it stays because a reader that tries the likely rule first is faster for everyone, and
+  because the field is only a hint, so removing it would change nothing an attacker cannot
+  work out by trying. Saying it hides the count
   would be a claim the file cannot back. Padding remains available later as an additive
   change, since an unknown field is ignored by existing readers.
 - **No timestamp and no device name.** Neither helps recovery, and both say something about
@@ -377,6 +495,13 @@ which is the correct behaviour and not a compatibility break.
 
 Anything else needs a new version: a changed cipher, a changed KDF, a changed meaning for an
 existing field, a newly required field.
+
+**The bounds above are frozen for version 1.** The iteration range, the field lengths and
+the size limits are part of what a version 1 archive means, not a reader's local policy. A
+future version may widen them; a version 1 reader that widens them on its own has stopped
+implementing version 1, and "every version 1 archive opens forever" quietly stops being
+true. Raising the recommended write count inside the existing range is fine and needs no
+new version.
 
 **Every future version must bind its own format string as additional authenticated data**,
 exactly as version 1 binds `openfactor.backup.v1`. The guarantee that a file cannot be

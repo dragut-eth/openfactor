@@ -28,7 +28,32 @@ documentation and Apple's point in opposite directions, and F13's two device hal
 UUID twin that may defeat the repair claim. The experiment is written at the end of
 `docs/audits/A2.md`. Xavier now has the watch, so it is runnable.
 
-### Gate A3 reported, and the format is not frozen yet
+### Gate A3 ran twice, and the second pass found what the first pass's fix broke
+
+Two independent reviews of `docs/BACKUP_FORMAT.md`, Fable then Grok, plus a third from a
+model Xavier ran outside the repository. Reports are `docs/audits/A3.md` and
+`docs/audits/A3-grok.md`. **All findings from both are fixed.**
+
+The sequence is the lesson. Fable found the test vector had been built by feeding the key
+derivation the hyphenated passphrase, contradicting the document's own rule. The fix
+specified passphrase entry precisely and recorded the mode in a header field. Grok then
+found that the fix was worse than the gap: a mandatory unauthenticated header bit meant one
+character edited in a text editor bricks the archive forever, and that "remove Unicode
+whitespace" is not one algorithm, since `Character.isWhitespace` and
+`CharacterSet.whitespaces` disagree about zero width space and line feed. Verified on this
+machine before acting.
+
+The current rule is blunter and has no such seams: **keep the Base32 characters, discard
+everything else**, and the mode field is a hint that orders two attempts rather than a gate
+that forbids one. Measured against seven ways a real person hands a passphrase back,
+including iOS smart punctuation turning hyphens into en dashes, all seven now reach the same
+key. Three of them did not before.
+
+The vector grew teeth to match: a second vector for the verbatim path, a table of inputs
+that must all succeed, and a list of things that must fail, every item of which was run and
+confirmed to fail.
+
+### The earlier state, kept for the record
 
 **Verdict: not yet safe to make permanent**, on two blocking findings, both now fixed.
 `docs/audits/A3.md` has the full report, findings F22 to F32.
