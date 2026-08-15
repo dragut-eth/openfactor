@@ -149,9 +149,9 @@ struct SettingsView: View {
                     Your accounts are offered to iCloud Keychain, which is end to end \
                     encrypted. Apple cannot read them. This requires iCloud Keychain to be \
                     on in iOS Settings, and OpenFactor cannot check whether it is or \
-                    whether anything has arrived elsewhere. Turning this off stops this \
-                    device offering them. It may also remove them from your other devices, \
-                    which is not something OpenFactor controls.
+                    whether anything has arrived elsewhere. Turning this off keeps your \
+                    accounts on this iPhone and removes them from your other devices, \
+                    including your Apple Watch, until you turn it back on.
                     """
                     : """
                     Offers your accounts to iCloud Keychain, so they reach the other \

@@ -49,8 +49,20 @@ The vector was regenerated and re-verified from the *displayed* form through the
 canonicalisation, by CommonCrypto, Python and Node, so the check now exercises the rule
 instead of bypassing it.
 
-**Two open items remain**, unchanged by A3: gate A2's F8 and F13, which need the two device
-experiment. The watch exists now, so they are runnable.
+**Gate A2's F8 and F13 are closed**, by experiment on real hardware on 2026-08-15. Results
+are appended to `docs/audits/A2.md`.
+
+F8 went against this project: turning sync off **does** remove the accounts from other
+devices, within fourteen minutes on a paired watch. Apple's documentation was right and ours
+was wrong, and the settings footer now states it plainly instead of hedging.
+
+F13 came out clean: no twin, no duplicates, no error. It is closed for one writing device
+and one reader; two writing devices, and the rename and delete propagation steps, still need
+an iPad or a second iPhone.
+
+The experiment also found a defect nobody predicted: the watch's empty state told the wearer
+to wait for accounts that, with sync off, were never coming. Both causes are now named. It
+was invisible to review and to testing, and appeared only from standing in the state.
 
 ### PR 16 is inverted, and that is the design
 

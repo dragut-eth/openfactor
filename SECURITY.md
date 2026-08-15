@@ -112,18 +112,25 @@ no moment when an account exists only as a variable that a crash could lose. The
 implementation, reading each account out and writing it back, would have all three
 problems.
 
-**What turning sync off does, precisely, and what is still unknown.** The accounts stay on
-this device, stop being offered to iCloud Keychain, and go back to the device only
-protection class.
+**What turning sync off does, precisely. Observed on real hardware on 2026-08-15.** The
+accounts stay on this device, stop being offered to iCloud Keychain, and go back to the
+device only protection class.
 
-What happens to the copies on your other devices is **not established**, and this document
-previously expected them to be left alone. Gate A2 found that Apple's documentation for
-`kSecAttrSynchronizable` points the other way: updating or deleting an item through that
-key affects all copies. Nobody has observed which happens, so the interface now says only
-that turning sync off may remove them elsewhere and that OpenFactor does not control it. If
-you want an account gone from another device, the reliable move is to delete it there.
-Settling this needs two devices and is the first step of the experiment recorded in
-`docs/audits/A2.md`. Gate A2, F8.
+**They disappear from your other devices.** A paired Apple Watch holding ten accounts was
+empty fourteen minutes after the switch was turned off on the phone. This document
+previously expected the copies elsewhere to be left alone, and that expectation was wrong.
+Apple's documentation for `kSecAttrSynchronizable` was right: updating an item through that
+key affects all copies, and withdrawing an item from sync is such an update.
+
+Nothing is deleted in the sense a user means by it. The other device never held an
+independent copy, it had access to a shared one, and turning sync off withdraws the item
+from the shared space. From the other device, withdrawn and gone are the same thing.
+
+Turning sync back on restores them, and quickly: the same watch repopulated in under a
+minute, against the roughly thirty minutes the first synchronisation took. So this is
+reversible, but a user who turns sync off to stop copying their data around will find their
+watch empty, and the interface has to say so before they do it rather than after they
+wonder why their wrist stopped working. Gate A2, F8, closed by experiment.
 
 **Your device preference and the Keychain can disagree, and the app says so rather than
 repairing it.** The switch is remembered per device in `UserDefaults` and is written only

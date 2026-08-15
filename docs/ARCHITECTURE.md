@@ -214,14 +214,21 @@ The macOS legacy Keychain accepts writes from an unsigned process and ignores
 `kSecAttrAccessible` entirely, which makes it worse than useless as a stand in, since
 asserting against it would pass while proving nothing.
 
-**One state this has not been shown to repair.** Within a device, re-running the conversion
-finishes a half done one, and that is now tested. Across two devices, gate A2 raised a case
-the argument does not obviously cover: turn sync off on device A, its items become local,
-device B's copies stay synced and may re-arrive on A. A would then hold a local item and a
-synced item with the same service and UUID, which the Keychain permits because the sync flag
-is part of the primary key, and turning sync on again would update the local twin toward a
-primary key that already exists. Whether that happens is unknown, and settling it needs two
-devices. Written down rather than assumed away. Gate A2, F13.
+**The two device twin does not occur. Tested on real hardware on 2026-08-15.** Gate A2
+raised a case the idempotency argument did not obviously cover: turn sync off on device A,
+its items become local, device B's copies stay synced and re-arrive on A, leaving a local
+item and a synced item with the same service and UUID, which the Keychain permits because
+the sync flag is part of the primary key. Turning sync on again would then update the local
+twin toward a primary key that already exists.
+
+Run against a phone and a paired watch, the cycle produced no duplicate rows on either
+device, no `errSecDuplicateItem`, and no error at the switch. The wedge is theoretical
+rather than actual, at least for this pairing.
+
+**One caveat on how far that generalises.** The watch is read only, so this exercised the
+phone writing and the watch reading. A second writing device, a phone and an iPad both
+adding and renaming accounts, is a case still untested. Gate A2, F13, closed for the
+observed configuration.
 
 **Merging is iCloud Keychain's, and this app does not second guess it.** An item is
 identified by its service and its account attribute, which here is the account's UUID, and

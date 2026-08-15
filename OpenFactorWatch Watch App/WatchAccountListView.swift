@@ -73,14 +73,21 @@ struct WatchAccountListView: View {
         .padding(.vertical, 2)
     }
 
-    /// **This wording is load bearing.** An empty watch and a broken watch look identical,
-    /// and the likeliest reason for an empty one is that sync was turned on a few minutes
-    /// ago: iCloud Keychain took close to half an hour to carry seven accounts across during
-    /// PR 14, arriving one at a time with no error anywhere.
+    /// **This wording is load bearing, and the first version of it was wrong.**
     ///
-    /// So it says what is true, that nothing has arrived, and names the two reasons in the
-    /// order they actually occur. It must not send someone off to re-check settings that are
-    /// already correct, which is the failure this screen is most likely to cause.
+    /// An empty watch and a broken watch look identical. The original text assumed the
+    /// accounts were merely in flight and told the wearer to give it time, because iCloud
+    /// Keychain took close to half an hour to carry seven accounts across during PR 14.
+    ///
+    /// Running gate A2's experiment produced the other cause and caught the mistake: with
+    /// sync turned off on the phone, the watch empties within about fifteen minutes, and
+    /// "give it time" is then advice to wait for something that will never arrive. The
+    /// watch cannot tell the two apart, since both are an empty Keychain, so it names both
+    /// rather than confidently giving the wrong one.
+    ///
+    /// It still must not send someone to re-check settings that are already correct, which
+    /// is why waiting is named first: it is the likelier case for a new user, and the one
+    /// that resolves itself.
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("No accounts yet")
@@ -88,9 +95,11 @@ struct WatchAccountListView: View {
 
             Text(
                 """
-                Accounts arrive from your iPhone through iCloud Keychain, which can take a \
-                while. If you have just turned on iCloud sync in OpenFactor on your iPhone, \
-                give it time.
+                Accounts arrive from your iPhone through iCloud Keychain, which can take \
+                half an hour the first time. If you just turned sync on, give it time.
+
+                If you have been using OpenFactor here already, check that iCloud sync is \
+                still on in OpenFactor on your iPhone. Turning it off empties this watch.
                 """
             )
             .font(.footnote)
