@@ -40,14 +40,33 @@ struct WatchCodeView: View {
     @State private var code: String?
     @State private var codeWindow: Double?
 
+    /// The code and ring sizes follow the text size setting instead of being fixed.
+    ///
+    /// A fixed 30 was the exact mistake the phone made before PR 12: every label on the
+    /// screen grows with the wearer's setting and the one number the screen exists for
+    /// stays small. Scaled against `.title` so it grows on the same curve as the phone's
+    /// code does.
+    @ScaledMetric(relativeTo: .title) private var codeSize: CGFloat = 30
+    @ScaledMetric(relativeTo: .title) private var ringSize: CGFloat = 24
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let window = window(for: context.date)
 
+            // At accessibility sizes the code and the ring stack instead of sharing a
+            // row, the same shape shift the phone card makes: a grown code next to a grown
+            // ring does not fit a watch's width, and shrinking the code to make room would
+            // undo the setting the wearer asked for.
+            let paired = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(spacing: 4))
+                : AnyLayout(HStackLayout(spacing: 10))
+
             VStack(spacing: 6) {
-                HStack(spacing: 10) {
+                paired {
                     Text(displayedCode(in: window).map(CodeFormatting.grouped) ?? placeholder)
-                        .font(.system(size: 30, weight: .semibold, design: .rounded))
+                        .font(.system(size: codeSize, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
@@ -109,7 +128,7 @@ struct WatchCodeView: View {
                 )
                 .rotationEffect(.degrees(-90))
         }
-        .frame(width: 24, height: 24)
+        .frame(width: ringSize, height: ringSize)
         .accessibilityLabel("\(Int(remaining.rounded())) seconds left")
     }
 

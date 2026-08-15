@@ -273,6 +273,19 @@ refresh policy, so it has no reason to wake up at all. Anything that gives that 
 Keychain access is reversing a security decision and should be reviewed as one, not merged
 as a feature.
 
+**The watch scales the way the phone learned to in PR 12.** The code and ring sizes are
+scaled metrics rather than constants, and at accessibility sizes the pair stacks vertically
+instead of sharing a row, since a grown code beside a grown ring does not fit a watch and
+shrinking the code would undo the setting the wearer asked for. Verified by screenshot at
+the largest accessibility size, not assumed.
+
+The verification itself needed scaffolding worth knowing about: the watchOS simulator
+refuses `simctl ui content_size`, and its keychain holds no accounts. The watch app
+therefore has a DEBUG only rehearsal mode, behind `--layout-rehearsal` and `--ax-text`
+launch arguments, which swaps in an in memory store of fakes and pins the largest text
+size. It does not exist in a release build, and the fakes' secret is the RFC test vector,
+the one secret on earth that protects nothing.
+
 **One thing on the watch is the platform's and is left alone.** Scrolled rows flash to full
 opacity for a frame during a push, as watchOS drops its own scroll edge treatment before the
 transition finishes. Checked against a stock watch app, which does the same, rather than

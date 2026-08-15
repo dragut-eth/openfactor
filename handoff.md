@@ -47,8 +47,13 @@ and the design makes it structural rather than a promise. The extension has no K
 entitlement, so it cannot show a code even if asked, and that absence is asserted in
 `docs/PROJECT.md` as a setting that matters. Its timeline is one entry that never refreshes.
 
-Still to do in PR 14: running the watch through accessibility text sizes the way the phone
-was in PR 12.
+**The accessibility pass is done.** Code and ring are scaled metrics, the pair stacks at
+accessibility sizes, and both layouts are verified by screenshot in the simulator through
+the DEBUG rehearsal mode described in `docs/UI_SPEC.md`. The one check that still wants a
+human is the real watch at a large text size, which is a settings change on the device.
+
+PR 14 is feature complete. What remains before it merges is the warm A2 re-verification
+Xavier planned, now that the branch is finished.
 
 **Gate A2 is done and its follow up has landed.** The report is
 `docs/audits/A2.md`, findings F8 to F18. It found no path by which a secret leaves the

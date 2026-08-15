@@ -28,7 +28,51 @@ struct OpenFactorWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            // Layout rehearsal, simulator only in practice and DEBUG only by construction.
+            //
+            // Two things cannot be verified any other way: the watchOS simulator's runtime
+            // refuses `simctl ui content_size` outright, and its keychain has no accounts
+            // to draw. So `--layout-rehearsal` swaps in an in memory store of fakes, and
+            // `--ax-text` pins the largest accessibility size, letting the accessibility
+            // layouts be screenshotted before they reach a wrist. Neither flag exists in a
+            // release build, and the fakes' secrets are the RFC test vector, which is the
+            // one secret on earth that protects nothing.
+            if CommandLine.arguments.contains("--layout-rehearsal") {
+                let rehearsal = WatchAccountListView(store: Self.rehearsalStore())
+
+                if CommandLine.arguments.contains("--ax-text") {
+                    rehearsal.dynamicTypeSize(.accessibility3)
+                } else {
+                    rehearsal
+                }
+            } else {
+                WatchAccountListView(store: store)
+            }
+            #else
             WatchAccountListView(store: store)
+            #endif
         }
     }
+
+    #if DEBUG
+    private static func rehearsalStore() -> InMemorySecretStore {
+        let store = InMemorySecretStore()
+        let colors: [AccountColor] = [.red, .teal, .indigo]
+
+        for (index, issuer) in ["GitHub", "Fastmail", "Proton"].enumerated() {
+            try? store.add(
+                OTPAccount(
+                    issuer: issuer,
+                    name: "someone@example.com",
+                    secret: Data("12345678901234567890".utf8),
+                    generator: .totp(.standard)
+                ),
+                color: colors[index]
+            )
+        }
+
+        return store
+    }
+    #endif
 }
