@@ -288,7 +288,10 @@ both as translucent pill buttons. No frame overlay, no instructions.
   the list into "No accounts yet", which is false. Dimming is sixty percent, the weight
   the system gives `.secondary`, applied to the whole row so the palette relationship is
   scaled rather than rearranged. The ordering is asserted by test, including that the
-  wearer's own order survives inside each group.
+  wearer's own order survives inside each group. **Those rows do not open.** The screen
+  behind one could only say the code is on the phone, which the row already says with less
+  work, and a tap that leads nowhere useful teaches the wearer to distrust the taps that
+  do lead somewhere.
 
 ## Screen 5: Edit mode
 

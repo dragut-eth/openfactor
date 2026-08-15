@@ -117,6 +117,11 @@ struct WatchCodeView: View {
     /// The watch is read only, and advancing a counter is a write, so this is the one thing
     /// it genuinely cannot do for you. "Unavailable" reads as breakage; naming the phone
     /// tells you what to do next.
+    ///
+    /// **The list no longer opens those rows**, so in the shipping app this is a backstop
+    /// rather than something a wearer sees. It stays because the alternative is a screen
+    /// that shows a blank where a code goes if anything ever routes here again, and a
+    /// blank is the one thing this view exists to prevent.
     private var placeholder: String {
         if case .totp = record.metadata.generator { return " " }
         return "On iPhone"

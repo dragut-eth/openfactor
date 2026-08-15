@@ -30,16 +30,28 @@ struct WatchAccountListView: View {
                 }
 
                 ForEach(rows, id: \.id) { record in
-                    NavigationLink {
-                        // Identity per account, or SwiftUI reuses the same destination
-                        // instance between pushes and the previous account's code stays on
-                        // screen until the next refresh lands. Showing one account's code
-                        // under another account's name is worse than a slow screen: it is
-                        // the kind of thing someone types into the wrong login.
-                        WatchCodeView(store: store, record: record)
-                            .id(record.id)
-                    } label: {
-                        row(record)
+                    Group {
+                        // A counter based row does not open. The screen behind it could
+                        // only say the code is on the phone, which the row already says
+                        // with less work, and a tap that leads nowhere useful teaches the
+                        // wearer to distrust the ones that do open. It is still read
+                        // aloud, still counted, still there.
+                        if WatchList.needsPhone(record) {
+                            row(record)
+                        } else {
+                            NavigationLink {
+                                // Identity per account, or SwiftUI reuses the same
+                                // destination instance between pushes and the previous
+                                // account's code stays on screen until the next refresh
+                                // lands. Showing one account's code under another
+                                // account's name is worse than a slow screen: it is the
+                                // kind of thing someone types into the wrong login.
+                                WatchCodeView(store: store, record: record)
+                                    .id(record.id)
+                            } label: {
+                                row(record)
+                            }
+                        }
                     }
                     // A hint of the account's colour rather than a column of identical grey
                     // slabs. Mostly black, so the issuer drawn in the full strength colour
