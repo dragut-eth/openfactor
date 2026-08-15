@@ -95,11 +95,16 @@ struct ExportView: View {
     private var passphrase: some View {
         Form {
             Section {
+                // A menu rather than a segmented control, and a row rather than a banner.
+                // Every other choice in this app is a picker row, and this screen was the
+                // one place a different control shape appeared for the same kind of
+                // decision. A menu also keeps the person here, which matters because this
+                // choice rewrites the section directly beneath it.
                 Picker("Passphrase", selection: $model.choice) {
                     Text("Generated").tag(ExportViewModel.PassphraseChoice.generated)
                     Text("Your own").tag(ExportViewModel.PassphraseChoice.own)
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
             }
 
             if model.choice == .generated {
@@ -136,13 +141,7 @@ struct ExportView: View {
 
     private var generatedPassphrase: some View {
         Section {
-            Text(model.displayedPassphrase)
-                // Monospaced so the groups line up under each other when it wraps, which is
-                // how somebody copying it by hand keeps their place.
-                .font(.system(.title3, design: .monospaced, weight: .semibold))
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 4)
+            passphraseGrid
 
             Button("Copy passphrase") {
                 CodeClipboard.copy(passphrase: model.displayedPassphrase)
@@ -155,11 +154,44 @@ struct ExportView: View {
             Text(
                 """
                 One hundred and twenty bits, from this device. The letters and digits avoid \
-                every pair that is easy to confuse by hand, and the hyphens are there to be \
-                read rather than typed: they are not part of the passphrase.
+                every pair that is easy to confuse by hand. The spacing is for reading: type \
+                it back in any grouping, or none at all.
                 """
             )
         }
+    }
+
+    /// Six groups of four, laid out rather than punctuated.
+    ///
+    /// A single line wrapped after the fourth group on a real phone, which is survivable but
+    /// puts a hyphen at the end of a line, exactly where a hyphen is most likely to be read
+    /// as part of the text. A grid removes the punctuation entirely: position does the
+    /// grouping, nothing has to be explained away, and somebody typing it into a password
+    /// manager can keep their place by row rather than by counting characters.
+    private var passphraseGrid: some View {
+        let groups = BackupPassphrase.groups(model.generated)
+        let rows = stride(from: 0, to: groups.count, by: 3).map {
+            Array(groups[$0..<min($0 + 3, groups.count)])
+        }
+
+        return Grid(horizontalSpacing: 18, verticalSpacing: 10) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                GridRow {
+                    ForEach(Array(row.enumerated()), id: \.offset) { _, group in
+                        Text(group)
+                            .font(.system(.title3, design: .monospaced, weight: .semibold))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Passphrase")
+        // Spelled out. VoiceOver reads a run of letters as a word it invents, which is
+        // useless for something being transcribed exactly, and this is the one string in
+        // the app where a misheard character cannot be recovered from.
+        .accessibilityValue(model.generated.map(String.init).joined(separator: " "))
     }
 
     private var ownPassphrase: some View {

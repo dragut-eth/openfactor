@@ -37,6 +37,19 @@ struct BackupPassphraseTests {
         )
     }
 
+    /// The screen lays the groups out and the clipboard punctuates them, so both come from
+    /// one splitter. Two implementations of "every four characters" that disagreed would be
+    /// discovered by somebody typing a passphrase into an archive that then would not open.
+    @Test("The laid out groups and the punctuated string are the same groups")
+    func groupsAndStringAgree() {
+        let passphrase = "YZTRTHFWWT6EOXIV73XDQCDM"
+        let groups = BackupPassphrase.groups(passphrase)
+
+        #expect(groups == ["YZTR", "THFW", "WT6E", "OXIV", "73XD", "QCDM"])
+        #expect(groups.joined(separator: "-") == BackupPassphrase.grouped(passphrase))
+        #expect(groups.joined() == passphrase)
+    }
+
     /// The whole point of generating it this way. If a generated passphrase did not survive
     /// the round trip through the display form, every archive would be one transcription
     /// away from unrecoverable.

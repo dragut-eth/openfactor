@@ -128,8 +128,15 @@ whether or not App Lock is on: writing every secret to a file is categorically d
 from reading one code, and should not be two taps away on a phone handed over unlocked.
 Import is deliberately not gated, because it reveals nothing.
 
-The passphrase screen offers a generated one by default and the user's own behind a
-segmented control. The custom path shows what is wrong with a weak passphrase rather than a
+The passphrase screen offers a generated one by default and the user's own behind a menu
+picker, which is the control every other choice in the app uses. A segmented control was
+tried first and was the one place a different control shape appeared for the same kind of
+decision. The generated passphrase is laid out as six groups in a grid rather than one
+hyphenated line: on a real phone that line wrapped after the fourth group, which puts a
+hyphen at the end of a line, exactly where a hyphen is most likely to be read as part of the
+text. Position does the grouping instead, so there is no punctuation to explain away, and
+VoiceOver spells it character by character because a run of letters read as an invented word
+is useless for something being transcribed exactly. The custom path shows what is wrong with a weak passphrase rather than a
 strength bar, and the archive cannot be written until the estimator is satisfied. The
 footer says plainly that OpenFactor keeps no copy and that a lost passphrase means the
 archive cannot be opened by anyone.

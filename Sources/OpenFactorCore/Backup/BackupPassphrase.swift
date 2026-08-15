@@ -139,12 +139,19 @@ public enum BackupPassphrase {
     /// vector checks: it starts from this form, so an implementation that forgets to strip
     /// them cannot reach the published key.
     public static func grouped(_ passphrase: String) -> String {
+        groups(passphrase).joined(separator: "-")
+    }
+
+    /// The same groups, unjoined, for a screen that lays them out rather than punctuating
+    /// them. One splitter for both, so a grid and a string can never disagree about where a
+    /// group ends, which is the sort of difference somebody only discovers while typing a
+    /// passphrase back into an archive that will not open.
+    public static func groups(_ passphrase: String) -> [String] {
         stride(from: 0, to: passphrase.count, by: 4)
             .map { offset -> String in
                 let start = passphrase.index(passphrase.startIndex, offsetBy: offset)
                 let end = passphrase.index(start, offsetBy: 4, limitedBy: passphrase.endIndex)
                 return String(passphrase[start..<(end ?? passphrase.endIndex)])
             }
-            .joined(separator: "-")
     }
 }
