@@ -36,18 +36,18 @@
 
 <g transform="translate(51.2 51.2) scale(0.9)">
   <!-- The extracted piece: exposed neighbor faces -->
-  <polygon points="692,415 859.8,511.9 692,608.8 524.2,511.9" fill="url(#green)"/>
-  <polygon points="685.9,210.6 518.1,307.6 518.1,501.3 685.9,404.3" fill="url(#pink)"/>
-  <polygon points="685.9,210.6 518.1,307.6 518.1,501.3 685.9,404.3" fill="#000000" opacity="0.20"/>
+  <polygon points="698.1,407.4 872,511.9 698.1,612.4 524.2,511.9" fill="url(#green)"/>
+  <polygon points="692,200 518.1,300.5 518.1,501.3 692,400.8" fill="url(#pink)"/>
+  <polygon points="692,200 518.1,300.5 518.1,501.3 692,400.8" fill="#000000" opacity="0.20"/>
 
   <!-- Top face -->
-  <polygon points="512,96 685.9,196.5 512,296.9 338.1,196.5" fill="url(#orange)"/>
+  <polygon points="512,96 692,200 518.1,300.5 338.1,196.5" fill="url(#orange)"/>
   <polygon points="325.9,203.5 499.8,304 325.9,404.5 152,304" fill="url(#red)"/>
   <polygon points="512,311.1 685.9,411.5 512,512 338.1,411.5" fill="url(#indigo)"/>
 
   <!-- Right face -->
   <polygon points="685.9,411.5 512,512 512,712.8 685.9,612.3" fill="url(#teal)"/>
-  <polygon points="872,519 698.1,619.5 698.1,820.3 872,720" fill="url(#indigo)"/>
+  <polygon points="872,511.9 698.1,612.4 698.1,820.3 872,720" fill="url(#indigo)"/>
   <polygon points="685.9,626.5 512,727 512,928 685.9,827.3" fill="url(#green)"/>
 
   <!-- Left face -->
@@ -58,7 +58,7 @@
 
   <!-- One light, upper left: per-facet shading -->
   <polygon points="685.9,411.5 512,512 512,712.8 685.9,612.3" fill="#000000" opacity="0.20"/>
-  <polygon points="872,519 698.1,619.5 698.1,820.3 872,720" fill="#000000" opacity="0.20"/>
+  <polygon points="872,511.9 698.1,612.4 698.1,820.3 872,720" fill="#000000" opacity="0.20"/>
   <polygon points="685.9,626.5 512,727 512,928 685.9,827.3" fill="#000000" opacity="0.20"/>
   <polygon points="152,304 325.9,404.5 325.9,605.3 152,504.8" fill="#000000" opacity="0.08"/>
   <polygon points="338.1,411.5 512,512 512,712.8 338.1,612.3" fill="#000000" opacity="0.08"/>
