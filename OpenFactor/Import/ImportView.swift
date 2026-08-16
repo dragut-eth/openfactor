@@ -14,12 +14,39 @@ struct ImportView: View {
     @State private var passphrase = ""
 
     private let onImported: () -> Void
+    private let origin: Origin
 
     @Environment(\.dismiss) private var dismiss
+
+    /// How the accounts got here, which changes only what the last screen says.
+    ///
+    /// The preview itself does not care: the same three dispositions, the same refusals,
+    /// the same rule that nothing is written until somebody agrees. What differs is the
+    /// advice at the end. A file holding secret keys should be deleted; a transfer that was
+    /// one of three has two codes still to scan.
+    enum Origin: Equatable {
+        case file
+        case transfer(part: Int, of: Int)
+    }
 
     init(store: any SecretStore, onImported: @escaping () -> Void) {
         _model = State(initialValue: ImportViewModel(store: store))
         self.onImported = onImported
+        self.origin = .file
+    }
+
+    /// Opens straight into the preview, for accounts that arrived from a scanned transfer.
+    init(
+        store: any SecretStore,
+        batch: GoogleAuthenticatorImport.Batch,
+        onImported: @escaping () -> Void
+    ) {
+        let model = ImportViewModel(store: store)
+        model.present(batch.result, source: "Google Authenticator")
+
+        _model = State(initialValue: model)
+        self.onImported = onImported
+        self.origin = .transfer(part: batch.position, of: batch.size)
     }
 
     var body: some View {
@@ -252,15 +279,38 @@ struct ImportView: View {
                     Text("\(skipped) skipped.").foregroundStyle(.secondary)
                 }
             } footer: {
-                // The file the user just imported from is a plaintext list of every secret
-                // it held. Saying so is the last useful thing this screen can do.
-                Text(
-                    """
-                    That file contains your secret keys in the clear. Delete it when you no \
-                    longer need it.
-                    """
-                )
+                finishedAdvice
             }
+        }
+    }
+
+    @ViewBuilder
+    private var finishedAdvice: some View {
+        switch origin {
+        case .file:
+            // The file the user just imported from is a plaintext list of every secret it
+            // held. Saying so is the last useful thing this screen can do.
+            Text(
+                """
+                That file contains your secret keys in the clear. Delete it when you no \
+                longer need it.
+                """
+            )
+
+        case let .transfer(part, total) where total > 1:
+            // The line that replaces a whole collecting screen. The scanned code says which
+            // part of how many it is, so rather than holding partial state across scans and
+            // tracking what is missing, the app reads the field it already parsed and says
+            // it. Somebody who stops here has been told they are not finished.
+            Text(
+                """
+                That was part \(part) of \(total). Scan the other codes to bring the rest \
+                across. Accounts you already have will be skipped.
+                """
+            )
+
+        case .transfer:
+            Text("Your accounts are still in the other app. Nothing there was changed.")
         }
     }
 

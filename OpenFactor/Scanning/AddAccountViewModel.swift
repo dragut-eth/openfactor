@@ -23,6 +23,12 @@ final class AddAccountViewModel {
         /// Found one, showing what it contains.
         case confirming(OTPAccount)
 
+        /// Found a transfer from another authenticator, which is not one account and is
+        /// not this screen's job. It is handed to the import preview, which was built for
+        /// exactly this: forty accounts arriving at once is a different act from adding
+        /// one, and a confirmation screen showing a single issuer cannot answer it.
+        case transferring(GoogleAuthenticatorImport.Batch)
+
         /// Saved. The sheet closes on this.
         case added
     }
@@ -50,6 +56,23 @@ final class AddAccountViewModel {
     func handleScan(_ payload: String) {
         guard case .scanning = stage else { return }
 
+        // Asked first, and it is a scheme comparison rather than a guess. `otpauth://` is
+        // one account and `otpauth-migration://` is a transfer: two schemes, no overlap.
+        // Every other importer in this app has to sniff contents because a file extension
+        // lies; here the payload names its own format.
+        if GoogleAuthenticatorImport.looksLikeMigration(payload) {
+            do {
+                stage = .transferring(try GoogleAuthenticatorImport.read(payload))
+                problem = nil
+            } catch {
+                // Says what the code *is* and what to do about it. This screen used to
+                // answer a transfer code with "not a setup code", which was true and
+                // useless at the exact moment somebody was trying to move in.
+                problem = error.description
+            }
+            return
+        }
+
         do {
             let account = try OTPAuthURI.account(from: payload)
             color = .suggested(forIssuer: account.issuer)
@@ -60,6 +83,14 @@ final class AddAccountViewModel {
             // rather than replaced with something vaguer.
             problem = error.description
         }
+    }
+
+    /// Returns to the camera after a transfer preview was closed without importing.
+    ///
+    /// Without this the screen stays in a stage it can never leave: `handleScan` refuses
+    /// anything but `.scanning`, so the viewfinder would be live and deaf.
+    func resumeScanning() {
+        if case .transferring = stage { stage = .scanning }
     }
 
     /// Handles an imported image, which may hold no codes, one, or several.

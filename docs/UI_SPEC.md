@@ -106,6 +106,27 @@ cause. The review counts four things and lists each:
 opens with `{\rtf`, JSON with `{`, so every RTF export was read as a broken Aegis vault
 until a test caught it.
 
+**A transfer code is recognised by the scanner, and the only way in is the + button.**
+`otpauth://` is one account and `otpauth-migration://` is a transfer: two schemes, no
+overlap, so this is the one place in the app where the payload names its own format and
+nothing has to be sniffed. The add screen recognises it and hands it to the import preview,
+because forty accounts arriving at once is a different act from adding one and a
+confirmation showing a single issuer cannot answer it. There is no Settings entry for it:
+the + screen already accepts a picture of a code, so the person working from screenshots is
+served by the same door.
+
+**Parts are not collected, they are rescanned.** A large export spans several codes, and the
+tempting design holds the scanned parts and tells the person which are missing. It is not
+built, because each code carries whole accounts rather than fragments, and the preview's
+duplicate detection already does the work: scan part two after part one and the new accounts
+arrive while the ones already here are skipped. Three passes reach the same place one
+collected pass would have, and nothing holds secrets in memory between scans.
+
+What is kept is the sentence, since the code says which part of how many it is and that
+field is parsed anyway: **"That was part 1 of 3. Scan the other codes to bring the rest
+across."** Somebody who stops there has been told they are not finished, which was the only
+thing collecting bought.
+
 **Neither reader is named after the app that produced the file.** The labelled reader is
 described by its shape, a text or RTF export listing accounts under **Account Name** and
 **Secret Key** labels, because that is what it actually matches and because a brand name in

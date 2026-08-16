@@ -225,3 +225,189 @@ struct AddAccountViewModelTests {
         #expect(model.problem?.contains("No QR code") == true)
     }
 }
+
+/// The scanner meeting a transfer from another authenticator.
+///
+/// The behaviour being pinned is that the add screen recognises it and gets out of the way.
+/// It used to answer a transfer code with "not a setup code", which was true and useless at
+/// the exact moment somebody was trying to move in.
+@Suite("Scanning a transfer")
+struct TransferScanTests {
+
+    private func makeStore() -> KeychainSecretStore {
+        KeychainSecretStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+    }
+
+    // MARK: - A payload builder, so the fixtures are readable
+
+    private func varint(_ value: UInt64) -> Data {
+        var value = value
+        var data = Data()
+        repeat {
+            var byte = UInt8(value & 0x7F)
+            value >>= 7
+            if value != 0 { byte |= 0x80 }
+            data.append(byte)
+        } while value != 0
+        return data
+    }
+
+    private func varintField(_ number: Int, _ value: UInt64) -> Data {
+        varint(UInt64(number) << 3) + varint(value)
+    }
+
+    private func bytesField(_ number: Int, _ payload: Data) -> Data {
+        varint(UInt64(number) << 3 | 2) + varint(UInt64(payload.count)) + payload
+    }
+
+    private func transferCode(accounts: Int = 1, index: UInt64 = 0, size: UInt64 = 1) -> String {
+        let parameters = (0..<accounts).map { offset in
+            bytesField(1, Data("1234567890123456789\(offset)".utf8))
+                + bytesField(2, Data("octocat".utf8))
+                + bytesField(3, Data("Service \(offset)".utf8))
+                + varintField(4, 1) + varintField(5, 1) + varintField(6, 2)
+        }
+
+        let payload = parameters.reduce(Data()) { $0 + bytesField(1, $1) }
+            + varintField(3, size) + varintField(4, index) + varintField(5, 99)
+
+        let encoded = payload.base64EncodedString()
+            .addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+        return "otpauth-migration://offline?data=\(encoded)"
+    }
+
+    // MARK: - Recognition
+
+    @Test("A transfer code moves the add screen out of the way")
+    @MainActor
+    func recognisesATransfer() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let model = AddAccountViewModel(store: store)
+        model.handleScan(transferCode(accounts: 3))
+
+        guard case let .transferring(batch) = model.stage else {
+            Issue.record("expected a transfer, got \(model.stage)")
+            return
+        }
+        #expect(batch.result.accounts.count == 3)
+        #expect(model.problem == nil)
+    }
+
+    @Test("A plain setup code still adds one account")
+    @MainActor
+    func stillReadsSingleCodes() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let model = AddAccountViewModel(store: store)
+        model.handleScan("otpauth://totp/GitHub:octocat?secret=GEZDGNBVGY3TQOJQ&issuer=GitHub")
+
+        guard case .confirming = model.stage else {
+            Issue.record("expected a confirmation, got \(model.stage)")
+            return
+        }
+    }
+
+    /// The old answer to this was "not a setup code". The new one has to name what the code
+    /// is and what to do about it, since re-exporting is the fix and nothing else is.
+    @Test("A damaged transfer code is named rather than dismissed")
+    @MainActor
+    func namesDamagedTransfers() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let model = AddAccountViewModel(store: store)
+        model.handleScan("otpauth-migration://offline?data=aGVsbG8gd29ybGQ=")
+
+        #expect(model.stage == .scanning)
+        #expect(model.problem?.contains("Google Authenticator") == true)
+    }
+
+    /// Without this the viewfinder is live and deaf: `handleScan` refuses anything but
+    /// `.scanning`, so a preview closed without importing would leave the screen unable to
+    /// read another code.
+    @Test("Closing the preview returns the scanner to reading codes")
+    @MainActor
+    func resumesAfterAPreview() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let model = AddAccountViewModel(store: store)
+        model.handleScan(transferCode())
+        model.resumeScanning()
+
+        #expect(model.stage == .scanning)
+
+        model.handleScan("otpauth://totp/GitHub:octocat?secret=GEZDGNBVGY3TQOJQ")
+        guard case .confirming = model.stage else {
+            Issue.record("the scanner did not read the next code")
+            return
+        }
+    }
+
+    // MARK: - The preview it hands to
+
+    @Test("The preview opens on the accounts the code held")
+    @MainActor
+    func previewsTheBatch() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let batch = try GoogleAuthenticatorImport.read(transferCode(accounts: 2))
+        let model = ImportViewModel(store: store)
+        model.present(batch.result, source: "Google Authenticator")
+
+        guard case let .reviewing(preview) = model.stage else {
+            Issue.record("expected a preview, got \(model.stage)")
+            return
+        }
+        #expect(preview.source == "Google Authenticator")
+        #expect(preview.importable.count == 2)
+        #expect(try store.records().readable.isEmpty, "the preview must not save anything")
+    }
+
+    /// The reason a collecting screen was not built. Scanning part two after part one adds
+    /// the new accounts and skips the ones already here, so three passes reach the same
+    /// place one collected pass would have.
+    @Test("Scanning the same part twice adds nothing the second time")
+    @MainActor
+    func rescanningIsHarmless() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let batch = try GoogleAuthenticatorImport.read(transferCode(accounts: 2))
+
+        let first = ImportViewModel(store: store)
+        first.present(batch.result, source: "Google Authenticator")
+        guard case let .reviewing(preview) = first.stage else {
+            Issue.record("expected a preview")
+            return
+        }
+        first.confirm(preview, includingConflicts: false)
+        #expect(try store.records().readable.count == 2)
+
+        let second = ImportViewModel(store: store)
+        second.present(batch.result, source: "Google Authenticator")
+        guard case let .reviewing(again) = second.stage else {
+            Issue.record("expected a second preview")
+            return
+        }
+
+        #expect(again.importable.isEmpty)
+        #expect(again.duplicates.count == 2)
+    }
+
+    /// The line that replaced a whole collecting screen, and the field it comes from.
+    @Test("A code says which part of how many it is")
+    @MainActor
+    func batchPositionSurvivesToTheView() throws {
+        let batch = try GoogleAuthenticatorImport.read(
+            transferCode(accounts: 1, index: 1, size: 3)
+        )
+
+        #expect(ImportView.Origin.transfer(part: batch.position, of: batch.size)
+            == .transfer(part: 2, of: 3))
+    }
+}

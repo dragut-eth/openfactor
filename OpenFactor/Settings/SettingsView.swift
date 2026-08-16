@@ -294,7 +294,8 @@ struct SettingsView: View {
                 """
                 Export writes every account into one encrypted file, and asks you to confirm \
                 it is you first. Import reads that file back, a labelled text export, or an \
-                unencrypted Aegis vault.
+                unencrypted Aegis vault. A transfer code from Google Authenticator is \
+                scanned with the + button instead.
                 """
             )
         }

@@ -64,6 +64,18 @@ struct AddAccountView: View {
                         dismiss()
                     }
                 }
+                // A transfer is a different act from adding an account, so it gets the
+                // screen built for it rather than a variant of this one. Presented rather
+                // than pushed: the preview owns its own navigation, and this screen has a
+                // destination of its own already.
+                .sheet(isPresented: isTransferring) {
+                    if case let .transferring(batch) = model.stage {
+                        ImportView(store: store, batch: batch) {
+                            onAdded()
+                            dismiss()
+                        }
+                    }
+                }
                 .onChange(of: photoItem) { _, item in
                     guard let item else { return }
                     Task {
@@ -78,6 +90,16 @@ struct AddAccountView: View {
         }
     }
 
+    /// Reading the stage, and writing back the way out of it. Closing the preview without
+    /// importing has to return the scanner to a stage that accepts codes again, or the
+    /// camera would be live and deaf.
+    private var isTransferring: Binding<Bool> {
+        Binding(
+            get: { if case .transferring = model.stage { true } else { false } },
+            set: { if !$0 { model.resumeScanning() } }
+        )
+    }
+
     @ViewBuilder
     private var content: some View {
         switch model.stage {
@@ -85,6 +107,10 @@ struct AddAccountView: View {
             scanner
         case let .confirming(account):
             ConfirmAccountView(account: account, model: model)
+        case .transferring:
+            // The viewfinder stays behind the sheet, so closing the preview without
+            // importing lands back on a live camera rather than on a blank screen.
+            scanner
         case .added:
             ProgressView()
         }

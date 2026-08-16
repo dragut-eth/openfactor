@@ -68,6 +68,20 @@ final class ImportViewModel {
         self.store = store
     }
 
+    /// Shows a preview of accounts that arrived some other way than through a file.
+    ///
+    /// The scanner hands transfer codes here rather than growing its own review screen. The
+    /// judgement about what happens to each account is the same judgement whatever carried
+    /// it, and having it in one place is how the three dispositions stay consistent between
+    /// a file somebody chose and a code somebody pointed a camera at.
+    func present(_ result: ImportResult, source: String) {
+        do {
+            stage = .reviewing(try classify(result, source: source))
+        } catch {
+            stage = .failed("Your accounts could not be read from this device.")
+        }
+    }
+
     /// Reads a file the user picked, detecting the format from its contents.
     ///
     /// **The extension is a hint, never the decision.** A labelled text export saved as
