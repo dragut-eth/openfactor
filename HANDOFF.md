@@ -13,8 +13,15 @@ items, including the default group Apple's documentation calls private. Access g
 boundary; the sandboxed container is. `docs/VAULT.md` is the design that follows, encrypting
 accounts and keeping the key where no entitlement can reach it, and it has been through one
 cold audit round already, recorded in `docs/audits/V1.md`: twelve findings, five blocking,
-three of them data loss. **No code has been written.** Six things must be proven by probe
-before any is, and they are listed at the end of that document.
+three of them data loss. **No code has been written.** Six things had to be proven by probe
+first, and two are now measured: E1 found the Keychain hole, and E4 watched the container
+refuse a sibling that held the exact path, with `EPERM` from a raw `open`. The remaining four
+are listed at the end of that document, and the next one worth running is whether
+WatchConnectivity routing is exclusive to the paired counterpart app, since the design hands a
+256 bit key across it.
+
+**Awaiting an external audit round.** `docs/audits/V2-prompt.md` is written and the design is
+going to Grok and ChatGPT. Nothing is implemented until those come back.
 
 **Everything now reads `dev.openfactor.*`.** The bundle identifiers were renamed because
 `com.openfactor.dev` claimed a domain this project does not own, and the Keychain access
