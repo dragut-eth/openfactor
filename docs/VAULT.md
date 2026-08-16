@@ -349,9 +349,12 @@ this says otherwise.
 ## What must be proven before implementation
 
 1. ~~A sibling app cannot read another app's private container.~~ **Proven**, `docs/audits/E4-container-isolation.md`.
-2. **WatchConnectivity routing is exclusive to the paired counterpart app.** Now defence in
-   depth rather than load bearing, because of the authentication string, but still worth
-   knowing.
+2. **WatchConnectivity routing is exclusive to the paired counterpart app.** Half measured in
+   `docs/audits/E5-watchconnectivity-routing.md`: a sibling app with no watch of its own
+   activates a session and finds it inert, so a session is not a device wide channel. What is
+   still unmeasured is a rogue watch app *claiming to be* OpenFactor's counterpart. Defence in
+   depth rather than load bearing because of the authentication string, and if that string is
+   ever removed this becomes blocking again.
 3. **Backup exclusion behaves as documented on a real restore**, and separately under Quick
    Start, which is a different mechanism.
 4. **A watch can hold a P-256 private key and complete the exchange** inside the interactive
