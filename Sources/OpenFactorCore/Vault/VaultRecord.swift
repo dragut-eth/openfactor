@@ -70,10 +70,31 @@ public enum VaultRecord {
         id: UUID,
         key: SymmetricKey
     ) throws -> Data {
+        try seal(
+            metadata: metadata, secret: secret, id: id, key: key,
+            metadataNonce: AES.GCM.Nonce(), secretNonce: AES.GCM.Nonce())
+    }
+
+    /// The same, with the nonces supplied.
+    ///
+    /// **Only the published test vectors call this**, because a vector cannot be reproduced
+    /// against randomness. It is deliberately not public: a caller that chose its own nonces in
+    /// production would be one refactor away from reusing one, which is the mistake this
+    /// project's format documents call catastrophic rather than merely wrong.
+    static func seal(
+        metadata: Data,
+        secret: Data,
+        id: UUID,
+        key: SymmetricKey,
+        metadataNonce: AES.GCM.Nonce,
+        secretNonce: AES.GCM.Nonce
+    ) throws -> Data {
         let sealedMetadata = try AES.GCM.seal(
-            VaultPadding.pad(metadata), using: key, authenticating: aad(metadataTag, id))
+            VaultPadding.pad(metadata), using: key, nonce: metadataNonce,
+            authenticating: aad(metadataTag, id))
         let sealedSecret = try AES.GCM.seal(
-            VaultPadding.pad(secret), using: key, authenticating: aad(secretTag, id))
+            VaultPadding.pad(secret), using: key, nonce: secretNonce,
+            authenticating: aad(secretTag, id))
 
         var out = magic
         append(sealedMetadata, to: &out)

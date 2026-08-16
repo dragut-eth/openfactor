@@ -65,15 +65,29 @@ public enum WrappedVaultKey {
         passphrase: String,
         iterations: Int = writeIterations
     ) throws -> Data {
-        guard iterationRange.contains(iterations) else {
-            throw WrapError.iterationsOutOfRange(iterations)
-        }
-
         var salt = Data(repeating: 0, count: saltSize)
         let status = salt.withUnsafeMutableBytes {
             SecRandomCopyBytes(kSecRandomDefault, saltSize, $0.baseAddress!)
         }
         guard status == errSecSuccess else { throw WrapError.derivationFailed }
+
+        return try wrap(
+            vaultKey: vaultKey, passphrase: passphrase, iterations: iterations,
+            salt: salt, nonce: AES.GCM.Nonce())
+    }
+
+    /// The same, with the salt and nonce supplied. **Only the published vectors call this**, for
+    /// the reason `VaultRecord`'s equivalent seam gives.
+    static func wrap(
+        vaultKey: SymmetricKey,
+        passphrase: String,
+        iterations: Int,
+        salt: Data,
+        nonce: AES.GCM.Nonce
+    ) throws -> Data {
+        guard iterationRange.contains(iterations) else {
+            throw WrapError.iterationsOutOfRange(iterations)
+        }
 
         guard
             let wrapping = PBKDF2.deriveKey(
@@ -86,6 +100,7 @@ public enum WrappedVaultKey {
         let sealed = try AES.GCM.seal(
             vaultKey.withUnsafeBytes { Data($0) },
             using: SymmetricKey(data: wrapping),
+            nonce: nonce,
             authenticating: aad(salt: salt, iterations: iterations))
 
         var out = magic

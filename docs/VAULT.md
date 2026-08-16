@@ -225,6 +225,47 @@ equivalent for 32 opaque bytes. One generated form means one derivation.
 At 120 generated bits the PBKDF2 parameters are belt and braces rather than the thing holding
 the door.
 
+### Test vectors
+
+Real values, produced by this implementation and pinned so the format survives a rewrite. A
+round trip test proves an implementation agrees with itself, which is exactly what a format
+break also does; these prove it agrees with the bytes on this page.
+
+**Nonces and salts are fixed here for reproducibility. A real record generates both from the
+system CSPRNG and never reuses either**, which is asserted separately rather than left to the
+vector to imply.
+
+**Account record.** Key `00 01 02 … 1f`, account `6F1B0C0A-6D3A-4A1F-9A2E-2A3B4C5D6E7F`,
+metadata nonce `a0 a1 … ab`, secret nonce `b0 b1 … bb`, metadata
+`{"color":"blue","issuer":"GitHub","name":"octocat"}`, secret the ASCII bytes
+`12345678901234567890`. The record is **324 bytes**:
+
+```
+4f465631a0a1a2a3a4a5a6a7a8a9aaab00000090e6187c1e3ee961d00e0af5f13d58a2b205c97b3cb0de311fe96b
+54a445893268a63e329d8d0e71533ef161ea3358ec9a3374252916f2677e415e0b5ea47085b0b4bc856f30a5e4e0
+f4e2ff188fceccbacd0baba4c5c1997aee753e9ab19a4d948f842bab03ae8f9b9edb06508588ed28245061aede35
+9b3c2fcfdea4b455f24d3a0515a871126b350b9da248b8860917b0b1b2b3b4b5b6b7b8b9babb0000009099555abf
+ddff886b72cea09af46db9f0b7087ce42216b6055ece82f15c82f216054b233a63dea6b8a55ba04a3cb982b52d6d
+17c71b3b42f04d8a6c30049b20ffb2e83eb40abc66da19dca25e9e06e2314690c9b2a87875ddf5fb78902b590fbf
+63a07e5bced736165e4e1adc92dac0800db6b79773f3cd3a7807f7d91e0e2f2289b1b05aab1d368d0fb8593b65c3
+46fb
+```
+
+Both halves pad to one 128 byte bucket, so each sealed length reads `00000090`, which is 144:
+the bucket plus a 16 byte tag.
+
+**Wrapped key.** Vault key 32 bytes of `2a`, passphrase `YZTR-THFW-WT6E-OXIV-73XD-QCDM`, salt
+`c0 c1 … df`, iterations 600,000, nonce `d0 d1 … db`. The record is **100 bytes**:
+
+```
+4f464b31c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf000927c0d0d1d2d3d4d5
+d6d7d8d9dadb01a685bb1548f10f769b3bc1a1b7fe0a47ca50d52f06e4fd25a85b77ea3b299ddfa536edb22eb16f
+ea7eb8d4c7eea3bf
+```
+
+`000927c0` at offset 36 is 600,000, and a reader must take the count from there rather than
+assume the number it would write with.
+
 ## Getting the key onto a device
 
 ### The passphrase
