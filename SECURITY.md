@@ -244,6 +244,17 @@ rather than leaving this paragraph as the last word.
   passphrase and where the file ends up. See `docs/BACKUP_FORMAT.md`, which was written and
   audited before any of it was implemented for exactly this reason.
 
+## The privacy manifest
+
+`OpenFactor/PrivacyInfo.xcprivacy` is the machine readable form of the claims above, and it
+is short enough to read in full. No tracking, no tracking domains, **no collected data types
+at all**, and one required reason API: `UserDefaults`, for this app's own preferences.
+
+That last one is worth being precise about, because "uses UserDefaults" sounds worse than it
+is. What is stored there is the sort order, the appearance, the chosen icon, whether sync is
+on, and whether the lock is on and after how long. Never a secret, never an account name.
+The file that does it is `OpenFactor/Settings/Preferences.swift`.
+
 ## Practices in this repository
 
 - The security sensitive code lives in `OpenFactorCore`, a package with no UI and no

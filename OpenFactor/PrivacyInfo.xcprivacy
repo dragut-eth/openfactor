@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The privacy manifest.
+
+  Apple requires this to declare tracking, collected data, and any use of the APIs it calls
+  "required reason". For most apps it is a chore. Here it is the machine readable form of
+  the claim the README leads with, so it is worth reading rather than copying:
+
+  - No tracking, and no tracking domains.
+  - No collected data types at all. Not "collected but not linked to you", not "collected
+    for app functionality". None, because nothing leaves the device except the iCloud
+    Keychain sync the user turns on, which is Apple's transport and not this app's
+    collection.
+  - One required reason API: UserDefaults, for this app's own preferences. Sort order,
+    appearance, chosen icon, whether sync is on, whether the lock is on and its grace
+    period. Never a secret, never an account name. See OpenFactor/Settings/Preferences.swift,
+    which says the same thing in code.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- CA92.1: access to information from the app itself, and app group
+				     containers it is a member of. This app reads and writes only its own
+				     preferences. -->
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

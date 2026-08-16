@@ -183,6 +183,8 @@ Tests/OpenFactorCoreTests/                 The shared core suites, 17k fuzz iter
 OpenFactor.xcodeproj                       See docs/PROJECT.md, checked in deliberately
 OpenFactor/                                App target
   Assets.xcassets/AppIcon.appiconset/      The app icon, single 1024 source
+  PrivacyInfo.xcprivacy                    No tracking, no collected data, one
+                                           required reason API. Read it, it is short
   Design/                                  Tokens, palette, code formatting
   Views/AccountCard.swift                  The card. No state, no timer, no store
   AccountListViewModel.swift               Rows, ticking, search, copying
