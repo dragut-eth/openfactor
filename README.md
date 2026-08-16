@@ -13,8 +13,9 @@ container and never syncs.
 
 > **Status: beta, in testing.** The repository is built in public from the first commit.
 > The app works and is being tried on real devices. The encrypted vault is implemented on both
-> iPhone and Apple Watch, but the exchange that hands the key to a watch has never run between
-> real devices, and the project has **not** had a professional independent security audit. Do not
+> iPhone and Apple Watch, and the exchange that hands the key to a watch has been run between
+> real devices, though only its successful path. The project has **not** had a professional
+> independent security audit. Do not
 > entrust it with an account you cannot recover yet. The reviews and hardware experiments so far
 > are recorded in [docs/audits](docs/audits). The threat model against the finished app is PR 17
 > and reproducible build notes are PR 18, so a released binary cannot yet be checked against this
@@ -39,10 +40,10 @@ against a malicious OpenFactor update, a compromised operating system, or somebo
 already unlocked device. [docs/VAULT.md](docs/VAULT.md) specifies the key hierarchy, record
 formats, recovery path, Watch provisioning protocol, and the limits that remain.
 
-The vault is implemented as of PR 16d, on both iPhone and Apple Watch. No implementation review
-has happened, and the Watch exchange has been exercised only against itself and never between a
-real phone and a real watch, so the specification remains a design claim rather than a claim
-about a finished release.
+The vault is implemented as of PR 16d, on both iPhone and Apple Watch. The Watch exchange has now
+been run between a real phone and a real watch, though only its successful path. No implementation
+review has happened, so the specification remains a design claim rather than a claim about a
+finished release.
 
 ## Principles
 

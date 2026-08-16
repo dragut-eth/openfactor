@@ -412,6 +412,25 @@ that belong to provisioning have screens of their own. Specified in `docs/UI_SPE
 *The watch's screens exist as of PR 16d. Asking is automatic, since every message on them ends by
 telling somebody to do something on their phone, and returning to the app tries again.*
 
+**A device can hold a key that opens nothing, and must notice.** This page had no word for that
+state and the first implementation had no check for it. Replacing the vault, which is what
+erasing everything and setting up again does, leaves any other device holding the old key while
+every record that arrives is sealed under the new one. Found on hardware: a watch reported zero
+accounts while fifteen sat in its Keychain unopened.
+
+**The signal is records present and not one of them readable**, which is
+`StoredRecords.suggestsAWrongKey`. Both halves are load bearing. No records at all is an empty
+vault or one still arriving, and a device that discarded its key on an empty read would do so
+every time it got ahead of iCloud. A mixture is a record from a newer version beside ones this
+build understands, which is what `unreadable` was for and has nothing to do with keys.
+
+**A device may act on it once**, and must believe the second answer. The watch re-provisions and
+then re-reads; if a freshly installed key still opens nothing, the cause is a format this build
+does not understand and asking again would fetch the same key forever.
+
+*The watch implements this. **The phone does not yet**, and has the same hole: a phone holding an
+old key shows every account as unreadable and is not offered the passphrase that would fix it.*
+
 *The phone's two screens exist as of PR 16d.* `VaultGateView` stands between the app lock and the
 account list and renders one of three things. The list is never drawn while the key is missing:
 to it a locked device is a shelf of unreadable rows, which is a true statement about the storage

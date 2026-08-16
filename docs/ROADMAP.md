@@ -564,9 +564,11 @@ so "no accounts yet" keeps its old meaning.
 
 **What remains in this pull request:**
 
-- **Running the exchange between a real phone and a real watch.** It has been exercised only
-  against itself. E7 ran both halves on macOS CryptoKit, the same implementation watchOS carries,
-  but no watch was involved
+- **The phone has the wrong-key hole the watch just had fixed.** A phone holding an old vault key
+  shows every account as unreadable and is never offered the passphrase that would recover it.
+  The signal already exists as `StoredRecords.suggestsAWrongKey`
+- **The failure paths of the exchange on hardware.** The successful path has now been run between
+  a real phone and a real watch. Declining, and a phone with no vault of its own, have not
 - **A second model reviewing the exchange**, because one model wrote the design, found the flaw
   in it, and implemented its own fix. That is exactly where a shared blind spot survives
 - **The tripwire is deliberately not being built yet.** Its container anchor has an unsolved

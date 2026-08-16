@@ -51,10 +51,10 @@ struct OpenFactorWatchApp: App {
                     rehearsal
                 }
             } else {
-                WatchVaultGateView { WatchAccountListView(store: store) }
+                WatchVaultGateView(store: store) { WatchAccountListView(store: store) }
             }
             #else
-            WatchVaultGateView { WatchAccountListView(store: store) }
+            WatchVaultGateView(store: store) { WatchAccountListView(store: store) }
             #endif
         }
     }

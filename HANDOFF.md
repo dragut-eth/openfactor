@@ -63,10 +63,30 @@ alternative was a digit comparison performed on a wrist, which is a step people 
 because two halves of one implementation agree with each other whether or not the binding is
 real.
 
-**What is left in PR 16d.** Running the exchange between a real phone and a real watch, which has
-never happened: E7 ran both halves on macOS CryptoKit and no watch was involved. A second model
-reviewing it, since one model wrote the design, found its flaw and implemented its own fix. And
-the tripwire, which is **not** to be built yet: its container anchor has an unsolved staleness
+**The exchange has now run between a real phone and a real watch**, successfully, which closes
+the gap three documents were carrying. Only the successful path; declining and a phone with no
+vault of its own have not been tried on hardware.
+
+**Testing it found a hole the design had no word for: a device can hold a key that opens
+nothing.** Replacing the vault on the phone leaves the watch with the old key, and every record
+that arrives is sealed under the new one. The watch reported zero accounts while fifteen sat in
+its Keychain unopened. The signal is now `StoredRecords.suggestsAWrongKey` in the core, with
+tests, and the watch acts on it once and believes the second answer. **The phone has the same
+hole and it is not fixed.**
+
+**Two process failures worth keeping, because both cost real time.** The first diagnosis was
+wrong: "forget everything" resets every preference including the sync switch, so accounts
+imported afterwards were device-only and never reached the watch at all. Two rounds went into
+fixing a stale key that was not yet the problem, because reasoning replaced looking. The second
+was worse: the fix marked itself as "already tried" on the attempt rather than on the outcome, so
+an attempt nobody completed was enough to make the watch claim the records needed a newer version
+of the app, which was frightening and false. A three-line Debug readout of the raw record counts
+found both in a minute, and it should have existed before the first fix rather than after the
+second.
+
+**What is left in PR 16d.** The phone's wrong-key hole. A second model reviewing the exchange,
+since one model wrote the design, found its flaw and implemented its own fix. And the tripwire,
+which is **not** to be built yet: its container anchor has an unsolved staleness
 problem once several devices are churning, and E6 made it worse by showing the container path
 changes on update.
 

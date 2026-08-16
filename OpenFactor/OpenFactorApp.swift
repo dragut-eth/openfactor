@@ -121,12 +121,10 @@ struct OpenFactorApp: App {
                 Button("Not now", role: .cancel) { watchKeys.decline() }
                 Button("Set up Apple Watch") { watchKeys.approve() }
             } message: {
-                Text(
-                    """
-                    Your Apple Watch is asking for the key to your accounts. After this it \
-                    generates codes on its own, without your iPhone.
-                    """
-                )
+                // One line. The system alert is translucent on iOS 26 and this one lands on the
+                // account list, which is a wall of saturated color, so every word that is not
+                // load bearing is working against being read at all.
+                Text("Your Apple Watch is asking for the key to your accounts.")
             }
             .onChange(of: scenePhase, initial: true) { _, phase in
                 lock.scenePhaseChanged(to: phase)
@@ -143,12 +141,22 @@ struct OpenFactorApp: App {
         }
     }
 
-    /// The alert's binding. Dismissing it any other way counts as declining, because a
-    /// question about releasing a key must never resolve as yes by default.
+    /// The alert's binding. **The setter deliberately does nothing.**
+    ///
+    /// It used to decline on dismissal, on the reasoning that a question about releasing a key
+    /// must never resolve as yes by default. That was right in intent and wrong in mechanism:
+    /// SwiftUI sets this binding to false as part of dismissing the alert, *before* the button's
+    /// action runs, so pressing "Set up Apple Watch" declined first and then found nothing left
+    /// to approve. It failed every single time, which is what a deterministic ordering bug looks
+    /// like from the outside.
+    ///
+    /// The intent is preserved without the mechanism: both buttons answer explicitly, and an
+    /// alert that somehow goes away without either leaves the question unanswered, so it comes
+    /// back rather than resolving itself.
     private var watchAsking: Binding<Bool> {
         Binding(
             get: { watchKeys.isAsking && !lock.isLocked },
-            set: { if !$0 { watchKeys.decline() } })
+            set: { _ in })
     }
 
     /// The cover shows when the app is not active and not locked. Not when locked,

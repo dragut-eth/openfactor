@@ -97,13 +97,24 @@ again. The "Try again" button stays for when nothing changed and somebody wants 
 | The phone is not frontmost or is locked | Open OpenFactor on your iPhone | Unlock your iPhone and open OpenFactor, then try again. |
 | The phone has no vault either | Set up your iPhone first | OpenFactor is not set up on your iPhone yet. Do that first, then set up this watch. |
 | Declined, or nothing opened | Not set up | Try again when you are ready. |
+| A fresh key arrived and still opens nothing | Accounts cannot be read | This watch has the key but cannot open your accounts. They may need a newer version of OpenFactor. |
+
+**Having a key is not the same as having the right one.** Replace the vault on the phone, which
+is what erasing everything and setting up again does, and a watch provisioned earlier keeps the
+old key while every record that arrives is sealed under the new one. The first version of this
+screen checked only for presence, so it showed the account list, which reported zero accounts,
+correctly and uselessly, with nothing offering a way back. The gate now asks again by itself when
+records are present and not one of them opens.
 
 **On the phone**, an alert over whatever is on screen, because the watch can ask at any moment:
 
 > **Set up your Apple Watch?**
-> Your Apple Watch is asking for the key to your accounts. After this it generates codes on its
-> own, without your iPhone.
+> Your Apple Watch is asking for the key to your accounts.
 > `Not now` `Set up Apple Watch`
+
+One line, deliberately. The system alert is translucent on iOS 26 and this one appears over the
+account list, which is a wall of saturated color, so anything not load bearing is working against
+the words being read at all.
 
 Dismissing it any other way counts as declining. A question about releasing a key must never
 resolve as yes by default. It cannot appear while App Lock is showing, so the question waits

@@ -21,18 +21,20 @@ final class WatchVaultModel: NSObject {
         case checking
         /// This watch has the key. The list can be drawn.
         case ready
-        /// Nothing asked yet, or the wearer came back to try again.
-        case needsPhone
         /// A request is out and the phone has not answered.
         case waiting
-        /// The phone is not in range, or the app on it is not running.
-        case unreachable
-        /// The phone answered, but nobody is looking at it and its key file is locked.
-        case openTheApp
+        /// The phone did not answer, or answered from the background where it can do nothing.
+        ///
+        /// **One state rather than three**, because the remedy is identical and naming the cause
+        /// sent people to check the wrong thing. "Not reachable" also fires when the phone is on
+        /// the table with OpenFactor closed, which reads as a distance problem and is not one.
+        case needsPhoneApp
         /// The phone has no vault of its own yet.
         case phoneNotSetUp
         /// The person said no, or something did not open.
         case notSetUp
+        /// This watch has a key, asked again, and still cannot read anything.
+        case cannotRead
     }
 
     private(set) var stage: Stage = .checking
@@ -42,33 +44,70 @@ final class WatchVaultModel: NSObject {
     /// Held between the two messages, and only then. The private key inside it is used once.
     private var attempt: WatchProvisioning.Attempt?
 
+    /// The store, so the model can tell a key that works from one that merely exists.
+    private var store: (any SecretStore)?
+
+    /// Set only once a **fresh key has actually been installed and still opens nothing**.
+    ///
+    /// It used to be set at the moment of asking, which was wrong in a way that showed up
+    /// immediately on a wrist: the first attempt fired, did not complete because nobody was
+    /// looking at the phone, and the next check found the flag already set and declared that the
+    /// records needed a newer version of OpenFactor. That is a frightening sentence and it was
+    /// not true. Asking is not evidence; a key that arrived and did not help is.
+    private var hasReplacedStaleKey = false
+
     init(keys: VaultKeyStore = VaultKeyStore()) {
         self.keys = keys
         super.init()
     }
 
-    func activate() {
+    func activate(in store: any SecretStore) {
+        self.store = store
         WCSession.default.delegate = self
         WCSession.default.activate()
         refreshAndAsk()
     }
 
-    /// Re-reads whether this watch already has a key and, if it does not, asks.
+    /// Re-reads whether this watch can actually read its accounts, and asks if it cannot.
+    ///
+    /// **Having a key is not the same as having the right one**, and the difference is a dead
+    /// end that shipped in the first version of this screen. Replace the vault on the phone,
+    /// which is what "forget everything" and a fresh setup do, and this watch keeps the old key
+    /// while every record that arrives is sealed under the new one. The gate saw a key, said
+    /// ready, and handed the list a shelf of accounts it could not open. The list then reported
+    /// zero accounts, correctly and uselessly, with nothing offering a way back.
     ///
     /// **Asking is automatic rather than a button.** Every message this screen can show ends by
     /// telling somebody to go and do something on their phone, and the natural next move is to
-    /// raise the wrist again. Making that work is worth more than a tap that says "Try again"
-    /// for a second time. The button stays for the case where nothing changed and somebody
-    /// wants to poke it.
+    /// raise the wrist again. The button stays for when nothing changed and somebody wants to
+    /// poke it.
     func refreshAndAsk() {
         if ((try? keys.load()) ?? nil) != nil {
-            stage = .ready
-            return
+            guard keyOpensNothing else {
+                stage = .ready
+                return
+            }
+
+            // A fresh key was installed and these records still will not open, so a newer format
+            // wrote them rather than a different key having sealed them. Asking again would
+            // fetch the same key and produce the same result, forever.
+            guard !hasReplacedStaleKey else {
+                stage = .cannotRead
+                return
+            }
         }
 
         // Not while a request is already out, or raising the wrist twice would send two.
         guard stage != .waiting else { return }
         ask()
+    }
+
+    /// The rule itself lives in `StoredRecords.suggestsAWrongKey`, where it can be tested. A
+    /// decision about whether a device throws its key away does not belong in a view model that
+    /// no test can reach.
+    private var keyOpensNothing: Bool {
+        guard let store, let records = try? store.records() else { return false }
+        return records.suggestsAWrongKey
     }
 
     // MARK: - Asking
@@ -80,19 +119,28 @@ final class WatchVaultModel: NSObject {
         self.attempt = attempt
         stage = .waiting
 
+        // A spinner with nothing behind it is the worst of the states this screen can be in,
+        // and it is reachable: the phone answers "asking", then the person walks away, or the
+        // second message never arrives. After a while, say the thing that leads somewhere.
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(25))
+            guard let self, self.stage == .waiting else { return }
+            self.stage = .needsPhoneApp
+        }
+
         WCSession.default.sendMessage(["request": attempt.request]) { reply in
             Task { @MainActor in self.phoneAnswered(reply) }
         } errorHandler: { _ in
             // Not reachable, not paired, or the counterpart is not running. All of them mean
             // the same thing to somebody standing there: the phone is not answering.
-            Task { @MainActor in self.stage = .unreachable }
+            Task { @MainActor in self.stage = .needsPhoneApp }
         }
     }
 
     private func phoneAnswered(_ reply: [String: Any]) {
         switch reply["status"] as? String {
         case "asking": stage = .waiting
-        case "needsApp": stage = .openTheApp
+        case "needsApp": stage = .needsPhoneApp
         case "noVault": stage = .phoneNotSetUp
         default: stage = .notSetUp
         }
@@ -108,7 +156,15 @@ final class WatchVaultModel: NSObject {
             do {
                 try keys.install(try attempt.open(response))
                 self.attempt = nil
-                stage = .ready
+
+                // The key arrived. Whether it was the right one is a different question, and the
+                // only honest way to answer it is to try reading with it.
+                if keyOpensNothing {
+                    hasReplacedStaleKey = true
+                    stage = .cannotRead
+                } else {
+                    stage = .ready
+                }
             } catch {
                 self.attempt = nil
                 stage = .notSetUp

@@ -13,6 +13,10 @@ struct WatchVaultGateView<Content: View>: View {
 
     @State private var model = WatchVaultModel()
 
+    /// Read to tell a key that works from one that merely exists. See
+    /// `WatchVaultModel.refreshAndAsk(in:)`.
+    let store: any SecretStore
+
     @ViewBuilder let content: () -> Content
 
     @Environment(\.scenePhase) private var scenePhase
@@ -26,28 +30,27 @@ struct WatchVaultGateView<Content: View>: View {
                 content()
             case .waiting:
                 waiting
-            case .needsPhone:
-                message(
-                    "Set up on iPhone",
-                    "Open OpenFactor on your iPhone to finish setting up this watch.")
-                    // Reached only if asking could not even start.
-            case .unreachable:
-                message(
-                    "iPhone not reachable",
-                    "Bring your iPhone closer and try again.")
-            case .openTheApp:
+            // One message for every way the phone can fail to answer, because the remedy is
+            // the same and naming the cause was worse than useless: "iPhone not reachable" also
+            // fires when the phone is on the table with the app closed, which reads as a
+            // distance problem and sends somebody to check the wrong thing.
+            case .needsPhoneApp:
                 message(
                     "Open OpenFactor on your iPhone",
-                    "Unlock your iPhone and open OpenFactor, then try again.")
+                    "Your iPhone needs to be nearby, unlocked, and showing OpenFactor. Then try again.")
             case .phoneNotSetUp:
                 message(
                     "Set up your iPhone first",
                     "OpenFactor is not set up on your iPhone yet. Do that first, then set up this watch.")
             case .notSetUp:
                 message("Not set up", "Try again when you are ready.")
+            case .cannotRead:
+                message(
+                    "Accounts cannot be read",
+                    "This watch has the key but cannot open your accounts. They may need a newer version of OpenFactor.")
             }
         }
-        .onAppear { model.activate() }
+        .onAppear { model.activate(in: store) }
         .onChange(of: scenePhase) { _, phase in
             // Coming back is the moment to try again, because every message on this screen asks
             // somebody to go and do something on their phone. They do it, they raise their
