@@ -118,6 +118,11 @@ interchange format; this is not.
 All integers are big endian. **Test vectors are part of this format** and must exist before the
 implementation is considered complete.
 
+*Both records are implemented as of PR 16d, in `Sources/OpenFactorCore/Vault/`, with tests that
+assert the layout rather than only the round trip. That distinction earned itself immediately:
+the first writer emitted the secret half's length before its nonce, which round tripped through
+neither reader nor writer, and only the layout assertion caught it.*
+
 ### The account record
 
 One Keychain item per account, as today.

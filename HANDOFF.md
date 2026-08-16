@@ -260,6 +260,11 @@ Sources/OpenFactorCore/
   Backup/PBKDF2.swift                      CommonCrypto. CryptoKit has no password KDF
   Backup/BackupBase64.swift                Strict out, lenient in
   Backup/BackupError.swift                 Why an archive would not open
+  Vault/VaultRecord.swift                  One account, sealed in two halves so a
+                                           list never decrypts a secret
+  Vault/WrappedVaultKey.swift              The vault key sealed under a passphrase,
+                                           one record so it cannot arrive in pieces
+  Vault/VaultPadding.swift                 Length prefixed, so a size says less
 Tests/OpenFactorCoreTests/                 The shared core suites, 17k fuzz iterations
 OpenFactor.xcodeproj                       See docs/PROJECT.md, checked in deliberately
 OpenFactor/                                App target
