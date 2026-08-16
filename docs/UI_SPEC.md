@@ -474,6 +474,11 @@ error reported anywhere, and that latency fooled the people building it twice in
 the screen says nothing has arrived yet and names the likely reason, and deliberately does
 not send anyone off to re-check settings that are already correct.
 
+**The empty list's action is sized as a prominent button, not as its own label.**
+`ContentUnavailableView` fits its action to the text, which on a screen with nothing else on
+it reads as a link that happens to be blue. A large control size and a real width give it
+the weight of the one thing that screen is asking somebody to do.
+
 ## Design tokens
 
 Defined once in the app and never hardcoded at a call site, so a design change is a one

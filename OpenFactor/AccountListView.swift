@@ -186,8 +186,21 @@ struct AccountListView: View {
             } description: {
                 Text("Scan the QR code a service shows you when you turn on two factor authentication.")
             } actions: {
-                Button("Add an account") { isAdding = true }
-                    .buttonStyle(.borderedProminent)
+                // The proportions of a prominent iOS button rather than a text sized one.
+                // `ContentUnavailableView` sizes its action to the label, which on an empty
+                // screen with nothing else on it reads as a link that happens to be blue.
+                // A large control size and a real width give it the weight of the one thing
+                // this screen is asking somebody to do.
+                Button {
+                    isAdding = true
+                } label: {
+                    Text("Add an account")
+                        .frame(maxWidth: 260)
+                        .padding(.vertical, 4)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .buttonBorderShape(.capsule)
             }
         } else if model.visibleRows.isEmpty && model.isSearching {
             ContentUnavailableView.search
