@@ -1,7 +1,7 @@
 # Security
 
-OpenFactor holds the second factor for every account you add to it. That makes it a high
-value target, so this document is meant to be read, not filed.
+OpenFactor holds the second factor for every account added to it. That makes it a high-value
+target, so this document is meant to be read, not filed.
 
 ## Reporting a vulnerability
 
@@ -11,279 +11,281 @@ Please do not open a public issue for a vulnerability.
 
 Include what you did, what happened, and what you expected. A proof of concept helps.
 
-You will get an acknowledgement within 7 days. There is no bug bounty. This is a small
-open source project and the honest answer is that the reward is credit in the advisory,
-unless you would rather stay anonymous.
+You will get an acknowledgement within 7 days. There is no bug bounty. This is a small open-source
+project, and the available reward is credit in the advisory unless you would rather remain
+anonymous.
 
-Please give a reasonable window to ship a fix before publishing. If a fix is taking too
-long, say so and we will agree a date rather than let it sit.
+Please allow a reasonable window to ship a fix before publishing. If a fix is taking too long,
+say so and we will agree on a disclosure date rather than let it sit.
 
 ## Threat model
 
-Incomplete while the app is being built. Each entry is finalized in the PR that
-implements the relevant behavior, and the whole document is reviewed in PR 17. Claims
-marked *planned* are not yet true, because the code does not exist yet.
+This document is incomplete while the app is being built. The complete threat model is reviewed
+in PR 17. A statement marked **implemented** describes code that exists. A statement marked
+**vault design** describes a property specified in `docs/VAULT.md` that is not a release claim
+until the current vault integration, migration, and implementation review are complete.
+
+The distinction matters. A security design can be sound while the product implementing it is
+unfinished or wrong.
 
 ### What OpenFactor protects
 
-Your TOTP secrets, meaning the shared keys that generate your codes. Anyone holding a
-secret can generate valid codes forever, without your phone and without your knowledge.
-There is no revocation short of re enrolling with the service.
+The primary assets are the HOTP and TOTP secrets that generate verification codes. Anyone holding
+one can generate valid codes without the device and without the account owner's knowledge. The
+secret can be revoked only by re-enrolling with the service.
+
+Account metadata is sensitive too. Issuers and account names reveal which services someone uses
+and often the address or identity used there. The vault therefore encrypts metadata as well as
+secrets.
+
+Availability is a separate property. Encryption can prevent a reader from learning a secret. It
+cannot stop an authorised Keychain writer from deleting or replaying encrypted records.
+
+### Another app signed by the same developer team
+
+**Vault design, supported by hardware experiments.** OpenFactor does not treat a Keychain access
+group as a confidentiality boundary. Gate E1 demonstrated that another app signed by the same
+team can be authorised to read items in any of that team's Keychain access groups, including the
+default group.
+
+The vault is the response. Keychain contains encrypted account records and a wrapped recovery
+key. The key that opens account records is stored only in the app's private container. Gate E4
+demonstrated that a sibling app holding the exact container path was refused by the operating
+system and could not enumerate it.
+
+Reading OpenFactor's Keychain items should therefore reveal ciphertext, record identifiers,
+timestamps, and approximate padded sizes, but not account names or secrets.
+
+This does not provide integrity or availability. A sibling app that can read the items can also
+replace, replay, or delete them. Those cases are addressed separately below.
 
 ### Attacker with your locked device
 
-*Implemented and verified by test.* Secrets live in the Keychain with
-`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. They are encrypted with a key derived from
-your device passcode and the Secure Enclave, and are unreadable while the device is locked.
-An attacker with the hardware and no passcode should get nothing.
+**Vault design.** The vault key file uses the `.complete` protection class. It is unavailable
+while the device is locked and is excluded from device backups. The file is located through
+`FileManager` on every access because a real app update was observed preserving the file while
+moving the container that held it.
 
-**Turning sync on weakens this,** and there is no way to have both. A synchronizable
-Keychain item cannot be device only, by definition, so switching sync on moves every
-account to `kSecAttrAccessibleWhenUnlocked`. Still unreadable while the device is locked,
-still tied to your passcode, but no longer pinned to this one piece of hardware. That is
-the actual price of sync, and the settings screen says so in words before you pay it.
+Account records are also protected by the Keychain. With sync off they use
+`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. With sync on they must use
+`kSecAttrAccessibleWhenUnlocked`, because a synchronizable item cannot be tied to one device.
+Under the vault design this change affects the ciphertext and its availability elsewhere; it
+does not place the vault key in Keychain or cause that key to sync.
 
-Your account names are protected too. The issuer and account name cannot generate a code,
-but they say which services you use and under which email address, so they are stored in
-the Keychain alongside the secret rather than in an ordinary file. They are encrypted at
-rest and absent from unencrypted backups for the same reason the secrets are.
+The backup exclusion and protection attributes have been verified on a real device. Their
+behaviour through a restore and Quick Start has not been measured and is not claimed.
 
 ### Attacker with your unlocked device
 
-*Implemented in PR 15.* Two defences, one always on and one opted into.
+**Implemented in PR 15.** Two defences exist, one always on and one optional.
 
-**The app switcher never contains a code, for anyone.** iOS photographs the app as it
-leaves the foreground and shows that photograph to whoever flicks through the switcher.
-OpenFactor covers itself the moment it stops being active, so the photograph is a blank
-surface. This is not part of App Lock and obeys no setting, because the leak it closes
-does not care about settings. Verified empirically: the pre fix snapshot was captured
-showing a full settings screen, and the post fix snapshot is blank.
+**The app switcher never contains a code.** iOS photographs the app as it leaves the foreground
+and shows that photograph in the app switcher. OpenFactor covers itself as soon as it stops being
+active, so the captured surface is blank. This protection does not depend on App Lock.
 
-**App Lock, off by default,** requires Face ID, Touch ID, or the device passcode before
-anything is shown, on launch and on return from the background after a configurable grace
-period. A clock that moved backwards while the app was away counts as expired, because it
-is indistinguishable from tampering and the cost of being wrong is one prompt.
+**App Lock, off by default,** requires Face ID, Touch ID, or the device passcode before anything
+is shown, on launch and on return from the background after a configurable grace period. A clock
+that moved backwards while the app was away counts as expired because it is indistinguishable
+from tampering and the cost of being wrong is one prompt.
 
-**What App Lock is, stated exactly.** A gate in front of the interface, enforced by this
-app's code, not encryption. The secrets are protected by the device Keychain with the lock
-on or off, and an attacker who can run code as this app is already past both. What the
-lock defends is the borrowed phone: handed over unlocked for a call, left on a desk,
-snatched while open. The settings footer says this in as many words, because a user
-deciding whether they need it deserves the real shape of it.
+App Lock is a gate in front of the interface, enforced by this app's code. It is not encryption.
+It protects against a borrowed phone, a phone left unlocked on a desk, or a phone taken while it
+is open. An attacker able to run code as OpenFactor is already past it.
 
-**It fails closed.** If the device passcode is removed after the lock was enabled, there
-is nothing left to authenticate against, and the app stays locked with an explanation
-rather than quietly opening. The lock also cannot be enabled on a device with no passcode,
-since a lock that cannot lock is a false claim with a switch on it.
+App Lock fails closed. If the device passcode is removed after App Lock was enabled, the app stays
+locked with an explanation rather than quietly opening. App Lock cannot be enabled on a device
+with no passcode.
 
-**The watch has no App Lock,** deliberately. Its lock is the one watchOS already has:
-wrist detection plus the watch passcode, which locks the watch the moment it leaves the
-arm. An app level lock on top would add a second prompt without adding a second barrier.
+The Watch has no separate App Lock. It relies on the Watch passcode and wrist detection, which
+locks the device when it leaves the wearer's wrist.
 
 ### Attacker with your iCloud account
 
-*Implemented as of PR 13, and only relevant if you turn sync on. Off by default.* Sync uses
-iCloud Keychain, which is end
-to end encrypted, and Apple cannot read the synced items. Neither can someone who obtains
-your iCloud password alone.
+Sync is off by default. **Vault design:** when it is enabled, iCloud Keychain carries encrypted
+account records and the wrapped vault key. The vault key itself never syncs.
 
-**The keys are escrowed with Apple, and saying otherwise would overstate this.** An earlier
-version of this paragraph said the keys never leave your devices. Apple's platform security
-documentation describes an escrowed copy, guarded by hardware security modules that verify
-your device passcode without Apple seeing it, allow ten attempts, and destroy the record
-after that. "Apple cannot read them" survives this; "never leave your devices" does not, and
-the escrow is what makes recovery possible when every device is lost.
+Someone who recovers the Keychain material obtains ciphertext and the recovery record, not a
+plaintext account. Recovering the vault on a new device also requires the generated vault
+passphrase, which is shown once and never persisted by OpenFactor.
 
-That gives an attacker two routes, and both need more than your iCloud password:
+This makes Apple's Keychain escrow relevant to availability rather than the confidentiality of
+the account plaintext. If every device is lost, the ciphertext and wrapped key must return before
+the passphrase has anything to unwrap. A missing wrapped record must be reported as data still in
+flight or unavailable, never as a wrong passphrase.
 
-- **Join the circle of trust.** Your iCloud password plus one of your device passcodes adds
-  a device that then receives your secrets.
-- **Recover through escrow.** Your iCloud password, control of your trusted phone number,
-  and a device passcode guessable inside ten attempts recovers the keychain with none of
-  your devices present.
+Apple Account security still matters. An attacker able to delete or replace synchronized
+Keychain items can damage availability even without opening them. A strong Apple Account password,
+two-factor authentication, and a strong device passcode remain important defences.
 
-Two factor authentication on your Apple Account is therefore part of this app's security
-rather than separate from it, and so is your device passcode. A long alphanumeric passcode
-is the one thing you control that defends the escrow route directly. Gate A2, F15.
+Turning sync on and off does not decrypt account records. The conversion updates Keychain
+attributes in place. Both account records and the wrapped key follow the same sync preference.
+The vault key file does not.
 
-**Turning sync on and off never reads a secret.** The conversion updates each Keychain
-item in place, so no secret is decrypted, no secret enters this app's memory, and there is
-no moment when an account exists only as a variable that a crash could lose. The obvious
-implementation, reading each account out and writing it back, would have all three
-problems.
+### What turning sync off does
 
-**What turning sync off does, precisely. Observed on real hardware on 2026-08-15.** The
-accounts stay on this device, stop being offered to iCloud Keychain, and go back to the
-device only protection class.
+**Implemented and observed on real hardware.** The accounts stay on the device where sync was
+disabled, stop being offered to iCloud Keychain, and return to the device-only protection class.
 
-**They disappear from your other devices.** A paired Apple Watch holding ten accounts was
-empty fourteen minutes after the switch was turned off on the phone. This document
-previously expected the copies elsewhere to be left alone, and that expectation was wrong.
-Apple's documentation for `kSecAttrSynchronizable` was right: updating an item through that
-key affects all copies, and withdrawing an item from sync is such an update.
+They disappear from other devices. A paired Watch became empty after sync was turned off on its
+phone, and repopulated after sync was enabled again. Turning sync off therefore affects the Watch
+and every other device using those synchronized records. The interface must say so before the
+change rather than after another device appears empty.
 
-Nothing is deleted in the sense a user means by it. The other device never held an
-independent copy, it had access to a shared one, and turning sync off withdraws the item
-from the shared space. From the other device, withdrawn and gone are the same thing.
+The device preference and Keychain can disagree. The switch is remembered per device in
+`UserDefaults` and written only after the Keychain work succeeds. A conversion stopped part way
+can leave a mixture, and an account synchronized from another device can arrive regardless of
+this device's preference.
 
-Turning sync back on restores them, and quickly: the same watch repopulated in under a
-minute, against the roughly thirty minutes the first synchronisation took. So this is
-reversible, but a user who turns sync off to stop copying their data around will find their
-watch empty, and the interface has to say so before they do it rather than after they
-wonder why their wrist stopped working. Gate A2, F8, closed by experiment.
+The app reports the observed Keychain state rather than silently reconciling it. An arrived
+record is indistinguishable from a half-converted one, and pulling it out of sync automatically
+could affect every device.
 
-**Your device preference and the Keychain can disagree, and the app says so rather than
-repairing it.** The switch is remembered per device in `UserDefaults` and is written only
-after the Keychain work succeeds. Three ways the two come apart: a conversion killed part
-way leaves a mixture; an account synced from another device arrives here whatever this
-device's switch says; and once sync has ever been on, copies may exist elsewhere regardless
-of what the switch reads now.
+Sync is a request, not proof of delivery. Marking an item synchronizable offers it to iCloud
+Keychain. There is no public API that tells the app whether iCloud Keychain is enabled or whether
+a particular item has reached another device, so the interface does not claim either.
 
-Running the conversion again repairs the first case, because it is idempotent by design.
-The app deliberately does not reconcile at launch: an arrived account is indistinguishable
-from a half converted one, and "resolving" it would quietly pull that account out of sync
-on every device.
+### The Watch is another device holding the vault key
 
-That argument justifies not repairing. It does not justify not telling, which is what gate
-A2 found. The settings screen now reads the Keychain rather than the switch when it says
-where your accounts are, and says plainly when the two states are mixed. The delete
-confirmation reads it too, because whether a deletion reaches your other devices is the one
-thing in this app that cannot be undone. Gate A2, F9 and F12.
+**Vault design.** Account records reach the Watch as ciphertext through iCloud Keychain. The
+vault key does not. It is provisioned once from an unlocked, foregrounded phone over the
+interactive WatchConnectivity channel.
 
-**Sync is a request, not a delivery.** Marking an item synchronizable offers it to iCloud
-Keychain. If iCloud Keychain is off in iOS Settings, the conversion still succeeds and
-nothing leaves the device. There is no public API to check that setting, so the app cannot
-know and does not claim to. The interface names the prerequisite instead. Gate A2, F10.
+The Watch and phone each generate an ephemeral P-256 keypair, derive a shared secret with ECDH,
+and bind the protocol version, request nonce, and both public keys into the HKDF context and
+AES-GCM additional data. Both screens show a six-digit authentication string derived from the
+same transcript. The person provisioning the Watch confirms that the strings match before the
+phone releases a sealed vault key.
 
-### The watch is a device holding your secrets
+The protocol and byte layouts are specified in `docs/VAULT.md`. The cryptographic exchange has
+been exercised with negative controls, and a sibling phone app was unable to reach another app's
+Watch session. A rogue Watch app claiming to be the counterpart remains unmeasured. The human
+authentication string keeps routing exclusivity from being the only defence.
 
-*Verified on real hardware on 2026-08-14, and a direct consequence of the design chosen in
-PR 13.* This is no longer a description of intent. A paired Apple Watch has been observed
-reading an account created on the phone. The watch
-does not receive secrets from the phone. It reads the same synced Keychain items, through a
-shared access group, which is why it keeps working with the phone off or absent. The
-consequence is worth stating plainly rather than leaving implicit in an architecture
-document: **your paired watch holds your secrets, and it can generate your codes.** Treat a
-lost watch the way you would treat a lost phone.
+After provisioning, the Watch holds a vault key in its own protected container and can generate
+codes without the phone. Treat a lost provisioned Watch as a lost authenticator. The complication
+holds no key, no account data, and no Keychain entitlement.
 
-It also means the watch app needs sync on. With sync off there is nothing for it to read,
-and it will say that rather than showing an empty list.
+### Deletion, replay, and missing data
 
-Nothing in the interface mentions the watch until the watch app exists. The sync footer
-named it before PR 14 had started, which taught a reader their watch already held their
-secrets. Gate A2, F11.
+**Vault design, not yet complete.** AES-GCM detects modification of a record. It does not detect
+an old valid record being replayed, and it cannot stop deletion.
 
-We do not use CloudKit for secrets. A CloudKit private database is encrypted, but with a
-key Apple holds unless the encrypted fields API is used, and that is a weaker guarantee
-than iCloud Keychain gives for free.
+A container-resident anchor is intended to record that a vault exists. If the anchor exists and
+Keychain suddenly contains no account records, OpenFactor must report data missing rather than
+presenting an empty new vault. Keeping that tripwire accurate across legitimate changes from
+multiple devices is not solved yet. Replay detection across multiple writers is also unsolved.
+
+The encrypted export is the recovery backstop. The tripwire detects some destruction; it does not
+restore what was deleted.
+
+### Passphrase replacement is not revocation
+
+**Vault design.** Replacing the vault passphrase wraps the same vault key under a new passphrase.
+It does not rotate that key. Anyone holding an older wrapped-key record and its old passphrase can
+still recover the vault key.
+
+Responding to a suspected compromise requires a new vault key, re-encryption of every account, a
+new recovery passphrase, and reprovisioning every other device. Version 1 does not implement that
+rotation path and must not present a passphrase replacement as though it did.
+
+### Device loss and recovery
+
+The vault passphrase is generated with 120 bits of entropy, shown once, acknowledged, and never
+stored by OpenFactor. A new phone recovers by receiving the wrapped-key record, asking for the
+passphrase, unwrapping the vault key, and installing it in the new private container.
+
+With sync off, the wrapped key exists only on that device. Losing the device then loses the vault
+unless an encrypted export exists. This is deliberate and must be stated before someone disables
+sync.
+
+The vault key is excluded from device backups. Restore and Quick Start behaviour has not been
+verified end to end on real hardware, so seamless recovery through either path is not promised.
 
 ### Attacker on the network
 
-There is no network code. The app makes no requests, so there is nothing to intercept.
-This is verified in CI rather than asserted: the style job greps every Swift file in the
-repository for `URLSession`, the `Network` framework, raw sockets, and logging, and fails
-the build if any appears. It sweeps and excludes rather than naming directories, because
-the first version named three and the project grew three more in the same pull request
-that wrote it, leaving the shared folder and both watch targets unchecked while this
-paragraph said the whole tree was covered. Gate A2, F19. Until gate A2 this sentence said the same thing while CI checked nothing, which is
-exactly the plan laundered into a fact that the *planned* marker exists to prevent. Gate
-A2, F16.
+**Implemented.** There is no network code. The app makes no requests of its own, so there is
+nothing from OpenFactor to intercept. CI searches every Swift file for `URLSession`, the
+`Network` framework, raw sockets, and logging, and fails if any appears.
 
-iCloud Keychain traffic is the operating system's, not this app's, which is why the
-interface says the app makes no network requests "of its own".
+iCloud Keychain traffic is the operating system's, not this app's. The interface therefore says
+that OpenFactor makes no network requests of its own.
 
 ### Malicious or compromised dependency
 
-There are no third party dependencies. Nothing in the supply chain but Apple's own
-frameworks and this repository.
+There are no third-party dependencies. The supply chain is this repository, the Swift toolchain,
+and Apple's platform frameworks.
 
-Within Apple's frameworks, the cryptography comes from CryptoKit, with one exception:
-CryptoKit has no password based key derivation, so the backup format's PBKDF2 comes from
-CommonCrypto. Both are Apple's, neither is vendored, and the exception is named here rather
-than left for a reader to notice.
+Cryptography comes from CryptoKit, with one exception. CryptoKit has no password-based key
+derivation, so PBKDF2 comes from CommonCrypto. Both are Apple frameworks and neither is vendored.
+The HOTP dynamic truncation required by RFC 4226 is the only cryptographic construction written
+directly in this repository, and it is tested against the RFC vectors.
 
 ### Attacker who publishes a modified build
 
-Verify what you install. Reproducible build notes land in PR 18 so a third party can
-confirm that a released binary was built from the tagged source.
+The public source does not prove that a distributed binary was built from it. Reproducible build
+notes are planned for PR 18 so a third party can compare a released binary with the tagged source.
+Until then, this remains an open supply-chain limitation.
 
-### System added menu entries
+### System-added menu entries
 
-*Known and accepted, to be re-examined in PR 17.*
+**Known and accepted, to be re-examined in PR 17.**
 
-Long pressing an account card opens a system context menu. iOS may add entries to such a
-menu that this app does not define, and on iOS 26 it adds "Ask Siri". Invoking it may pass
-what is on screen, which includes a live code and an account name, to an assistant that can
-process requests off device.
+Long-pressing an account card opens a system context menu. iOS may add entries that OpenFactor
+does not define. On current systems that can include an assistant action. Invoking a system-added
+action may pass visible content, including a live code and account name, to a service that can
+process requests away from the device.
 
-This was found during development and the menu was removed. It was then deliberately
-restored, because the system menu carries a preview and a lift animation that an app
-defined action sheet cannot reproduce, and the alternative was judged the worse product.
-The trade is recorded here rather than left implicit.
-
-What is known: the entry exists, and the app does not put it there. What is not known, and
-what this project cannot verify from the outside, is exactly what it transmits and when.
-Anyone for whom that matters can turn off Apple Intelligence in iOS Settings, which removes
-the entry.
-
-PR 17 should either establish what it transmits, or state plainly that it is unverified,
-rather than leaving this paragraph as the last word.
+The app does not control those entries and cannot verify externally exactly what they transmit.
+Anyone for whom that matters can disable the relevant system assistant features, which removes
+the entry. PR 17 must either establish the behaviour or preserve the limitation explicitly.
 
 ### Explicitly out of scope
 
-- A jailbroken or already compromised device. If the OS is owned, nothing in userspace
-  helps.
-- A malicious Xcode toolchain or a compromised Apple platform.
-- Shoulder surfing, screen recording by another app you installed, and physical coercion.
-- Your own choice to export secrets in plaintext, which the app permits behind an explicit
-  warning and an acknowledgement, because an authenticator you cannot leave is its own kind
-  of trap. Gate A2, F17.
-- **An archive you have created and stored badly.** Once bytes are in a file, none of the
-  protections the rest of this app relies on apply: not the device passcode, not the Secure
-  Enclave, not the Keychain's protection class. An encrypted archive is only as good as the
-  passphrase and where the file ends up. See `docs/BACKUP_FORMAT.md`, which was written and
-  audited before any of it was implemented for exactly this reason.
+- A jailbroken or already compromised device. If the operating system is controlled, nothing in
+  this app can restore the boundary.
+- A malicious Xcode toolchain or compromised Apple platform.
+- Shoulder surfing, physical coercion, or someone using a device that is already unlocked and
+  authenticated to OpenFactor.
+- A plaintext export the user deliberately creates after an explicit warning and acknowledgement.
+  Portability requires this path, and the resulting file contains every exported secret.
+- An archive stored badly. Once bytes are in a file, the device passcode, Secure Enclave, Keychain
+  protection class, and vault container no longer protect it. See `docs/BACKUP_FORMAT.md`.
+- Phishing. HOTP and TOTP codes can be entered into a convincing fake site. OpenFactor does not
+  make these protocols phishing-resistant.
 
 ## The privacy manifest
 
-`OpenFactor/PrivacyInfo.xcprivacy` is the machine readable form of the claims above, and it
-is short enough to read in full. No tracking, no tracking domains, **no collected data types
-at all**, and one required reason API: `UserDefaults`, for this app's own preferences.
+`OpenFactor/PrivacyInfo.xcprivacy` is the machine-readable form of the privacy claims above. It
+declares no tracking, no tracking domains, no collected data types, and one required-reason API:
+`UserDefaults`, used for the app's own preferences.
 
-That last one is worth being precise about, because "uses UserDefaults" sounds worse than it
-is. What is stored there is the sort order, the appearance, the chosen icon, whether sync is
-on, and whether the lock is on and after how long. Never a secret, never an account name.
-The file that does it is `OpenFactor/Settings/Preferences.swift`.
+Those preferences include sort order, appearance, chosen icon, sync preference, and App Lock
+settings. They never include a secret, account name, vault key, or passphrase.
 
 ## Credentials and this repository
 
-**No credential belongs in this repository, and CI enforces it rather than trusting anyone
-to remember.** The `No credentials` job refuses anything shaped like an API key identifier,
-an issuer identifier, or a private key block, and refuses credential files by extension.
+No credential belongs in this repository. CI refuses private-key blocks, credential files, and
+values shaped like the App Store Connect credentials used by the release process.
 
-It exists because an App Store Connect API key identifier was committed here and pushed. An
-identifier is not a key, the private key and issuer identifier were never in the repository,
-and nothing was compromised. It was still avoidable, and on a project that asks people to
-audit its handling of secrets, "we noticed eventually" is not a control.
-
-The team identifier is the deliberate exception: it is in the project file, it ships inside
-every binary Apple distributes, and `docs/PROJECT.md` explains why it stays.
+The Apple development team identifier is the deliberate exception. It is not a secret, appears
+inside signed applications, and is documented in `docs/PROJECT.md`.
 
 ## Practices in this repository
 
-- The security sensitive code lives in `OpenFactorCore`, a package with no UI and no
-  dependencies, so it can be audited in isolation.
-- The cryptography comes from Apple's frameworks: CryptoKit for hashing, HMAC and
-  AES-256-GCM, and CommonCrypto for PBKDF2, which CryptoKit does not provide. The one thing
-  written by hand is the HOTP construction of RFC 4226, which is dynamic truncation over an
-  HMAC the framework computes, and it is verified against the RFC's own test vectors.
-- The generators are verified against the official RFC test vectors in CI.
-- Secrets are never logged, and never sent to analytics because there is none. They leave
-  the Keychain in exactly two places, both of which a person has to ask for: a code copied
-  to the clipboard, local to the device and expiring, and an export file, which is deleted
-  when the screen that made it goes away and swept at launch if the app was killed first.
-- Non secret metadata such as the account color and sort order is stored separately from
-  the secret, so drawing the list never requires loading secret material.
-- The account card uses a **system context menu**, and iOS may append entries of its own to
-  it. On iOS 26 it appends "Ask Siri", which offers to pass the card's contents to an
-  assistant that may process them off device. See the threat model entry above.
+- Security-sensitive code lives in `OpenFactorCore`, a package with no UI and no third-party
+  dependencies, so it can be reviewed in isolation.
+- The cryptography comes from CryptoKit and CommonCrypto. Published formats have pinned test
+  vectors so a rewrite can be checked against fixed bytes rather than only itself.
+- The HOTP and TOTP generators are verified against the official RFC test vectors in CI.
+- Secrets are never logged and are never sent to analytics because there is none. Under the vault
+  design they are plaintext in memory only while an operation needs them, such as generating a
+  code or producing an explicitly requested export.
+- Metadata and secrets are sealed separately inside one account record. Drawing the list opens
+  only the metadata half. Generating a code opens the secret half for that account only.
+- The vault key is never written to Keychain, synchronized, backed up, placed in an App Group, or
+  logged. Its only device-to-device path is the authenticated Watch provisioning exchange.
+- Findings from design reviews, implementation reviews, and hardware experiments are kept under
+  `docs/audits/`, including findings that required the design to change.
+- The account card uses a system context menu, and the operating system may append actions of its
+  own. The threat model above records the resulting uncertainty rather than attributing those
+  actions to OpenFactor.

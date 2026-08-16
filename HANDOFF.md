@@ -5,20 +5,38 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-15, on TestFlight as `dev.openfactor.app`, 1.0 (2).
+**Last updated:** 2026-08-16, on TestFlight as `dev.openfactor.app`, 1.0 (2). Branch
+`pr-16d-vault`, not pushed.
 
 **The storage is being redesigned, and the reason is measured rather than argued.** Gate E1
 proved on hardware that a second app signed by the same team reads another app's Keychain
 items, including the default group Apple's documentation calls private. Access groups are not a
 boundary; the sandboxed container is. `docs/VAULT.md` is the design that follows, encrypting
-accounts and keeping the key where no entitlement can reach it, and it has been through one
-cold audit round already, recorded in `docs/audits/V1.md`: twelve findings, five blocking,
-three of them data loss. **No code has been written.** Six things had to be proven by probe
-first, and two are now measured: E1 found the Keychain hole, and E4 watched the container
-refuse a sibling that held the exact path, with `EPERM` from a raw `open`. The remaining four
-are listed at the end of that document, and the next one worth running is whether
-WatchConnectivity routing is exclusive to the paired counterpart app, since the design hands a
-256 bit key across it.
+accounts and keeping the key where no entitlement can reach it. It went through one cold audit
+round recorded in `docs/audits/V1.md`, twelve findings, five blocking, three of them data loss,
+and then an external round recorded in the `V2-*.md` files.
+
+**PR 16d is implementing it, and the phone now works end to end.** `Sources/OpenFactorCore/Vault/`
+holds the record format, the wrapped key, the key file, and `Vault` itself. `KeychainSecretStore`
+is converted: it seals on write, opens only the metadata half to list, and opens the secret half
+only in `secret(for:)`. `OpenFactor/Vault/` holds the two screens, and `VaultGateView` now stands
+between the app lock and the account list so the list is never drawn while the key is missing.
+Creating a vault, showing the passphrase once, and unlocking a second device with it all work and
+are covered by tests.
+
+**What is left in PR 16d.** The watch provisioning exchange, which is the whole of E7 turned into
+code and the only remaining way a watch gets a key. The watch's third empty state, which
+`VAULT.md` calls for and which today would send a wearer to turn off the sync that is working.
+And the tripwire, which is **not** to be built yet: its container anchor has an unsolved
+staleness problem once several devices are churning, and E6 made it worse by showing the
+container path changes on update.
+
+**One decision was made during the wiring that the design had not covered.** A locked device with
+a lost passphrase was a permanent dead end: it cannot open its accounts, cannot reach Settings to
+erase them, and does not recover by deleting the app, because the Keychain outlives it and iCloud
+returns whatever did clear. The erase flow is now reachable from the locked screen, with its Face
+ID and typed word intact, and the vault is destroyed only after the accounts are gone.
+`VAULT.md` records it under what the interface owes.
 
 **The external audit round is complete and the design has been revised once, at the end of it.**
 ChatGPT, Grok and Fable all approve the central move and all three refused to freeze the page.
@@ -35,8 +53,8 @@ key. And **rewrapping is not revocation**: a passphrase change does not rotate t
 anyone holding an old wrapped item and the old passphrase keeps access forever, which version 1
 now states plainly rather than implying otherwise.
 
-**Still nothing implemented, deliberately.** Seven things had to be proven first, at the end of
-`VAULT.md`. **Six are now settled**: E1 the Keychain hole, E4 the container refusing a sibling,
+**Nothing was implemented until the probes were done.** Seven things had to be proven first, at
+the end of `VAULT.md`. **Six are now settled**: E1 the Keychain hole, E4 the container refusing a sibling,
 E5 a sibling WatchConnectivity session activating and reaching nothing, E6 the file attributes
 sticking and an app update moving the container while preserving the data, and E7 the watch
 exchange fitting in 145 bytes against a 65,536 limit with its binding proved by negative
@@ -448,4 +466,10 @@ sharing a model share their blind spots.
 - The RFC vector tables are the authority. If a change breaks one, the change is wrong.
 - RFC 6238 Appendix B uses a **different seed per algorithm**, 20, 32, and 64 bytes.
   Running the whole table against the 20 byte seed is the usual way to get it wrong.
+- **Do not trust simulator taps to prove an interface works.** Verifying the vault screens by
+  hand, taps below roughly the top 45 per cent of the screen silently never landed while taps
+  above it worked, which reads exactly like a dead control and cost half an hour chasing a
+  binding that was never broken. Screenshots are trustworthy; injected touches are not. Anything
+  a screen owes belongs in a test against the view model, which is where `VaultGateModelTests`
+  now lives.
 

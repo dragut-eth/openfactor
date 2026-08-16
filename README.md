@@ -76,6 +76,18 @@ separation doing its job, not friction to be designed away.
 - Ship a Mac app or browser extension that generates codes.
 - Put vault keys in Keychain, iCloud Drive, or a shared App Group container.
 
+## Android
+
+OpenFactor is built specifically for iPhone and Apple Watch. An Android version is not planned.
+
+If you use Android, [Aegis Authenticator](https://getaegis.app/) is a free, open-source
+authenticator worth considering. Aegis is an independent project with no affiliation to
+OpenFactor.
+
+OpenFactor uses Aegis's documented vault format as one of its portability targets. Its
+Aegis-compatible export is plaintext so another authenticator can import it, and must be handled
+accordingly.
+
 ## Formats and standards
 
 Codes are generated per the published specifications, and the implementation is verified

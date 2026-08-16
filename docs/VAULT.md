@@ -372,6 +372,33 @@ way to tell them apart. Both must be labelled where shown and where asked for.
 being off; there is now provisioned-but-unprovisioned-key, and the existing advice to check sync
 would send a wearer to turn off the thing that is working.
 
+*The phone's two screens exist as of PR 16d.* `VaultGateView` stands between the app lock and the
+account list and renders one of three things. The list is never drawn while the key is missing:
+to it a locked device is a shelf of unreadable rows, which is a true statement about the storage
+and a frightening and wrong one about somebody's accounts.
+
+**The passphrase is generated before the vault is, not after.** `Vault.create()` creates and then
+returns the string, so a process killed in that gap leaves a vault whose passphrase no longer
+exists anywhere. The screen therefore generates, shows, waits for the acknowledgement, and only
+then calls `Vault.create(with:)`. Until that call nothing has been written and leaving costs
+nothing. This is what turns the obligation above from a description into something a test can
+assert, and `VaultGateModelTests` asserts it.
+
+**Creation is a button somebody presses and never something the app does on its own.** Absent and
+locked are indistinguishable for as long as iCloud Keychain takes to deliver the wrapped record,
+measured here at close to half an hour. The setup screen says what waiting looks like, offers to
+check again, and states plainly that a second vault would leave the first one's accounts
+unreadable. The state is re-read whenever the app comes forward, so a record arriving while the
+screen is open moves the device to the unlock question by itself.
+
+**The locked screen must offer a way out, or the app is a permanent dead end.** A reinstall whose
+passphrase is lost can never open its accounts, cannot reach Settings to erase them, and does not
+recover by deleting the app: the Keychain outlives it and iCloud returns whatever did clear. The
+erase flow is therefore reachable from the locked screen with its Face ID and typed word intact.
+It works there because `records()` needs no key and reports every account as unreadable, which is
+exactly enough to delete them. The vault is destroyed only **after** the accounts are gone; the
+other order would leave ciphertext with no key anywhere and no screen left to remove it from.
+
 *The store is converted as of PR 16d. `KeychainSecretStore` seals on write, opens the metadata
 half to list, and opens the secret half only in `secret(for:)`. `update` re-seals metadata and
 copies the secret half verbatim, so a rename never decrypts a secret. `kSecAttrGeneric` is never

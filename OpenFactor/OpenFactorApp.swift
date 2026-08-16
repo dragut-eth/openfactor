@@ -18,7 +18,21 @@ struct OpenFactorApp: App {
     /// without one. Naming it in code would mean hardcoding the team identifier, which does
     /// not belong in a public repository, and would give the group two homes that could
     /// disagree. The entitlement is the single place it is written down.
-    private let store = SyncAwareKeychainStore()
+    private let store: SyncAwareKeychainStore
+
+    /// This device's vault, sharing the very same key store the accounts are read through.
+    ///
+    /// One `VaultKeyStore` instance rather than two. Both defaults point at the same file, so
+    /// two would behave identically today, and the day somebody changes where the key lives is
+    /// the day two would silently disagree: the gate would report a vault open that the store
+    /// could not read.
+    private let vault: Vault
+
+    init() {
+        let keys = VaultKeyStore()
+        store = SyncAwareKeychainStore(vaultKeys: keys)
+        vault = Vault(keys: keys)
+    }
 
     /// The lock and the snapshot cover. See `PrivacyShield` for why they live in their
     /// own window rather than in this view tree.
@@ -43,7 +57,12 @@ struct OpenFactorApp: App {
                 if lock.isLocked {
                     LockScreenView(controller: lock)
                 } else {
-                    AccountListView(store: store)
+                    // The vault gate, not the list. A device that has accounts and no key must
+                    // ask for its passphrase before anything is drawn, and a device that has
+                    // never had a vault must be offered one: the list cannot render either
+                    // state honestly, because to it both look like a shelf of unreadable rows.
+                    VaultGateView(vault: vault, store: store) {
+                        AccountListView(store: store)
                         // Accounts saved before the shared access group was declared are
                         // still in the app's bundle group. The phone reads them either
                         // way, so nothing looks wrong here; the watch cannot see them at
@@ -79,6 +98,7 @@ struct OpenFactorApp: App {
                                 """
                             )
                         }
+                    }
                 }
             }
             // Anything a previous run left behind, removed before the interface exists.
