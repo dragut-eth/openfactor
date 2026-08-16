@@ -66,8 +66,14 @@ public enum PassphraseStrength {
         let letters = lettersOnly(passphrase, undoingSubstitutions: false)
         let substituted = lettersOnly(passphrase, undoingSubstitutions: true)
 
+        // A third reading, collapsed. `trustno1trustno1` is a blocklisted word written
+        // twice, and the prefix rule below does not reach that far: the doubled copy is
+        // eight characters longer than the word, so it read as something original. Every
+        // repeated unit collapses to one before the list is consulted.
+        let readings = [letters, substituted].flatMap { [$0, collapsingRepeatedUnits($0)] }
+
         if let word = commonWords.first(where: { word in
-            [letters, substituted].contains { reading in
+            readings.contains { reading in
                 reading == word
                     || (reading.hasPrefix(word) && reading.count <= word.count + 3)
             }
@@ -82,7 +88,30 @@ public enum PassphraseStrength {
             )
         }
 
-        let bits = estimateBits(scalars)
+        // Walks across a keyboard are not sequences in code point order, so the run
+        // collapsing below cannot see them: `1qaz2wsx3edc` steps down a column of the
+        // keyboard and reads as twelve independent characters. They are matched as
+        // substrings rather than as whole passphrases, since a walk padded with two
+        // characters is still a walk, and only when the walk is most of what is there.
+        let flattened = lowercasedASCII(passphrase)
+        if let walk = keyboardWalks.first(where: {
+            flattened.contains($0) && $0.count * 2 >= flattened.count
+        }) {
+            return Assessment(
+                bits: 10,
+                isAcceptable: false,
+                advice: """
+                    This traces a path across the keyboard ("\(walk)"), which guessing \
+                    programs walk before they try anything else.
+                    """
+            )
+        }
+
+        // A repeated unit is priced as the unit plus the choice of how many times, not as
+        // its full length. Collapsing it only for the blocklist was not enough: `asdfasdfasdf`
+        // is not on any list and was reading as twelve independent characters.
+        let (unit, repetitions) = repeatedUnit(scalars)
+        let bits = estimateBits(unit) + (repetitions > 1 ? log2(Double(repetitions)) : 0)
 
         guard bits >= minimumBits else {
             return Assessment(
@@ -145,6 +174,59 @@ public enum PassphraseStrength {
 
         return effective * log2(Double(pool))
     }
+
+    /// The same collapse over scalars, with how many times the unit repeats.
+    private static func repeatedUnit(
+        _ scalars: [Unicode.Scalar]
+    ) -> (unit: [Unicode.Scalar], repetitions: Int) {
+        guard scalars.count > 1 else { return (scalars, 1) }
+
+        for length in 1...(scalars.count / 2) where scalars.count % length == 0 {
+            let unit = Array(scalars[0..<length])
+            if stride(from: 0, to: scalars.count, by: length)
+                .allSatisfy({ Array(scalars[$0..<($0 + length)]) == unit }) {
+                return (unit, scalars.count / length)
+            }
+        }
+
+        return (scalars, 1)
+    }
+
+    /// The shortest unit this text is a whole number of repetitions of, or the text itself.
+    ///
+    /// `asdfasdfasdf` costs what `asdf` costs plus the choice of how many times, not what
+    /// twelve independent characters cost.
+    private static func collapsingRepeatedUnits(_ text: String) -> String {
+        let characters = Array(text)
+        guard characters.count > 1 else { return text }
+
+        for length in 1...(characters.count / 2) where characters.count % length == 0 {
+            let unit = characters[0..<length]
+            if stride(from: 0, to: characters.count, by: length)
+                .allSatisfy({ Array(characters[$0..<($0 + length)]) == Array(unit) }) {
+                return String(unit)
+            }
+        }
+
+        return text
+    }
+
+    private static func lowercasedASCII(_ text: String) -> String {
+        String(String.UnicodeScalarView(text.unicodeScalars.map { scalar in
+            (scalar.value >= 0x41 && scalar.value <= 0x5A)
+                ? Unicode.Scalar(scalar.value + 0x20)! : scalar
+        }))
+    }
+
+    /// Paths across a QWERTY keyboard, in both directions, which are what a person reaches
+    /// for when told to use letters, digits and symbols. Short on purpose, like the word
+    /// list: these are the ones that appear at the top of every breach corpus.
+    private static let keyboardWalks: [String] = [
+        "1qaz2wsx", "2wsx3edc", "1qaz2wsx3edc", "qazwsx", "qazwsxedc", "zaqxsw", "zaq12wsx",
+        "qwerty", "qwertyui", "qwertyuiop", "asdfgh", "asdfghjkl", "zxcvbn", "zxcvbnm",
+        "qwertasdfg", "qweasdzxc", "1q2w3e4r", "1q2w3e4r5t", "123qweasd", "poiuyt",
+        "lkjhgf", "mnbvcxz", "azerty", "azertyuiop", "qsdfgh", "wxcvbn",
+    ]
 
     private static func isAlphanumeric(_ scalar: Unicode.Scalar) -> Bool {
         let value = scalar.value

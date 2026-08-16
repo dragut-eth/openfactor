@@ -69,13 +69,41 @@ struct ExportViewModelTests {
         let model = await ready(store)
         model.choice = .own
 
-        for weak in ["short", "password1234", "aaaaaaaaaaaaaaaa"] {
+        // Ticked after each one, because typing clears the acknowledgement. That is the
+        // point of the other tests in this suite, and it means the only thing left refusing
+        // these is the strength floor.
+        for weak in ["short", "password1234", "aaaaaaaaaaaaaaaa", "1qaz2wsx3edc"] {
             model.ownPassphrase = weak
+            model.hasSavedPassphrase = true
             #expect(!model.canExport, "\(weak) must not be accepted")
         }
 
         model.ownPassphrase = "voltage.ledger.mango.stairwell"
+        model.hasSavedPassphrase = true
         #expect(model.canExport)
+    }
+
+    /// The screen's gate and the writer's gate are separate, and both must hold. The button
+    /// being disabled is a courtesy; the writer refusing is the rule.
+    @Test("Even if the screen let it through, the writer refuses")
+    @MainActor
+    func writerRefusesIndependentlyOfTheScreen() async throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+        try store.add(try account("GitHub", secret: "GEZDGNBVGY3TQOJQ"), color: .blue)
+
+        let model = await ready(store)
+        model.choice = .own
+        model.ownPassphrase = "password1234"
+        model.hasSavedPassphrase = true
+
+        model.export()
+
+        guard case let .failed(message) = model.stage else {
+            Issue.record("expected a refusal, got \(model.stage)")
+            return
+        }
+        #expect(message.contains("too easy to guess"))
     }
 
     // MARK: - The file
@@ -198,6 +226,80 @@ struct ExportViewModelTests {
         }
 
         #expect(protection == .complete)
+    }
+
+    // MARK: - What the acknowledgement refers to
+
+    /// The blocking finding of the security review, and the failure it describes is silent:
+    /// the archive is written, the share sheet appears, everything looks right, and the
+    /// passphrase on the piece of paper opens nothing. Nobody learns that until a restore.
+    @Test("Generating a different passphrase clears the acknowledgement")
+    @MainActor
+    func regenerationClearsTheAcknowledgement() async throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let model = await ready(store)
+        #expect(model.canExport)
+
+        model.regenerate()
+
+        #expect(!model.hasSavedPassphrase)
+        #expect(!model.canExport, "the box referred to a passphrase that is gone")
+    }
+
+    @Test("Editing a custom passphrase clears the acknowledgement")
+    @MainActor
+    func editingCustomPassphraseClearsTheAcknowledgement() async throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let model = await ready(store)
+        model.choice = .own
+        model.ownPassphrase = "voltage.ledger.mango.stairwell"
+        model.hasSavedPassphrase = true
+        #expect(model.canExport)
+
+        model.ownPassphrase = "voltage.ledger.mango.stairwells"
+        #expect(!model.canExport)
+    }
+
+    @Test("Switching between a generated and a custom passphrase clears it too")
+    @MainActor
+    func switchingClearsTheAcknowledgement() async throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        let model = await ready(store)
+        #expect(model.canExport)
+
+        model.choice = .own
+        #expect(!model.hasSavedPassphrase)
+    }
+
+    /// The other half of "the file does not outlive the screen". `onDisappear` cannot run in
+    /// a process that is no longer there, so a force quit or an out of memory kill on the
+    /// Ready screen used to leave the file behind for good.
+    @Test("A file left behind by a previous run is removed at launch")
+    @MainActor
+    func orphanedFilesAreSwept() async throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+        try store.add(try account("GitHub", secret: "GEZDGNBVGY3TQOJQ"), color: .blue)
+
+        let model = await ready(store)
+        model.export()
+
+        guard case let .ready(url) = model.stage else {
+            Issue.record("expected a file")
+            return
+        }
+        #expect(FileManager.default.fileExists(atPath: url.path))
+
+        // The process died here, so nothing called discardFile.
+        ExportViewModel.discardOrphanedFiles()
+
+        #expect(!FileManager.default.fileExists(atPath: url.path))
     }
 
     @Test("A generated passphrase is what the archive was actually sealed with")

@@ -81,6 +81,13 @@ struct OpenFactorApp: App {
                         }
                 }
             }
+            // Anything a previous run left behind, removed before the interface exists.
+            // The export screen deletes its own file when it goes away, which covers every
+            // way a screen goes away and not the one where the process does not: force quit
+            // from the app switcher, or an out of memory kill, while the file is on screen.
+            // For the plaintext vault that would be every secret in the clear, sitting in
+            // the container with nothing ever revisiting it. Found by the security review.
+            .task { ExportViewModel.discardOrphanedFiles() }
             .onChange(of: scenePhase, initial: true) { _, phase in
                 lock.scenePhaseChanged(to: phase)
                 updateShield(for: phase)

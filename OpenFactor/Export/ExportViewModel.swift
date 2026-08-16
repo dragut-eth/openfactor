@@ -51,12 +51,24 @@ final class ExportViewModel {
     /// avoidable data loss this app could arrange.
     private(set) var generated: String = ""
 
-    var choice: PassphraseChoice = .generated
-    var ownPassphrase: String = ""
+    var choice: PassphraseChoice = .generated {
+        didSet { if choice != oldValue { hasSavedPassphrase = false } }
+    }
+
+    var ownPassphrase: String = "" {
+        didSet { if ownPassphrase != oldValue { hasSavedPassphrase = false } }
+    }
 
     /// Ticked by the person, and the gate on producing the file. Deliberately not a toggle
     /// that defaults on: the format says never write an archive whose passphrase the user
     /// has not been shown and confirmed they have stored.
+    ///
+    /// **It is cleared whenever the passphrase it refers to changes**, and that was a
+    /// blocking finding of the security review rather than caution. Tick the box, then tap
+    /// "Generate a different one", and the archive was sealed with a passphrase that had
+    /// never been on screen while the box was ticked. The one written down opens nothing,
+    /// and nobody finds out until a restore. The same held for editing a custom passphrase
+    /// after ticking, and for switching between the two.
     var hasSavedPassphrase = false
 
     private(set) var accountCount = 0
@@ -75,6 +87,8 @@ final class ExportViewModel {
     }
 
     func regenerate() {
+        // The acknowledgement referred to the old one.
+        hasSavedPassphrase = false
         generated = BackupPassphrase.generate() ?? ""
         if generated.isEmpty {
             stage = .failed(
@@ -193,6 +207,24 @@ final class ExportViewModel {
             }
     }
 
+    /// Where exports live while they exist: one directory, so that removing it removes
+    /// every one of them without having to know their names.
+    private static var directory: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("Exports", isDirectory: true)
+    }
+
+    /// Removes anything a previous run left behind.
+    ///
+    /// **Called at launch, because `onDisappear` cannot cover a process that is not there
+    /// any more.** The review found the gap: force quit from the app switcher, or an out of
+    /// memory kill, while the Ready screen is showing, and the file survives with nothing in
+    /// the app ever revisiting it. For the plaintext vault that is every secret in the clear,
+    /// sitting in the container until the app is deleted. The promise was that the file does
+    /// not outlive the screen, and this is the half of it the screen cannot keep.
+    static func discardOrphanedFiles() {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
     /// The file, with the strongest protection iOS offers while it exists.
     ///
     /// The name carries a date so a person with three of them in Files can tell which is
@@ -206,7 +238,13 @@ final class ExportViewModel {
         let stamp = Self.stampFormatter.string(from: Date())
         let name = label.map { "OpenFactor \($0) \(stamp)" } ?? "OpenFactor \(stamp)"
 
-        let url = FileManager.default.temporaryDirectory
+        try FileManager.default.createDirectory(
+            at: Self.directory,
+            withIntermediateDirectories: true,
+            attributes: [.protectionKey: FileProtectionType.complete]
+        )
+
+        let url = Self.directory
             .appendingPathComponent(name)
             .appendingPathExtension(pathExtension)
 

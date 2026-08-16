@@ -110,14 +110,14 @@ struct BackupArchiveTests {
 
     @Test("A custom passphrase round trips without being canonicalised")
     func customPassphraseRoundTrips() throws {
-        let passphrase = "  Correct Horse Battery Staple!  "
+        let passphrase = "  Voltage Ledger Mango Stairwell!  "
         let data = try archive([try account("GitHub")], passphrase: passphrase, mode: .custom)
 
         #expect(throws: Never.self) {
             try BackupArchive.read(data, passphrase: passphrase)
         }
         #expect(throws: BackupError.couldNotOpen) {
-            try BackupArchive.read(data, passphrase: "CORRECTHORSEBATTERYSTAPLE")
+            try BackupArchive.read(data, passphrase: "VOLTAGELEDGERMANGOSTAIRWELL")
         }
     }
 
@@ -320,9 +320,82 @@ struct BackupArchiveTests {
 
     @Test("A file too large to be an archive is refused before it is parsed")
     func oversizeFilesAreRefused() {
-        let huge = Data(repeating: UInt8(ascii: "A"), count: 12 * 1024 * 1024)
+        let huge = Data(repeating: UInt8(ascii: "A"), count: 13 * 1024 * 1024)
         #expect(throws: BackupError.tooLarge) {
             try BackupArchive.read(huge, passphrase: "x")
+        }
+    }
+
+    // MARK: - The writer's own obligations
+
+    /// The format states this as binding on writers, and until a review pointed it out the
+    /// only thing enforcing it was a disabled button on one screen. Version 1 is forever,
+    /// and so is an archive holding every secret its owner has behind `password1234`.
+    @Test("The writer refuses a weak custom passphrase rather than sealing with it", arguments: [
+        "password1234", "short", "1qaz2wsx3edc",
+    ])
+    func writerRefusesWeakCustomPassphrases(weak: String) throws {
+        #expect(throws: BackupError.passphraseTooWeak) {
+            try BackupArchive.write(
+                [try self.account("GitHub")],
+                passphrase: weak,
+                mode: .custom,
+                iterations: Self.iterations
+            )
+        }
+    }
+
+    /// The strength rule applies to the custom path only. A generated passphrase is 120 bits
+    /// and is not run past an estimator that could only be wrong about it.
+    @Test("A generated passphrase is not subject to the estimator")
+    func generatedPassphrasesSkipTheEstimator() throws {
+        #expect(throws: Never.self) {
+            try BackupArchive.write(
+                [try self.account("GitHub")],
+                passphrase: "AAAA-AAAA-AAAA-AAAA-AAAA-AAAA",
+                mode: .generated,
+                iterations: Self.iterations
+            )
+        }
+    }
+
+    // MARK: - Sizes
+
+    /// The bounds of version 1 are frozen, and this reader narrowed one of them. The whole
+    /// file guard was set to the ciphertext ceiling, so a conforming archive at the top of
+    /// the range was refused by roughly the size of its own field names. Found by review.
+    ///
+    /// The salt is deliberately the wrong length, so the file is refused for that instead:
+    /// it proves the size guard was passed without paying for eleven megabytes of base64
+    /// decoding and four key derivations.
+    @Test("An archive at the top of the frozen ceiling is not refused for its size")
+    func ceilingSizedArchivesArePassedOn() throws {
+        var object = try container(try archive([try account("GitHub")]))
+        var kdf = try #require(object["kdf"] as? [String: Any])
+        kdf["salt"] = BackupBase64.encode(Data(repeating: 0, count: 31))
+        object["kdf"] = kdf
+        object["ciphertext"] = String(
+            repeating: "A", count: BackupArchive.maximumCiphertextCharacters
+        )
+
+        let data = try rebuild(object)
+        #expect(data.count > BackupArchive.maximumCiphertextCharacters, "the container adds bytes")
+
+        #expect(throws: BackupError.wrongLength(field: "kdf.salt", expected: 32, found: 31)) {
+            try BackupArchive.read(data, passphrase: "YZTR-THFW-WT6E-OXIV-73XD-QCDM")
+        }
+    }
+
+    @Test("A ciphertext field beyond the ceiling is still refused")
+    func oversizeCiphertextIsRefused() throws {
+        var object = try container(try archive([try account("GitHub")]))
+        object["ciphertext"] = String(
+            repeating: "A", count: BackupArchive.maximumCiphertextCharacters + 4
+        )
+
+        #expect(throws: BackupError.tooLarge) {
+            try BackupArchive.read(
+                try self.rebuild(object), passphrase: "YZTR-THFW-WT6E-OXIV-73XD-QCDM")
         }
     }
 

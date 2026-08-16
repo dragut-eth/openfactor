@@ -159,6 +159,17 @@ struct BackupPassphraseTests {
         #expect(!PassphraseStrength.assess(input).isAcceptable)
     }
 
+    /// Every one of these was accepted before an independent review ran them through the
+    /// estimator. They are not exotic: a repeated unit, a doubled copy of a word already on
+    /// the blocklist, and three walks across a keyboard, all of which a guessing program
+    /// tries before it tries anything original.
+    @Test("The inputs a review found the estimator accepting are refused", arguments: [
+        "1qaz2wsx3edc", "qazwsxedcrfv", "qwertasdfgzx", "asdfasdfasdf", "trustno1trustno1",
+    ])
+    func refusesWhatTheReviewFound(input: String) {
+        #expect(!PassphraseStrength.assess(input).isAcceptable, "\(input)")
+    }
+
     @Test("Cheap structure does not count as length", arguments: [
         "aaaaaaaaaaaaaaaa", "abcdefghijklmnop", "1234567890123456",
     ])

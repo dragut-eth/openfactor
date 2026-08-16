@@ -635,6 +635,22 @@ exists: every secret key readable by anyone who opens it.
 - **No timestamp and no device name.** Neither helps recovery, and both say something about
   the owner.
 
+## The implementation of this document
+
+This page was reviewed three times before any code existed, and the code was reviewed
+separately afterwards, because the two are different artefacts and a clean page says nothing
+about the thing claiming to implement it. That second review is recorded in
+`docs/audits/A3-implementation.md`. It found five defects, two of them blocking, none of them
+reachable from the test vector: the vector proves bytes, not lifecycles.
+
+One of the five is worth repeating here, because it is a mistake this page invites. The
+reader bounded the **whole file** by the bound this page places on the `ciphertext` field, so
+a conforming archive at the top of the frozen ceiling was refused by roughly the size of its
+own field names. This document bounds the ciphertext string and the decoded plaintext. It
+does not bound the container, and a reader that invents that bound and sets it too low has
+narrowed a frozen limit, which is the same offence as widening one and the direction that
+loses data.
+
 ## Changing this format
 
 Version 1 archives must open forever. A version 2 may exist; it does not retire version 1,

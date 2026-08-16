@@ -41,6 +41,10 @@ public enum BackupError: Sendable, Equatable, Error {
     /// anything about the file.
     case derivationFailed
 
+    /// A custom passphrase an offline guessing attack finishes too quickly. Refused by the
+    /// writer, because version 1 is forever and so is an archive sealed with one.
+    case passphraseTooWeak
+
     /// Written for the person trying to recover their accounts.
     public var description: String {
         switch self {
@@ -70,6 +74,11 @@ public enum BackupError: Sendable, Equatable, Error {
             """
         case .derivationFailed:
             "OpenFactor could not derive a key on this device."
+        case .passphraseTooWeak:
+            """
+            That passphrase is too easy to guess to protect every account you have. \
+            OpenFactor did not write an archive.
+            """
         }
     }
 }

@@ -37,6 +37,23 @@ public enum BackupArchive {
     /// whatever the file asked it to spend.
     static let maximumCiphertextCharacters = 11_184_812
 
+    /// A guard on the whole file, and **not one of the format's bounds.**
+    ///
+    /// The format bounds the ciphertext field, not the container, so this exists only so
+    /// that an unbounded file is never handed to a JSON parser. It was originally set to
+    /// `maximumCiphertextCharacters`, which was wrong in a way that took a review to see: a
+    /// conforming archive at the top of the frozen ceiling is about three hundred and sixty
+    /// bytes larger than its own ciphertext field once the field names, the key derivation
+    /// and cipher objects and the whitespace are counted, so this reader refused a file the
+    /// format declares valid. The bounds of version 1 are frozen, and a reader that narrows
+    /// them has stopped implementing version 1.
+    ///
+    /// The slack is a whole mebibyte rather than the few hundred bytes that would do,
+    /// because the format anticipates padding arriving later as an ignored unknown field. An
+    /// archive padded past this is refused, which is this reader's own policy rather than
+    /// the format's, and is said out loud here rather than left to be discovered.
+    static let maximumFileBytes = maximumCiphertextCharacters + 1024 * 1024
+
     // MARK: - Reading
 
     /// Opens an archive, or explains why it cannot.
@@ -47,7 +64,7 @@ public enum BackupArchive {
         _ data: Data,
         passphrase: String
     ) throws(BackupError) -> ImportResult {
-        guard data.count <= maximumCiphertextCharacters else { throw .tooLarge }
+        guard data.count <= maximumFileBytes else { throw .tooLarge }
 
         guard
             let root = try? JSONSerialization.jsonObject(with: data),
@@ -190,6 +207,16 @@ public enum BackupArchive {
         mode: BackupPassphrase.Mode,
         iterations: Int = writeIterations
     ) throws -> Data {
+        // **The writer refuses a weak custom passphrase here, rather than upstream.** The
+        // format states this as an obligation on writers, and until a review pointed it out
+        // the only thing enforcing it was a disabled button on one screen. A rule that lives
+        // in a view is a rule a second caller, a keyboard path or a refactor removes by
+        // accident, and what it would produce is a permanent archive holding every secret
+        // its owner has, behind something an offline attack finishes in a minute.
+        if mode == .custom, !PassphraseStrength.assess(passphrase).isAcceptable {
+            throw BackupError.passphraseTooWeak
+        }
+
         let plaintext = try BackupPayload.write(accounts)
 
         let salt = try randomBytes(saltBytes)

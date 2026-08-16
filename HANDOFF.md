@@ -14,7 +14,7 @@ first when picking the work back up.
 | Gate A2, audit of sync | Done, twice. Original eleven findings closed except F8 and F13's two device half; three new findings from the re-verification, all fixed |
 | PR 14, watchOS app | Feature complete on `pr-14-watch`, re-verified, pushed |
 | PR 15, app lock | Built on `pr-15-app-lock`, pushed. Face ID needs a real device |
-| PR 16, export and import | Format audited **three** times and fixed. On `pr-16-import-export`: erase, both importers, the import preview, and the whole encrypted archive in core, reproducing every published test vector value. Neither reader carries a brand name: the labelled text reader is named and described by the shape it matches. The export screen and the passphrase screen are built, and an archive round trips through the app's own import. The Aegis JSON export is built and the format document is pinned to a fixed revision of the Aegis documentation. What remains is a security review of `Backup/` before merge. Steam Guard is parked as PR 16b |
+| PR 16, export and import | Format audited **three** times and fixed. On `pr-16-import-export`: erase, both importers, the import preview, and the whole encrypted archive in core, reproducing every published test vector value. Neither reader carries a brand name: the labelled text reader is named and described by the shape it matches. The export screen and the passphrase screen are built, and an archive round trips through the app's own import. The Aegis JSON export is built and the format document is pinned to a fixed revision of the Aegis documentation. The implementation was reviewed by a second model in two independent passes: five findings, two blocking, all fixed and recorded in `docs/audits/A3-implementation.md`. Ready for a docs pass and merge. Steam Guard is parked as PR 16b |
 | PR 17 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **What only Xavier can verify in PR 15:** Face ID and passcode unlock, the grace periods,
@@ -121,6 +121,14 @@ bundle group. The phone reads every group it can reach, so it looked correct; th
 tests run inside the app, so they looked correct too. Only the watch, which shares exactly
 one group, could see it. `migrateToDefaultAccessGroup()` is the fix.
 
+**A document that survives three reviews says nothing about the code under it.** Gate A3
+reviewed the backup format three times before a line of it existed, which is the right order
+and leaves an obvious hole. The published test vector closes part of it: it proves this
+implementation reaches the same bytes as three others. It cannot see a nonce reused between
+two exports, a file that outlives its screen, or an acknowledgement referring to a passphrase
+that no longer exists. Reviewing the implementation separately, by a different model, found
+five of those, two of them blocking. Neither was reachable from the vector.
+
 **A comment can be the bug.** The labelled text reader defaulted sha1, 6 and 30 when a
 label was absent, under a comment claiming it did the opposite. Both audits read the comment
 and moved on. An absent label in a human readable report means the parse failed, not that
@@ -210,6 +218,8 @@ OpenFactorTests/                           App only tests: palette and watch pal
 docs/audits/A1.md                          Gate A1 findings and disposition
 docs/audits/A2.md                          Gate A2, plus the dated re-verification
 docs/audits/A2-prompt.md                   The prompt A2 was run with
+docs/audits/A3-implementation.md           A3's second half: the code, not the
+                                           page. Five findings, all fixed
 docs/PROJECT.md                            The project file in plain language
 docs/POLISH.md                             Polish items, for PR 12
 docs/design/icon-dark.svg, icon-light.svg  The app icon, source of truth

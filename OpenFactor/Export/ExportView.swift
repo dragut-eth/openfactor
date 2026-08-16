@@ -65,8 +65,6 @@ struct ExportView: View {
                     Holds every account you have, encrypted with a passphrase OpenFactor \
                     generates. Keeping it somewhere safe is your job: anyone who has both \
                     the file and the passphrase has all of your codes.
-
-                    OpenFactor will ask you to confirm it is you before it starts.
                     """
                 )
             }
