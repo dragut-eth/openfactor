@@ -147,20 +147,34 @@ a particular item has reached another device, so the interface does not claim ei
 
 ### The Watch is another device holding the vault key
 
-**Vault design.** Account records reach the Watch as ciphertext through iCloud Keychain. The
-vault key does not. It is provisioned once from an unlocked, foregrounded phone over the
-interactive WatchConnectivity channel.
+**Exchange implemented in PR 16d, the screens are not built yet.** Account records reach the
+Watch as ciphertext through iCloud Keychain. The vault key does not. It is provisioned once from
+an unlocked, foregrounded phone over the interactive WatchConnectivity channel.
 
 The Watch and phone each generate an ephemeral P-256 keypair, derive a shared secret with ECDH,
-and bind the protocol version, request nonce, and both public keys into the HKDF context and
-AES-GCM additional data. Both screens show a six-digit authentication string derived from the
-same transcript. The person provisioning the Watch confirms that the strings match before the
-phone releases a sealed vault key.
+and bind the protocol version, request nonce, and both public keys into the HKDF context and the
+AES-GCM additional data. The Watch rejects a response that does not echo the nonce it just sent,
+before deriving anything.
 
-The protocol and byte layouts are specified in `docs/VAULT.md`. The cryptographic exchange has
-been exercised with negative controls, and a sibling phone app was unable to reach another app's
-Watch session. A rogue Watch app claiming to be the counterpart remains unmeasured. The human
-authentication string keeps routing exclusivity from being the only defense.
+The protocol and byte layouts are specified in `docs/VAULT.md`. The negative controls that make
+the binding meaningful are kept as tests rather than only as a one-off experiment: a substituted
+phone public key does not open the payload, an altered transcript derives a different key, and a
+response to a different request is refused.
+
+**Routing exclusivity is load bearing here, and that is a change.** An earlier design had both
+screens show a six-digit authentication string so that routing would be defense in depth. That
+comparison could not do what it claimed, because the Watch cannot derive the string until the
+message that already carries the key, and restoring it would have cost a third message and a
+digit comparison performed on a wrist. It was removed rather than kept as theater.
+
+What the exchange now rests on is that WatchConnectivity connects an iOS app to its own companion
+Watch app rather than to arbitrary apps. A sibling phone app was measured activating a session
+and reaching nothing. **Apple does not document this as a security guarantee**, and a rogue Watch
+app claiming to be the counterpart remains unmeasured; such an app would have to ship inside
+OpenFactor's own bundle, which is a malicious build and separately out of scope.
+
+The human gate is on the phone. The key file is unreadable while the device is locked, so the
+phone must be unlocked and foregrounded, and the app asks before it answers.
 
 After provisioning, the Watch holds a vault key in its own protected container and can generate
 codes without the phone. Treat a lost provisioned Watch as a lost authenticator. The complication

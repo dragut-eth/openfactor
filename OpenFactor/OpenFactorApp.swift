@@ -38,6 +38,10 @@ struct OpenFactorApp: App {
     /// own window rather than in this view tree.
     @State private var lock = AppLockController()
 
+    /// Answers a watch asking for the vault key. The only path by which that key leaves this
+    /// device, and the only reason this app talks to the watch at all.
+    @State private var watchKeys = WatchKeyProvider()
+
     /// Set when the access group migration could not finish. See the alert below.
     ///
     /// Held as a flag rather than the error: reading through the store's existential
@@ -108,6 +112,22 @@ struct OpenFactorApp: App {
             // For the plaintext vault that would be every secret in the clear, sitting in
             // the container with nothing ever revisiting it. Found by the security review.
             .task { ExportViewModel.discardOrphanedFiles() }
+            .task { watchKeys.activate() }
+            // Over whatever is on screen, because the watch may ask at any moment and the
+            // answer is the same wherever the person happens to be in the app. It cannot
+            // appear while locked: the lock screen is the root then, and this modifier is
+            // attached above it deliberately so the question waits rather than being missed.
+            .alert("Set up your Apple Watch?", isPresented: watchAsking) {
+                Button("Not now", role: .cancel) { watchKeys.decline() }
+                Button("Set up Apple Watch") { watchKeys.approve() }
+            } message: {
+                Text(
+                    """
+                    Your Apple Watch is asking for the key to your accounts. After this it \
+                    generates codes on its own, without your iPhone.
+                    """
+                )
+            }
             .onChange(of: scenePhase, initial: true) { _, phase in
                 lock.scenePhaseChanged(to: phase)
                 updateShield(for: phase)
@@ -121,6 +141,14 @@ struct OpenFactorApp: App {
                 (AppearancePreference(rawValue: appearance) ?? .system).colorScheme
             )
         }
+    }
+
+    /// The alert's binding. Dismissing it any other way counts as declining, because a
+    /// question about releasing a key must never resolve as yes by default.
+    private var watchAsking: Binding<Bool> {
+        Binding(
+            get: { watchKeys.isAsking && !lock.isLocked },
+            set: { if !$0 { watchKeys.decline() } })
     }
 
     /// The cover shows when the app is not active and not locked. Not when locked,

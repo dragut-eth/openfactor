@@ -80,6 +80,39 @@ already set up. The second returns the device to an install that has never been 
 inside `#if DEBUG`, keyed off an environment value only the gate sets, and a Release binary is
 checked to contain neither string.
 
+## Screen 0b: The watch asks for its key
+
+A watch with no vault key cannot read a single account, so `WatchVaultGateView` stands in front
+of the list for the same reason the phone's gate does: the list would otherwise be a screen full
+of accounts it cannot open.
+
+**It asks by itself.** Every message below ends by telling somebody to do something on their
+phone, and the natural next move is to raise the wrist again, so returning to the app tries
+again. The "Try again" button stays for when nothing changed and somebody wants to poke it.
+
+| State | Title | Detail |
+| --- | --- | --- |
+| Asking | Waiting for your iPhone | a spinner, no button |
+| The phone is not answering | iPhone not reachable | Bring your iPhone closer and try again. |
+| The phone is not frontmost or is locked | Open OpenFactor on your iPhone | Unlock your iPhone and open OpenFactor, then try again. |
+| The phone has no vault either | Set up your iPhone first | OpenFactor is not set up on your iPhone yet. Do that first, then set up this watch. |
+| Declined, or nothing opened | Not set up | Try again when you are ready. |
+
+**On the phone**, an alert over whatever is on screen, because the watch can ask at any moment:
+
+> **Set up your Apple Watch?**
+> Your Apple Watch is asking for the key to your accounts. After this it generates codes on its
+> own, without your iPhone.
+> `Not now` `Set up Apple Watch`
+
+Dismissing it any other way counts as declining. A question about releasing a key must never
+resolve as yes by default. It cannot appear while App Lock is showing, so the question waits
+rather than being answered by somebody holding a locked phone.
+
+**The existing empty state does not gain a third cause.** `docs/VAULT.md` asked for one, on the
+assumption that a watch with no key would reach the list. It does not, so "no accounts yet" keeps
+meaning exactly what it meant.
+
 ## Screen 1: Account list (root)
 
 **Reference behavior**

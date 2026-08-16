@@ -41,8 +41,8 @@ lives in the container, where nothing else can reach it.
 **Closed after provisioning: confidentiality against another app on the same team.** It reads
 ciphertext and cannot obtain the key.
 
-**During provisioning** the claim is weaker and depends on the watch exchange below, which is
-why that exchange has an authentication string rather than only a button.
+**During provisioning** the claim is weaker and rests on WatchConnectivity's routing, which is
+stated as a load bearing assumption in the exchange below rather than buried.
 
 **Improved, with a distinction the first draft got wrong: iCloud Keychain becomes a transport
 for ciphertext.** For **confidentiality** the escrow discussion in `SECURITY.md` stops being
@@ -282,22 +282,32 @@ still in flight.
 
 Typing 24 characters on a wrist is not a design.
 
+*Implemented as `WatchProvisioning` in PR 16d, with the negative controls from gate E7 kept as
+tests.*
+
 ```
 Watch                                            Phone
 
  generate w_priv / w_pub, and a 16 byte nonce
- ── version ‖ nonce ‖ w_pub ───────────────────►
+ ── "OFW1" ‖ nonce ‖ w_pub ───────────────────►                          85 bytes
                                     generate ephemeral p_priv / p_pub
-                                    shared   = ECDH(p_priv, w_pub)
-                                    transcript = version ‖ nonce ‖ w_pub ‖ p_pub
-                                    kek      = HKDF-SHA256(shared,
-                                                 info = "openfactor.vault.watch.v1" ‖ transcript)
-                                    sas      = first 6 digits of SHA-256(transcript)
-                                    show sas, wait for the person to confirm it matches
-                                    sealed   = AES-256-GCM(kek, vaultKey, aad = transcript)
- ◄── version ‖ nonce ‖ p_pub ‖ sealed ──────────
- recompute shared, kek, sas; show sas
- unseal, write to container, never ask again
+                                    shared     = ECDH(p_priv, w_pub)
+                                    transcript = "OFW1" ‖ nonce ‖ w_pub ‖ p_pub
+                                    kek        = HKDF-SHA256(shared, salt = empty,
+                                                   info = "openfactor.vault.watch.v1" ‖ transcript)
+                                    sealed     = AES-256-GCM(kek, vaultKey, aad = transcript)
+ ◄── "OFW1" ‖ nonce ‖ p_pub ‖ sealed ──────────                         145 bytes
+ check the nonce is the one just sent
+ recompute shared and kek, open, write to container, never ask again
+```
+
+```
+field         size   notes
+"OFW1"           4   magic and version. A version 2 changes these rather than reusing them
+nonce           16   from the system CSPRNG, fresh per attempt
+public key      65   P-256, x963 representation
+sealed          60   12 byte nonce, 32 byte ciphertext, 16 byte tag
+transcript     150   the four fields above, in the order they were sent
 ```
 
 **The phone needs its own ephemeral keypair.** The first draft wrote "ECDH, then HKDF, then seal
@@ -305,12 +315,38 @@ to the watch's public key" as though that were one primitive. ECDH needs a priva
 sides; what it described was ECIES with half missing.
 
 **The whole transcript is bound**, version, nonce and both public keys, into the HKDF info and
-the AAD. The nonce is what makes a replayed response detectable.
+the AAD. **The HKDF salt is empty**, deliberately: the transcript is already in `info`, and a
+salt would be a second place to get the same job wrong. The nonce is what makes a replayed
+response detectable, and the watch checks it **before deriving anything**.
 
-**The person compares a six digit string on both screens.** A tap alone authorizes *when* the
-exchange happens, not *who* it happens with, and an injected request looks identical from the
-user's side. The string is what makes routing exclusivity **defense in depth instead of load
-bearing**, which is the move this document makes everywhere else.
+### There is no six digit comparison, and what that costs
+
+Earlier versions of this page specified one, and said it was what made routing exclusivity
+**defense in depth instead of load bearing**. It is gone. Two reasons, and the second one is the
+honest cost.
+
+**It could not do what this page claimed.** The page said the person confirms the strings match
+*before the phone releases the sealed key*. The watch derives its string from the transcript,
+which contains the phone's public key, and that public key arrives **in the same message as the
+sealed key**. At the moment of confirming, the genuine watch has nothing to display. The
+comparison could only ever have been after the fact, which is not what was claimed. Making it
+work would have taken a third message; that was weighed and rejected below.
+
+**So routing exclusivity is now load bearing.** WatchConnectivity connects an iOS app to its own
+companion watch app rather than to arbitrary apps. Gate E5 measured a same-team sibling
+activating a session and reaching nothing, and a rogue counterpart would have to ship inside
+OpenFactor's own bundle, which is a malicious OpenFactor build and already out of scope. **Apple
+does not document this as a security guarantee**, and the rogue counterpart case remains
+unmeasured. That is the assumption this exchange rests on, written here rather than implied.
+
+**Why the third message was rejected.** It would have restored the claim at the cost of a six
+digit comparison performed on a wrist, which is a step people tap through rather than perform. A
+defense that is not carried out is worth less than one that is named honestly and not carried
+out at all.
+
+**The human gate is on the phone.** The key file is `.complete` protected, so the phone must be
+unlocked and foregrounded to read it, and the app asks before it answers. The key never moves
+because two apps happened to be open.
 
 **The interactive channel only.** Queued transfer modes persist payloads to disk while waiting.
 
@@ -368,9 +404,13 @@ seen.
 identically and look identical, and somebody recovering months later holds two strings and no
 way to tell them apart. Both must be labeled where shown and where asked for.
 
-**The watch's empty state gains a third cause.** It distinguishes accounts in flight from sync
-being off; there is now provisioned-but-unprovisioned-key, and the existing advice to check sync
-would send a wearer to turn off the thing that is working.
+**The watch's empty state does not gain a third cause after all.** This asked for one, on the
+assumption that a watch with no key would still reach the list. It does not: `WatchVaultGateView`
+stands in front of it, so "no accounts yet" keeps meaning exactly what it meant, and the states
+that belong to provisioning have screens of their own. Specified in `docs/UI_SPEC.md`.
+
+*The watch's screens exist as of PR 16d. Asking is automatic, since every message on them ends by
+telling somebody to do something on their phone, and returning to the app tries again.*
 
 *The phone's two screens exist as of PR 16d.* `VaultGateView` stands between the app lock and the
 account list and renders one of three things. The list is never drawn while the key is missing:

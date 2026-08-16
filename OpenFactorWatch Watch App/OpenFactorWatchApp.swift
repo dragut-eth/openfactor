@@ -10,8 +10,12 @@ import SwiftUI
 /// It holds its own copy of the secrets rather than asking the phone for a code, because
 /// it has to work with the phone off, absent, or out of range. The copies arrive through
 /// iCloud Keychain, in the access group both targets declare, rather than over
-/// WatchConnectivity, which would mean building a second transport for secret material to
-/// leak through.
+/// WatchConnectivity.
+///
+/// **The one exception is the vault key**, which cannot arrive that way: it never syncs, by
+/// design, because a key that syncs is a key in the Keychain. It is asked for once over the
+/// interactive WatchConnectivity channel, and `WatchVaultGateView` is what stands in front of
+/// the list until it arrives.
 @main
 struct OpenFactorWatchApp: App {
 
@@ -47,10 +51,10 @@ struct OpenFactorWatchApp: App {
                     rehearsal
                 }
             } else {
-                WatchAccountListView(store: store)
+                WatchVaultGateView { WatchAccountListView(store: store) }
             }
             #else
-            WatchAccountListView(store: store)
+            WatchVaultGateView { WatchAccountListView(store: store) }
             #endif
         }
     }
