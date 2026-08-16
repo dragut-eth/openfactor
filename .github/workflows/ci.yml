@@ -50,6 +50,56 @@ jobs:
           fi
           echo "No network code and no logging found."
 
+      # Added after an App Store Connect API key identifier was committed to this public
+      # repository and pushed. Nothing was compromised: an identifier is not the key, and
+      # neither the key nor the issuer identifier was ever here. But a project whose premise
+      # is being auditable and careful with secrets should not rely on somebody noticing.
+      #
+      # These match shapes rather than known values, so the check keeps working after a key
+      # is rotated and catches a credential nobody has thought of yet.
+      #
+      # `git grep -E` does **not** support `\b`. The first version of this check used it,
+      # matched nothing, and reported success against a file that contained the exact string
+      # it was written to catch. Every pattern here was tested against a positive before
+      # being trusted, which is the only reason this job is worth having.
+      #
+      # This file is excluded from its own patterns, since it necessarily contains them.
+      - name: No credentials
+        run: |
+          fail() {
+            echo "$1"
+            echo "Credentials are read at run time, never committed. See scripts/ship-testflight.sh."
+            exit 1
+          }
+
+          # An Apple API key identifier is ten upper case alphanumerics, too common a shape
+          # to match alone, so it is anchored to the words that accompany one.
+          if git grep -n -I -E \
+            '(KEY_ID|KEYID|key_id|keyId|apiKey|api_key|API_KEY|ApiKey)[^A-Za-z0-9]{1,4}[A-Z0-9]{10}([^A-Za-z0-9]|$)' \
+            -- ':!.github/workflows/ci.yml'; then
+            fail "Found something shaped like an API key identifier."
+          fi
+
+          # An issuer identifier is a UUID, and none belongs here: the account's is read from
+          # the home directory and test UUIDs are generated at run time.
+          if git grep -n -I -E \
+            '(issuer|ISSUER|apiIssuer|issuer_id)[^A-Za-z0-9]{1,4}[0-9a-f]{8}-[0-9a-f]{4}' \
+            -- ':!.github/workflows/ci.yml'; then
+            fail "Found something shaped like an issuer identifier."
+          fi
+
+          if git grep -n -I -E 'BEGIN (RSA |EC |OPENSSH |PGP )?PRIVATE KEY' \
+            -- ':!.github/workflows/ci.yml'; then
+            fail "Found a private key block."
+          fi
+
+          # Files that are credentials whatever is inside them.
+          if git ls-files | grep -iE '\.(p8|p12|pem|cer|mobileprovision|keystore|jks)$'; then
+            fail "Found a credential file tracked in the repository."
+          fi
+
+          echo "No credentials found."
+
       # RTF fixtures are excluded because in RTF a trailing space is not whitespace: it
       # is the delimiter that terminates a control word, so `\u8232 ` at the end of a line
       # carries meaning. The fixtures are captured exports and are kept byte exact.

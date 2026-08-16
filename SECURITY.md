@@ -255,6 +255,20 @@ is. What is stored there is the sort order, the appearance, the chosen icon, whe
 on, and whether the lock is on and after how long. Never a secret, never an account name.
 The file that does it is `OpenFactor/Settings/Preferences.swift`.
 
+## Credentials and this repository
+
+**No credential belongs in this repository, and CI enforces it rather than trusting anyone
+to remember.** The `No credentials` job refuses anything shaped like an API key identifier,
+an issuer identifier, or a private key block, and refuses credential files by extension.
+
+It exists because an App Store Connect API key identifier was committed here and pushed. An
+identifier is not a key, the private key and issuer identifier were never in the repository,
+and nothing was compromised. It was still avoidable, and on a project that asks people to
+audit its handling of secrets, "we noticed eventually" is not a control.
+
+The team identifier is the deliberate exception: it is in the project file, it ships inside
+every binary Apple distributes, and `docs/PROJECT.md` explains why it stays.
+
 ## Practices in this repository
 
 - The security sensitive code lives in `OpenFactorCore`, a package with no UI and no
