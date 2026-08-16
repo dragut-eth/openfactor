@@ -555,12 +555,20 @@ the seven probes are settled; the two-writer rewrap case is blocked on a second 
 device. `OpenFactor/Vault/` holds the gate and its three screens, specified in
 `docs/UI_SPEC.md`.
 
+**The watch exchange is built too.** `WatchProvisioning` carries gate E7's negative controls as
+tests, the watch has a gate of its own in front of the list, and the phone asks before it
+answers. The six digit comparison was removed, because it could not do what the design claimed;
+`docs/VAULT.md` records what that costs, which is that routing exclusivity is now load bearing.
+The watch's third empty state turned out not to be needed: the gate stands in front of the list,
+so "no accounts yet" keeps its old meaning.
+
 **What remains in this pull request:**
 
-- **The watch provisioning exchange**, which is gate E7 turned into code and the only way a watch
-  gets a key. Until it exists a paired watch shows nothing
-- **The watch's third empty state.** It distinguishes accounts in flight from sync being off, and
-  now needs provisioned-but-no-key, or it sends a wearer to turn off the sync that is working
+- **Running the exchange between a real phone and a real watch.** It has been exercised only
+  against itself. E7 ran both halves on macOS CryptoKit, the same implementation watchOS carries,
+  but no watch was involved
+- **A second model reviewing the exchange**, because one model wrote the design, found the flaw
+  in it, and implemented its own fix. That is exactly where a shared blind spot survives
 - **The tripwire is deliberately not being built yet.** Its container anchor has an unsolved
   staleness problem once several devices are writing, and E6 made it worse by measuring the
   container path changing on update. A tripwire that cries wolf is worse than none

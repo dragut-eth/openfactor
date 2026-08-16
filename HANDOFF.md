@@ -47,12 +47,33 @@ on an 874pt screen, which reads exactly like a dead control and cost half an hou
 binding that was never broken. Screenshots are reliable; injected touches are not. Anything a
 screen owes belongs in a view model test, which is where `VaultGateModelTests` lives.
 
-**What is left in PR 16d.** The watch provisioning exchange, which is the whole of E7 turned into
-code and the only remaining way a watch gets a key. The watch's third empty state, which
-`VAULT.md` calls for and which today would send a wearer to turn off the sync that is working.
-And the tripwire, which is **not** to be built yet: its container anchor has an unsolved
-staleness problem once several devices are churning, and E6 made it worse by showing the
-container path changes on update.
+**The watch exchange is built, and building it found a flaw in the design it implements.**
+`SECURITY.md` and `VAULT.md` both said the person compares a six digit string on both screens
+*before the phone releases the key*. They could not: the watch derives its string from the
+transcript, which contains the phone's public key, and that public key arrived in the same
+message as the sealed key. At the moment of confirming, the genuine watch had nothing to display.
+The comparison was only ever after the fact.
+
+Xavier chose the simpler resolution rather than a third message: no comparison at all, one
+confirmation on the phone, and both documents rewritten to say the cost out loud, which is that
+**routing exclusivity is load bearing now** and Apple does not document it as a guarantee. The
+alternative was a digit comparison performed on a wrist, which is a step people tap through.
+
+`WatchProvisioning` keeps E7's negative controls as tests rather than as a one-off experiment,
+because two halves of one implementation agree with each other whether or not the binding is
+real.
+
+**What is left in PR 16d.** Running the exchange between a real phone and a real watch, which has
+never happened: E7 ran both halves on macOS CryptoKit and no watch was involved. A second model
+reviewing it, since one model wrote the design, found its flaw and implemented its own fix. And
+the tripwire, which is **not** to be built yet: its container anchor has an unsolved staleness
+problem once several devices are churning, and E6 made it worse by showing the container path
+changes on update.
+
+**What has no test coverage, stated rather than implied.** The cryptography is covered; the
+plumbing is not. `WCSession` is a hard dependency in both `WatchKeyProvider` and
+`WatchVaultModel`, so message routing, the status mapping and the phone's alert are verified by
+reading them and nothing else.
 
 **One decision was made during the wiring that the design had not covered.** A locked device with
 a lost passphrase was a permanent dead end: it cannot open its accounts, cannot reach Settings to
