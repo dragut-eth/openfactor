@@ -75,7 +75,7 @@ jobs:
             fi
             echo "ok: $1"
           }
-          check "PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev;"
+          check "PRODUCT_BUNDLE_IDENTIFIER = dev.openfactor.app;"
           # The watch app has to be EMBEDDED in the iOS app, not merely a sibling target
           # in the same project. It was a sibling for three pull requests, which is
           # invisible everywhere that matters: it builds, it installs from Xcode onto a
@@ -96,8 +96,8 @@ jobs:
           # The watch app sees the phone's accounts only because both targets declare the
           # same access group. Get this wrong and the watch runs perfectly and shows
           # nothing, which is the hardest kind of bug to attribute.
-          check "PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev.watchkitapp;"
-          check "INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.openfactor.dev;"
+          check "PRODUCT_BUNDLE_IDENTIFIER = dev.openfactor.app.watchkitapp;"
+          check "INFOPLIST_KEY_WKCompanionAppBundleIdentifier = dev.openfactor.app;"
           check "OpenFactorWatch.entitlements"
           check "WATCHOS_DEPLOYMENT_TARGET = 11.0;"
 

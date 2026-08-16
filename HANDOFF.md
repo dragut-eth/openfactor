@@ -292,7 +292,7 @@ would be to weaken what they assert.
 - The `.xcodeproj` is checked in rather than generated, reversing the earlier lean. A
   generator would make `brew install` a prerequisite for opening the project. The cost is
   paid back by `docs/PROJECT.md` and a CI job asserting the settings it describes
-- Bundle identifier `com.openfactor.dev`, fixed by the App Store Connect record
+- Bundle identifier `dev.openfactor.app`, fixed by the App Store Connect record
 - No view hardcodes a colour, radius, or spacing. They all come from `Tokens`, which is
   what makes a light mode regression hard to introduce
 - Card gradients only ever darken from the base, so the base is always the worst case for
