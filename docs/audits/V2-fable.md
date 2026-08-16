@@ -16,7 +16,7 @@ routing exclusivity, which is exactly the shape of belief E1 destroyed.
 
 **And the argument for the fix is better than the fix.** A short authentication string derived
 from the exchange, shown on both screens for the person to compare, **demotes routing
-exclusivity from load bearing to defence in depth** — which is the move this document makes
+exclusivity from load bearing to defence in depth**, which is the move this document makes
 everywhere else. It stops the security property depending on how a probe turns out.
 
 This changes the disposition recorded for ChatGPT's C2, which was accepted only *conditionally*,
@@ -36,8 +36,8 @@ which the replay paragraph covers for accounts and not for this.
 
 So a user told "change your passphrase" after a suspected compromise has been given a remedy
 that is not one. The document must say that responding to compromise requires **vault key
-rotation** — new key, re-encrypt every account, new passphrase — and either define that path or
-state plainly that version 1 does not have it.
+rotation**, meaning a new key, every account re-encrypted, and a new passphrase, and either
+define that path or state plainly that version 1 does not have it.
 
 ## Accepted
 
