@@ -297,8 +297,11 @@ Checkable, and several belong in CI and the ship script:
 Written down so an audit can rule on them rather than assume them, and so nobody mistakes
 confidence for evidence a second time.
 
-1. **That a sibling app cannot read another app's private container.** The whole design rests on
-   it, and the belief has the exact shape of the one E1 destroyed. A probe settles it.
+1. ~~That a sibling app cannot read another app's private container.~~ **Proven**, on hardware,
+   in `docs/audits/E4-container-isolation.md`. A sibling app holding the victim's exact path,
+   obtained through the Keychain hole E1 found, was refused by the kernel: `EPERM` from a raw
+   `open`, not merely a `nil` from Foundation. Enumeration was denied too. What remains unproven
+   is the container's **durability**, which is item 3, not its privacy.
 2. **That WatchConnectivity routing is exclusive to the paired counterpart app**, and that a
    sibling cannot inject a provisioning request.
 3. **That excluding the key file from backups behaves as documented on a real restore**, and
