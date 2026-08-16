@@ -71,7 +71,11 @@ struct AddAccountView: View {
                 .sheet(isPresented: isTransferring) {
                     if case let .transferring(batch) = model.stage {
                         ImportView(store: store, batch: batch) {
+                            // Reload the list behind. Not a dismissal: the finish screen is
+                            // where the person is told this was one part of several, and
+                            // closing here would skip it.
                             onAdded()
+                        } onFinished: {
                             dismiss()
                         }
                     }

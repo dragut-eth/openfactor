@@ -13,7 +13,17 @@ struct ImportView: View {
     @State private var includeConflicts = false
     @State private var passphrase = ""
 
+    /// Called when accounts have been written, so whatever is behind can reload. **Not a
+    /// signal to close.** Conflating the two is what hid the finish screen on the transfer
+    /// path: the caller dismissed the whole add sheet the instant Add was tapped, taking
+    /// this screen with it, so the line telling somebody they had scanned one part of three
+    /// was written, tested and never once displayed.
     private let onImported: () -> Void
+
+    /// Called when the person is finished with this screen, for a caller that has more to
+    /// tear down than this sheet. `nil` means dismissing this one is the whole job.
+    private let onFinished: (() -> Void)?
+
     private let origin: Origin
 
     @Environment(\.dismiss) private var dismiss
@@ -32,6 +42,7 @@ struct ImportView: View {
     init(store: any SecretStore, onImported: @escaping () -> Void) {
         _model = State(initialValue: ImportViewModel(store: store))
         self.onImported = onImported
+        self.onFinished = nil
         self.origin = .file
     }
 
@@ -39,13 +50,15 @@ struct ImportView: View {
     init(
         store: any SecretStore,
         batch: GoogleAuthenticatorImport.Batch,
-        onImported: @escaping () -> Void
+        onImported: @escaping () -> Void,
+        onFinished: @escaping () -> Void
     ) {
         let model = ImportViewModel(store: store)
         model.present(batch.result, source: "Google Authenticator")
 
         _model = State(initialValue: model)
         self.onImported = onImported
+        self.onFinished = onFinished
         self.origin = .transfer(part: batch.position, of: batch.size)
     }
 
@@ -72,7 +85,7 @@ struct ImportView: View {
                 // accounts are actually added it becomes Done, on the trailing edge.
                 if case .finished = model.stage {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                        Button("Done") { onFinished?() ?? dismiss() }
                     }
                 } else {
                     ToolbarItem(placement: .cancellationAction) {
