@@ -67,7 +67,11 @@ enum StoreUnderTest: String, CaseIterable, Sendable, CustomStringConvertible {
         case .inMemory:
             InMemorySecretStore()
         case .keychain:
-            KeychainSecretStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+            // Unlocked, because a store will not create a vault by itself: the design requires
+            // a passphrase to have been shown first, so `.vaultLocked` is the correct answer to
+            // a fresh store and the wrong starting point for a suite about something else.
+            (try? UnlockedVault.store())
+                ?? KeychainSecretStore(service: "app.openfactor.tests.\(UUID().uuidString)")
         }
     }
 }

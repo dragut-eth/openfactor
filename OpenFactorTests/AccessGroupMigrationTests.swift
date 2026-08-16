@@ -146,8 +146,8 @@ struct AccessGroupMigrationTests {
 @Suite("Access group migration, end to end")
 struct AccessGroupMigrationEndToEndTests {
 
-    private func makeStore() -> KeychainSecretStore {
-        KeychainSecretStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+    private func makeStore() throws -> KeychainSecretStore {
+        try UnlockedVault.store()
     }
 
     private func account(issuer: String) -> OTPAccount {
@@ -193,16 +193,28 @@ struct AccessGroupMigrationEndToEndTests {
     /// gap A2 found in the idempotency test at F13.
     @Test("An account in the old group is moved, and its secret survives")
     func movesLegacyAccounts() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let (target, legacy) = try groups(service: store.service)
         try #require(legacy != target)
 
-        // One account written the way a build before PR 13 wrote it, into the app's bundle
-        // group, and one written the way this build does.
+        // One account written into the app's bundle group, the way a build before PR 13 wrote
+        // it, and one written the way this build does.
+        //
+        // Its value is a sealed record rather than a raw secret, because this test is about
+        // **where an item lives**, not about what is inside it. A pre-vault item holding a raw
+        // secret is a different problem with a different answer: it is converted, deliberately
+        // and with confirmation, by the migration `docs/VAULT.md` specifies, and never silently
+        // read as though it were a record.
         let stranded = UUID()
         let secret = Data("12345678901234567890".utf8)
+        let sealed = try VaultRecord.seal(
+            metadata: Data(#"{"name":"octocat","generator":{},"color":"blue","sortIndex":0}"#.utf8),
+            secret: secret,
+            id: stranded,
+            key: try #require(try store.vaultKeys.load()))
+
         #expect(
             SecItemAdd(
                 [
@@ -211,7 +223,7 @@ struct AccessGroupMigrationEndToEndTests {
                     kSecAttrAccount as String: stranded.uuidString,
                     kSecAttrAccessGroup as String: legacy,
                     kSecUseDataProtectionKeychain as String: true,
-                    kSecValueData as String: secret,
+                    kSecValueData as String: sealed,
                 ] as CFDictionary,
                 nil
             ) == errSecSuccess
@@ -235,7 +247,7 @@ struct AccessGroupMigrationEndToEndTests {
 
     @Test("A store with nothing stranded reports nothing moved")
     func nothingToMigrate() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let first = try store.add(account(issuer: "GitHub"), color: .blue)
@@ -248,6 +260,8 @@ struct AccessGroupMigrationEndToEndTests {
 
     @Test("A store pinned to an explicit group has nothing to migrate")
     func pinnedStoreDoesNothing() throws {
+        // No vault needed: this asserts a pinned store declines to migrate, and never stores
+        // or reads an account.
         let store = KeychainSecretStore(
             service: "app.openfactor.tests.\(UUID().uuidString)",
             accessGroup: "does.not.matter"

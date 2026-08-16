@@ -234,8 +234,8 @@ struct AddAccountViewModelTests {
 @Suite("Scanning a transfer")
 struct TransferScanTests {
 
-    private func makeStore() -> KeychainSecretStore {
-        KeychainSecretStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+    private func makeStore() throws -> KeychainSecretStore {
+        try UnlockedVault.store()
     }
 
     // MARK: - A payload builder, so the fixtures are readable
@@ -281,7 +281,7 @@ struct TransferScanTests {
     @Test("A transfer code moves the add screen out of the way")
     @MainActor
     func recognisesATransfer() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = AddAccountViewModel(store: store)
@@ -298,7 +298,7 @@ struct TransferScanTests {
     @Test("A plain setup code still adds one account")
     @MainActor
     func stillReadsSingleCodes() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = AddAccountViewModel(store: store)
@@ -315,7 +315,7 @@ struct TransferScanTests {
     @Test("A damaged transfer code is named rather than dismissed")
     @MainActor
     func namesDamagedTransfers() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = AddAccountViewModel(store: store)
@@ -331,7 +331,7 @@ struct TransferScanTests {
     @Test("Closing the preview returns the scanner to reading codes")
     @MainActor
     func resumesAfterAPreview() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = AddAccountViewModel(store: store)
@@ -352,7 +352,7 @@ struct TransferScanTests {
     @Test("The preview opens on the accounts the code held")
     @MainActor
     func previewsTheBatch() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let batch = try GoogleAuthenticatorImport.read(transferCode(accounts: 2))
@@ -374,7 +374,7 @@ struct TransferScanTests {
     @Test("Scanning the same part twice adds nothing the second time")
     @MainActor
     func rescanningIsHarmless() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let batch = try GoogleAuthenticatorImport.read(transferCode(accounts: 2))

@@ -21,10 +21,18 @@ struct KeychainSecretStoreTests {
         accessibility: SecretAccessibility = .whenUnlockedThisDeviceOnly,
         synchronizable: Bool = false
     ) -> KeychainSecretStore {
-        KeychainSecretStore(
+        // Its own directory, so no two stores share a vault key and none is written into the
+        // application support directory of whatever process runs the tests.
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("vault-test-\(UUID().uuidString)")
+        let keys = VaultKeyStore(directory: { directory })
+        _ = try? keys.create()
+
+        return KeychainSecretStore(
             service: "app.openfactor.tests.\(UUID().uuidString)",
             accessibility: accessibility,
-            synchronizable: synchronizable
+            synchronizable: synchronizable,
+            vaultKeys: keys
         )
     }
 

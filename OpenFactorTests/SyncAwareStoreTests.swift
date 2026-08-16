@@ -77,6 +77,18 @@ struct SyncAwareStoreTests {
         )
     }
 
+
+    /// A vault key of its own, so this suite exercises the sync preference rather than the
+    /// vault. The preference must never reach the key: turning sync off changes where items are
+    /// offered and nothing about which key opens them.
+    private func makeVault() throws -> VaultKeyStore {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("vault-test-\(UUID().uuidString)")
+        let keys = VaultKeyStore(directory: { directory })
+        _ = try keys.create()
+        return keys
+    }
+
     @Test("With sync off, a new account is device only and not offered to iCloud")
     func addsUnsyncedWhenPreferenceIsOff() throws {
         let service = "app.openfactor.tests.\(UUID().uuidString)"
@@ -85,8 +97,9 @@ struct SyncAwareStoreTests {
         let defaults = makeDefaults()
         defaults.set(false, forKey: PreferenceKey.syncEnabled)
 
-        try SyncAwareKeychainStore(defaults: defaults, service: service)
-            .add(account(), color: .blue)
+        try SyncAwareKeychainStore(
+            defaults: defaults, service: service, vaultKeys: try makeVault()
+        ).add(account(), color: .blue)
 
         let item = try #require(rawItem(service: service))
         #expect(item[kSecAttrSynchronizable as String] as? Bool != true)
@@ -107,7 +120,8 @@ struct SyncAwareStoreTests {
         let defaults = makeDefaults()
         defaults.set(false, forKey: PreferenceKey.syncEnabled)
 
-        let store = SyncAwareKeychainStore(defaults: defaults, service: service)
+        let store = SyncAwareKeychainStore(
+            defaults: defaults, service: service, vaultKeys: try makeVault())
         try store.add(account(), color: .blue)
 
         // The same store instance, deliberately. Nothing is re-created here.
@@ -141,7 +155,8 @@ struct SyncAwareStoreTests {
         let defaults = makeDefaults()
         defaults.set(false, forKey: PreferenceKey.syncEnabled)
 
-        let store = SyncAwareKeychainStore(defaults: defaults, service: service)
+        let store = SyncAwareKeychainStore(
+            defaults: defaults, service: service, vaultKeys: try makeVault())
         try store.add(account(), color: .blue)
 
         #expect(try store.setSynchronizable(true) == 1)

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Security
 
@@ -9,8 +10,8 @@ import Security
 ///
 /// | Keychain field | Holds |
 /// | --- | --- |
-/// | `kSecValueData` | the secret, and nothing else |
-/// | `kSecAttrGeneric` | the metadata, as JSON |
+/// | `kSecValueData` | a `VaultRecord`: the metadata and the secret, each sealed |
+/// | `kSecAttrGeneric` | **nothing. Never written, and cleared on conversion** |
 /// | `kSecAttrAccount` | the account identifier, a UUID |
 /// | `kSecAttrService` | a constant, so the app's items can be found |
 ///
@@ -18,25 +19,26 @@ import Security
 /// secret and writing its metadata leaves a secret nobody can name, or a name with no
 /// secret behind it. With one item there is nothing to get out of step.
 ///
-/// The separation the design calls for is achieved by the queries instead, and more
-/// strongly than storing them apart would manage. ``records()`` asks for attributes and
-/// explicitly not for data, so listing accounts never decrypts a single secret. Only
-/// ``secret(for:)`` asks for data, for one account, at the moment a code is generated.
+/// The separation the design calls for used to be achieved by the queries: ``records()`` asked
+/// for attributes and explicitly not for data, so listing never decrypted a secret.
 ///
-/// ## Why the metadata is in the Keychain too
+/// **That property survives the vault, by a different mechanism.** A record now seals the
+/// metadata and the secret separately under one key, so ``records()`` fetches the data it has to
+/// and opens only the metadata half. A secret's plaintext still exists in exactly one place,
+/// ``secret(for:)``, at the moment a code is generated. An external review caught the first
+/// design discarding this without mentioning it, which is why the record has two halves rather
+/// than being one blob.
 ///
-/// The issuer and account name cannot generate a code, but they say which services
-/// someone uses and under which email address. Keeping them in a plist or a database file
-/// would leave that in the clear on the device and in every unencrypted backup. In the
-/// Keychain they are encrypted at rest.
+/// ## Why the metadata is sealed rather than stored as an attribute
 ///
-/// To be exact about the strength of that, because this project's claims should be no
-/// stronger than the facts: the accessibility class chosen below protects the item's
-/// **data**, meaning the secret. Attributes, and the metadata JSON lives in one, are
-/// encrypted under the keychain's own key rather than the per item class, which is a
-/// weaker guarantee than the secret gets. Still encrypted at rest and still absent from
-/// unencrypted backups, but not "the same protection as the secret", and the threat
-/// model should not claim otherwise. Noted at gate A1.
+/// The issuer and account name cannot generate a code, but they say which services somebody
+/// uses and under which email address, which is most of what an attacker wanted.
+///
+/// Gate A1 recorded that an attribute is encrypted under the keychain's own key rather than the
+/// per item class, a weaker guarantee than the secret's, and said the threat model should not
+/// claim otherwise. Gate E1 then measured something worse: a sibling app on the same team reads
+/// items out of the group, attributes included. So metadata in an attribute is metadata in the
+/// clear as far as that adversary is concerned, and it now lives inside the ciphertext.
 ///
 /// `kSecAttrLabel` is deliberately set to a constant rather than to the account name. On
 /// macOS that field is what Keychain Access lists, and there is no reason for a passer by
@@ -71,16 +73,37 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
     /// not hold fails every call with `errSecMissingEntitlement`. Gate A2, F18.
     public let accessGroup: String?
 
+    /// Where this device's vault key lives, and the only thing that can open a record.
+    public let vaultKeys: VaultKeyStore
+
     public init(
         service: String = "app.openfactor.accounts",
         accessibility: SecretAccessibility = .whenUnlockedThisDeviceOnly,
         synchronizable: Bool = false,
-        accessGroup: String? = nil
+        accessGroup: String? = nil,
+        vaultKeys: VaultKeyStore = VaultKeyStore()
     ) {
         self.service = service
         self.accessibility = accessibility
         self.synchronizable = synchronizable
         self.accessGroup = accessGroup
+        self.vaultKeys = vaultKeys
+    }
+
+    /// The vault key, or the reason there is not one.
+    ///
+    /// Read on every call rather than held. The file is 32 bytes and the alternative is caching
+    /// a key across a state change, which is how a device that has just been unprovisioned keeps
+    /// working until it does not.
+    private func vaultKey() throws(SecretStoreError) -> SymmetricKey {
+        do {
+            guard let key = try vaultKeys.load() else { throw SecretStoreError.vaultLocked }
+            return key
+        } catch let error as SecretStoreError {
+            throw error
+        } catch {
+            throw SecretStoreError.vaultLocked
+        }
     }
 
     // MARK: - Writing
@@ -104,9 +127,24 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
             )
         )
 
+        let sealed: Data
+        do {
+            sealed = try VaultRecord.seal(
+                metadata: try encode(record.metadata, id: record.id),
+                secret: account.secret,
+                id: record.id,
+                key: try vaultKey())
+        } catch let error as SecretStoreError {
+            throw error
+        } catch {
+            throw SecretStoreError.vaultLocked
+        }
+
         var attributes = baseAttributes(id: record.id)
-        attributes[kSecValueData as String] = account.secret
-        attributes[kSecAttrGeneric as String] = try encode(record.metadata, id: record.id)
+        attributes[kSecValueData as String] = sealed
+        // `kSecAttrGeneric` is deliberately absent. It held the metadata as JSON before the
+        // vault, and an external review pointed out that a conversion which seals the value and
+        // leaves the attribute in place satisfies the instruction and defeats the design.
         attributes[kSecAttrAccessible as String] = accessibility.attribute
         attributes[kSecAttrSynchronizable as String] = synchronizable
         attributes[kSecAttrLabel as String] = "OpenFactor"
@@ -119,12 +157,29 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         return record
     }
 
+    /// Rewrites an account's metadata without ever decrypting its secret.
+    ///
+    /// A rename, a colour change, a reorder and an HOTP counter all arrive here. The existing
+    /// record is read, its metadata half re-sealed, and **its secret half copied verbatim**, so
+    /// the property the old implementation got from naming only one attribute survives: no path
+    /// through this method can overwrite a secret, and none decrypts one either.
     public func update(_ record: AccountRecord) throws(SecretStoreError) {
-        // Only the metadata is named here, so there is no path through this method that
-        // can overwrite a secret.
-        let changes: [String: Any] = [
-            kSecAttrGeneric as String: try encode(record.metadata, id: record.id)
-        ]
+        let existing = try sealedRecord(for: record.id)
+
+        let rewritten: Data
+        do {
+            rewritten = try VaultRecord.replacingMetadata(
+                in: existing,
+                with: try encode(record.metadata, id: record.id),
+                id: record.id,
+                key: try vaultKey())
+        } catch let error as SecretStoreError {
+            throw error
+        } catch {
+            throw SecretStoreError.unreadableMetadata(id: record.id)
+        }
+
+        let changes: [String: Any] = [kSecValueData as String: rewritten]
 
         let status = SecItemUpdate(
             query(id: record.id) as CFDictionary,
@@ -449,9 +504,10 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         var query = baseQuery()
         query[kSecMatchLimit as String] = kSecMatchLimitAll
         query[kSecReturnAttributes as String] = true
-        // Named explicitly, rather than left to the default, because this is the line
-        // that keeps drawing the list from decrypting any secrets.
-        query[kSecReturnData as String] = false
+        // Data is required now, because the metadata lives inside it. The property this line
+        // used to carry, that listing never decrypts a secret, is carried by the record's two
+        // halves instead: what comes back is ciphertext, and only the metadata half is opened.
+        query[kSecReturnData as String] = true
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -469,8 +525,13 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         var readable: [AccountRecord] = []
         var unreadable: [UUID] = []
 
+        // Loaded once for the whole listing rather than per item. A device with no key reports
+        // every account as unreadable rather than throwing, so the list can still say how many
+        // accounts are waiting for a passphrase instead of showing nothing at all.
+        let key = try? vaultKeys.load()
+
         for item in items {
-            switch decode(item) {
+            switch decode(item, key: key) {
             case let .readable(record): readable.append(record)
             case let .unreadable(id): unreadable.append(id)
             case .foreign: continue
@@ -485,19 +546,18 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         )
     }
 
+    /// **The only place a secret's plaintext exists.** Called when a code is generated, for one
+    /// account, and never while drawing a list.
     public func secret(for id: UUID) throws(SecretStoreError) -> Data {
-        var query = query(id: id)
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        query[kSecReturnData as String] = true
+        let sealed = try sealedRecord(for: id)
 
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard status == errSecSuccess, let secret = result as? Data else {
-            throw error(for: status)
+        do {
+            return try VaultRecord.openSecret(sealed, id: id, key: try vaultKey())
+        } catch let error as SecretStoreError {
+            throw error
+        } catch {
+            throw SecretStoreError.unreadableMetadata(id: id)
         }
-
-        return secret
     }
 
     // MARK: - Queries
@@ -563,14 +623,17 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         case foreign
     }
 
-    private func decode(_ item: [String: Any]) -> DecodedItem {
+    private func decode(_ item: [String: Any], key: SymmetricKey?) -> DecodedItem {
         guard let rawID = item[kSecAttrAccount as String] as? String,
             let id = UUID(uuidString: rawID)
         else {
             return .foreign
         }
 
-        guard let json = item[kSecAttrGeneric as String] as? Data,
+        guard let key else { return .unreadable(id: id) }
+
+        guard let sealed = item[kSecValueData as String] as? Data,
+            let json = try? VaultRecord.openMetadata(sealed, id: id, key: key),
             let metadata = try? JSONDecoder().decode(AccountMetadata.self, from: json)
         else {
             // Reported, never skipped and never repaired. A record this version cannot
@@ -580,6 +643,22 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
         }
 
         return .readable(AccountRecord(id: id, metadata: metadata))
+    }
+
+    /// One account's sealed bytes, which both `secret(for:)` and `update(_:)` need.
+    private func sealedRecord(for id: UUID) throws(SecretStoreError) -> Data {
+        var query = query(id: id)
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        query[kSecReturnData as String] = true
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess, let sealed = result as? Data else {
+            throw error(for: status)
+        }
+
+        return sealed
     }
 
     // MARK: - Status codes

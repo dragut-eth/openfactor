@@ -28,6 +28,13 @@ public enum SecretStoreError: Error, Equatable, Sendable {
     /// that a later version would have read perfectly.
     case unreadableMetadata(id: UUID)
 
+    /// This device holds ciphertext and no vault key.
+    ///
+    /// **Ordinary rather than broken.** It is the state of a fresh install, a reinstall, a new
+    /// phone, or a watch that has not been provisioned yet. The interface owes it a passphrase
+    /// prompt, or on a watch an offer to ask the phone, and must never present it as damage.
+    case vaultLocked
+
     /// Asked to advance a counter on an account whose codes come from the clock.
     case notCounterBased
 
@@ -60,6 +67,11 @@ extension SecretStoreError: CustomStringConvertible {
             return "An account with that identifier already exists."
         case .deviceLocked:
             return "Unlock the device to read this account."
+        case .vaultLocked:
+            return """
+                This device does not have the key to your accounts yet. Enter your passphrase, \
+                or open OpenFactor on your iPhone with this watch nearby.
+                """
         case let .unreadableMetadata(id):
             return "The details for account \(id) could not be read. Its secret is intact."
         case .notCounterBased:

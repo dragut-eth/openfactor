@@ -25,9 +25,23 @@ struct SyncAwareKeychainStore: SynchronizableSecretStore {
     /// app can accidentally point at a different set of items.
     private let service: String?
 
-    init(defaults: UserDefaults = .standard, service: String? = nil) {
+    /// This device's vault key. Passed through to every store this builds, because a store
+    /// without one reads ciphertext it cannot open.
+    ///
+    /// **The sync preference must not reach the vault key.** Turning sync off changes where
+    /// account items are offered, and changes nothing about which key opens them: the key never
+    /// syncs under any setting, and a device that lost its key when the switch moved would have
+    /// its accounts made unreadable by a preference.
+    private let vaultKeys: VaultKeyStore
+
+    init(
+        defaults: UserDefaults = .standard,
+        service: String? = nil,
+        vaultKeys: VaultKeyStore = VaultKeyStore()
+    ) {
         self.defaults = defaults
         self.service = service
+        self.vaultKeys = vaultKeys
     }
 
     private var store: KeychainSecretStore {
@@ -39,11 +53,13 @@ struct SyncAwareKeychainStore: SynchronizableSecretStore {
             return KeychainSecretStore(
                 service: service,
                 accessibility: accessibility,
-                synchronizable: shouldSync
+                synchronizable: shouldSync,
+                vaultKeys: vaultKeys
             )
         }
 
-        return KeychainSecretStore(accessibility: accessibility, synchronizable: shouldSync)
+        return KeychainSecretStore(
+            accessibility: accessibility, synchronizable: shouldSync, vaultKeys: vaultKeys)
     }
 
     @discardableResult

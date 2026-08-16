@@ -12,8 +12,8 @@ import Testing
 @Suite("Export")
 struct ExportViewModelTests {
 
-    private func makeStore() -> KeychainSecretStore {
-        KeychainSecretStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+    private func makeStore() throws -> KeychainSecretStore {
+        try UnlockedVault.store()
     }
 
     private func account(_ issuer: String, secret: String) throws -> OTPAccount {
@@ -46,7 +46,7 @@ struct ExportViewModelTests {
     @Test("No file is written until the passphrase has been acknowledged")
     @MainActor
     func acknowledgementIsRequired() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = ExportViewModel(store: store)
@@ -63,7 +63,7 @@ struct ExportViewModelTests {
     @Test("A weak passphrase of your own cannot produce an archive")
     @MainActor
     func weakCustomPassphrasesAreRefused() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = await ready(store)
@@ -88,7 +88,7 @@ struct ExportViewModelTests {
     @Test("Even if the screen let it through, the writer refuses")
     @MainActor
     func writerRefusesIndependentlyOfTheScreen() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(try account("GitHub", secret: "GEZDGNBVGY3TQOJQ"), color: .blue)
 
@@ -111,7 +111,7 @@ struct ExportViewModelTests {
     @Test("The archive it writes is one it can read back")
     @MainActor
     func archiveRoundTrips() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(try account("GitHub", secret: "GEZDGNBVGY3TQOJQ"), color: .purple)
         try store.add(try account("Fastmail", secret: "JBSWY3DPEHPK3PXP"), color: .teal)
@@ -141,7 +141,7 @@ struct ExportViewModelTests {
     @Test("Two exports never share a salt or a nonce")
     @MainActor
     func everyExportIsFresh() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(try account("GitHub", secret: "GEZDGNBVGY3TQOJQ"), color: .blue)
 
@@ -174,7 +174,7 @@ struct ExportViewModelTests {
     @Test("The file does not outlive the screen that made it")
     @MainActor
     func fileIsDiscarded() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(try account("GitHub", secret: "GEZDGNBVGY3TQOJQ"), color: .blue)
 
@@ -202,7 +202,7 @@ struct ExportViewModelTests {
     @Test("The file is written with the strongest protection iOS offers")
     @MainActor
     func fileIsProtected() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(try account("GitHub", secret: "GEZDGNBVGY3TQOJQ"), color: .blue)
 
@@ -236,7 +236,7 @@ struct ExportViewModelTests {
     @Test("Generating a different passphrase clears the acknowledgement")
     @MainActor
     func regenerationClearsTheAcknowledgement() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = await ready(store)
@@ -251,7 +251,7 @@ struct ExportViewModelTests {
     @Test("Editing a custom passphrase clears the acknowledgement")
     @MainActor
     func editingCustomPassphraseClearsTheAcknowledgement() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = await ready(store)
@@ -267,7 +267,7 @@ struct ExportViewModelTests {
     @Test("Switching between a generated and a custom passphrase clears it too")
     @MainActor
     func switchingClearsTheAcknowledgement() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = await ready(store)
@@ -283,7 +283,7 @@ struct ExportViewModelTests {
     @Test("A file left behind by a previous run is removed at launch")
     @MainActor
     func orphanedFilesAreSwept() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(try account("GitHub", secret: "GEZDGNBVGY3TQOJQ"), color: .blue)
 
@@ -305,7 +305,7 @@ struct ExportViewModelTests {
     @Test("A generated passphrase is what the archive was actually sealed with")
     @MainActor
     func generatedPassphraseIsTheRealOne() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(try account("GitHub", secret: "GEZDGNBVGY3TQOJQ"), color: .blue)
 
@@ -339,7 +339,7 @@ struct ExportViewModelTests {
     @Test("Asking for a different passphrase actually changes it")
     @MainActor
     func regenerationChangesThePassphrase() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = await ready(store)

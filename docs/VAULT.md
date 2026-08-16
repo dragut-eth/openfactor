@@ -372,6 +372,11 @@ way to tell them apart. Both must be labelled where shown and where asked for.
 being off; there is now provisioned-but-unprovisioned-key, and the existing advice to check sync
 would send a wearer to turn off the thing that is working.
 
+*The store is converted as of PR 16d. `KeychainSecretStore` seals on write, opens the metadata
+half to list, and opens the secret half only in `secret(for:)`. `update` re-seals metadata and
+copies the secret half verbatim, so a rename never decrypts a secret. `kSecAttrGeneric` is never
+written.*
+
 ## Migration
 
 **Plaintext items are never removed without an explicit act.** The first draft said they are

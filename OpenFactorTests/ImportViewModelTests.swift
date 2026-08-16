@@ -13,8 +13,8 @@ import Testing
 @Suite("Import preview")
 struct ImportViewModelTests {
 
-    private func makeStore() -> KeychainSecretStore {
-        KeychainSecretStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+    private func makeStore() throws -> KeychainSecretStore {
+        try UnlockedVault.store()
     }
 
     private let secret = Data("12345678901234567890".utf8)
@@ -58,7 +58,7 @@ struct ImportViewModelTests {
     @Test("Reading a file writes nothing to the store")
     @MainActor
     func readingWritesNothing() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = ImportViewModel(store: store)
@@ -76,7 +76,7 @@ struct ImportViewModelTests {
     @Test("Confirming writes exactly what the preview promised")
     @MainActor
     func confirmingWrites() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = ImportViewModel(store: store)
@@ -101,7 +101,7 @@ struct ImportViewModelTests {
     @Test("An account already stored, identically, is a duplicate rather than a new one")
     @MainActor
     func detectsDuplicates() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(account("GitHub", secret: Base32.decode("GEZDGNBVGY3TQOJQ")), color: .blue)
 
@@ -124,7 +124,7 @@ struct ImportViewModelTests {
     @Test("The same secret with different settings is a conflict, not a duplicate")
     @MainActor
     func detectsConflicts() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(
             account("GitHub", secret: Base32.decode("GEZDGNBVGY3TQOJQ"), period: 30),
@@ -147,7 +147,7 @@ struct ImportViewModelTests {
     @Test("A conflict is skipped unless the user asks for it")
     @MainActor
     func conflictsAreOptional() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(
             account("GitHub", secret: Base32.decode("GEZDGNBVGY3TQOJQ"), period: 30),
@@ -174,7 +174,7 @@ struct ImportViewModelTests {
     @Test("A renamed account is still recognised as the same one")
     @MainActor
     func recognisesRenamedAccounts() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
         try store.add(
             account("Old name", secret: Base32.decode("GEZDGNBVGY3TQOJQ")),
@@ -198,7 +198,7 @@ struct ImportViewModelTests {
     @Test("The format is decided by contents, not by the file extension")
     @MainActor
     func detectsFormatFromContents() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let labelled = """
@@ -222,7 +222,7 @@ struct ImportViewModelTests {
     @Test("An OpenFactor archive is recognised, unlocked, and previewed")
     @MainActor
     func readsItsOwnArchive() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let passphrase = "YZTR-THFW-WT6E-OXIV-73XD-QCDM"
@@ -268,7 +268,7 @@ struct ImportViewModelTests {
     @Test("A wrong passphrase leaves the archive where it was")
     @MainActor
     func wrongPassphraseKeepsTheArchive() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let archive = try BackupArchive.write(
@@ -293,7 +293,7 @@ struct ImportViewModelTests {
     @Test("An encrypted Aegis vault fails with the message that names the fix")
     @MainActor
     func explainsEncryptedVaults() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let encrypted = """
@@ -314,7 +314,7 @@ struct ImportViewModelTests {
     @Test("A file that is neither format fails rather than importing nothing quietly")
     @MainActor
     func rejectsUnrelatedFiles() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = ImportViewModel(store: store)
@@ -331,7 +331,7 @@ struct ImportViewModelTests {
     @Test("An implausibly large file is refused before it is parsed")
     @MainActor
     func refusesHugeFiles() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let huge = String(repeating: "A", count: 9 * 1024 * 1024)
@@ -350,7 +350,7 @@ struct ImportViewModelTests {
     @Test("Refused records reach the preview with a reason")
     @MainActor
     func surfacesRefusals() async throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         let model = ImportViewModel(store: store)

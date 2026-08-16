@@ -16,8 +16,8 @@ import Testing
 @Suite("Erase all accounts")
 struct EraseAccountsTests {
 
-    private func makeStore() -> KeychainSecretStore {
-        KeychainSecretStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+    private func makeStore() throws -> KeychainSecretStore {
+        try UnlockedVault.store()
     }
 
     private func account(_ issuer: String) -> OTPAccount {
@@ -76,7 +76,7 @@ struct EraseAccountsTests {
 
     @Test("Erasing removes every account")
     func erasesEverything() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         for issuer in ["GitHub", "Fastmail", "Proton"] {
@@ -95,7 +95,7 @@ struct EraseAccountsTests {
     /// secret on a device its owner believes is empty.
     @Test("Erasing removes records this version cannot decode")
     func erasesUndecodableRecords() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         try store.add(account("GitHub"), color: .blue)
@@ -113,7 +113,7 @@ struct EraseAccountsTests {
 
     @Test("Erasing an empty store is not an error")
     func erasingNothing() throws {
-        let store = makeStore()
+        let store = try makeStore()
         defer { store.cleanUp() }
 
         try eraseEverything(in: store)
@@ -124,8 +124,8 @@ struct EraseAccountsTests {
     /// store's. The service is the boundary and this is the test that keeps it one.
     @Test("Erasing one store leaves another alone")
     func doesNotReachOtherStores() throws {
-        let erased = makeStore()
-        let untouched = makeStore()
+        let erased = try makeStore()
+        let untouched = try makeStore()
         defer { erased.cleanUp(); untouched.cleanUp() }
 
         try erased.add(account("GitHub"), color: .blue)
