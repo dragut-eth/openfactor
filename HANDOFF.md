@@ -265,6 +265,8 @@ Sources/OpenFactorCore/
   Vault/WrappedVaultKey.swift              The vault key sealed under a passphrase,
                                            one record so it cannot arrive in pieces
   Vault/VaultPadding.swift                 Length prefixed, so a size says less
+  Vault/VaultKeyStore.swift                The key in the container. Asks FileManager
+                                           every time, because E6 saw a container move
 Tests/OpenFactorCoreTests/                 The shared core suites, 17k fuzz iterations
 OpenFactor.xcodeproj                       See docs/PROJECT.md, checked in deliberately
 OpenFactor/                                App target

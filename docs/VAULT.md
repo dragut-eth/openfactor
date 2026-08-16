@@ -91,6 +91,8 @@ though it were one.
 `Application Support`, never `Caches` or `tmp`, which iOS purges under storage pressure with no
 user action and no signal.
 
+*Implemented as `VaultKeyStore` in PR 16d.*
+
 **Always located through `FileManager`, never through a remembered path.** An app update
 preserves the data and **moves the container**, measured in `docs/audits/E6-container-durability.md`:
 the file survived byte for byte while its directory changed identity. Anything that caches or
