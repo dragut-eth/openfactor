@@ -47,18 +47,35 @@
 
 set -euo pipefail
 
-TEAM_ID="HST4KH9P2X"
-KEY_ID="PVPR4GTMF6"
 SCHEME="OpenFactor"
 WORK="$(mktemp -d)"
 
 trap 'rm -rf "$WORK"' EXIT
 
+# **Nothing identifying anyone's account is written down here.** This repository is public.
+# The key identifier, the issuer identifier and the key itself all live outside it, in the
+# maintainer's home directory, and are read at run time. A key identifier is not the key,
+# but publishing one is free exposure for no benefit.
+#
+# The team identifier is the exception, and deliberately so: it is already in the project
+# file and ships inside every binary Apple distributes, which `docs/PROJECT.md` explains.
+# It is read from the project rather than repeated, so there is one place it is written.
 ISSUER_FILE="$HOME/.appstoreconnect/issuer_id"
-KEY_FILE="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
+KEYS_DIR="$HOME/.appstoreconnect/private_keys"
 
 [ -f "$ISSUER_FILE" ] || { echo "Missing $ISSUER_FILE. See the comment at the top."; exit 1; }
-[ -f "$KEY_FILE" ] || { echo "Missing $KEY_FILE. See the comment at the top."; exit 1; }
+
+# The key identifier is part of the file name Apple gives the key, so it never has to be
+# stored separately or typed.
+KEY_FILE="$(ls "$KEYS_DIR"/AuthKey_*.p8 2>/dev/null | head -1)"
+[ -n "$KEY_FILE" ] || { echo "No AuthKey_*.p8 in $KEYS_DIR. See the comment at the top."; exit 1; }
+
+KEY_ID="$(basename "$KEY_FILE" .p8)"
+KEY_ID="${KEY_ID#AuthKey_}"
+
+TEAM_ID="$(grep -m1 "DEVELOPMENT_TEAM = " OpenFactor.xcodeproj/project.pbxproj \
+  | sed 's/.*DEVELOPMENT_TEAM = \([A-Z0-9]*\);.*/\1/')"
+[ -n "$TEAM_ID" ] || { echo "Could not read DEVELOPMENT_TEAM from the project file."; exit 1; }
 
 security find-identity -v -p codesigning | grep -q "Apple Distribution" || {
   echo "No Apple Distribution identity in the keychain. A human has to create it in Xcode."
