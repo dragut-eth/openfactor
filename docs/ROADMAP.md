@@ -532,6 +532,22 @@ checking the watch on hardware afterwards rather than assuming.
 **A new signed target is new audit surface.** Gate A4 has to cover it, and PR 18's
 reproducible build notes gain another binary to account for.
 
+### PR 16d: The vault
+
+**Storage stops being plaintext in a shared Keychain group.** Gate E1 measured that access
+groups are not a boundary between apps of one team, so accounts are encrypted with a key kept
+in the app's private container, which is a boundary. The design is `docs/VAULT.md`, written
+before the code and audited before the code, as the backup format was.
+
+- The passphrase, PBKDF2 and AES-GCM come from the archive and are already audited four times.
+  This is one new layer, not a new subsystem
+- Six assumptions must be settled by probe before implementation, including whether a sibling
+  app can reach another app's container at all. That belief has the same shape as the one E1
+  destroyed
+- The watch is handed the key once over WatchConnectivity and never needs the phone again
+- Not a fix for a malicious update, which reads its own container. That is answered by
+  reproducible builds in PR 18, not by cryptography
+
 ### PR 17: Security review and threat model
 
 - Complete `SECURITY.md`: attacker with the unlocked device, the locked device, the iCloud

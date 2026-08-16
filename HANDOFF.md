@@ -7,6 +7,15 @@ first when picking the work back up.
 
 **Last updated:** 2026-08-15, on TestFlight as `dev.openfactor.app`, 1.0 (2).
 
+**The storage is being redesigned, and the reason is measured rather than argued.** Gate E1
+proved on hardware that a second app signed by the same team reads another app's Keychain
+items, including the default group Apple's documentation calls private. Access groups are not a
+boundary; the sandboxed container is. `docs/VAULT.md` is the design that follows, encrypting
+accounts and keeping the key where no entitlement can reach it, and it has been through one
+cold audit round already, recorded in `docs/audits/V1.md`: twelve findings, five blocking,
+three of them data loss. **No code has been written.** Six things must be proven by probe
+before any is, and they are listed at the end of that document.
+
 **Everything now reads `dev.openfactor.*`.** The bundle identifiers were renamed because
 `com.openfactor.dev` claimed a domain this project does not own, and the Keychain access
 group was renamed after them so nothing is left explaining an inconsistency. Both were done
