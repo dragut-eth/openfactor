@@ -20,8 +20,26 @@ are listed at the end of that document, and the next one worth running is whethe
 WatchConnectivity routing is exclusive to the paired counterpart app, since the design hands a
 256 bit key across it.
 
-**Awaiting an external audit round.** `docs/audits/V2-prompt.md` is written and the design is
-going to Grok and ChatGPT. Nothing is implemented until those come back.
+**The external audit round is complete and the design has been revised once, at the end of it.**
+ChatGPT, Grok and Fable all approve the central move and all three refused to freeze the page.
+Ten further findings, recorded in `docs/audits/V2-chatgpt.md`, `V2-grok.md` and `V2-fable.md`,
+all now in `docs/VAULT.md`. They divided almost perfectly: protocol and format precision, then
+integration with the code that exists, then semantic errors. None of the three would have been
+enough alone.
+
+The three worth knowing without reading the records. The watch exchange was **half a protocol**,
+since ECDH needs a private key on both sides. Listing accounts today never loads a secret, a
+deliberate property stated in `KeychainSecretStore`'s own header, and the design was **discarding
+it without mentioning it**; it is preserved now by sealing each record in two halves under one
+key. And **rewrapping is not revocation**: a passphrase change does not rotate the vault key, so
+anyone holding an old wrapped item and the old passphrase keeps access forever, which version 1
+now states plainly rather than implying otherwise.
+
+**Still nothing implemented, deliberately.** Seven things must be proven first and they are at
+the end of `VAULT.md`. Two are measured, E1 and E4. The next worth running is item 2,
+WatchConnectivity routing exclusivity, now demoted from load bearing to defence in depth by the
+provisioning code but still worth knowing. Item 7, container durability across Offload App and
+Quick Start, is the other one that could still hurt.
 
 **Everything now reads `dev.openfactor.*`.** The bundle identifiers were renamed because
 `com.openfactor.dev` claimed a domain this project does not own, and the Keychain access

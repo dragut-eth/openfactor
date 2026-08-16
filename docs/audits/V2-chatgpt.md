@@ -92,6 +92,10 @@ unaddressed here. Both halves are needed and neither substitutes for the other.
 
 ## Disposition
 
-Nothing is edited into `VAULT.md` yet. Grok and Fable are still to report, and rewriting the
-document three times would produce three drafts nobody has reviewed as a whole. The revision
-happens once, when the round is complete, and this file is the record until then.
+**All six are now in `VAULT.md`**, revised once at the end of the round rather than three times
+during it.
+
+One disposition here was later overturned. C2, the human-verifiable provisioning code, was
+accepted only *conditionally*, pending the routing probe. Fable's review argued that the point
+of adding it is precisely that the claim stops depending on how that probe turns out, which is
+right and better reasoning than the conditional. It is in the design unconditionally.

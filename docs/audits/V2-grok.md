@@ -94,12 +94,13 @@ They do not overlap anywhere else, which is the argument for having run two.
 
 ## Disposition
 
-Still nothing edited into `VAULT.md`. Fable has not reported. When the revision happens it now
-carries, at minimum: the complete ECDH transcript with a nonce and bound public keys, exact
-record encodings with test vectors, the wipe-the-old-attribute rule, the App Group ban, the
-third watch empty state, the split escrow sentence, and an honest decision about whether
-listing still avoids loading secrets.
+**All nine are in `VAULT.md`.** G1, the only design question in the round rather than a gap to
+fill, was resolved by **sealing the account record in two halves under one key**: metadata and
+secret, with domain-separated additional data so neither can be substituted for the other.
+Listing decrypts the metadata half alone, so the property survives intact, and a rename, a
+reorder or an HOTP counter rewrites the metadata half while copying the secret half verbatim,
+so those operations never decrypt a secret either.
 
-That last one is the only finding in either review that is a **design** question rather than a
-gap to fill, because preserving it may cost some of the metadata privacy this whole redesign
-exists to buy.
+That was not in any reviewer's suggestion. It exists because G1 named a property the design was
+discarding without noticing, and the fix turned out to cost a header rather than the metadata
+privacy the redesign exists for.
