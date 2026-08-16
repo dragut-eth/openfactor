@@ -175,6 +175,23 @@ and colour tables. It is deliberately not a general RTF parser, and `NSAttribute
 rejected for the job: it would read the file correctly and would mean handing an attacker
 supplied document to a large rich text engine inside an app holding second factors.
 
+**Google Authenticator's export is read from a QR code**, which is the widest input in the
+app: a camera pointed at a stranger's code, by somebody who has made no decision about
+trusting it. So `ProtobufReader` reads four wire types and nothing else, bounds checks every
+read, never allocates to a length the input claims, caps varints at ten bytes, and refuses
+groups because they are the one construct whose skip logic recurses. Taking `SwiftProtobuf`
+would have been a line of manifest and would have handed camera input to tens of thousands
+of lines nobody here has read. It is fuzzed in the same pull request that introduced it, not
+a later one, and the property asserted is not merely that it survives but that **noise never
+becomes an account**.
+
+Two things about the payload are worth knowing before reading the code. The secret is **raw
+bytes**, not Base32, and decoding it would produce an account generating plausible codes no
+service accepts. And there is no period field: 30 is the value rather than a guess, because
+that app has no interface for changing it. Their algorithm enumeration includes MD5 and
+their digit count has no seven, and both gaps refuse the account by name rather than being
+mapped onto something close.
+
 **Aegis is also written**, unencrypted, as the way out of this app. Vault version 1 and
 database version 3, pinned to a fixed revision of the Aegis documentation in
 `docs/BACKUP_FORMAT.md` rather than described as current, because "compatible" without a

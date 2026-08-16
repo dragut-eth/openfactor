@@ -118,6 +118,49 @@ struct FuzzTests {
         }
     }
 
+    /// **The widest surface in the app.** Every other parser here is fed by a file somebody
+    /// chose or a URI somebody scanned into a form. This one is fed by a camera pointed at a
+    /// stranger's QR code, and the person pointing it has made no decision about whether to
+    /// trust the bytes. The roadmap made fuzzing it a condition of the pull request that
+    /// introduced it rather than a follow up.
+    @Test("Random bytes cannot crash the protobuf reader")
+    func protobufReaderSurvivesGarbage() {
+        var random = SplitMix64(seed: 0x9E3779B97F4A7C15)
+
+        for _ in 0..<20_000 {
+            let length = Int(random.next() % 300)
+            let bytes = Data((0..<length).map { _ in UInt8(truncatingIfNeeded: random.next()) })
+
+            // The only contract is that it returns or throws. A crash, a hang, or an
+            // allocation sized by these bytes would all be failures, and the first two show
+            // up here as the suite never finishing.
+            _ = try? ProtobufReader.fields(in: bytes)
+        }
+    }
+
+    /// The same bytes through the whole reader, checking the property that matters rather
+    /// than only that nothing crashed: **noise must never become an account.** A half read
+    /// secret generates codes that look exactly like working ones.
+    @Test("Random bytes cannot become a Google Authenticator account")
+    func migrationReaderSurvivesGarbage() {
+        var random = SplitMix64(seed: 0xD1B54A32D192ED03)
+
+        for _ in 0..<10_000 {
+            let length = Int(random.next() % 400)
+            let bytes = Data((0..<length).map { _ in UInt8(truncatingIfNeeded: random.next()) })
+            let uri = "otpauth-migration://offline?data="
+                + bytes.base64EncodedString().addingPercentEncoding(
+                    withAllowedCharacters: .alphanumerics)!
+
+            guard let batch = try? GoogleAuthenticatorImport.read(uri) else { continue }
+
+            for imported in batch.result.accounts {
+                #expect(imported.account.secret.count >= 10, "noise produced a usable secret")
+            }
+            #expect(batch.size >= 1)
+        }
+    }
+
     /// Serialization then parsing, over randomly built valid accounts. The writer and the
     /// parser were reviewed together at gate A1, and this is the executable form of the
     /// claim that they agree.

@@ -164,6 +164,10 @@ Sources/OpenFactorCore/
   Import/RichTextReader.swift              Just enough RTF to recover the text. Not a
                                            parser, and must not grow into one
   Import/AegisImport.swift                 Aegis vaults. Strict, and refuses encrypted
+  Import/ProtobufReader.swift              Four wire types, bounds checked. Not a
+                                           protobuf implementation, and must not become
+  Import/GoogleAuthenticatorImport.swift   Their export QR. Raw secrets, batches, and
+                                           their enumerations refused where not ours
   Export/AegisExport.swift                 The way out. Plaintext, and pinned to a
                                            fixed revision of the Aegis documentation
   Backup/BackupArchive.swift               The encrypted archive, read and written
