@@ -1,8 +1,13 @@
 # UI Specification
 
-Derived from the app credited in the README as the product reference: the feature set was
-chosen against it, and the visual treatment is adapted where noted. Sync, the watch, the app
-lock and the backup format are this project's own.
+Derived from [Step Two](https://steptwo.app/), which the README credits as this project's
+product reference: the feature set was chosen against it, and the visual treatment is adapted
+where noted. Sync, the watch, the app lock, the backup format and the vault are this project's
+own. Step Two's creator has not participated in or endorsed this project, and no Step Two source
+code, assets, or artwork are used here.
+
+Naming it is deliberate. "The app credited in the README as the product reference" was the
+earlier phrasing, and a euphemism for a public fact reads as something being hidden.
 
 Reference screenshots are kept locally in `assets/`, which is gitignored and never
 committed.
