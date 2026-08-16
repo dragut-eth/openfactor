@@ -59,7 +59,7 @@ This is why the app target exists at all right now. The interface came second.
 | Watch `INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp` | `YES` | The watch app has to work with the phone off, absent, or out of range. That requirement is what ruled out asking the phone for each code, and it is why the watch holds its own copy of the secrets |
 | Watch `CODE_SIGN_ENTITLEMENTS` | `OpenFactorWatch Watch App/OpenFactorWatch.entitlements` | Declares the same shared Keychain access group as the phone. This is the entire mechanism by which the watch sees the phone's accounts, so it is the one setting that, if wrong, produces a watch app that runs perfectly and shows nothing |
 | Watch `WATCHOS_DEPLOYMENT_TARGET` | `11.0` | Matches the package |
-| Complication `PRODUCT_BUNDLE_IDENTIFIER` | `dev.openfactor.app.watchkitapp.watchface` | It must begin with the watch app's identifier, or the extension is not recognised as belonging to it. The suffix is `watchface` rather than the obvious `complication` because **Apple will not register an identifier ending in `.complication`**. It was refused under `com.openfactor.dev.watchkitapp.` and then, after the rename, refused again under `dev.openfactor.app.watchkitapp.`, while every sibling identifier registered in the same attempt. Two prefixes rules out the first explanation, that another team held the string. Do not try to tidy this back to `complication`: the failure appears only at export, long after everything local has succeeded |
+| Complication `PRODUCT_BUNDLE_IDENTIFIER` | `dev.openfactor.app.watchkitapp.watchface` | It must begin with the watch app's identifier, or the extension is not recognized as belonging to it. The suffix is `watchface` rather than the obvious `complication` because **Apple will not register an identifier ending in `.complication`**. It was refused under `com.openfactor.dev.watchkitapp.` and then, after the rename, refused again under `dev.openfactor.app.watchkitapp.`, while every sibling identifier registered in the same attempt. Two prefixes rules out the first explanation, that another team held the string. Do not try to tidy this back to `complication`: the failure appears only at export, long after everything local has succeeded |
 | Complication has **no** `CODE_SIGN_ENTITLEMENTS` | absent | The complication never reads the Keychain, and the absence of the entitlement is what guarantees it. A live code on a watch face is a second factor shown to anyone who glances at your wrist. Adding an entitlement here reverses a security decision |
 | `INFOPLIST_KEY_NSFaceIDUsageDescription` | set | App Lock authenticates with `LocalAuthentication`. Absent, the Face ID prompt is a crash, not a warning, and only on a real device |
 | `INFOPLIST_KEY_NSCameraUsageDescription` | set | The camera is used to scan setup codes. A missing usage string is not a warning, it is a crash the first time the app asks, and only on a real device where nobody is looking |
@@ -67,7 +67,7 @@ This is why the app target exists at all right now. The interface came second.
 ## Folder layout
 
 Xcode's own names are kept rather than renamed to something tidier, because renaming a
-synchronised folder means hand editing the project file, and hand edits to that file are
+synchronized folder means hand editing the project file, and hand edits to that file are
 exactly what this document exists to compensate for.
 
 ```
@@ -81,14 +81,14 @@ Tests/OpenFactorCoreTests/ The test suite, run twice, see below
 ## How one test suite runs in two places
 
 `OpenFactorTests` is an empty folder. Its sources are `Tests/OpenFactorCoreTests`, attached
-to the target as a second synchronised folder, so the same files run in both contexts:
+to the target as a second synchronized folder, so the same files run in both contexts:
 
 - `swift test` runs them unsigned. Fast, no simulator, and the Keychain tests skip.
 - `xcodebuild test` runs them inside the app. Slower, and the Keychain tests execute.
 
 One set of files, no duplication, nothing to drift. Xcode's `Add Files` dialog cannot
 express this, since it refuses to reference files it considers owned by the package, so
-the second synchronised folder was added to the project file directly.
+the second synchronized folder was added to the project file directly.
 
 CI runs both jobs. If you find yourself making the Keychain tests pass under `swift test`,
 stop: they are supposed to skip there, and the only way to make them pass would be to
@@ -97,12 +97,12 @@ weaken what they assert.
 ## Folders shared between targets
 
 `OpenFactorShared` holds the small amount of interface code both app targets need:
-`PaletteColor`, which is the colour and contrast maths, and `CodeFormatting`, which groups
-digits for transcription. It is attached to the phone and watch targets as a synchronised
+`PaletteColor`, which is the color and contrast maths, and `CodeFormatting`, which groups
+digits for transcription. It is attached to the phone and watch targets as a synchronized
 folder, the same mechanism that attaches the core's test sources to the app test target.
 
 It exists so those two are not written twice. The watch palette's values differ from the
-phone's on purpose, since the colour is text there rather than background, but the arithmetic
+phone's on purpose, since the color is text there rather than background, but the arithmetic
 that decides whether either is legible is the same arithmetic and there should be one of it.
 
 ## The watch app is not embedded in the phone app yet

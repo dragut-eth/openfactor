@@ -144,6 +144,27 @@ public struct Vault: Sendable {
         return BackupPassphrase.grouped(passphrase)
     }
 
+    #if DEBUG
+        /// Forgets this device's key and leaves the wrapped record, which is exactly the
+        /// `locked` state.
+        ///
+        /// **A development tool, compiled out of any build that is not Debug.** It exists so the
+        /// unlock screen can be looked at without contriving a second device: that screen is the
+        /// ordinary state of a new iPhone or a reinstall, and it was otherwise unreachable on a
+        /// phone that had already been set up.
+        ///
+        /// Nothing is destroyed. The accounts stay, sealed, and the passphrase still opens them.
+        public func discardKeyForDebug() throws(VaultError) {
+            do {
+                try keys.discard()
+            } catch let error as SecretStoreError {
+                throw .storage(error)
+            } catch {
+                throw .storage(.keychain(status: -1))
+            }
+        }
+    #endif
+
     // MARK: - Removing
 
     /// Forgets everything: the key on this device and the wrapped record.

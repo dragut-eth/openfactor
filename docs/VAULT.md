@@ -20,7 +20,7 @@ Secrets were plaintext Keychain items in a shared access group, and the project 
 developer team was a boundary. **It is not.** Gate E1 measured a second app signed by the same
 team reading another app's secrets out of the group Apple's documentation calls private.
 
-> Anything an app can read **silently**, a sibling app can be authorised to read silently.
+> Anything an app can read **silently**, a sibling app can be authorized to read silently.
 
 No arrangement of access groups helps, because each is a grant the account holder controls.
 **The container is the exception**, and gate E4 measured that too: a sibling holding the
@@ -163,7 +163,7 @@ metadata:  "OFV1" || 0x6D || the UUID's 16 raw bytes
 secret:    "OFV1" || 0x73 || the UUID's 16 raw bytes
 ```
 
-**The metadata half** is JSON, keys sorted, holding issuer, name, colour, sort index and the
+**The metadata half** is JSON, keys sorted, holding issuer, name, color, sort index and the
 generator including any HOTP counter, then padded to the next multiple of 128 bytes with a
 length prefix so the padding is unambiguous. Padding exists because GCM output is the length of
 its input, so without it the length of an issuer and account name leaks to any reader.
@@ -173,7 +173,7 @@ its input, so without it the length of an issuer and account name leaks to any r
 **Unknown JSON fields are ignored, not rejected**, so a later version can add one. An unknown
 **magic** is refused, and the item is reported unreadable rather than guessed at.
 
-**The secret half is written once and never rewritten.** A rename, a colour change, a reorder or
+**The secret half is written once and never rewritten.** A rename, a color change, a reorder or
 an HOTP counter rewrites the metadata half and copies the secret half **verbatim**, so those
 operations never decrypt a secret and never need a fresh nonce for it. This also corrects a
 claim in the first draft: account items are rewritten constantly, and the wrapped key is not the
@@ -215,7 +215,7 @@ the archive enforces. **A fresh salt and nonce on every rewrap.**
 ### Deriving the wrapping key
 
 ```
-wrappingKey = PBKDF2-HMAC-SHA256(passphrase canonicalised per BACKUP_FORMAT.md,
+wrappingKey = PBKDF2-HMAC-SHA256(passphrase canonicalized per BACKUP_FORMAT.md,
                                  salt, iterations, 32 bytes)
 ```
 
@@ -307,9 +307,9 @@ sides; what it described was ECIES with half missing.
 **The whole transcript is bound**, version, nonce and both public keys, into the HKDF info and
 the AAD. The nonce is what makes a replayed response detectable.
 
-**The person compares a six digit string on both screens.** A tap alone authorises *when* the
+**The person compares a six digit string on both screens.** A tap alone authorizes *when* the
 exchange happens, not *who* it happens with, and an injected request looks identical from the
-user's side. The string is what makes routing exclusivity **defence in depth instead of load
+user's side. The string is what makes routing exclusivity **defense in depth instead of load
 bearing**, which is the move this document makes everywhere else.
 
 **The interactive channel only.** Queued transfer modes persist payloads to disk while waiting.
@@ -366,7 +366,7 @@ seen.
 
 **The two passphrases must be distinguishable.** The vault's and an archive's are generated
 identically and look identical, and somebody recovering months later holds two strings and no
-way to tell them apart. Both must be labelled where shown and where asked for.
+way to tell them apart. Both must be labeled where shown and where asked for.
 
 **The watch's empty state gains a third cause.** It distinguishes accounts in flight from sync
 being off; there is now provisioned-but-unprovisioned-key, and the existing advice to check sync
@@ -489,7 +489,7 @@ from one of two people with disposable data.
 2. **WatchConnectivity routing is exclusive to the paired counterpart app.** Half measured in
    `docs/audits/E5-watchconnectivity-routing.md`: a sibling app with no watch of its own
    activates a session and finds it inert, so a session is not a device wide channel. What is
-   still unmeasured is a rogue watch app *claiming to be* OpenFactor's counterpart. Defence in
+   still unmeasured is a rogue watch app *claiming to be* OpenFactor's counterpart. Defense in
    depth rather than load bearing because of the authentication string, and if that string is
    ever removed this becomes blocking again.
 3. **Backup exclusion behaves as documented on a real restore**, and separately under Quick

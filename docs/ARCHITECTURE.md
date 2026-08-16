@@ -114,7 +114,7 @@ optional with a default, so an old reader can ignore them. And values that chang
 generation, the algorithm, digits, period, and counter, are never given fallbacks: an
 unknown algorithm fails the record loudly, because guessing produces plausible codes that
 are rejected everywhere. Cosmetic values get fallbacks instead, which is why an unknown
-colour name decodes as the default rather than making an account, or the whole list,
+color name decodes as the default rather than making an account, or the whole list,
 unreadable.
 
 **Decoding is lenient about formatting and strict about content.** `Base32` accepts
@@ -133,10 +133,10 @@ work everywhere else. The reasoning is repeated at the code.
 `SecretStore` and the generators. Screens and behavior are specified in
 [UI_SPEC.md](UI_SPEC.md).
 
-A third folder, `OpenFactorShared`, is compiled into both app targets. It holds the colour
+A third folder, `OpenFactorShared`, is compiled into both app targets. It holds the color
 and contrast arithmetic and the digit grouping, which both apps need and neither should own
 twice. The watch's palette values differ from the phone's on purpose, because there the
-colour is text rather than background, but the arithmetic deciding whether either is legible
+color is text rather than background, but the arithmetic deciding whether either is legible
 is the same arithmetic and there is one of it.
 
 **One timer for the whole list,** never one per row. Every visible code recomputes on a
@@ -169,12 +169,12 @@ saved. Adding forty accounts is a different act from adding one.
 and names the tenth. Aborting punishes the user for another app's data; dropping it silently
 hands them an authenticator with a hole they discover at a login.
 
-**The labelled text export is read best effort, and says so.** `LabelledTextImport` is named
+**The labeled text export is read best effort, and says so.** `LabelledTextImport` is named
 for the shape it matches, not for any app: a text or RTF document listing accounts under
 seven English labels, **Account Name**, **Secret Key**, **Issuer**, **Algorithm**,
 **Digits**, **Period**, **Type**. It performs no signature check, so any file in that shape
 reads. It is not an interchange format, it is a report written for a human, with English
-labels and prose, and a localised export produces no accounts rather than wrong ones, which
+labels and prose, and a localized export produces no accounts rather than wrong ones, which
 is the correct way for a reader of an uncontrolled document to fail.
 
 **Nothing that changes a code is defaulted there.** An earlier version filled in sha1, 6 and
@@ -184,7 +184,7 @@ generates the wrong codes. A missing algorithm, digit count or period is now a r
 names which setting was not found. Aegis is the opposite case and defaults on purpose: it
 publishes a schema in which an absent field genuinely means the documented default. `RichTextReader` recovers the text with just enough RTF to handle the
 constructs that appear: `\uN` code points, `\'XX` code page bytes, and skipping the font
-and colour tables. It is deliberately not a general RTF parser, and `NSAttributedString` was
+and color tables. It is deliberately not a general RTF parser, and `NSAttributedString` was
 rejected for the job: it would read the file correctly and would mean handing an attacker
 supplied document to a large rich text engine inside an app holding second factors.
 
@@ -326,7 +326,7 @@ so the list sort has to be stable rather than assume positions are unique. Build
 conflict resolution layer on top of this was considered and rejected: it would mean a
 second source of truth about which accounts exist, and the failure mode of getting that
 wrong is losing a second factor. Gate A2 should confirm this description against the
-behaviour rather than take it on trust.
+behavior rather than take it on trust.
 
 **iCloud Keychain propagation is slow enough to be mistaken for failure.** Measured on real
 hardware on 2026-08-14: seven accounts marked synchronizable on an iPhone took close to half

@@ -10,6 +10,9 @@ struct ExportView: View {
 
     @State private var model: ExportViewModel
 
+    @State private var copies = 0
+    @State private var hasCopied = false
+
     @Environment(\.dismiss) private var dismiss
 
     init(store: any SecretStore) {
@@ -52,7 +55,7 @@ struct ExportView: View {
     private var explanation: some View {
         Form {
             Section {
-                Button("Encrypted archive") {
+                Button("Encrypted backup") {
                     Task { await model.authenticate(for: .archive) }
                 }
             } header: {
@@ -89,7 +92,7 @@ struct ExportView: View {
             }
 
             Section {
-                LabeledContent("Archive format", value: "openfactor.backup.v1")
+                LabeledContent("Backup format", value: "openfactor.backup.v1")
                 LabeledContent("Encryption", value: "AES-256-GCM")
                 LabeledContent("Key derivation", value: "PBKDF2-HMAC-SHA256")
             } footer: {
@@ -140,14 +143,14 @@ struct ExportView: View {
                 // losing the passphrase final.
                 Text(
                     """
-                    OpenFactor does not keep a copy. If this passphrase is lost, the archive \
+                    OpenFactor does not keep a copy. If this passphrase is lost, the backup \
                     cannot be opened by anyone, including you.
                     """
                 )
             }
 
             Section {
-                Button("Create archive") { model.export() }
+                Button("Create backup") { model.export() }
                     .disabled(!model.canExport)
             } footer: {
                 if model.accountCount > 0 {
@@ -175,7 +178,7 @@ struct ExportView: View {
                     anything it passes through on the way to wherever you send it. Send it \
                     to the app you are moving to, import it there, and delete it.
 
-                    If you want a copy to keep, go back and export an encrypted archive \
+                    If you want a copy to keep, go back and export an encrypted backup \
                     instead.
                     """
                 )
@@ -196,18 +199,38 @@ struct ExportView: View {
         Section {
             passphraseGrid
 
-            Button("Copy passphrase") {
+            // Same answer-the-tap treatment the account list uses. Copying produces no visible
+            // change otherwise, so there is nothing to tell you it worked.
+            Button {
                 CodeClipboard.copy(passphrase: model.displayedPassphrase)
+                copies += 1
+                hasCopied = true
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    hasCopied = false
+                }
+            } label: {
+                Label(
+                    hasCopied ? "Copied" : "Copy passphrase",
+                    systemImage: hasCopied ? "checkmark" : "doc.on.doc")
             }
+            .sensoryFeedback(trigger: copies) { _, _ in .success }
 
             Button("Generate a different one") { model.regenerate() }
         } header: {
             Text("Passphrase")
         } footer: {
+            // This is where the two passphrases are told apart, rather than on the vault setup
+            // screen where it used to be. Somebody here has already been given a vault
+            // passphrase and is now being handed a second string that looks exactly like it,
+            // so the distinction is a live question rather than a hypothetical one.
             Text(
                 """
                 One hundred and twenty bits, from this device. The spacing is for reading: \
                 type it back in any grouping, or none at all.
+
+                **This one belongs to the backup**, and is not the vault passphrase OpenFactor \
+                showed you when you set it up. Label them wherever you keep them.
                 """
             )
         }
@@ -281,7 +304,7 @@ struct ExportView: View {
             Section {
                 ShareLink(item: url) {
                     Label(
-                        model.kind == .archive ? "Save the archive" : "Send the file",
+                        model.kind == .archive ? "Save the backup" : "Send the file",
                         systemImage: "square.and.arrow.up"
                     )
                 }

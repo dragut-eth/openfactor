@@ -186,21 +186,12 @@ struct AccountListView: View {
             } description: {
                 Text("Scan the QR code a service shows you when you turn on two factor authentication.")
             } actions: {
-                // The proportions of a prominent iOS button rather than a text sized one.
-                // `ContentUnavailableView` sizes its action to the label, which on an empty
-                // screen with nothing else on it reads as a link that happens to be blue.
-                // A large control size and a real width give it the weight of the one thing
-                // this screen is asking somebody to do.
-                Button {
-                    isAdding = true
-                } label: {
-                    Text("Add an account")
-                        .frame(maxWidth: 260)
-                        .padding(.vertical, 4)
+                // See `PrimaryAction`, which now owns these proportions and the reasoning
+                // behind them, so this button and the vault setup's cannot drift apart.
+                Button { isAdding = true } label: {
+                    PrimaryActionLabel("Add an account")
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .buttonBorderShape(.capsule)
+                .primaryActionStyle()
             }
         } else if model.visibleRows.isEmpty && model.isSearching {
             ContentUnavailableView.search
@@ -314,7 +305,7 @@ struct AccountListView: View {
 
     @ViewBuilder
     private func menu(for row: AccountListViewModel.Row) -> some View {
-        Button { recolouring = row } label: { Label("Change colour", systemImage: "paintpalette") }
+        Button { recolouring = row } label: { Label("Change color", systemImage: "paintpalette") }
         Button { editing = row } label: { Label("Edit details", systemImage: "pencil") }
         Button(role: .destructive) { askToDelete(row) } label: {
             Label("Remove \(row.record.metadata.displayIssuer)", systemImage: "trash")

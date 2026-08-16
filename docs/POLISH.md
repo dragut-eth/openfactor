@@ -27,9 +27,9 @@ Not everything waits for PR 12.
    like the settings gear.
 4. **Dragging while sorted automatically does nothing,** because the Edit button is hidden
    in that state. It should switch to manual order instead of refusing.
-5. **The copied confirmation is small and tucked in a corner.** Wants it larger and centred.
+5. **The copied confirmation is small and tucked in a corner.** Wants it larger and centered.
 6. **Cancel and Enter manually are set in different weights** on the scan screen.
-7. **Colour cannot be chosen while adding an account.** Done. Two treatments, chosen after
+7. **Color cannot be chosen while adding an account.** Done. Two treatments, chosen after
    a proposal: a swatch strip directly under the card on the scan confirmation, where the
    point is watching the choice land on the card above it, and a disclosure row opening the
    grid in manual setup, where a `Form` row is the native idiom and the preview is too far
@@ -43,7 +43,7 @@ Not everything waits for PR 12.
 4. Dragging a sorted list now adopts the order on screen and switches to manual, rather
    than the affordance being hidden. Refusing the gesture was the worst of the options: the
    user has said plainly where they want the card.
-5. The copied confirmation is larger, centred on the card, and lasts 2.2 seconds rather
+5. The copied confirmation is larger, centered on the card, and lasts 2.2 seconds rather
    than 1.6. The old duration was a guess and was consistently gone before it could be
    observed.
 6. Both scan buttons in the same weight. Enter manually was a confirmation action, which
@@ -53,7 +53,7 @@ Not everything waits for PR 12.
 9. The expiring ring is red rather than amber, at Xavier's call. Bright red, because the
    palette's own red card is dark and a deep red ring vanishes into it. Verified against
    the red card, which is the worst case.
-7. Colour is choosable in both add paths, and in manual setup it follows the issuer until
+7. Color is choosable in both add paths, and in manual setup it follows the issuer until
    somebody picks one. A choice that silently reverted on the next keystroke in the service
    field would be worse than not offering it.
 10. "Ask Siri" in the card's context menu. Removed the context menu, then restored it at
@@ -68,7 +68,7 @@ Not everything waits for PR 12.
     now, with the navigation driven by state.
 13. The scroll indicator drew on top of the cards.
 14. Haptic feedback when a code is copied, at Xavier's request. `sensoryFeedback`, so it
-    honours the system haptics setting. It was drawing exactly where it should:
+    honors the system haptics setting. It was drawing exactly where it should:
     padding the list had moved the list's own trailing edge inward to meet the cards. The
     margins now belong to the rows, leaving the list full width and the indicator beside
     the cards rather than over them.

@@ -7,6 +7,74 @@ lock and the backup format are this project's own.
 Reference screenshots are kept locally in `assets/`, which is gitignored and never
 committed.
 
+## Screen 0: The vault gate
+
+**Not derived from the reference.** The reference has no vault, so none of this is adapted from
+anything. It exists because `docs/VAULT.md` requires that no vault exist whose passphrase has not
+been shown and acknowledged, and that a device holding records it cannot read asks for a
+passphrase rather than offering a new one.
+
+`VaultGateView` sits between the app lock and the account list and renders one of three things.
+**The account list is never drawn while the key is missing.** To the list a locked device is a
+shelf of unreadable rows, which is a true statement about the storage and a frightening and wrong
+one about somebody's accounts.
+
+### Setup, when no vault has ever existed
+
+A key symbol in the accent color, "Set up OpenFactor" as a large centered title, then one
+paragraph, then the app's one prominent button.
+
+| Element | Content | Why |
+| --- | --- | --- |
+| Explanation | The key never leaves this iPhone; anything else holding the accounts holds them encrypted | Says nothing about iCloud. Sync is off by default, so the first person to read this screen always has it off, and a paragraph about what iCloud carries would describe something that is not happening |
+| "Create my vault" | The one prominent action, from `PrimaryActionLabel` | The same control as the empty list's "Add an account", from one definition, so the two cannot drift apart |
+| "Already using OpenFactor?" with "Check again" | Names iCloud sync as the condition, gives the hour it can take, and says a second vault would leave the first one's accounts unreadable | The one case the screen exists to get right, and the one nothing in the state can distinguish: a second device whose wrapped record has not arrived looks exactly like a first device |
+
+**Creation is a button somebody presses and never automatic.** The state is re-read whenever the
+app comes forward, so a record arriving while this screen is open moves the device to the unlock
+question by itself.
+
+### The passphrase, shown once
+
+Six groups of four in a monospaced grid, a copy button, an acknowledgement toggle, then Continue.
+
+**Nothing is stored until Continue.** The passphrase is generated, displayed, and only written
+once the toggle is on and the button is pressed, so a process killed on this screen leaves the
+device exactly as it was found. `Vault.create()` cannot give that property, which is why the app
+uses `create(with:)` and this two-step sequence.
+
+| Element | Content |
+| --- | --- |
+| Under the grid | What it is for: reinstalling, or another iPhone on the same Apple Account |
+| Under the toggle | OpenFactor keeps no copy and cannot show it again, so write it down; on its own it opens nothing, since anyone using it would also need the Apple Account or the iPhone |
+| "Generate a different one" | The same label and the same position the export screen uses |
+
+Copying answers the tap with a haptic and a "Copied" label for two seconds, the same pattern the
+account list uses, because a tap that changes nothing on screen otherwise tells you nothing.
+
+### Unlock, when records are here and the key is not
+
+The ordinary state of a new iPhone, a restored one, and a reinstall. It is not an error and does
+not read like one.
+
+The field is monospaced, like every field in the app that takes a machine-generated string. The
+helper text names **which** passphrase, because somebody who has exported a backup holds two
+strings that look identical.
+
+**"Lost your passphrase?" is not optional.** Without it the app is a permanent dead end: a
+reinstall with no passphrase cannot open its accounts, cannot reach Settings to erase them, and
+does not recover by deleting the app, because the Keychain outlives it and sync returns whatever
+did clear. It opens the ordinary erase flow, Face ID and typed word intact, and destroys the
+vault only after the accounts are gone.
+
+### Debug builds only
+
+Settings carries "Lock this iPhone" and "Forget everything" in Debug builds. The first drops the
+key and keeps the accounts, which is the only way to reach the unlock screen on a phone that is
+already set up. The second returns the device to an install that has never been run. Both are
+inside `#if DEBUG`, keyed off an environment value only the gate sets, and a Release binary is
+checked to contain neither string.
+
 ## Screen 1: Account list (root)
 
 **Reference behavior**
@@ -60,7 +128,7 @@ Rate on the App Store, Send Feedback. Each row has a colored rounded icon. `Done
 | Add **About and Source**, linking to the GitHub repo and license | The whole point of the project |
 | Replace **Send Feedback** with **Report an Issue**, linking to GitHub Issues | No mail composer, no support inbox to run |
 | Keep **Rate on the App Store** | Uses `StoreKit`, involves no tracking. Not present until there is a listing to point at, which is PR 18 |
-| Add **Appearance** (System, Light, Dark) | The palette was built for both schemes from the start, so honouring a preference costs nothing |
+| Add **Appearance** (System, Light, Dark) | The palette was built for both schemes from the start, so honoring a preference costs nothing |
 | iCloud row explains in plain words what is synced and that Apple cannot read it | Sync is the one thing that leaves the device, so it gets an explanation, not just a toggle |
 
 **App Lock: a toggle and a grace period, under a Security header.** Off by default, since
@@ -77,7 +145,7 @@ forbids.
 **The lock screen** is a surface, a lock mark, and one Unlock button. It names no account
 and shows nothing of what is behind it, because it is also what the app switcher
 photographs while locked. Face ID raises itself once per locked spell; after that the
-button re-raises it, so a cancelled prompt does not loop.
+button re-raises it, so a canceled prompt does not loop.
 
 **The snapshot cover is not a setting.** The moment the app stops being active, a blank
 surface covers everything, including sheets, including manual entry with a half typed
@@ -106,10 +174,10 @@ cause. The review counts four things and lists each:
 opens with `{\rtf`, JSON with `{`, so every RTF export was read as a broken Aegis vault
 until a test caught it.
 
-**A transfer code is recognised by the scanner, and the only way in is the + button.**
+**A transfer code is recognized by the scanner, and the only way in is the + button.**
 `otpauth://` is one account and `otpauth-migration://` is a transfer: two schemes, no
 overlap, so this is the one place in the app where the payload names its own format and
-nothing has to be sniffed. The add screen recognises it and hands it to the import preview,
+nothing has to be sniffed. The add screen recognizes it and hands it to the import preview,
 because forty accounts arriving at once is a different act from adding one and a
 confirmation showing a single issuer cannot answer it. There is no Settings entry for it:
 the + screen already accepts a picture of a code, so the person working from screenshots is
@@ -127,7 +195,7 @@ field is parsed anyway: **"That was part 1 of 3. Scan the other codes to bring t
 across."** Somebody who stops there has been told they are not finished, which was the only
 thing collecting bought.
 
-**Neither reader is named after the app that produced the file.** The labelled reader is
+**Neither reader is named after the app that produced the file.** The labeled reader is
 described by its shape, a text or RTF export listing accounts under **Account Name** and
 **Secret Key** labels, because that is what it actually matches and because a brand name in
 the interface would claim a relationship this project does not have. The preview reports
@@ -141,7 +209,7 @@ Add, edit and erase are abandoned, so they carry a leading Cancel. Settings is c
 it carries a trailing Done.
 
 **Export offers two files, and they are separate paths rather than a switch.** An encrypted
-archive, which is the backup, and a plain Aegis vault, which is the way out. The plaintext
+encrypted backup, and a plain Aegis vault, which is the way out. The plaintext
 one has a warning that has to be read and an acknowledgement of its own, and burying that
 under a control on a shared screen would make the dangerous choice the cheaper tap. Both are
 gated on Face ID, both write a file that does not outlive the screen, and the plaintext one
@@ -150,7 +218,7 @@ passes through.
 
 **Export is three screens, and the middle one is the point.** What the file is, before
 anything is generated. Then the passphrase, which has to be acknowledged with a toggle
-before the archive can be written, because the format's rule is that no archive is written
+before the backup can be written, because the format's rule is that no backup is written
 whose passphrase the user has not been shown and confirmed they have stored. Then the file,
 with a share sheet. Face ID or the passcode is asked for between the first and second,
 whether or not App Lock is on: writing every secret to a file is categorically different
@@ -166,9 +234,9 @@ hyphen at the end of a line, exactly where a hyphen is most likely to be read as
 text. Position does the grouping instead, so there is no punctuation to explain away, and
 VoiceOver spells it character by character because a run of letters read as an invented word
 is useless for something being transcribed exactly. The custom path shows what is wrong with a weak passphrase rather than a
-strength bar, and the archive cannot be written until the estimator is satisfied. The
+strength bar, and the backup cannot be written until the estimator is satisfied. The
 footer says plainly that OpenFactor keeps no copy and that a lost passphrase means the
-archive cannot be opened by anyone.
+backup cannot be opened by anyone.
 
 **The file does not outlive the screen.** It is written with the strongest protection class
 iOS offers and deleted when the sheet goes away, whichever way it went away. No history of
@@ -176,7 +244,7 @@ exports is kept. The file name carries a date and nothing else: no device name, 
 count, no issuer, because a file name is visible in every share sheet and every screenshot
 of one.
 
-**Importing an archive asks for the passphrase and says nothing encouraging.** No attempt
+**Importing a backup asks for the passphrase and says nothing encouraging.** No attempt
 counter, no "close", no distinction between a wrong passphrase and an altered file, because
 the reader genuinely cannot tell which it is. The wait while keys are derived is named
 rather than left as a spinner: it is the work factor that makes guessing expensive, and a
@@ -196,13 +264,13 @@ the user back to the account list. Reported from a device, reproduced in the sim
 fixed by presenting a single sheet from the view that owns the whole form.
 
 **Erase all accounts**, in its own section at the bottom, away from anything routine,
-because a destructive action sharing a section with a colour picker invites the wrong tap.
+because a destructive action sharing a section with a color picker invites the wrong tap.
 
 It exists because there is otherwise no way to start over: deleting the app does not
 reliably clear the Keychain, and with sync on anything cleared returns. The footer says
 that, since "just delete the app" is what everyone assumes.
 
-Three defences, each answering a different way this goes wrong. **Face ID or the passcode**,
+Three defenses, each answering a different way this goes wrong. **Face ID or the passcode**,
 whether or not App Lock is on, because someone holding an unlocked phone should not destroy
 every second factor with two taps. **A typed word**, `ERASE`, because a confirmation you can
 tap through is a confirmation you will tap through. And **a sentence naming what actually
@@ -277,7 +345,7 @@ If that read fails it uses the wider warning, because overstating the consequenc
 irreversible act is the safe direction to be wrong in. The person this protects is the one
 keeping a second device precisely as their fallback.
 
-**Preferences live in `UserDefaults`, secrets do not.** A sort order and a colour scheme
+**Preferences live in `UserDefaults`, secrets do not.** A sort order and a color scheme
 reveal nothing, not even that any accounts exist. Anything that would say which services
 someone uses is in the Keychain with the secrets, which is why the account metadata is there
 and not here.
@@ -304,7 +372,7 @@ both as translucent pill buttons. No frame overlay, no instructions.
   only verification opportunity the flow has.
 - An image holding more than one QR code is refused rather than guessed at. Which account
   gets added should not be a coin toss.
-- The confirmation carries a **swatch strip directly under the card**, so a colour choice
+- The confirmation carries a **swatch strip directly under the card**, so a color choice
   lands on the thing being chosen for. A picker that covered the card would hide it.
 
 ## Screen 4: Manual setup
@@ -326,9 +394,9 @@ both as translucent pill buttons. No frame overlay, no instructions.
   and Save is simply unavailable until the form describes a real account.
 - Show a live preview of the generated code before saving, so the user can confirm it
   matches the service before losing access to the enrollment page.
-- A **colour row opening the grid**, rather than the strip the scan screen uses. In a form
+- A **color row opening the grid**, rather than the strip the scan screen uses. In a form
   a disclosure row is the native idiom, and the preview card is far enough down that a
-  strip would not sit next to what it changes. The colour follows the service name until
+  strip would not sit next to what it changes. The color follows the service name until
   somebody picks one, then stops, because a choice that reverted on the next keystroke
   would be worse than no choice.
 - **Counter based accounts get a next code button in the list, not a countdown ring.**
@@ -372,7 +440,7 @@ implied by the Sort Accounts setting.
 - Swiping to delete exists too, and routes through the same confirmation. A swipe is a
   convenient gesture, not a decision to lose an account.
 - Change Color offers the palette as a grid rather than a nested list. Ten swatches fit on
-  one screen, so nobody should have to scroll a list of colour names.
+  one screen, so nobody should have to scroll a list of color names.
 - **Reordering uses the system's drag handles rather than a custom drag.** The reference
   implies dragging with no visible affordance. The native handles are familiar, work with
   VoiceOver, and cost nothing to adopt.
@@ -390,7 +458,7 @@ is how Reminders and Contacts behave.
 
 There was briefly a fourth thing, an ellipsis menu on each card. It was not decoration, it
 was covering a gap: in edit mode a long press is a drag, so the context menu is unreachable
-and Change colour and Edit details had nowhere to live. Filling that gap with a new control
+and Change color and Edit details had nowhere to live. Filling that gap with a new control
 was the wrong instinct twice over. The ellipsis is a navigation bar idiom rather than an
 edit mode one, and it sat exactly where the countdown ring sits, so the ring appeared to
 mutate into a button. Tapping the row is what iOS users already reach for, and it removes a
@@ -400,11 +468,11 @@ control instead of adding one.
 mode, which is the same split iOS uses, so the VoiceOver hint changes with it: "Copies the
 code" becomes "Opens details".
 
-**The edit screen holds the colour.** Previously "Edit details" and "Change colour" were two
+**The edit screen holds the color.** Previously "Edit details" and "Change color" were two
 destinations for one idea, which was tolerable while the only way in was a menu offering
-both, and stopped being tolerable when a tap had to choose one of them. Change colour in the
+both, and stopped being tolerable when a tap had to choose one of them. Change color in the
 context menu is now a shortcut into a screen that holds everything, rather than the only way
-to reach the colour at all. One grid of swatches, used inline by the edit screen and wrapped
+to reach the color at all. One grid of swatches, used inline by the edit screen and wrapped
 in a sheet by the shortcut, so the two cannot drift apart.
 
 ## Screens 6 and 7: the watch
@@ -417,15 +485,15 @@ It holds its own copy of the secrets and works with the phone off, absent, or ou
 Those copies arrive through iCloud Keychain in the shared access group, not over
 WatchConnectivity, which would have meant a second transport for secret material.
 
-**The list is not a resized phone card.** A card is a coloured rectangle carrying white
-text; at this size that would be a colour swatch with unreadable writing on it. So the
-screen stays the black it already is and the colour moves to the type: issuer in the
-account's colour, account name in white beneath it.
+**The list is not a resized phone card.** A card is a colored rectangle carrying white
+text; at this size that would be a color swatch with unreadable writing on it. So the
+screen stays the black it already is and the color moves to the type: issuer in the
+account's color, account name in white beneath it.
 
 The palette inverts for the same reason. The phone's entries are dark enough for white text
 to sit on them, which is precisely the wrong thing against black. `WatchPalette` holds the
 vivid variants, chosen to clear contrast against black rather than under white. Only the
-issuer is coloured. The account name and the code are white, because a code read at a glance
+issuer is colored. The account name and the code are white, because a code read at a glance
 in bad light needs contrast more than it needs identity.
 
 **No code appears in the list.** The phone shows every code at once, because a phone is held
@@ -525,7 +593,7 @@ Not a pass at the end. The rules the interface follows.
   not because they dislike it.
 - **A copy is confirmed by touch as well as sight.** Tapping a card produces no visible
   change except a badge that fades, so it also triggers system haptic feedback, which
-  honours the user's own haptics setting rather than buzzing regardless.
+  honors the user's own haptics setting rather than buzzing regardless.
 
 ## App icon
 
@@ -587,11 +655,11 @@ icon tells is that the extracted piece is the second factor, the one only you
 hold, and the watch is the device you hold on your body. Two devices, one idea,
 split the way the idea itself splits.
 
-The colours are not a choice, except one. The assembly's spec records that the
+The colors are not a choice, except one. The assembly's spec records that the
 extracted piece carried a green face and a pink face away, so green and pink are
 canon: this is the piece, not a piece. Only the third face, never visible while it
 sat in the assembly, is free, and it is indigo. Pink sits on the right, indigo on
-the left, and the shading stays with the side rather than the colour, because the
+the left, and the shading stays with the side rather than the color, because the
 light does not move: nothing on top, 8 percent on the left, 20 percent on the
 right.
 
@@ -607,10 +675,10 @@ canvas. The source of truth is docs/design/icon-watch.svg, same rules as the
 others.
 
 **The complication is the same piece, drawn as a template.** The system tints
-complications with the watch face's colour, so it is supplied as shape and opacity
-rather than colour: three white faces at 100, 72, and 45 percent, which is the
+complications with the watch face's color, so it is supplied as shape and opacity
+rather than color: three white faces at 100, 72, and 45 percent, which is the
 icon's light rule restated in opacity. On a plain face it reads as shades of grey,
-on a coloured face as shades of that colour, and in both it stays a solid with a
+on a colored face as shades of that color, and in both it stays a solid with a
 light on it rather than a flat hexagon. The shape is drawn in code, in unit terms
 that make it auditable against the SVG by arithmetic: the bounding box is root
 three over two, side vertices at one and three quarters of the height, everything
@@ -643,7 +711,7 @@ object.
 The tinted rendition belongs to the primary only, and is derived from the **dark** artwork
 with `sips`. Deriving it from the light one, as the first version did, was wrong: tinted home
 screens are dark, and the system drives the tint from luminance, so a near white canvas
-becomes a solid slab of the user's colour with the cube as a hole in it. Light element on
+becomes a solid slab of the user's color with the cube as a hole in it. Light element on
 dark ground is what a tinted icon has to be.
 
 ```bash

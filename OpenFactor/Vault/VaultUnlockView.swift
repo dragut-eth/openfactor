@@ -32,15 +32,15 @@ struct VaultUnlockView: View {
                     Text("Vault passphrase")
                 } footer: {
                     // `docs/VAULT.md` requires the two passphrases be distinguishable where they
-                    // are asked for as well as where they are shown. Somebody who exported an
-                    // archive holds two strings that look identical, and typing the wrong one
+                    // are asked for as well as where they are shown. Somebody who exported a
+                    // backup holds two strings that look identical, and typing the wrong one
                     // here produces a failure that explains nothing on its own.
                     Text(
                         """
-                        The passphrase OpenFactor showed you when you first set it up. This is \
-                        not the passphrase of an exported archive.
+                        This is the vault passphrase OpenFactor gave you when you first set it \
+                        up, not the passphrase for an exported backup.
 
-                        Dashes and capitals do not matter.
+                        Dashes, spacing and capitalization do not matter.
                         """
                     )
                 }
@@ -67,7 +67,7 @@ struct VaultUnlockView: View {
 
                 wayOut
             }
-            .navigationTitle("Enter your passphrase")
+            .navigationTitle("Enter your vault passphrase")
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .top) { explanation }
             .sheet(isPresented: $isErasing) {
@@ -84,8 +84,8 @@ struct VaultUnlockView: View {
     private var explanation: some View {
         Text(
             """
-            Your accounts are on this iPhone but the key to open them is not. That key never \
-            leaves a device, so whatever brought your accounts here could not bring it too.
+            Your accounts are here, but this iPhone does not have the key to unlock them. Enter \
+            the vault passphrase you saved when you set up OpenFactor.
             """
         )
         .font(.footnote)
@@ -111,11 +111,11 @@ struct VaultUnlockView: View {
         } footer: {
             Text(
                 """
-                There is no way to recover these accounts without it. Starting over removes \
-                them from this iPhone and from iCloud, and OpenFactor sets up a new vault with \
-                a new passphrase.
+                Without the vault passphrase, this vault cannot be recovered. Starting over \
+                removes it from this iPhone and iCloud, then creates a new vault with a new \
+                passphrase.
 
-                If you have an exported archive, start over and then import it.
+                If you have an exported backup, you can import it after starting over.
                 """
             )
         }

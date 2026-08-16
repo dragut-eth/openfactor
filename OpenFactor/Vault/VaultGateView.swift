@@ -53,6 +53,7 @@ struct VaultGateView<Content: View>: View {
             // state that has to be re-read afterwards. Settings would delete everything and
             // leave the account list standing in front of a vault that no longer exists.
             .environment(\.debugForgetEverything) { model.forgetEverything(in: store) }
+            .environment(\.debugLockDevice) { model.lockForDebug() }
         #endif
     }
 
@@ -64,5 +65,9 @@ struct VaultGateView<Content: View>: View {
         /// Settings keys the row's existence off, so there is nothing to hide in a release
         /// build and nothing to accidentally leave switched on.
         @Entry var debugForgetEverything: (() -> Void)?
+
+        /// Also Debug only. Drops the key and keeps the accounts, which is the one state that
+        /// cannot otherwise be reached on a phone that is already set up.
+        @Entry var debugLockDevice: (() -> Void)?
     }
 #endif

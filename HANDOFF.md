@@ -31,6 +31,22 @@ was written as though it were on. `VAULT.md` records what changed and why. The l
 about wording. Two of the sentences were false only in the configuration nobody had looked at,
 and both read perfectly well in the one everybody had.
 
+**The screens went through a design pass on hardware, and it produced rules rather than tweaks.**
+One prominent button now exists in one place, `PrimaryAction.swift`, used by both the empty
+list's "Add an account" and the vault's "Create my vault"; it was a fixed 260pt frame, which
+sizes a button to a number instead of to its words, and is padding now. The exported file is
+called a **backup** everywhere a person can read it, matching `openfactor.backup.v1` and
+`BACKUP_FORMAT.md`, where the interface had been saying "archive". Fields that take a
+machine-generated string are monospaced and fields that take a word are not, which added it to
+import and removed it from the ERASE confirmation. Spelling is US English throughout the app and
+the living docs; `docs/audits/` is left alone, because those are records of what reviewers wrote.
+
+**A caution for the next interface pass.** Simulator taps are silently dropped below the vertical
+midpoint of the screen. A button at 417pt works and the same kind of button at 434pt does nothing,
+on an 874pt screen, which reads exactly like a dead control and cost half an hour chasing a
+binding that was never broken. Screenshots are reliable; injected touches are not. Anything a
+screen owes belongs in a view model test, which is where `VaultGateModelTests` lives.
+
 **What is left in PR 16d.** The watch provisioning exchange, which is the whole of E7 turned into
 code and the only remaining way a watch gets a key. The watch's third empty state, which
 `VAULT.md` calls for and which today would send a wearer to turn off the sync that is working.
@@ -113,7 +129,7 @@ says which is which, because conflating them is what makes this take an afternoo
 | PR 14, watchOS app | Feature complete on `pr-14-watch`, re-verified, pushed |
 | PR 15, app lock | Built on `pr-15-app-lock`, pushed. Face ID needs a real device |
 | PR 16, export and import | **Merged to main.** Format audited three times before the code, then the implementation audited separately: erase, both file importers, the import preview, the encrypted archive reproducing every published test vector value, the export and passphrase screens, and the plain Aegis vault pinned to a fixed revision of their documentation. Five findings from the implementation review, two blocking, all fixed and recorded in `docs/audits/A3-implementation.md` |
-| PR 16a, Google Authenticator import | Built on `pr-16a-google-import`. A hand written protobuf reader, the transfer recognised by the + scanner, and the import preview reused unchanged. Verified against a real export from Xavier's phone: eight accounts, no refusals. Parts are rescanned rather than collected, and the finish screen says which part of how many arrived |
+| PR 16a, Google Authenticator import | Built on `pr-16a-google-import`. A hand written protobuf reader, the transfer recognized by the + scanner, and the import preview reused unchanged. Verified against a real export from Xavier's phone: eight accounts, no refusals. Parts are rescanned rather than collected, and the finish screen says which part of how many arrived |
 | PR 16b, Steam Guard, and PR 16c, a share extension | Both planned in `docs/ROADMAP.md`, neither started. Steam Guard is parked. Small in core, and it ripples into storage, the card, the watch and the backup format's `type` enumeration. 16c stops a transfer QR having to rest in the photo library, and its design is mostly a list of what the extension is forbidden to do |
 | PR 17 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
@@ -168,10 +184,10 @@ this gate was scheduled to catch.
 
 F24, the passphrase entry contradiction, was found independently by A3 and by a review
 Xavier commissioned elsewhere. The format now carries a `passphrase` mode field, so a reader
-never has to guess which canonicalisation produced the key.
+never has to guess which canonicalization produced the key.
 
 The vector was regenerated and re-verified from the *displayed* form through the
-canonicalisation, by CommonCrypto, Python and Node, so the check now exercises the rule
+canonicalization, by CommonCrypto, Python and Node, so the check now exercises the rule
 instead of bypassing it.
 
 **Gate A2's F8 and F13 are closed**, by experiment on real hardware on 2026-08-15. Results
@@ -202,8 +218,8 @@ write a fourth decryptor from the page alone and see whether it reaches those by
 ambiguity they have to guess at is a finding.
 
 Settled with Xavier before writing it: PBKDF2 rather than Argon2id, argued rather than
-apologised for; the app generates the passphrase; the plain `otpauth://` export is dropped
-in favour of Aegis JSON; export is gated on Face ID and import is not; duplicates skip on
+apologized for; the app generates the passphrase; the plain `otpauth://` export is dropped
+in favor of Aegis JSON; export is gated on Face ID and import is not; duplicates skip on
 secret; and erase all accounts joins this PR because deleting the app does not clear the
 Keychain.
 
@@ -237,7 +253,7 @@ installs each target it builds. Only a distributed build cares, because that is 
 path where the watch app has to ride inside the phone app's bundle. It is asserted in CI
 now. When a setting only matters to the App Store, the local evidence is not evidence.
 
-**A comment can be the bug.** The labelled text reader defaulted sha1, 6 and 30 when a
+**A comment can be the bug.** The labeled text reader defaulted sha1, 6 and 30 when a
 label was absent, under a comment claiming it did the opposite. Both audits read the comment
 and moved on. An absent label in a human readable report means the parse failed, not that
 the writer meant the default, so the reader now refuses and names the setting it could not
@@ -313,7 +329,7 @@ OpenFactor/                                App target
   Import/ImportView.swift                  Choose, review, confirm. Writes nothing early
   Export/ExportViewModel.swift             The passphrase, the file, and the file's life
   Export/ExportView.swift                  Explain, passphrase, share. Gated on Face ID
-  Views/EditAccountView.swift              Renaming, and the colour grid
+  Views/EditAccountView.swift              Renaming, and the color grid
   Settings/SettingsView.swift              Only rows whose features exist
   Settings/Preferences.swift               Preferences, in UserDefaults. Never secrets
   Settings/SyncAwareKeychainStore.swift    Reads the sync preference per call
@@ -322,7 +338,7 @@ OpenFactor/                                App target
   Lock/AppLockController.swift             Scene phases and LocalAuthentication. Thin
   Lock/PrivacyShield.swift                 The app switcher cover. The only UIKit window
 OpenFactorShared/                          Compiled into both app targets
-  PaletteColor.swift                       Colour and contrast arithmetic
+  PaletteColor.swift                       Color and contrast arithmetic
   CodeFormatting.swift                     Digit grouping for transcription
   WatchPalette.swift                       The palette inverted for text on black
   WatchList.swift                          Which accounts the watch can finish, and the
@@ -358,7 +374,7 @@ Run the suite two ways, and CI runs both:
 - `xcodebuild test -project OpenFactor.xcodeproj -scheme OpenFactor -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:OpenFactorTests`, about 25 seconds, Keychain tests **run**
 
 The shared core suites run twice. `OpenFactorTests` also holds app only suites whose sources are
-`Tests/OpenFactorCoreTests`, attached as a second synchronised folder. Do not "fix" the
+`Tests/OpenFactorCoreTests`, attached as a second synchronized folder. Do not "fix" the
 skip under `swift test`: it is correct, and the only way to make those tests pass there
 would be to weaken what they assert.
 
@@ -400,14 +416,14 @@ would be to weaken what they assert.
   generator would make `brew install` a prerequisite for opening the project. The cost is
   paid back by `docs/PROJECT.md` and a CI job asserting the settings it describes
 - Bundle identifier `dev.openfactor.app`, fixed by the App Store Connect record
-- No view hardcodes a colour, radius, or spacing. They all come from `Tokens`, which is
+- No view hardcodes a color, radius, or spacing. They all come from `Tokens`, which is
   what makes a light mode regression hard to introduce
 - Card gradients only ever darken from the base, so the base is always the worst case for
   contrast and the tests only have to prove two stops
 - One timer for the whole list, in the view, ticking the view model once a second. Codes
   are regenerated only when the counter changes, which a test proves by counting Keychain
   reads rather than by inspection
-- The view model holds names, colours, and six digits. Never a secret. Asserted by
+- The view model holds names, colors, and six digits. Never a secret. Asserted by
   reflecting over a row rather than by trusting the comment
 - Copied codes are written `localOnly` with an expiry equal to the code's own. Both
   verified: an already expired entry is unreadable, and without `localOnly` the code does
@@ -434,7 +450,7 @@ would be to weaken what they assert.
   aspirational row is a false claim
 - Sorting is a view of the list. An automatic order never touches the stored positions, so
   the manual arrangement survives switching away and back
-- Preferences are in `UserDefaults` because a sort order and a colour scheme reveal nothing.
+- Preferences are in `UserDefaults` because a sort order and a color scheme reveal nothing.
   Anything naming a service stays in the Keychain with the secrets
 
 ## Decisions still open

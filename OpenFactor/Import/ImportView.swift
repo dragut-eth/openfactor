@@ -111,7 +111,7 @@ struct ImportView: View {
             } footer: {
                 Text(
                     """
-                    OpenFactor can read an archive it exported, a text or RTF export that \
+                    OpenFactor can read a backup it exported, a text or RTF export that \
                     lists accounts with **Account Name** and **Secret Key** labels, and an \
                     unencrypted Aegis vault. Nothing is added until you have seen what the \
                     file contains.
@@ -130,21 +130,30 @@ struct ImportView: View {
     private func locked(_ failure: String?) -> some View {
         Form {
             Section {
-                SecureField("Passphrase", text: $passphrase)
+                // Monospaced, like every other field in the app that takes a string a
+                // machine generated rather than a person invented: this one, the vault
+                // passphrase, and the secret key in manual setup.
+                SecureField("Backup passphrase", text: $passphrase)
+                    .font(.body.monospaced())
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.go)
                     .onSubmit { open() }
 
-                Button("Open archive") { open() }
+                Button("Open backup") { open() }
                     .disabled(passphrase.isEmpty)
             } header: {
-                Text("This archive is encrypted")
+                Text("This backup is encrypted")
             } footer: {
+                // Says which passphrase, the same way the vault's unlock screen does.
+                // Somebody who has both holds two strings that look identical, and this screen
+                // used to ask for "the passphrase" as though there were only one.
                 Text(
                     """
-                    Type the passphrase exactly as OpenFactor showed it. The hyphens, spacing \
-                    and capitalisation do not matter.
+                    The passphrase OpenFactor showed you when you created this backup. This is \
+                    not your vault passphrase.
+
+                    Dashes, spacing and capitalization do not matter.
                     """
                 )
             }

@@ -36,6 +36,7 @@ struct SettingsView: View {
 
     #if DEBUG
         @Environment(\.debugForgetEverything) private var forgetEverything
+        @Environment(\.debugLockDevice) private var lockDevice
         @State private var isForgetting = false
     #endif
 
@@ -301,7 +302,7 @@ struct SettingsView: View {
             Text(
                 """
                 Export writes every account into one encrypted file, and asks you to confirm \
-                it is you first. Import reads that file back, a labelled text export, or an \
+                it is you first. Import reads that file back, a labeled text export, or an \
                 unencrypted Aegis vault. A transfer code from Google Authenticator is \
                 scanned with the + button instead.
                 """
@@ -342,6 +343,17 @@ struct SettingsView: View {
         private var debugSection: some View {
             if let forget = forgetEverything {
                 Section {
+                    if let lockDevice {
+                        // Not destructive, and no confirmation, because nothing is lost: the
+                        // accounts stay sealed and the passphrase still opens them. It exists
+                        // so the unlock screen can be looked at at all, which on a phone that
+                        // is already set up otherwise needs a second device.
+                        Button("Lock this iPhone") {
+                            lockDevice()
+                            dismiss()
+                        }
+                    }
+
                     Button(role: .destructive) { isForgetting = true } label: {
                         Text("Forget everything")
                     }
@@ -363,8 +375,9 @@ struct SettingsView: View {
                 } footer: {
                     Text(
                         """
-                        Returns this iPhone to an install that has never been run, so the setup \
-                        screen can be seen again. Not present in a release build.
+                        Lock drops this device's key and keeps the accounts, which is the \
+                        unlock screen. Forget everything returns this iPhone to an install that \
+                        has never been run. Neither is present in a release build.
                         """
                     )
                 }
@@ -381,7 +394,7 @@ struct SettingsView: View {
             }
 
             Link(destination: Self.repository.appending(path: "blob/main/LICENSE")) {
-                Label("Licence", systemImage: "doc.text")
+                Label("License", systemImage: "doc.text")
             }
 
             Link(destination: Self.repository.appending(path: "issues")) {

@@ -22,8 +22,9 @@ say so and we will agree on a disclosure date rather than let it sit.
 
 This document is incomplete while the app is being built. The complete threat model is reviewed
 in PR 17. A statement marked **implemented** describes code that exists. A statement marked
-**vault design** describes a property specified in `docs/VAULT.md` that is not a release claim
-until the current vault integration, migration, and implementation review are complete.
+**vault design** describes a property specified in `docs/VAULT.md` that is not yet built. There
+is deliberately no migration path; `docs/VAULT.md` explains why a converter would be the least
+exercised code in the project. Nothing here has had an implementation review.
 
 The distinction matters. A security design can be sound while the product implementing it is
 unfinished or wrong.
@@ -39,13 +40,13 @@ and often the address or identity used there. The vault therefore encrypts metad
 secrets.
 
 Availability is a separate property. Encryption can prevent a reader from learning a secret. It
-cannot stop an authorised Keychain writer from deleting or replaying encrypted records.
+cannot stop an authorized Keychain writer from deleting or replaying encrypted records.
 
 ### Another app signed by the same developer team
 
-**Vault design, supported by hardware experiments.** OpenFactor does not treat a Keychain access
-group as a confidentiality boundary. Gate E1 demonstrated that another app signed by the same
-team can be authorised to read items in any of that team's Keychain access groups, including the
+**Implemented on iPhone in PR 16d, supported by hardware experiments.** OpenFactor does not
+treat a Keychain access group as a confidentiality boundary. Gate E1 demonstrated that another app signed by the same
+team can be authorized to read items in any of that team's Keychain access groups, including the
 default group.
 
 The vault is the response. Keychain contains encrypted account records and a wrapped recovery
@@ -61,7 +62,7 @@ replace, replay, or delete them. Those cases are addressed separately below.
 
 ### Attacker with your locked device
 
-**Vault design.** The vault key file uses the `.complete` protection class. It is unavailable
+**Implemented in PR 16d.** The vault key file uses the `.complete` protection class. It is unavailable
 while the device is locked and is excluded from device backups. The file is located through
 `FileManager` on every access because a real app update was observed preserving the file while
 moving the container that held it.
@@ -73,11 +74,11 @@ Under the vault design this change affects the ciphertext and its availability e
 does not place the vault key in Keychain or cause that key to sync.
 
 The backup exclusion and protection attributes have been verified on a real device. Their
-behaviour through a restore and Quick Start has not been measured and is not claimed.
+behavior through a restore and Quick Start has not been measured and is not claimed.
 
 ### Attacker with your unlocked device
 
-**Implemented in PR 15.** Two defences exist, one always on and one optional.
+**Implemented in PR 15.** Two defenses exist, one always on and one optional.
 
 **The app switcher never contains a code.** iOS photographs the app as it leaves the foreground
 and shows that photograph in the app switcher. OpenFactor covers itself as soon as it stops being
@@ -101,7 +102,7 @@ locks the device when it leaves the wearer's wrist.
 
 ### Attacker with your iCloud account
 
-Sync is off by default. **Vault design:** when it is enabled, iCloud Keychain carries encrypted
+Sync is off by default. **Implemented in PR 16d:** when it is enabled, iCloud Keychain carries encrypted
 account records and the wrapped vault key. The vault key itself never syncs.
 
 Someone who recovers the Keychain material obtains ciphertext and the recovery record, not a
@@ -115,7 +116,7 @@ flight or unavailable, never as a wrong passphrase.
 
 Apple Account security still matters. An attacker able to delete or replace synchronized
 Keychain items can damage availability even without opening them. A strong Apple Account password,
-two-factor authentication, and a strong device passcode remain important defences.
+two-factor authentication, and a strong device passcode remain important defenses.
 
 Turning sync on and off does not decrypt account records. The conversion updates Keychain
 attributes in place. Both account records and the wrapped key follow the same sync preference.
@@ -159,7 +160,7 @@ phone releases a sealed vault key.
 The protocol and byte layouts are specified in `docs/VAULT.md`. The cryptographic exchange has
 been exercised with negative controls, and a sibling phone app was unable to reach another app's
 Watch session. A rogue Watch app claiming to be the counterpart remains unmeasured. The human
-authentication string keeps routing exclusivity from being the only defence.
+authentication string keeps routing exclusivity from being the only defense.
 
 After provisioning, the Watch holds a vault key in its own protected container and can generate
 codes without the phone. Treat a lost provisioned Watch as a lost authenticator. The complication
@@ -180,7 +181,7 @@ restore what was deleted.
 
 ### Passphrase replacement is not revocation
 
-**Vault design.** Replacing the vault passphrase wraps the same vault key under a new passphrase.
+**Implemented in PR 16d.** Replacing the vault passphrase wraps the same vault key under a new passphrase.
 It does not rotate that key. Anyone holding an older wrapped-key record and its old passphrase can
 still recover the vault key.
 
@@ -198,8 +199,14 @@ With sync off, the wrapped key exists only on that device. Losing the device the
 unless an encrypted export exists. This is deliberate and must be stated before someone disables
 sync.
 
-The vault key is excluded from device backups. Restore and Quick Start behaviour has not been
+The vault key is excluded from device backups. Restore and Quick Start behavior has not been
 verified end to end on real hardware, so seamless recovery through either path is not promised.
+
+A device holding records it cannot open must not become a dead end. It cannot reach Settings to
+erase them, and deleting the app does not help, because the Keychain outlives it and sync
+returns whatever did clear. The unlock screen therefore offers the same erase flow, behind the
+same authentication and typed confirmation, and destroys the vault only after the accounts are
+gone.
 
 ### Attacker on the network
 
@@ -237,7 +244,7 @@ process requests away from the device.
 
 The app does not control those entries and cannot verify externally exactly what they transmit.
 Anyone for whom that matters can disable the relevant system assistant features, which removes
-the entry. PR 17 must either establish the behaviour or preserve the limitation explicitly.
+the entry. PR 17 must either establish the behavior or preserve the limitation explicitly.
 
 ### Explicitly out of scope
 
@@ -248,7 +255,7 @@ the entry. PR 17 must either establish the behaviour or preserve the limitation 
   authenticated to OpenFactor.
 - A plaintext export the user deliberately creates after an explicit warning and acknowledgement.
   Portability requires this path, and the resulting file contains every exported secret.
-- An archive stored badly. Once bytes are in a file, the device passcode, Secure Enclave, Keychain
+- A backup stored badly. Once bytes are in a file, the device passcode, Secure Enclave, Keychain
   protection class, and vault container no longer protect it. See `docs/BACKUP_FORMAT.md`.
 - Phishing. HOTP and TOTP codes can be entered into a convincing fake site. OpenFactor does not
   make these protocols phishing-resistant.

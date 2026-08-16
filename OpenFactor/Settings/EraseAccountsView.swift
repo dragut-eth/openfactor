@@ -51,7 +51,6 @@ struct EraseAccountsView: View {
                     TextField(Self.confirmation, text: $typed)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
-                        .font(.body.monospaced())
                 } footer: {
                     Text("Type \(Self.confirmation) to confirm.")
                 }

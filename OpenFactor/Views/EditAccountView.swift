@@ -52,7 +52,7 @@ struct EditAccountView: View {
                     Text("These are just labels. Changing them does not affect the codes.")
                 }
 
-                Section("Colour") {
+                Section("Color") {
                     AccountColorGrid(selected: color) { color = $0 }
                 }
             }
@@ -91,7 +91,7 @@ struct AccountColorPicker: View {
                 .padding(Tokens.Spacing.large)
             }
             .background(Tokens.Surface.background)
-            .navigationTitle("Colour")
+            .navigationTitle("Color")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -194,7 +194,7 @@ struct AccountColorStrip: View {
             .padding(.vertical, 4)
         }
         .scrollIndicators(.hidden)
-        .accessibilityLabel("Card colour")
+        .accessibilityLabel("Card color")
     }
 }
 
@@ -219,6 +219,6 @@ struct AccountColorStrip: View {
     )
 }
 
-#Preview("Colour") {
+#Preview("Color") {
     AccountColorPicker(selected: .indigo, onPick: { _ in })
 }

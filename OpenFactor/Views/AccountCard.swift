@@ -214,7 +214,7 @@ private var samples: [AccountCard.Model] {
     .preferredColorScheme(.light)
 }
 
-#Preview("Every colour") {
+#Preview("Every color") {
     ScrollView {
         VStack(spacing: Tokens.Spacing.cardGap) {
             ForEach(AccountColor.allCases, id: \.self) { color in

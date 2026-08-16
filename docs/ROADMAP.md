@@ -69,7 +69,7 @@ the last audited tag, which keeps the claim honest and the work small.
 - **Paid professional review.** A firm that does applied cryptography and mobile work.
   Realistically several thousand to several tens of thousands, which is the honest reason
   it is scoped to A3 and A4 rather than every gate.
-- **Funded open source audit programmes.** Several organisations fund security audits for
+- **Funded open source audit programmes.** Several organizations fund security audits for
   open source tools, particularly ones with a privacy or safety rationale. Worth applying
   to well before A4, since the lead times are long. Verify current programmes and terms at
   the time rather than trusting a list written here.
@@ -311,7 +311,7 @@ reassuring.
 - Independent review of the sync code and of the sync section of the threat model
 - Verify against Apple's current documentation that the guarantees claimed for iCloud
   Keychain are the guarantees it actually gives, rather than what this repository asserts
-- Confirm the merge behaviour described in `docs/ARCHITECTURE.md` is what actually
+- Confirm the merge behavior described in `docs/ARCHITECTURE.md` is what actually
   happens, rather than what this repository assumes, and that nothing can cross wire a
   secret onto another account's metadata
 - Confirm that turning sync off behaves on a second device the way the interface implies,
@@ -332,9 +332,9 @@ gets the fewest capabilities.
   for secret material to leak through
 - **It must work with the phone off, absent, or out of range.** That is what rules out the
   alternative where the watch holds nothing and asks the phone for each code
-- List: near black rows, issuer in the account's colour, account name in white beneath.
+- List: near black rows, issuer in the account's color, account name in white beneath.
   Not a resized phone card. The palette inverts, so the vivid variants that fail as a card
-  background under white text are the right values for coloured text on black
+  background under white text are the right values for colored text on black
 - Code screen: code large at the top, countdown ring beside it, issuer and name beneath,
   back to the list. Nothing else
 - **Complications need deciding rather than assuming.** One showing a live code puts a
@@ -375,7 +375,7 @@ claim rather than an intention.
 - Export gated behind Face ID or the passcode, since producing a file containing every
   secret is categorically different from reading one code. Import is not gated: it reveals
   nothing
-- Import of the same format, plus **Aegis plain JSON** and **labelled text or RTF exports**
+- Import of the same format, plus **Aegis plain JSON** and **labeled text or RTF exports**
   (the shape Step Two writes, matched by its labels rather than by its name), and
   export as Aegis plain JSON
 - **The plain `otpauth://` export was dropped.** Aegis JSON is a better escape hatch, since
@@ -439,7 +439,7 @@ repeated `OtpParameters` (secret, name, issuer, algorithm, digits, type, counter
   guessing or silently mangling them
 - **Bulk confirmation.** Adding forty accounts at once is a different problem from adding
   one, and the scan confirmation screen does not answer it
-- Recognise the `otpauth-migration` scheme even before it is supported, so the error names
+- Recognize the `otpauth-migration` scheme even before it is supported, so the error names
   what the code actually is rather than saying it is not a setup code
 - The import preview from PR 16 is a prerequisite, not a nicety: forty accounts arriving at
   once is the case it was designed for
@@ -547,6 +547,23 @@ before the code and audited before the code, as the backup format was.
 - The watch is handed the key once over WatchConnectivity and never needs the phone again
 - Not a fix for a malicious update, which reads its own container. That is answered by
   reproducible builds in PR 18, not by cryptography
+
+**Status: the iPhone half is built.** `Sources/OpenFactorCore/Vault/` holds the record format,
+the wrapped key, the key file and `Vault`. `KeychainSecretStore` is converted: it seals on write,
+opens only the metadata half to list, and opens the secret half only in `secret(for:)`. Six of
+the seven probes are settled; the two-writer rewrap case is blocked on a second development
+device. `OpenFactor/Vault/` holds the gate and its three screens, specified in
+`docs/UI_SPEC.md`.
+
+**What remains in this pull request:**
+
+- **The watch provisioning exchange**, which is gate E7 turned into code and the only way a watch
+  gets a key. Until it exists a paired watch shows nothing
+- **The watch's third empty state.** It distinguishes accounts in flight from sync being off, and
+  now needs provisioned-but-no-key, or it sends a wearer to turn off the sync that is working
+- **The tripwire is deliberately not being built yet.** Its container anchor has an unsolved
+  staleness problem once several devices are writing, and E6 made it worse by measuring the
+  container path changing on update. A tripwire that cries wolf is worse than none
 
 ### PR 17: Security review and threat model
 

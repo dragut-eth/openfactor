@@ -257,7 +257,7 @@ struct ImportViewModelTests {
             Issue.record("expected a preview, got \(model.stage)")
             return
         }
-        #expect(preview.source == "OpenFactor archive")
+        #expect(preview.source == "OpenFactor backup")
         #expect(preview.importable.count == 1)
         #expect(preview.importable.first?.imported.color == .indigo)
     }

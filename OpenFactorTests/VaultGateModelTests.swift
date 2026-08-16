@@ -141,18 +141,31 @@ struct VaultGateModelTests {
             recovered.withUnsafeBytes { Data($0) } == created.withUnsafeBytes { Data($0) })
     }
 
-    @Test("Asking for a different passphrase forgets the first and still writes nothing")
-    func discardingReturnsToTheStart() throws {
+    /// "Show me a different one" used to return to the intro screen, which is not what the
+    /// label says, and read as a bug because it was one. This is the behaviour it claims.
+    @Test("Asking for a different passphrase shows a different one, in place")
+    func askingForAnotherShowsAnother() throws {
         let (gate, vault, _, wrapped) = makeGate()
         defer { try? wrapped.delete() }
 
         gate.refresh()
         gate.offerPassphrase()
-        gate.hasSavedPassphrase = true
-        gate.discardPassphrase()
+        guard case let .showingPassphrase(first) = gate.stage else {
+            Issue.record("expected a passphrase to be on screen")
+            return
+        }
 
-        #expect(gate.stage == .introducing)
-        // The acknowledgement must not carry over to a passphrase nobody has seen yet.
+        gate.hasSavedPassphrase = true
+        gate.offerPassphrase()
+
+        guard case let .showingPassphrase(second) = gate.stage else {
+            Issue.record("it must stay on the passphrase screen")
+            return
+        }
+        #expect(first != second)
+
+        // The part that matters. A tick carried over to a string nobody has read yet would
+        // defeat the only guard this screen has.
         #expect(!gate.hasSavedPassphrase)
         #expect(vault.state() == .absent)
     }

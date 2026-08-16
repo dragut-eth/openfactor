@@ -9,6 +9,11 @@ struct VaultSetupView: View {
 
     @Bindable var model: VaultGateModel
 
+    /// Bumped on every copy, which is what drives the haptic and the label. A counter rather
+    /// than a flag so copying twice in a row is felt twice.
+    @State private var copies = 0
+    @State private var hasCopied = false
+
     var body: some View {
         NavigationStack {
             Group {
@@ -23,15 +28,39 @@ struct VaultSetupView: View {
         }
     }
 
+    /// Empty on the intro, where the title is drawn large in the screen itself rather than
+    /// shrunk into the bar. A person meeting the app for the first time gets a title; a person
+    /// on the second step gets a bar label telling them where they are.
     private var title: String {
         if case .showingPassphrase = model.stage { return "Your vault passphrase" }
-        return "Set up OpenFactor"
+        return ""
     }
 
     // MARK: - What a vault is
 
     private var introduction: some View {
         Form {
+            // A first screen that was a settings form doing a welcome screen's job: grey text
+            // and two buttons of equal weight, so nothing said which one was the point. The
+            // mark and the large title make it an arrival, and the filled button below makes
+            // the primary action look primary.
+            Section {
+                VStack(spacing: Tokens.Spacing.medium) {
+                    Image(systemName: "key.fill")
+                        .font(.system(size: 46))
+                        .foregroundStyle(Color.accentColor)
+                        // The title says it. A symbol read out after it adds nothing.
+                        .accessibilityHidden(true)
+
+                    Text("Set up OpenFactor")
+                        .font(.largeTitle.bold())
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+
             // Deliberately says nothing about iCloud. Sync is off by default, so the first
             // person to read this screen always has it off, and a paragraph about what iCloud
             // carries would be describing something that is not happening. What is true in both
@@ -48,7 +77,29 @@ struct VaultSetupView: View {
             }
 
             Section {
-                Button("Create my vault") { model.offerPassphrase() }
+                // The same button as the empty list's "Add an account", from the same
+                // definition rather than by hand. Both screens ask for one thing and nothing
+                // else, so they get the one prominent control this app has.
+                // Centred with spacers rather than `.frame(maxWidth: .infinity)`. A prominent
+                // button style paints its background into whatever frame it is given, so that
+                // modifier stretched the capsule instead of centring it.
+                HStack {
+                    Spacer()
+                    Button { model.offerPassphrase() } label: {
+                        PrimaryActionLabel("Create my vault")
+                    }
+                    .primaryActionStyle()
+                    Spacer()
+                }
+                // Centres the button in the band between the explanation card and the footer
+                // beneath it. The two paddings are different on purpose and are measured rather
+                // than chosen from the spacing scale: the room above a row comes from section
+                // spacing and the room below comes from footer spacing, and those are not the
+                // same size, so equal padding would not produce equal gaps.
+                .padding(.top, Tokens.Spacing.tight)
+                .padding(.bottom, 12)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             } footer: {
                 // It used to say the passphrase was the only way to reach your accounts from a
                 // new iPhone. That is false with sync off, where nothing reaches a new iPhone at
@@ -100,6 +151,14 @@ struct VaultSetupView: View {
                 }
             }
         }
+        // The gaps above and below the explanation were the Form's default section spacing,
+        // which is sized for a settings screen with many sections rather than a welcome screen
+        // with three. Tightened once here rather than padded around per section.
+        .listSectionSpacing(Tokens.Spacing.medium)
+        // The space above the key was the scroll view's own top margin, not the navigation bar,
+        // which on this screen has no title and collapses to nothing. Hiding the bar changed
+        // the layout by zero points; this is where the room actually was.
+        .contentMargins(.top, 0, for: .scrollContent)
     }
 
     // MARK: - The passphrase
@@ -109,19 +168,43 @@ struct VaultSetupView: View {
             Section {
                 grid(generated)
 
-                Button("Copy passphrase") {
+                // A tap that changes nothing on screen needs an answer. The account list
+                // already solved this, with a haptic and a "Copied" confirmation, and these
+                // screens simply did not use it. Reused rather than reinvented.
+                Button {
                     CodeClipboard.copy(passphrase: BackupPassphrase.grouped(generated))
+                    copies += 1
+                    hasCopied = true
+                    Task {
+                        try? await Task.sleep(for: .seconds(2))
+                        hasCopied = false
+                    }
+                } label: {
+                    Label(
+                        hasCopied ? "Copied" : "Copy passphrase",
+                        systemImage: hasCopied ? "checkmark" : "doc.on.doc")
                 }
+                .sensoryFeedback(trigger: copies) { _, _ in .success }
+
+                // The same action the export screen offers, so it carries the same label and
+                // sits in the same place: inside the passphrase section, under the copy button,
+                // rather than down beside Continue. It used to go back to the intro screen,
+                // which is not what any of these labels say.
+                Button("Generate a different one") { model.offerPassphrase() }
+                    .disabled(model.isWorking)
             } footer: {
-                // Named, and named as the vault's. `docs/VAULT.md` requires the two passphrases
-                // be distinguishable: this one and an archive's are generated identically and
-                // look identical, and somebody recovering months later would hold two strings
-                // with nothing to tell them apart.
+                // Says what this is for, in the two situations it is actually for. The earlier
+                // version explained how a vault passphrase differs from an archive's, which on
+                // a first run describes a thing that does not exist yet and lands as noise.
+                //
+                // `docs/VAULT.md` still requires the two be distinguishable. That is satisfied
+                // by the screen title, "Your vault passphrase", which is a label rather than a
+                // paragraph. The comparison belongs on the export screen, where somebody is
+                // holding a second string and the distinction is a live question.
                 Text(
                     """
-                    This is your **vault passphrase**. An exported archive has a passphrase of \
-                    its own, which is a different string for a different thing, so label them \
-                    wherever you keep them.
+                    You need this if you delete and reinstall OpenFactor, or set it up on \
+                    another iPhone signed in to the same Apple Account.
                     """
                 )
             }
@@ -130,15 +213,18 @@ struct VaultSetupView: View {
                 Toggle("I have saved this passphrase", isOn: $model.hasSavedPassphrase)
                     .disabled(model.isWorking)
             } footer: {
-                // Says what is true rather than what would be reassuring. The earlier wording,
-                // "if it is lost, and this iPhone is lost", implied the passphrase alone is
-                // enough to recover from a lost phone. That holds only with sync on. With sync
-                // off the wrapped record lives on this iPhone and nowhere else, so the phone
-                // going means the accounts go, passphrase or not.
+                // Two sentences doing two jobs. The first tells somebody to write it down,
+                // against a lifetime of being told never to write secrets down. The second is
+                // what earns that instruction: the passphrase is not a credential on its own.
+                //
+                // "Your Apple Account or this iPhone" rather than only the Apple Account. The
+                // encrypted copy also sits on the device and in a device backup, so naming
+                // iCloud alone would be the more comforting claim and the less true one.
                 Text(
                     """
-                    OpenFactor does not keep a copy and cannot show it again. Nobody can reach \
-                    your accounts without it, including you.
+                    OpenFactor cannot show it again and keeps no copy, so write it down \
+                    somewhere you will still have it. On its own it opens nothing: anyone using \
+                    it would also need your Apple Account or this iPhone.
                     """
                 )
             }
@@ -156,13 +242,6 @@ struct VaultSetupView: View {
                     }
                 }
                 .disabled(!model.hasSavedPassphrase || model.isWorking)
-
-                // Not "Cancel". Nothing has been created yet, so there is nothing to cancel;
-                // what this does is throw away a string and offer another. It sits in the form
-                // rather than the navigation bar, where its label crowded the title badly enough
-                // that the two ran together.
-                Button("Show me a different one") { model.discardPassphrase() }
-                    .disabled(model.isWorking)
 
                 if let failure = model.failure {
                     Text(failure).foregroundStyle(.red)

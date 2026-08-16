@@ -114,7 +114,7 @@ struct ManualSetupView: View {
             Button {
                 isChoosingColour = true
             } label: {
-                LabeledContent("Colour") {
+                LabeledContent("Color") {
                     HStack(spacing: Tokens.Spacing.small) {
                         Circle()
                             .fill(Palette.gradient(for: model.color, in: colorScheme))
@@ -127,7 +127,7 @@ struct ManualSetupView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Colour, \(model.color.rawValue)")
+            .accessibilityLabel("Color, \(model.color.rawValue)")
         } header: {
             Text("Account")
         } footer: {

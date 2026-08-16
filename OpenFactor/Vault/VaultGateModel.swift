@@ -81,6 +81,11 @@ final class VaultGateModel {
     // MARK: - Creating
 
     /// Generates a passphrase and shows it. **Writes nothing.**
+    ///
+    /// Also what "show me a different one" calls, which is the whole of that button: it used to
+    /// return to the intro screen, so the label promised one thing and the code did another.
+    /// Note that it clears the acknowledgement, which is the part that matters. Carrying a tick
+    /// over to a string nobody has read yet would defeat the only guard on this screen.
     func offerPassphrase() {
         hasSavedPassphrase = false
         failure = nil
@@ -113,13 +118,6 @@ final class VaultGateModel {
 
         typedPassphrase = ""
         stage = .open
-    }
-
-    /// Throws the shown passphrase away and generates another. For the case where somebody
-    /// mistyped it into wherever they keep it and would rather start again than be unsure.
-    func discardPassphrase() {
-        stage = .introducing
-        hasSavedPassphrase = false
     }
 
     // MARK: - Unlocking
@@ -167,6 +165,14 @@ final class VaultGateModel {
     }
 
     #if DEBUG
+        /// Drops this device's key and keeps everything else, so the next screen is the unlock
+        /// one. Debug builds only. Nothing is lost: the passphrase still opens it.
+        func lockForDebug() {
+            try? vault.discardKeyForDebug()
+            typedPassphrase = ""
+            refresh()
+        }
+
         /// Returns this device to the state of an install that has never been run.
         ///
         /// **A development tool, compiled out of any build that is not Debug.** A shipped

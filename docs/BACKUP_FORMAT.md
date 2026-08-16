@@ -73,7 +73,7 @@ described below depends on it.
 `format` is compared **byte for byte**, since the same string is bound as additional
 authenticated data: a reader that case folds the comparison and then authenticates with the
 file's spelling fails the tag. It identifies the version and is the only field a reader must
-understand before anything else. A reader that does not recognise the value must refuse the file and say so,
+understand before anything else. A reader that does not recognize the value must refuse the file and say so,
 rather than attempt it.
 
 ### What a reader must refuse
@@ -134,7 +134,7 @@ up in transit. A correctly generated passphrase contains nothing but alphabet ch
 discarding the rest can never change a clean input, and it rescues every mangled one.
 
 **Verbatim form**, used for custom passphrases: the UTF-8 bytes of the input exactly as
-given. No stripping, no case folding, no Unicode normalisation.
+given. No stripping, no case folding, no Unicode normalization.
 
 **The reader algorithm, which is not optional:**
 
@@ -175,7 +175,7 @@ the field does not help, since a flipped bit would then fail the tag instead. Th
 attacker served by that is one who wants the owner never to recover, and this is a recovery
 format.
 
-**Writers** set the field to match the rule they used, and canonicalise before deriving when
+**Writers** set the field to match the rule they used, and canonicalize before deriving when
 they generated the passphrase. A writer that mislabels merely costs a reader one extra
 derivation.
 
@@ -184,7 +184,7 @@ to each reader.**
 
 Two keyboards can encode the same non-ASCII passphrase differently, composed on one platform
 and decomposed on another: same glyphs, different bytes, different key. The format does not
-normalise the stored form, because that would silently change a passphrase a user typed, so
+normalize the stored form, because that would silently change a passphrase a user typed, so
 NFC and NFD are attempted instead. A writer should also warn when a custom passphrase
 contains non-ASCII characters.
 
@@ -309,7 +309,7 @@ there is no confusion with `O`, `I`, `B` or `g`. Every character of a generated 
 is drawn from `A` to `Z` and `2` to `7`, and nothing else.
 
 The hyphens are display only, are not part of the passphrase, and are removed by the
-canonicalisation above before the key is derived.
+canonicalization above before the key is derived.
 
 ## The payload
 
@@ -343,23 +343,23 @@ The decrypted plaintext is a UTF-8 JSON object.
 | `counter` | hotp only | The next counter value, 0 to 2^53 - 1 |
 | `issuer` | no | The service name |
 | `name` | no | The account, usually an email address |
-| `color` | no | A card colour, see below. Cosmetic |
+| `color` | no | A card color, see below. Cosmetic |
 | `sortIndex` | no | Position in the list. Cosmetic |
 
 **Unknown fields must be ignored, not rejected.** A version 1 reader meeting a field added
 later should import the account without it.
 
 **Values that change a generated code are never guessed.** If `algorithm`, `digits`,
-`period`, `counter` or `secret` is missing, malformed, or unrecognised, that account is
+`period`, `counter` or `secret` is missing, malformed, or unrecognized, that account is
 refused and named. Substituting a default there produces codes that look correct and are
 rejected forever, and the user finds out at a login, not at the import.
 
-**Cosmetic values fall back.** An unrecognised `color` becomes the default rather than
+**Cosmetic values fall back.** An unrecognized `color` becomes the default rather than
 failing the account, and a missing `sortIndex` places the account at the end. This is the
 same rule the stored metadata follows, set at gate A1: things that affect a code fail loudly,
 things that affect appearance fail quietly.
 
-Colours are `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `indigo`, `purple`, `pink`,
+Colors are `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `indigo`, `purple`, `pink`,
 `gray`. The default is `blue`.
 
 **One account failing does not fail the archive.** A reader imports what it can and reports
@@ -382,7 +382,7 @@ reported by its position in the array, counting from one.
   rejected forever. Without the second, a length that is not valid Base32 is either refused
   or silently truncated depending on the reader, and a truncated secret is the same failure.
 - **Enumerated values are matched byte for byte**, and writers emit exactly the spellings
-  listed above: `totp`, `hotp`, `SHA1`, `SHA256`, `SHA512`, and the colour names. A writer
+  listed above: `totp`, `hotp`, `SHA1`, `SHA256`, `SHA512`, and the color names. A writer
   emitting `sha1` produces an archive a strict reader refuses, permanently.
 - An empty `accounts` array is **valid**. It imports nothing and is not an error.
 - `counter` must be an integer from 0 to 2^53 - 1. A reader whose JSON parser represents
@@ -403,7 +403,7 @@ exists so implementations can check themselves.
 | --- | --- |
 | `passphrase` mode | `generated` |
 | Passphrase, as displayed to the user | `YZTR-THFW-WT6E-OXIV-73XD-QCDM` |
-| Passphrase, canonicalised, and this is what the KDF receives | `YZTRTHFWWT6EOXIV73XDQCDM`, 24 characters |
+| Passphrase, canonicalized, and this is what the KDF receives | `YZTRTHFWWT6EOXIV73XDQCDM`, 24 characters |
 | Salt | bytes `00 01 02 ... 1f`, base64 `AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=` |
 | Iterations | 600000 |
 | Nonce | bytes `a0 a1 ... ab`, base64 `oKGio6Slpqeoqaqr` |
@@ -412,7 +412,7 @@ exists so implementations can check themselves.
 **Start from the displayed form.** An implementation that derives a key from
 `YZTR-THFW-WT6E-OXIV-73XD-QCDM` without removing the hyphens will not reach these bytes,
 and that is deliberate: the previous version of this document published a vector with
-exactly that mistake baked in, so the check now exercises the canonicalisation rather than
+exactly that mistake baked in, so the check now exercises the canonicalization rather than
 bypassing it.
 
 Derived key, hex:
@@ -459,7 +459,7 @@ of the rest has implemented a different format.
 ### A second vector, for the verbatim path
 
 Same salt, nonce, AAD and plaintext. Only the passphrase rule differs, and **this one is not
-canonicalised**: an implementation that applies the Base32 filter here will strip the spaces
+canonicalized**: an implementation that applies the Base32 filter here will strip the spaces
 and the lower case and reach the wrong key.
 
 | | |
@@ -525,7 +525,7 @@ A reader that only proves it can open things has proved half of what matters.
 **Verified independently, three implementations sharing no code.** Both keys were derived by
 Apple's CommonCrypto and by Python's `hashlib.pbkdf2_hmac`, which agree to the byte. Both
 ciphertexts were sealed by CryptoKit and opened, with tags verified and AAD checked, by
-Node's OpenSSL binding. The seven inputs above were each run through the canonicalisation
+Node's OpenSSL binding. The seven inputs above were each run through the canonicalization
 and confirmed to reach the same key.
 
 An implementer should reach exactly these bytes, pass every row of the table, and see every
@@ -591,7 +591,7 @@ against.
   that objects to them.
 
 **Three things do not survive this file, and the app says so rather than letting them
-vanish quietly**: the card colour, the list order, and anything else cosmetic. Aegis has no
+vanish quietly**: the card color, the list order, and anything else cosmetic. Aegis has no
 concept that maps onto them. Only the encrypted archive round trips a whole setup.
 
 **Compatibility with Aegis itself is not something this project's tests can prove.** They
@@ -616,7 +616,7 @@ exists: every secret key readable by anyone who opens it.
 - **No key file, no hardware key, no split secret.** Every one of them is a way to lose the
   archive, and this is a format whose purpose is recovery.
 - **No metadata outside the ciphertext**, beyond what decryption needs. No account names, no
-  issuers, no colours. Two things are visible to anyone holding the file and unable to open
+  issuers, no colors. Two things are visible to anyone holding the file and unable to open
   it. **The length reveals the approximate number of accounts**, at roughly 150 bytes each,
   and the format does not pad to hide it. **The `passphrase` field, when present, reveals which kind of
   passphrase protects it**, which tells an attacker whether guessing is worth attempting at
@@ -659,7 +659,7 @@ because someone has a file in a drawer.
 Additive changes, new optional fields, do not need a new version, since readers ignore what
 they do not know. **A new value for an existing enumerated field is also additive**: a
 future `type` or `algorithm` is refused by a version 1 reader under the never-guess rule,
-which is the correct behaviour and not a compatibility break.
+which is the correct behavior and not a compatibility break.
 
 Anything else needs a new version: a changed cipher, a changed KDF, a changed meaning for an
 existing field, a newly required field.

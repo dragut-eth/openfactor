@@ -175,7 +175,7 @@ final class ExportViewModel {
         } catch let error as BackupError {
             stage = .failed(error.description)
         } catch {
-            stage = .failed("OpenFactor could not write the archive.")
+            stage = .failed("OpenFactor could not write the backup.")
         }
     }
 
@@ -278,8 +278,8 @@ final class ExportViewModel {
             switch self {
             case .someUnreadable:
                 """
-                Some accounts could not be read, so OpenFactor did not write an archive. An \
-                archive missing accounts is worse than no archive, because you would find \
+                Some accounts could not be read, so OpenFactor did not write a backup. A \
+                backup missing accounts is worse than no backup, because you would find \
                 out when you needed it. Unlock your device and try again.
                 """
             }

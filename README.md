@@ -12,8 +12,9 @@ sync is enabled, Keychain carries ciphertext; the vault key remains in each devi
 container and never syncs.
 
 > **Status: beta, in testing.** The repository is built in public from the first commit.
-> The app works and is being tried on real devices, but the encrypted vault is still being
-> integrated and the project has **not** had a professional independent security audit. Do not
+> The app works and is being tried on real devices. The encrypted vault is implemented on
+> iPhone and the Watch half is not built yet, and the project has **not** had a professional
+> independent security audit. Do not
 > entrust it with an account you cannot recover yet. The reviews and hardware experiments so far
 > are recorded in [docs/audits](docs/audits). The threat model against the finished app is PR 17
 > and reproducible build notes are PR 18, so a released binary cannot yet be checked against this
@@ -32,14 +33,15 @@ OpenFactor does not treat Keychain access as its confidentiality boundary. Accou
 encrypted before it is stored there, and the key needed to decrypt it lives only in each app's
 private container. Keychain is storage and, when sync is enabled, transport for ciphertext.
 
-That design protects confidentiality if another authorised app can read OpenFactor's Keychain
+That design protects confidentiality if another authorized app can read OpenFactor's Keychain
 items. It does not prevent that app from deleting or replaying them. It also does not defend
 against a malicious OpenFactor update, a compromised operating system, or somebody using an
 already unlocked device. [docs/VAULT.md](docs/VAULT.md) specifies the key hierarchy, record
 formats, recovery path, Watch provisioning protocol, and the limits that remain.
 
-The encrypted vault is being implemented now. Until its implementation and migration have been
-reviewed, the specification is a design claim rather than a claim about a finished release.
+The vault is implemented on iPhone as of PR 16d. Watch provisioning is not built yet, and no
+implementation review has happened, so the specification remains a design claim rather than a
+claim about a finished release.
 
 ## Principles
 
@@ -60,7 +62,7 @@ reviewed, the specification is a design claim rather than a claim about a finish
    and the Keychain, plus CommonCrypto for the password-based key derivation that CryptoKit
    does not provide. This keeps the review boundary limited to OpenFactor and Apple's platform
    frameworks.
-6. **You can leave.** Export can write an encrypted OpenFactor archive whose format is public,
+6. **You can leave.** Export can write an encrypted OpenFactor backup whose format is public,
    or a plaintext Aegis-compatible file for moving to another authenticator. The interface makes
    the difference explicit because portability should not require hiding the security cost.
 
@@ -99,7 +101,7 @@ against the official test vectors in those documents.
 - The de facto `otpauth://` URI format, for importing from other apps
 - [`docs/VAULT.md`](docs/VAULT.md), device storage, encryption, recovery, and Watch
   provisioning. The record layouts are byte-exact and carry pinned test vectors
-- [`docs/BACKUP_FORMAT.md`](docs/BACKUP_FORMAT.md), this project's own encrypted archive.
+- [`docs/BACKUP_FORMAT.md`](docs/BACKUP_FORMAT.md), this project's own encrypted backup.
   Written and reviewed before the code, and carrying a test vector produced by three
   implementations sharing no code, so "openable without this app" is a tested claim rather
   than an intention
@@ -113,7 +115,7 @@ Sources/OpenFactorCore/        Base32, HOTP, TOTP, otpauth parsing, and the encr
 Tests/OpenFactorCoreTests/     Including the published RFC vector tables and the fuzzing.
 OpenFactor.xcodeproj           The app project. See docs/PROJECT.md for what is in it.
 OpenFactor/                    iOS app target. Views, view models, and the app lock.
-OpenFactorShared/              The little both app targets need: colour and contrast
+OpenFactorShared/              The little both app targets need: color and contrast
                                arithmetic, and digit grouping. Compiled into each.
 OpenFactorWatch Watch App/     watchOS app. Read only: it shows the list and one code.
 OpenFactorWatch Complication/  Launches the app. Holds no data and no Keychain entitlement.
@@ -123,7 +125,7 @@ docs/                          Architecture, roadmap, UI specification, audits.
 
 ## Building
 
-Requires Xcode 26 or later, targeting iOS 18 and watchOS 11. The project uses synchronised
+Requires Xcode 26 or later, targeting iOS 18 and watchOS 11. The project uses synchronized
 folder groups, which older Xcode versions cannot open.
 
 ```bash
@@ -195,7 +197,7 @@ they do not soften the warning above.
 - [docs/ROADMAP.md](docs/ROADMAP.md), the PR by PR delivery plan
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), how the pieces fit and why
 - [docs/VAULT.md](docs/VAULT.md), the normative storage and key-management design
-- [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md), the portable encrypted archive format
+- [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md), the portable encrypted backup format
 - [docs/UI_SPEC.md](docs/UI_SPEC.md), every screen and its behavior
 - [docs/PROJECT.md](docs/PROJECT.md), what is in the Xcode project, in plain language
 - [docs/audits/](docs/audits/), findings from each review gate

@@ -170,7 +170,7 @@ final class ImportViewModel {
         switch outcome {
         case let .success(result):
             do {
-                stage = .reviewing(try classify(result, source: "OpenFactor archive"))
+                stage = .reviewing(try classify(result, source: "OpenFactor backup"))
             } catch {
                 stage = .failed("Your accounts could not be read from this device.")
             }
