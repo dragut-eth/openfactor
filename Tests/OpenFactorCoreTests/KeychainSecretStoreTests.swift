@@ -91,7 +91,7 @@ struct KeychainSecretStoreTests {
         let group = item[kSecAttrAccessGroup as String] as? String
 
         #expect(
-            group?.hasSuffix("com.openfactor.shared") == true,
+            group?.hasSuffix("dev.openfactor.shared") == true,
             """
             Secrets landed in \(group ?? "no group") rather than the shared group. \
             Check OpenFactor.entitlements: the first group in it is the one the Keychain \

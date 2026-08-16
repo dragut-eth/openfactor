@@ -16,7 +16,7 @@
 	-->
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)com.openfactor.shared</string>
+		<string>$(AppIdentifierPrefix)dev.openfactor.shared</string>
 	</array>
 </dict>
 </plist>

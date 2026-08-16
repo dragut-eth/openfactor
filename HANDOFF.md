@@ -7,6 +7,14 @@ first when picking the work back up.
 
 **Last updated:** 2026-08-15, on TestFlight as `dev.openfactor.app`, 1.0 (2).
 
+**Everything now reads `dev.openfactor.*`.** The bundle identifiers were renamed because
+`com.openfactor.dev` claimed a domain this project does not own, and the Keychain access
+group was renamed after them so nothing is left explaining an inconsistency. Both were done
+while two people held test data, which is the only reason the group rename was cheap: it
+strands every stored account, and after a real release it would have needed a migration.
+**The group must never be renamed again**, and `docs/PROJECT.md` says so where somebody
+tidying up would find it.
+
 **The app is being tested by someone other than Xavier**, which changes what evidence is
 available. Anything about the watch, about iCloud Keychain latency, or about a Google
 Authenticator export has until now been proved on one person's devices and one iCloud
