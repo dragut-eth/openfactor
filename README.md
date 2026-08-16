@@ -1,14 +1,24 @@
 # OpenFactor
 
-A minimalist two factor authentication app for iPhone and Apple Watch.
+A minimal two factor authentication app for iPhone and Apple Watch.
+
+Minimal in what it asks of you, not in what it took to build. The app is one screen of
+cards, an add button and a settings sheet, and it will not grow accounts, folders, a
+password manager or a browser extension. Most of the code you will find here is the
+machinery for getting your accounts **in** and **out**, because an authenticator you cannot
+leave is a trap, and that is not a corner worth cutting.
 
 Your secrets stay on your device. There is no OpenFactor account, no OpenFactor server,
 and no analytics. The only thing that ever leaves your phone is an optional iCloud
 Keychain sync, which Apple cannot read.
 
-> **Status: pre alpha.** The repository is being built in public from the first commit.
-> Nothing is shippable yet. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is planned
-> and [HANDOFF.md](HANDOFF.md) for where the work currently stands.
+> **Status: beta, in testing.** The repository is built in public from the first commit.
+> The app works and is being tried on real devices, and it has **not** had a professional
+> security audit: the reviews so far are independent model reviews, recorded in
+> [docs/audits](docs/audits). The threat model against the finished app is PR 17 and
+> reproducible build notes are PR 18, so a released binary cannot yet be checked against
+> this source by a third party. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is planned
+> and [HANDOFF.md](HANDOFF.md) for where the work stands.
 
 ## Why another authenticator
 

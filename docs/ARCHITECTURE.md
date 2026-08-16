@@ -142,11 +142,24 @@ is the same arithmetic and there is one of it.
 **One timer for the whole list,** never one per row. Every visible code recomputes on a
 single shared tick.
 
-## Reading other apps' exports
+## Getting accounts in and out
+
+*Importers exist as of PR 16, the encrypted archive and the Aegis export as of PR 16, the
+Google Authenticator transfer as of PR 16a.*
+
+This is the largest part of the app by volume and it is worth saying why, since a
+minimalist authenticator with five file formats in it looks like a contradiction. The
+interface stays one screen of cards; none of this appears there. What it buys is the
+property the README leads with: an authenticator you cannot leave is a trap, and a backup
+you can only open with the software that wrote it is not a backup. Reading three formats
+and writing two is the cost of both claims being true, and it is paid in code rather than
+in what a person has to learn.
 
 Importers live in the core, beside the `otpauth://` parser, for the same reason it does:
 they are hostile input readers that produce secrets, and that is the part of the project
 meant to be audited on its own.
+
+### Reading other apps' exports
 
 **They return a result rather than writing anything.** No importer touches the Keychain. It
 reports what it found, what it refused and why, and the interface asks before anything is

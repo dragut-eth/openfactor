@@ -197,10 +197,10 @@ interface says the app makes no network requests "of its own".
 There are no third party dependencies. Nothing in the supply chain but Apple's own
 frameworks and this repository.
 
-Within Apple's frameworks, the cryptography comes from CryptoKit, with one exception
-arriving in PR 16: CryptoKit has no password based key derivation, so the backup format's
-PBKDF2 comes from CommonCrypto. Both are Apple's, neither is vendored, and the exception is
-named here rather than left for a reader to notice.
+Within Apple's frameworks, the cryptography comes from CryptoKit, with one exception:
+CryptoKit has no password based key derivation, so the backup format's PBKDF2 comes from
+CommonCrypto. Both are Apple's, neither is vendored, and the exception is named here rather
+than left for a reader to notice.
 
 ### Attacker who publishes a modified build
 
@@ -235,18 +235,28 @@ rather than leaving this paragraph as the last word.
   helps.
 - A malicious Xcode toolchain or a compromised Apple platform.
 - Shoulder surfing, screen recording by another app you installed, and physical coercion.
-- *Planned.* Your own choice to export secrets in plaintext, which the app will permit
-  behind an explicit warning because an authenticator you cannot leave is its own kind of
-  trap. There is no export of any kind until PR 16. Gate A2, F17.
+- Your own choice to export secrets in plaintext, which the app permits behind an explicit
+  warning and an acknowledgement, because an authenticator you cannot leave is its own kind
+  of trap. Gate A2, F17.
+- **An archive you have created and stored badly.** Once bytes are in a file, none of the
+  protections the rest of this app relies on apply: not the device passcode, not the Secure
+  Enclave, not the Keychain's protection class. An encrypted archive is only as good as the
+  passphrase and where the file ends up. See `docs/BACKUP_FORMAT.md`, which was written and
+  audited before any of it was implemented for exactly this reason.
 
 ## Practices in this repository
 
 - The security sensitive code lives in `OpenFactorCore`, a package with no UI and no
   dependencies, so it can be audited in isolation.
-- All cryptography comes from CryptoKit. No hand rolled primitives.
+- The cryptography comes from Apple's frameworks: CryptoKit for hashing, HMAC and
+  AES-256-GCM, and CommonCrypto for PBKDF2, which CryptoKit does not provide. The one thing
+  written by hand is the HOTP construction of RFC 4226, which is dynamic truncation over an
+  HMAC the framework computes, and it is verified against the RFC's own test vectors.
 - The generators are verified against the official RFC test vectors in CI.
-- Secrets are never logged, never sent to analytics because there is none, and never
-  written outside the Keychain.
+- Secrets are never logged, and never sent to analytics because there is none. They leave
+  the Keychain in exactly two places, both of which a person has to ask for: a code copied
+  to the clipboard, local to the device and expiring, and an export file, which is deleted
+  when the screen that made it goes away and swept at launch if the app was killed first.
 - Non secret metadata such as the account color and sort order is stored separately from
   the secret, so drawing the list never requires loading secret material.
 - The account card uses a **system context menu**, and iOS may append entries of its own to

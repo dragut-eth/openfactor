@@ -5,7 +5,7 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-15, PR 15 built and awaiting Xavier's device pass.
+**Last updated:** 2026-08-15, PR 16 merged to main and PR 16a verified on hardware.
 
 | | |
 | --- | --- |
@@ -14,7 +14,9 @@ first when picking the work back up.
 | Gate A2, audit of sync | Done, twice. Original eleven findings closed except F8 and F13's two device half; three new findings from the re-verification, all fixed |
 | PR 14, watchOS app | Feature complete on `pr-14-watch`, re-verified, pushed |
 | PR 15, app lock | Built on `pr-15-app-lock`, pushed. Face ID needs a real device |
-| PR 16, export and import | Format audited **three** times and fixed. On `pr-16-import-export`: erase, both importers, the import preview, and the whole encrypted archive in core, reproducing every published test vector value. Neither reader carries a brand name: the labelled text reader is named and described by the shape it matches. The export screen and the passphrase screen are built, and an archive round trips through the app's own import. The Aegis JSON export is built and the format document is pinned to a fixed revision of the Aegis documentation. The implementation was reviewed by a second model in two independent passes: five findings, two blocking, all fixed and recorded in `docs/audits/A3-implementation.md`. Ready for a docs pass and merge. Steam Guard is parked as PR 16b |
+| PR 16, export and import | **Merged to main.** Format audited three times before the code, then the implementation audited separately: erase, both file importers, the import preview, the encrypted archive reproducing every published test vector value, the export and passphrase screens, and the plain Aegis vault pinned to a fixed revision of their documentation. Five findings from the implementation review, two blocking, all fixed and recorded in `docs/audits/A3-implementation.md` |
+| PR 16a, Google Authenticator import | Built on `pr-16a-google-import`. A hand written protobuf reader, the transfer recognised by the + scanner, and the import preview reused unchanged. Verified against a real export from Xavier's phone: eight accounts, no refusals. Parts are rescanned rather than collected, and the finish screen says which part of how many arrived |
+| PR 16b, Steam Guard | Parked. Small in core, and it ripples into storage, the card, the watch and the backup format's `type` enumeration |
 | PR 17 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 **What only Xavier can verify in PR 15:** Face ID and passcode unlock, the grace periods,
