@@ -47,7 +47,12 @@ That is a preference for verification over trust, not a criticism of a very good
    third party dependencies. The cryptography lives in one small package with no UI code
    in it, so an auditor can read the part that matters without reading the app.
 5. **No dependencies.** Everything is built on CryptoKit, Foundation, SwiftUI, and the
-   Keychain. Every dependency is code you would otherwise have to trust on our word.
+   Keychain, plus CommonCrypto for one thing CryptoKit does not provide: a password based
+   key derivation for the backup passphrase. Every dependency is code you would otherwise
+   have to trust on our word.
+6. **You can leave.** Export writes every account into one encrypted file whose format is
+   documented well enough for somebody else's program to open it, and a plain file other
+   authenticators import. An authenticator you cannot leave is a trap.
 
 ## What it deliberately will not do
 
@@ -71,6 +76,10 @@ against the official test vectors in those documents.
 - [RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238), TOTP
 - [RFC 4648](https://datatracker.ietf.org/doc/html/rfc4648), Base32
 - The de facto `otpauth://` URI format, for importing from other apps
+- [`docs/BACKUP_FORMAT.md`](docs/BACKUP_FORMAT.md), this project's own encrypted archive.
+  Written and reviewed before the code, and carrying a test vector produced by three
+  implementations sharing no code, so "openable without this app" is a tested claim rather
+  than an intention
 
 ## Repository layout
 
