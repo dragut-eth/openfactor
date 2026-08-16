@@ -461,6 +461,77 @@ a version 2 can be added but every version 1 archive still has to open.
 
 **No user facing build ships export until this gate closes.**
 
+### PR 16b: Steam Guard
+
+Parked, and small in core: the same HMAC over the same time counter, the same dynamic
+truncation, then five characters out of a 26 character alphabet instead of `mod 10^digits`.
+About twenty lines.
+
+The cost is the ripple, and it is why this is its own pull request rather than a rider.
+`OTPGenerator` gains a case, which touches the stored metadata encoding, the card, manual
+setup, the watch, and the `otpauth://` reader. Codes stop being digits, so `CodeFormatting`
+and the monospaced digit styling need a second shape. Aegis exports these with
+`type: "steam"`, which is currently refused by name, so the importer and one of its tests
+change. And `docs/BACKUP_FORMAT.md` needs a `steam` type documented, which its own rules
+bless as additive, but which is still an edit to a normative document that has been reviewed
+four times.
+
+Yandex, Mobile-OTP and Blizzard are **not** planned. Yandex needs a PIN mixed into the key,
+motp is MD5, and Blizzard has no `otpauth://` representation to import from at all.
+
+### PR 16c: A share extension, so a QR never has to rest in Photos
+
+**The problem, stated precisely.** A transfer QR is every secret its owner has, in the
+clear, in one image. When one arrives by Messages, Mail, AirDrop or Files, the only route
+into OpenFactor today is to save it to Photos first, and the photo library is the worst
+resting place available: it is long lived, it is searchable, and it syncs to iCloud Photos.
+The extension removes that step.
+
+**What it does not fix, said up front.** An image already in Photos stays there. The
+ordinary case, pointing the camera at another phone's screen, never creates a file at all
+and is unaffected. And the image still passes through the sending app's own storage; this
+removes the *additional* copy, not every copy.
+
+#### The design, which is mostly about what the extension is not allowed to do
+
+- **No Keychain entitlement on the extension.** The same rule the watch complication
+  follows, and for the same reason: the absence of the entitlement is the security property,
+  not a promise in a comment. The extension cannot read an account and cannot write one.
+- **The extension does not parse.** It does not decode the QR, does not read protobuf, does
+  not touch `otpauth-migration`. All of that stays in the app, in one place, already fuzzed.
+  A second process parsing hostile input is a second attack surface for no gain.
+- **What it actually does:** writes the received image into a dedicated `Inbox` directory in
+  a shared app group container, with the strongest file protection class, and opens the
+  containing app.
+- **The URL carries a name, never a payload.** `openfactor://inbox?item=<uuid>` and nothing
+  else. A URL is the wrong place for secret material: it can be logged, it appears in
+  handoff, and it is the sort of thing that ends up in a diagnostic bundle. The app looks up
+  the file by name and the name reveals nothing.
+- **The app reads it once and deletes it**, then sweeps the whole directory at launch, which
+  is the same lifecycle the export file already has and can reuse.
+
+**Why the shared container is acceptable when Photos is not.** It is app private, it carries
+complete file protection, it holds one item for seconds rather than years, and nothing syncs
+it anywhere. That is a different thing from a permanent, cloud replicated library.
+
+#### The cheaper half, worth doing in the same pull request
+
+**Document types**, which need no extension and no new process at all. Declaring an exported
+type for `.openfactor` and accepting Aegis JSON means an archive can be opened straight from
+Files or from a mail attachment with "Open in OpenFactor", rather than going through the
+in-app picker. Info.plist only.
+
+#### Two risks to name before starting
+
+**Touching entitlements is how sync broke before.** Adding an app group sits beside the
+Keychain access group that PR 13 got wrong and PR 14 spent a migration fixing. They are
+different entitlements and should not interfere, but "should not" is exactly the phrase that
+preceded the last one. The access group tests exist and must stay green, and it is worth
+checking the watch on hardware afterwards rather than assuming.
+
+**A new signed target is new audit surface.** Gate A4 has to cover it, and PR 18's
+reproducible build notes gain another binary to account for.
+
 ### PR 17: Security review and threat model
 
 - Complete `SECURITY.md`: attacker with the unlocked device, the locked device, the iCloud
