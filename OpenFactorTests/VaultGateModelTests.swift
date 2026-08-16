@@ -295,3 +295,98 @@ struct VaultGateModelTests {
         #expect(vault.state() == .absent)
     }
 }
+
+#if DEBUG
+    /// The Debug-only reset, tested because it is destructive and because its ordering matters.
+    ///
+    /// A path that removes every account and the vault is not something to add on the strength of
+    /// "it is only Debug". If it is worth having, it is worth checking, and the reason it sits on
+    /// the model rather than in the view is that a private method on a `View` cannot be checked at
+    /// all.
+    @MainActor
+    @Suite("Forget everything, Debug only")
+    struct DebugForgetEverythingTests {
+
+        /// A store, a vault open on the same key, and somewhere to put them.
+        private func makeEverything() throws -> (VaultGateModel, Vault, KeychainSecretStore, WrappedKeyStore) {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("forget-\(UUID().uuidString)")
+            let keys = VaultKeyStore(directory: { directory })
+            let wrapped = WrappedKeyStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+            let vault = Vault(keys: keys, wrapped: wrapped)
+            _ = try vault.create()
+
+            let store = KeychainSecretStore(
+                service: "app.openfactor.tests.\(UUID().uuidString)",
+                synchronizable: false,
+                vaultKeys: keys)
+
+            return (VaultGateModel(vault: vault), vault, store, wrapped)
+        }
+
+        private func anAccount(_ name: String) -> OTPAccount {
+            OTPAccount(
+                issuer: "Example",
+                name: name,
+                secret: Data("12345678901234567890".utf8),
+                generator: .totp(.standard)
+            )
+        }
+
+        @Test("Everything is gone and the device is back at the beginning")
+        func forgetsEverything() throws {
+            let (gate, vault, store, wrapped) = try makeEverything()
+            defer { try? wrapped.delete() }
+
+            _ = try store.add(anAccount("one"), color: .blue)
+            _ = try store.add(anAccount("two"), color: .green)
+            #expect(try store.records().readable.count == 2)
+
+            UserDefaults.standard.set(true, forKey: PreferenceKey.syncEnabled)
+            UserDefaults.standard.set(true, forKey: PreferenceKey.appLockEnabled)
+
+            gate.forgetEverything(in: store)
+
+            let left = try store.records()
+            #expect(left.readable.isEmpty)
+            // The unreadable ones too. An account this build cannot decode is still an account,
+            // and leaving it would be a reset that reports success and leaves secrets behind.
+            #expect(left.unreadable.isEmpty)
+
+            #expect(vault.state() == .absent)
+            #expect(gate.stage == .introducing)
+
+            #expect(!UserDefaults.standard.bool(forKey: PreferenceKey.syncEnabled))
+            #expect(!UserDefaults.standard.bool(forKey: PreferenceKey.appLockEnabled))
+        }
+
+        /// The ordering claim, stated as a test rather than only as a comment. Destroying the
+        /// vault first would leave records nothing could ever open, and `records()` would still
+        /// list them, so this asserts the end state the right order produces.
+        @Test("No account survives the vault it was sealed under")
+        func leavesNoOrphanedCiphertext() throws {
+            let (gate, vault, store, wrapped) = try makeEverything()
+            defer { try? wrapped.delete() }
+
+            _ = try store.add(anAccount("orphan"), color: .red)
+
+            gate.forgetEverything(in: store)
+
+            #expect(vault.state() == .absent)
+            let left = try store.records()
+            #expect(left.readable.isEmpty && left.unreadable.isEmpty)
+        }
+
+        @Test("Running it on a device with nothing on it is not an error")
+        func isSafeOnAFreshDevice() throws {
+            let (gate, vault, store, wrapped) = try makeEverything()
+            defer { try? wrapped.delete() }
+
+            gate.forgetEverything(in: store)
+            #expect(throws: Never.self) { gate.forgetEverything(in: store) }
+
+            #expect(vault.state() == .absent)
+            #expect(gate.stage == .introducing)
+        }
+    }
+#endif

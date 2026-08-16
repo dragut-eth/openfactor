@@ -48,5 +48,21 @@ struct VaultGateView<Content: View>: View {
             guard phase == .active else { return }
             model.refresh()
         }
+        #if DEBUG
+            // Offered from here rather than built in Settings, because only the gate holds the
+            // state that has to be re-read afterwards. Settings would delete everything and
+            // leave the account list standing in front of a vault that no longer exists.
+            .environment(\.debugForgetEverything) { model.forgetEverything(in: store) }
+        #endif
     }
+
 }
+
+#if DEBUG
+    extension EnvironmentValues {
+        /// Set by `VaultGateView` in Debug builds only. `nil` everywhere else, which is what
+        /// Settings keys the row's existence off, so there is nothing to hide in a release
+        /// build and nothing to accidentally leave switched on.
+        @Entry var debugForgetEverything: (() -> Void)?
+    }
+#endif

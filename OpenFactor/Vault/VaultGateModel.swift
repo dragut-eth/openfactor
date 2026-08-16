@@ -166,6 +166,40 @@ final class VaultGateModel {
         refresh()
     }
 
+    #if DEBUG
+        /// Returns this device to the state of an install that has never been run.
+        ///
+        /// **A development tool, compiled out of any build that is not Debug.** A shipped
+        /// authenticator must not carry a button that destroys everything without so much as a
+        /// Face ID prompt. The real erase is in Settings, behind authentication and a typed
+        /// word, and this does not replace it.
+        ///
+        /// It exists because the setup screen can otherwise be read once per device and never
+        /// again, which makes working on its wording a loop of deleting the app, reinstalling,
+        /// landing on the unlock screen, and starting over.
+        ///
+        /// It lives on the model rather than in the view for a reason worth keeping: a private
+        /// method on a `View` cannot be tested, and this one has an ordering requirement. If it
+        /// were untestable it would also be unverifiable, and a destructive path nobody can
+        /// check is not something to add even to a Debug build.
+        ///
+        /// **Accounts first, then the vault.** The other order leaves ciphertext that nothing
+        /// can ever open, which is the same rule the real erase follows.
+        func forgetEverything(in store: any SecretStore) {
+            if let records = try? store.records() {
+                for id in records.readable.map(\.id) + records.unreadable {
+                    try? store.delete(id: id)
+                }
+            }
+
+            destroyVault()
+
+            // The preferences too, or the next run is a first launch with somebody else's sync
+            // setting and app lock already on, which is not the thing being looked at.
+            PreferenceKey.forgetEverythingForDebug()
+        }
+    #endif
+
     // MARK: - Off the main thread
 
     // PBKDF2 at 600,000 iterations is hundreds of milliseconds by design. Run on the main actor

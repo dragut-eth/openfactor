@@ -391,6 +391,24 @@ check again, and states plainly that a second vault would leave the first one's 
 unreadable. The state is re-read whenever the app comes forward, so a record arriving while the
 screen is open moves the device to the unlock question by itself.
 
+**The setup screen says nothing about iCloud, deliberately.** Sync is off by default, so the
+first person to read that screen always has it off, and a paragraph about what iCloud carries
+would describe something that is not happening. Two claims were wrong for that reason and are
+gone: that the passphrase is the only way to reach your accounts from a new iPhone, which is
+false with sync off because nothing reaches a new iPhone at all, and that losing the passphrase
+matters only if the iPhone is also lost, which is true only with sync on. What the screen says
+instead is true in both configurations: the key never leaves this iPhone, anything else holding
+the accounts holds them encrypted, and the passphrase is what rebuilds the key, most often after
+a restore.
+
+**The one place iCloud is named is the section about waiting**, because arrival is what that
+section is about and arrival only happens with sync on. The condition is stated rather than
+assumed: somebody whose other iPhone has sync off will wait forever, and telling them to wait
+would be the same false promise in a politer form. Note that whether the record arrives does not
+depend on *this* device's sync preference: the record carries its own synchronizable attribute
+and `WrappedKeyStore` queries with `kSecAttrSynchronizableAny`, so a phone with sync off still
+sees a record another phone synced.
+
 **The locked screen must offer a way out, or the app is a permanent dead end.** A reinstall whose
 passphrase is lost can never open its accounts, cannot reach Settings to erase them, and does not
 recover by deleting the app: the Keychain outlives it and iCloud returns whatever did clear. The
@@ -398,6 +416,15 @@ erase flow is therefore reachable from the locked screen with its Face ID and ty
 It works there because `records()` needs no key and reports every account as unreadable, which is
 exactly enough to delete them. The vault is destroyed only **after** the accounts are gone; the
 other order would leave ciphertext with no key anywhere and no screen left to remove it from.
+
+**A Debug-only reset exists and must never ship.** `VaultGateModel.forgetEverything(in:)`
+removes every account, the vault, and the preferences, returning the device to an install that
+has never been run. It exists because the setup screen can otherwise be read once per device and
+never again, which makes working on its wording a loop of deleting the app, reinstalling, landing
+on the unlock screen and starting over. It is inside `#if DEBUG`, its row in Settings is keyed off
+an environment value only the gate sets, and a Release binary is checked to contain neither
+string. It sits on the model rather than in the view because a private method on a `View` cannot
+be tested, and a destructive path nobody can check is not worth adding even to a Debug build.
 
 *The store is converted as of PR 16d. `KeychainSecretStore` seals on write, opens the metadata
 half to list, and opens the secret half only in `secret(for:)`. `update` re-seals metadata and

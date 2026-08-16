@@ -32,12 +32,17 @@ struct VaultSetupView: View {
 
     private var introduction: some View {
         Form {
+            // Deliberately says nothing about iCloud. Sync is off by default, so the first
+            // person to read this screen always has it off, and a paragraph about what iCloud
+            // carries would be describing something that is not happening. What is true in both
+            // configurations is the key and where it lives, so that is what this says. iCloud is
+            // explained on the screen that has the switch, where the decision is being made.
             Section {
                 Text(
                     """
-                    Your accounts are encrypted with a key that stays on this iPhone. iCloud \
-                    carries the encrypted accounts and never the key, so nobody holding a copy \
-                    of what is synced can read them.
+                    Your accounts are encrypted with a key that never leaves this iPhone. \
+                    Anything else that ends up holding them, a backup or another device, holds \
+                    them encrypted.
                     """
                 )
             }
@@ -45,10 +50,15 @@ struct VaultSetupView: View {
             Section {
                 Button("Create my vault") { model.offerPassphrase() }
             } footer: {
+                // It used to say the passphrase was the only way to reach your accounts from a
+                // new iPhone. That is false with sync off, where nothing reaches a new iPhone at
+                // all. What the passphrase actually does is rebuild the key, and the case that
+                // happens in most often is a restore, where the encrypted accounts come back
+                // from a backup and the key deliberately does not.
                 Text(
                     """
-                    OpenFactor will show you a passphrase. It is the only way to reach your \
-                    accounts from a new iPhone, and it is shown once.
+                    OpenFactor will show you a passphrase, once. It is what rebuilds this key if \
+                    this iPhone ever loses it, after restoring from a backup for example.
                     """
                 )
             }
@@ -58,6 +68,15 @@ struct VaultSetupView: View {
             // exactly like a first device. This project measured iCloud Keychain taking close
             // to half an hour. Creating a second vault here would strand every account sealed
             // under the first, so the wait is described rather than left to be discovered.
+            //
+            // This is the one section that has to name iCloud, because arrival is the thing it
+            // is about and arrival only happens with sync on. The condition is stated rather
+            // than assumed: somebody whose other iPhone has sync off will wait forever, and
+            // telling them to wait would be the same false promise in a politer form.
+            //
+            // Whether the record arrives does not depend on *this* iPhone's sync setting. The
+            // record carries its own synchronizable attribute and the lookup accepts either, so
+            // a phone with sync off still sees one that another phone synced.
             Section {
                 Button("Check again") { model.refresh() }
             } header: {
@@ -65,11 +84,12 @@ struct VaultSetupView: View {
             } footer: {
                 Text(
                     """
-                    If you have OpenFactor on another iPhone, wait a little and check again. \
-                    This screen will change to ask for your existing passphrase once your \
-                    accounts reach this iPhone, which can take up to an hour.
+                    If you already use OpenFactor on another iPhone or iPad with iCloud sync \
+                    turned on, your accounts may still be on their way here. iCloud can take up \
+                    to an hour. Wait, then check again: this screen will ask for your existing \
+                    passphrase once they arrive.
 
-                    Creating a second vault would leave those accounts unreadable.
+                    Creating a vault now would leave those accounts unreadable.
                     """
                 )
             }
@@ -110,10 +130,15 @@ struct VaultSetupView: View {
                 Toggle("I have saved this passphrase", isOn: $model.hasSavedPassphrase)
                     .disabled(model.isWorking)
             } footer: {
+                // Says what is true rather than what would be reassuring. The earlier wording,
+                // "if it is lost, and this iPhone is lost", implied the passphrase alone is
+                // enough to recover from a lost phone. That holds only with sync on. With sync
+                // off the wrapped record lives on this iPhone and nowhere else, so the phone
+                // going means the accounts go, passphrase or not.
                 Text(
                     """
-                    OpenFactor does not keep a copy. If it is lost, and this iPhone is lost, \
-                    your accounts cannot be recovered by anyone, including you.
+                    OpenFactor does not keep a copy and cannot show it again. Nobody can reach \
+                    your accounts without it, including you.
                     """
                 )
             }

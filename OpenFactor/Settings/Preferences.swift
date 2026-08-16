@@ -80,6 +80,22 @@ enum PreferenceKey {
     /// How long the app can be away before returning locks it, in seconds. Zero means any
     /// time away at all.
     static let appLockGraceSeconds = "appLockGraceSeconds"
+
+    #if DEBUG
+        /// Every key above, so the Debug-only reset can put the app back to a first launch.
+        ///
+        /// Listed rather than derived from the defaults dictionary, which also holds keys
+        /// belonging to the system and to SwiftUI that this app has no business removing.
+        private static let all = [
+            sortOrder, appearance, syncEnabled, appIcon, appLockEnabled, appLockGraceSeconds,
+        ]
+
+        /// Forgets every preference. See `VaultGateView.forgetEverything()`; nothing else may
+        /// call this, and it does not exist outside a Debug build.
+        static func forgetEverythingForDebug() {
+            for key in all { UserDefaults.standard.removeObject(forKey: key) }
+        }
+    #endif
 }
 
 

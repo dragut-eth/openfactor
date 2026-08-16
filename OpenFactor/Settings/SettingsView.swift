@@ -34,6 +34,11 @@ struct SettingsView: View {
 
     let store: any SecretStore
 
+    #if DEBUG
+        @Environment(\.debugForgetEverything) private var forgetEverything
+        @State private var isForgetting = false
+    #endif
+
     /// Called after accounts are added or removed here, so the list behind reloads rather
     /// than showing rows that no longer match what is stored.
     var onAccountsChanged: () -> Void = {}
@@ -92,6 +97,9 @@ struct SettingsView: View {
                 backupSection
                 eraseSection
                 aboutSection
+                #if DEBUG
+                    debugSection
+                #endif
             }
             .sheet(item: $sheet) { which in
                 switch which {
@@ -319,6 +327,50 @@ struct SettingsView: View {
             )
         }
     }
+
+    #if DEBUG
+        /// A development affordance, and one that does not exist in any other build.
+        ///
+        /// The setup screen can otherwise be read once per device and never again, which makes
+        /// working on its wording a loop of deleting the app, reinstalling, and starting over.
+        /// The row is keyed off the environment value the vault gate sets, so a release build
+        /// has nothing to hide: the closure is absent and the section renders nothing.
+        ///
+        /// A confirmation, but no Face ID. The point is to be fast, and the thing this protects
+        /// is a developer's test data. The real erase is untouched and still authenticates.
+        @ViewBuilder
+        private var debugSection: some View {
+            if let forget = forgetEverything {
+                Section {
+                    Button(role: .destructive) { isForgetting = true } label: {
+                        Text("Forget everything")
+                    }
+                    .confirmationDialog(
+                        "Forget everything?",
+                        isPresented: $isForgetting,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Forget everything", role: .destructive) {
+                            forget()
+                            dismiss()
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("Accounts, the vault, and every preference.")
+                    }
+                } header: {
+                    Text("Debug build only")
+                } footer: {
+                    Text(
+                        """
+                        Returns this iPhone to an install that has never been run, so the setup \
+                        screen can be seen again. Not present in a release build.
+                        """
+                    )
+                }
+            }
+        }
+    #endif
 
     private var aboutSection: some View {
         Section {

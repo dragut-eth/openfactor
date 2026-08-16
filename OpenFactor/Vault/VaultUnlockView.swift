@@ -85,7 +85,7 @@ struct VaultUnlockView: View {
         Text(
             """
             Your accounts are on this iPhone but the key to open them is not. That key never \
-            leaves a device, which is why iCloud could not bring it with them.
+            leaves a device, so whatever brought your accounts here could not bring it too.
             """
         )
         .font(.footnote)

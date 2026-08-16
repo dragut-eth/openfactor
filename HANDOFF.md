@@ -24,6 +24,13 @@ between the app lock and the account list so the list is never drawn while the k
 Creating a vault, showing the passphrase once, and unlocking a second device with it all work and
 are covered by tests.
 
+**The setup screen's copy was rewritten after Xavier read it on hardware.** He asked whether the
+screen appears because his iCloud sync is on. It does not, and the question was the bug report:
+sync is off by default, so the first person to see that screen always has it off, and the text
+was written as though it were on. `VAULT.md` records what changed and why. The lesson is not
+about wording. Two of the sentences were false only in the configuration nobody had looked at,
+and both read perfectly well in the one everybody had.
+
 **What is left in PR 16d.** The watch provisioning exchange, which is the whole of E7 turned into
 code and the only remaining way a watch gets a key. The watch's third empty state, which
 `VAULT.md` calls for and which today would send a wearer to turn off the sync that is working.
