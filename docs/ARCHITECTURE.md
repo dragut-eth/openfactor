@@ -175,6 +175,15 @@ and colour tables. It is deliberately not a general RTF parser, and `NSAttribute
 rejected for the job: it would read the file correctly and would mean handing an attacker
 supplied document to a large rich text engine inside an app holding second factors.
 
+**Aegis is also written**, unencrypted, as the way out of this app. Vault version 1 and
+database version 3, pinned to a fixed revision of the Aegis documentation in
+`docs/BACKUP_FORMAT.md` rather than described as current, because "compatible" without a
+version is an unverifiable claim. Only `totp` and `hotp` are emitted: Aegis also defines
+`steam`, `motp` and `yandex`, and writing one of those without generating those codes would
+be a lie about what was exported. What the tests can prove is that the file matches the
+document and that this project's reader takes it back unchanged; whether Aegis accepts it is
+one person, one import, once per format change.
+
 **Aegis is read strictly**, because Aegis publishes its format. Encrypted vaults are refused
 by name, since they use scrypt and providing it would mean a dependency. The refusal names
 the fix, which is to export unencrypted, rather than failing with something the user cannot

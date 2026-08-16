@@ -119,6 +119,14 @@ deleting it.
 Add, edit and erase are abandoned, so they carry a leading Cancel. Settings is closed, so
 it carries a trailing Done.
 
+**Export offers two files, and they are separate paths rather than a switch.** An encrypted
+archive, which is the backup, and a plain Aegis vault, which is the way out. The plaintext
+one has a warning that has to be read and an acknowledgement of its own, and burying that
+under a control on a shared screen would make the dangerous choice the cheaper tap. Both are
+gated on Face ID, both write a file that does not outlive the screen, and the plaintext one
+is named `OpenFactor plaintext <date>.json` so it says what it is in every share sheet it
+passes through.
+
 **Export is three screens, and the middle one is the point.** What the file is, before
 anything is generated. Then the passphrase, which has to be acknowledged with a toggle
 before the archive can be written, because the format's rule is that no archive is written

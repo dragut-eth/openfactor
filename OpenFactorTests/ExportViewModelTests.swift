@@ -36,7 +36,7 @@ struct ExportViewModelTests {
     @MainActor
     private func ready(_ store: any SecretStore) async -> ExportViewModel {
         let model = ExportViewModel(store: store)
-        await model.authenticate()
+        await model.authenticate(for: .archive)
         model.hasSavedPassphrase = true
         return model
     }
@@ -50,7 +50,7 @@ struct ExportViewModelTests {
         defer { store.cleanUp() }
 
         let model = ExportViewModel(store: store)
-        await model.authenticate()
+        await model.authenticate(for: .archive)
 
         #expect(!model.canExport, "the file must not be available before it is acknowledged")
 

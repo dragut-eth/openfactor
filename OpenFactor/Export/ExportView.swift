@@ -22,6 +22,7 @@ struct ExportView: View {
                 switch model.stage {
                 case .explaining: explanation
                 case .choosing: passphrase
+                case .warning: plaintextWarning
                 case let .ready(url): ready(url)
                 case let .failed(message): failure(message)
                 }
@@ -51,19 +52,19 @@ struct ExportView: View {
     private var explanation: some View {
         Form {
             Section {
-                Button("Continue") {
-                    Task { await model.authenticate() }
+                Button("Encrypted archive") {
+                    Task { await model.authenticate(for: .archive) }
                 }
             } header: {
-                Text("An encrypted archive")
+                Text("A backup")
             } footer: {
                 // Said before anything is generated, because after the file exists the
                 // decision has already been made.
                 Text(
                     """
-                    The archive holds every account you have, encrypted with a passphrase \
-                    OpenFactor generates. Keeping it somewhere safe is your job: anyone who \
-                    has both the file and the passphrase has all of your codes.
+                    Holds every account you have, encrypted with a passphrase OpenFactor \
+                    generates. Keeping it somewhere safe is your job: anyone who has both \
+                    the file and the passphrase has all of your codes.
 
                     OpenFactor will ask you to confirm it is you before it starts.
                     """
@@ -71,7 +72,26 @@ struct ExportView: View {
             }
 
             Section {
-                LabeledContent("Format", value: "openfactor.backup.v1")
+                Button("Plain Aegis vault") {
+                    Task { await model.authenticate(for: .plainAegis) }
+                }
+            } header: {
+                Text("A way out")
+            } footer: {
+                // Offered second and described plainly, because the argument for it is real
+                // and so is the danger. An authenticator you cannot leave is a trap; a file
+                // holding every secret in the clear is a trap of a different kind.
+                Text(
+                    """
+                    For moving to another app. Aegis, and several others, import this format. \
+                    **It is not encrypted**: every secret is readable by anything that can \
+                    open a text file.
+                    """
+                )
+            }
+
+            Section {
+                LabeledContent("Archive format", value: "openfactor.backup.v1")
                 LabeledContent("Encryption", value: "AES-256-GCM")
                 LabeledContent("Key derivation", value: "PBKDF2-HMAC-SHA256")
             } footer: {
@@ -131,6 +151,41 @@ struct ExportView: View {
             Section {
                 Button("Create archive") { model.export() }
                     .disabled(!model.canExport)
+            } footer: {
+                if model.accountCount > 0 {
+                    Text("\(model.accountCount) accounts will be included.")
+                }
+            }
+        }
+    }
+
+    /// The plaintext path, which is one screen and one sentence.
+    ///
+    /// It has an acknowledgement of its own rather than borrowing the passphrase screen's,
+    /// because the thing being acknowledged is the opposite: there is no passphrase between
+    /// this file and whoever ends up holding it.
+    private var plaintextWarning: some View {
+        Form {
+            Section {
+                Toggle("I understand this file is not encrypted", isOn: $model.understandsPlaintext)
+            } header: {
+                Text("Plain Aegis vault")
+            } footer: {
+                Text(
+                    """
+                    Every secret key will be readable by anyone who opens this file, and by \
+                    anything it passes through on the way to wherever you send it. Send it \
+                    to the app you are moving to, import it there, and delete it.
+
+                    If you want a copy to keep, go back and export an encrypted archive \
+                    instead.
+                    """
+                )
+            }
+
+            Section {
+                Button("Create file") { model.exportPlain() }
+                    .disabled(!model.understandsPlaintext)
             } footer: {
                 if model.accountCount > 0 {
                     Text("\(model.accountCount) accounts will be included.")
@@ -227,17 +282,30 @@ struct ExportView: View {
         Form {
             Section {
                 ShareLink(item: url) {
-                    Label("Save the archive", systemImage: "square.and.arrow.up")
+                    Label(
+                        model.kind == .archive ? "Save the archive" : "Send the file",
+                        systemImage: "square.and.arrow.up"
+                    )
                 }
             } header: {
                 Text("Ready")
             } footer: {
-                Text(
-                    """
-                    Save it somewhere you will still have it when this phone is gone. \
-                    OpenFactor keeps no copy and no record that you made one.
-                    """
-                )
+                if model.kind == .archive {
+                    Text(
+                        """
+                        Save it somewhere you will still have it when this phone is gone. \
+                        OpenFactor keeps no copy and no record that you made one.
+                        """
+                    )
+                } else {
+                    Text(
+                        """
+                        Import it into the other app, then delete it from everywhere it \
+                        landed on the way. OpenFactor keeps no copy and no record that you \
+                        made one.
+                        """
+                    )
+                }
             }
 
             Section {

@@ -533,18 +533,70 @@ item under "what must fail" actually fail, before trusting their reader with any
 
 ## Unencrypted export
 
-*Non-normative. This section describes intent; PR 16 specifies the output and this document
-will be updated to pin it.*
-
 The app can also export a plain **Aegis compatible JSON** file, for moving to another app.
 It is not this format and is not encrypted. It exists because an authenticator you cannot
 leave is a trap, and because a file other apps genuinely import is a better escape hatch
 than a list of URIs.
 
-When PR 16 lands, this section must state the Aegis vault database version emitted and cite
-the Aegis format documentation at a fixed revision. Aegis is another project's format and a
-moving target, and "compatible" without a version is the same unverifiable claim this
-document exists to avoid.
+### What is emitted, and against what
+
+**Vault version 1, database version 3**, per the Aegis vault format documentation at
+commit [`f91b6f04667b99977ed9739a0e15b8d1837f73e8`](https://github.com/beemdevelopment/Aegis/blob/f91b6f04667b99977ed9739a0e15b8d1837f73e8/docs/vault.md),
+dated 1 March 2024.
+
+The revision is pinned rather than described as current, because Aegis is another project's
+format and a moving target, and "compatible" without a version is the same unverifiable
+claim this document exists to avoid. If Aegis moves, this is what the writer was built
+against.
+
+```json
+{
+  "version": 1,
+  "header": { "slots": null, "params": null },
+  "db": {
+    "version": 3,
+    "entries": [
+      {
+        "type": "totp",
+        "uuid": "6f1b0c0a-6d3a-4a1f-9a2e-2a3b4c5d6e7f",
+        "name": "octocat",
+        "issuer": "GitHub",
+        "note": "",
+        "favorite": false,
+        "icon": null,
+        "info": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algo": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    ]
+  }
+}
+```
+
+- `header.slots` and `header.params` are both `null`, which is what marks a vault as
+  unencrypted. This is the same pair the importer checks in the other direction.
+- `type` is `totp` or `hotp`, and **only those two**. Aegis also defines `steam`, `motp` and
+  `yandex`; a writer emitting one of those without generating those codes would be lying
+  about what it exported.
+- `info.period` appears on `totp` entries and `info.counter` on `hotp` entries, never both.
+- `uuid` is a fresh version 4 UUID per entry per export. This app has no identifier to carry
+  across: the record's own id is a device local thing the encrypted archive deliberately
+  does not carry either, and deriving one from the secret would be a habit worth not forming
+  even where it is harmless.
+- `note`, `favorite` and `icon` are written with neutral values rather than omitted. They are
+  part of the shape Aegis documents, and a reader that expects them is likelier than one
+  that objects to them.
+
+**Three things do not survive this file, and the app says so rather than letting them
+vanish quietly**: the card colour, the list order, and anything else cosmetic. Aegis has no
+concept that maps onto them. Only the encrypted archive round trips a whole setup.
+
+**Compatibility with Aegis itself is not something this project's tests can prove.** They
+prove the file matches the document above and that this app's own reader takes it back
+unchanged. Whether Aegis accepts it is one person, one import, once per format change.
 
 A raw `otpauth://` text export was considered and dropped. It offered no portability the
 Aegis file does not, and a second plaintext path is a second thing to warn about, audit, and
@@ -552,9 +604,10 @@ get wrong.
 
 **The temporary file has a lifecycle, and it is part of the design.** A plaintext export is
 written only when the user explicitly asks for it, with the strongest file protection class
-iOS offers while it exists, and the app's copy is deleted as soon as the share sheet
-completes or is cancelled. No history of plaintext exports is kept. The warning shown before
-it is produced says what the file is: reusable authentication secrets, in the clear.
+iOS offers while it exists, and the app's copy is deleted when the export screen goes away,
+whichever way it went away. No history of plaintext exports is kept. The warning shown
+before it is produced says what the file is, and has to be acknowledged before the file
+exists: every secret key readable by anyone who opens it.
 
 ## What this format deliberately does not do
 

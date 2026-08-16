@@ -16,13 +16,26 @@ import SwiftUI
 final class ExportViewModel {
 
     enum Stage: Equatable {
-        /// What the file is, before anything is generated.
+        /// Which kind of file, before anything is generated.
         case explaining
         /// The passphrase exists and has not been used yet.
         case choosing
-        /// The archive is written and waiting to be shared.
+        /// The plaintext path, which has one thing to say and needs it acknowledged.
+        case warning
+        /// The file is written and waiting to be shared.
         case ready(URL)
         case failed(String)
+    }
+
+    /// The two ways out of the app.
+    ///
+    /// One is a backup and one is a door. They are separate paths rather than a switch on
+    /// the same screen, because the plaintext one has a warning that has to be read and an
+    /// acknowledgement of its own, and burying that under a segmented control would make the
+    /// dangerous choice the cheaper tap.
+    enum Kind: Equatable {
+        case archive
+        case plainAegis
     }
 
     /// Which rule produces the key. Generated is the default and stays the default.
@@ -47,6 +60,12 @@ final class ExportViewModel {
     var hasSavedPassphrase = false
 
     private(set) var accountCount = 0
+
+    private(set) var kind: Kind = .archive
+
+    /// Ticked on the plaintext path. The same gate the passphrase has, for the same reason:
+    /// the person has to have read the one sentence that matters before a file exists.
+    var understandsPlaintext = false
 
     private let store: any SecretStore
 
@@ -95,18 +114,38 @@ final class ExportViewModel {
     /// categorically different from reading one code and should not be two taps away on a
     /// phone that was handed over unlocked. Import is deliberately not gated: it reveals
     /// nothing.
-    func authenticate() async {
+    func authenticate(for kind: Kind) async {
         let allowed = await AppLockAvailability.authenticate(
             reason: String(localized: "Export your accounts")
         )
 
         guard allowed else { return }
 
+        self.kind = kind
         accountCount = (try? store.records().readable.count) ?? 0
-        stage = .choosing
+        stage = kind == .archive ? .choosing : .warning
     }
 
     // MARK: - Writing
+
+    /// Writes the plaintext vault.
+    ///
+    /// Gated behind the same authentication as the encrypted archive, and behind an
+    /// acknowledgement of its own. It is the more dangerous of the two files by a wide
+    /// margin: there is no passphrase between it and whoever ends up holding it.
+    func exportPlain() {
+        guard understandsPlaintext else { return }
+
+        do {
+            let accounts = try collectAccounts()
+            let vault = try AegisExport.write(accounts)
+            stage = .ready(try writeTemporaryFile(vault, extension: "json", label: "plaintext"))
+        } catch let error as ExportFailure {
+            stage = .failed(error.description)
+        } catch {
+            stage = .failed("OpenFactor could not write the file.")
+        }
+    }
 
     func export() {
         let passphrase = effectivePassphrase
@@ -116,7 +155,7 @@ final class ExportViewModel {
             let archive = try BackupArchive.write(
                 accounts, passphrase: passphrase.text, mode: passphrase.mode
             )
-            stage = .ready(try writeTemporaryFile(archive))
+            stage = .ready(try writeTemporaryFile(archive, extension: "openfactor", label: nil))
         } catch let error as ExportFailure {
             stage = .failed(error.description)
         } catch let error as BackupError {
@@ -159,11 +198,17 @@ final class ExportViewModel {
     /// The name carries a date so a person with three of them in Files can tell which is
     /// which, and nothing else: no device name, no account count, no issuer. A file name is
     /// visible in every share sheet, every backup listing and every screenshot of one.
-    private func writeTemporaryFile(_ data: Data) throws -> URL {
+    private func writeTemporaryFile(
+        _ data: Data,
+        extension pathExtension: String,
+        label: String?
+    ) throws -> URL {
         let stamp = Self.stampFormatter.string(from: Date())
+        let name = label.map { "OpenFactor \($0) \(stamp)" } ?? "OpenFactor \(stamp)"
+
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenFactor \(stamp)")
-            .appendingPathExtension("openfactor")
+            .appendingPathComponent(name)
+            .appendingPathExtension(pathExtension)
 
         try data.write(to: url, options: [.atomic, .completeFileProtection])
         return url
@@ -185,7 +230,7 @@ final class ExportViewModel {
     func discardFile() {
         guard case let .ready(url) = stage else { return }
         try? FileManager.default.removeItem(at: url)
-        stage = .choosing
+        stage = kind == .archive ? .choosing : .warning
     }
 
     private enum ExportFailure: Error {
