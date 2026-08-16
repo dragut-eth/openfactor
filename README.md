@@ -1,82 +1,82 @@
 # OpenFactor
 
-A minimal two-factor authenticator for iPhone and Apple Watch.
+A deliberately focused authenticator for iPhone and Apple Watch.
 
-OpenFactor is intentionally simple: your accounts, an add button, and settings. No accounts
-to create, no password manager, no browser extension, and no unnecessary features. A lot of
-the work goes into making sure you can import your accounts easily and export them just as
-easily.
+OpenFactor stores verification codes without an OpenFactor account, server, browser extension,
+or analytics service. It keeps the authenticator physically separate from the computer asking
+for the code, while making it straightforward to import your accounts, back them up, and take
+them elsewhere.
 
-Your secrets stay on your devices. OpenFactor has no account system, no servers, and no
-analytics. If you enable sync, your accounts are synced through iCloud Keychain, where Apple
-cannot read them.
+The vault is designed so account data is encrypted before it reaches the Keychain. If iCloud
+sync is enabled, Keychain carries ciphertext; the vault key remains in each device's private app
+container and never syncs.
 
 > **Status: beta, in testing.** The repository is built in public from the first commit.
-> The app works and is being tried on real devices, and it has **not** had a professional
-> security audit: the reviews so far are independent model reviews, recorded in
-> [docs/audits](docs/audits). The threat model against the finished app is PR 17 and
-> reproducible build notes are PR 18, so a released binary cannot yet be checked against
-> this source by a third party. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is planned
-> and [HANDOFF.md](HANDOFF.md) for where the work stands.
+> The app works and is being tried on real devices, but the encrypted vault is still being
+> integrated and the project has **not** had a professional independent security audit. Do not
+> entrust it with an account you cannot recover yet. The reviews and hardware experiments so far
+> are recorded in [docs/audits](docs/audits). The threat model against the finished app is PR 17
+> and reproducible build notes are PR 18, so a released binary cannot yet be checked against this
+> source by a third party. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is planned and
+> [HANDOFF.md](HANDOFF.md) for where the work stands.
 
 ## Why another authenticator
 
-Most authenticator apps ask you to trust a company. This one asks you to trust code you
-can read. Every design decision below follows from that.
+Most authenticator apps ask you to trust a company and its service. OpenFactor has no service.
+Its security claims are meant to be checked against code, tests, specifications, and measurements
+rather than accepted from a product page.
 
-## Inspiration
+## Security model
 
-OpenFactor is heavily inspired by [Step Two](https://steptwo.app/), which I use every day
-and consider the best two factor authenticator available. The feature set here
-deliberately follows its shape.
+OpenFactor does not treat Keychain access as its confidentiality boundary. Account data is
+encrypted before it is stored there, and the key needed to decrypt it lives only in each app's
+private container. Keychain is storage and, when sync is enabled, transport for ciphertext.
 
-I asked its creator, Neil Sardesai, more than once over a few years, whether he would open
-source Step Two or license it to me so that I could. He declined, politely, and wished me
-luck. He has had no involvement in OpenFactor and has not endorsed it. No Step Two source
-code, assets, or artwork is used here, and nothing was decompiled or extracted. Everything
-is written from the published RFCs.
+That design protects confidentiality if another authorised app can read OpenFactor's Keychain
+items. It does not prevent that app from deleting or replaying them. It also does not defend
+against a malicious OpenFactor update, a compromised operating system, or somebody using an
+already unlocked device. [docs/VAULT.md](docs/VAULT.md) specifies the key hierarchy, record
+formats, recovery path, Watch provisioning protocol, and the limits that remain.
 
-I built it because if I am going to depend on something as consequential as an
-authenticator, I would rather be able to read the source and see how my data is handled.
-That is a preference for verification over trust, not a criticism of a very good app.
+The encrypted vault is being implemented now. Until its implementation and migration have been
+reviewed, the specification is a design claim rather than a claim about a finished release.
 
 ## Principles
 
 1. **No OpenFactor servers and no OpenFactor cloud.** No backend exists. There is nothing
    to breach, subpoena, or shut down. If you turn on sync, encrypted copies do leave the
    device, through Apple's infrastructure and not ours, which is the next point.
-2. **Sync only through iCloud Keychain,** which is end to end encrypted, and Apple cannot
-   read the synced items. The keys are escrowed with Apple in a form guarded by hardware
-   security modules, so "Apple holds no key" would be too strong a claim; `SECURITY.md`
-   sets out what that escrow does and does not mean. Sync is off until you turn it on, and
-   the app explains what is synced before you do.
+2. **Sync only through iCloud Keychain.** In the vault design, the items that sync are
+   ciphertext and the key needed to open them never syncs. Apple's escrow remains relevant to
+   whether those items can be recovered after every device is lost, so `SECURITY.md` sets out
+   what it does and does not mean. Sync is off until you turn it on, and the app explains what
+   is synced before you do.
 3. **No tracking of any kind.** No analytics, no crash reporting, no first launch ping,
    no anonymous telemetry. The app makes no network requests at all.
-4. **Auditable by humans and by AI.** Small files, one concept each, plain naming, and no
-   third party dependencies. The cryptography lives in one small package with no UI code
-   in it, so an auditor can read the part that matters without reading the app.
-5. **No dependencies.** Everything is built on CryptoKit, Foundation, SwiftUI, and the
-   Keychain, plus CommonCrypto for one thing CryptoKit does not provide: a password based
-   key derivation for the backup passphrase. Every dependency is code you would otherwise
-   have to trust on our word.
-6. **You can leave.** Export writes every account into one encrypted file whose format is
-   documented well enough for somebody else's program to open it, and a plain file other
-   authenticators import. An authenticator you cannot leave is a trap.
+4. **Designed for review.** Small files, one concept each, plain naming, byte-exact formats,
+   and tests for important claims. The security-sensitive code lives in one small package with
+   no UI, so an auditor can read the part that matters without first reading the app.
+5. **No third-party dependencies.** Everything is built on CryptoKit, Foundation, SwiftUI,
+   and the Keychain, plus CommonCrypto for the password-based key derivation that CryptoKit
+   does not provide. This keeps the review boundary limited to OpenFactor and Apple's platform
+   frameworks.
+6. **You can leave.** Export can write an encrypted OpenFactor archive whose format is public,
+   or a plaintext Aegis-compatible file for moving to another authenticator. The interface makes
+   the difference explicit because portability should not require hiding the security cost.
 
 ## What it deliberately will not do
 
-**There is no Mac app and no browser extension, on purpose.** A second factor is worth
-less the moment it lives on the machine asking for it. Reading a code off a phone or a
-watch is the separation doing its job, not friction to be designed away.
+**There is no Mac app and no browser extension, on purpose.** A second factor is worth less the
+moment it lives on the machine asking for it. Reading a code from a phone or watch is the
+separation doing its job, not friction to be designed away.
 
+- Store passwords or fill codes automatically. This is an authenticator, not a password manager.
+- Offer an OpenFactor account, server, cloud, or web app.
+- Collect data, including anonymous analytics and crash reports.
+- Ship a Mac app or browser extension that generates codes.
+- Put vault keys in Keychain, iCloud Drive, or a shared App Group container.
 
-- Store passwords. This is an authenticator, not a password manager.
-- Offer accounts, servers, or a web app.
-- Collect data, including the anonymous kind.
-- Ship a browser extension.
-- Run anywhere but Apple platforms.
-
-## Standards
+## Formats and standards
 
 Codes are generated per the published specifications, and the implementation is verified
 against the official test vectors in those documents.
@@ -85,6 +85,8 @@ against the official test vectors in those documents.
 - [RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238), TOTP
 - [RFC 4648](https://datatracker.ietf.org/doc/html/rfc4648), Base32
 - The de facto `otpauth://` URI format, for importing from other apps
+- [`docs/VAULT.md`](docs/VAULT.md), device storage, encryption, recovery, and Watch
+  provisioning. The record layouts are byte-exact and carry pinned test vectors
 - [`docs/BACKUP_FORMAT.md`](docs/BACKUP_FORMAT.md), this project's own encrypted archive.
   Written and reviewed before the code, and carrying a test vector produced by three
   implementations sharing no code, so "openable without this app" is a tested claim rather
@@ -93,9 +95,9 @@ against the official test vectors in those documents.
 ## Repository layout
 
 ```
-Package.swift                  The OpenFactorCore package. No dependencies, and it stays that way.
-Sources/OpenFactorCore/        Base32, HOTP, TOTP, otpauth parsing, secret storage.
-                               No UI. This is the security sensitive code.
+Package.swift                  OpenFactorCore. No third-party dependencies, and it stays that way.
+Sources/OpenFactorCore/        Base32, HOTP, TOTP, otpauth parsing, and the encrypted vault.
+                               No UI. This is the security-sensitive code.
 Tests/OpenFactorCoreTests/     Including the published RFC vector tables and the fuzzing.
 OpenFactor.xcodeproj           The app project. See docs/PROJECT.md for what is in it.
 OpenFactor/                    iOS app target. Views, view models, and the app lock.
@@ -139,18 +141,17 @@ xcodebuild test -project OpenFactor.xcodeproj -scheme OpenFactor -destination 'p
 
 Same files, two contexts. CI runs both. See [docs/PROJECT.md](docs/PROJECT.md).
 
-## Audits
+## Security review status
 
-**OpenFactor has not been audited. Do not trust it with a real account yet.**
+**OpenFactor has not received a professional independent security audit. Do not trust it with an
+account you cannot recover yet.**
 
-That sentence stays exactly as it is until it stops being true. An unaudited security tool
-that reads as though it were audited is worse than one that says nothing.
+That warning stays until it stops being true. A security tool that presents model reviews as a
+professional audit would be worse than one that says nothing.
 
-Five review gates are planned, and the plan is public before any of them have happened, in
-[docs/ROADMAP.md](docs/ROADMAP.md): the core before anything is built on it, sync, the
-export format before any user has a backup, the finished app, and then the diff at every
-release after that. Findings get published whether or not they are flattering, and this
-section will name the audited commit and who reviewed it.
+The project nevertheless reviews security decisions before and after implementation. Findings
+are published whether or not they are flattering, and hardware-dependent claims are measured on
+real devices where possible. These are engineering review gates, not substitutes for an audit.
 
 **Gate A1** ran on 2026-08-14 against the core, tag `audit-a1`: an adversarial model
 review, the RFC vector tables re-verified against the IETF documents, and 17,000+ fuzz
@@ -158,26 +159,47 @@ iterations. Two defects found and fixed, full findings in
 [docs/audits/A1.md](docs/audits/A1.md), and its one open item closed in PR 5 when the
 protection class tests first ran for real.
 
-**Gate A2** ran on 2026-08-14 against iCloud Keychain sync, the only feature that lets
-secret material leave the device, and again after the watch app was finished. Fourteen
-findings across the two passes, in [docs/audits/A2.md](docs/audits/A2.md). None was a path
-by which a secret escapes; almost all were sentences the interface or these documents
-asserted that the code could not back, which for a security tool is its own kind of defect.
-Two remain open and are marked as such wherever they are relied on: what turning sync off
-does to copies on other devices, where Apple's documentation and this project's expectation
-disagree, and one merge case that needs two devices to settle.
+**Gate A2** ran on 2026-08-14 against iCloud Keychain sync, the only feature that lets stored
+account material leave the device, and again after the watch app was finished. Fourteen findings
+across the two passes are recorded in [docs/audits/A2.md](docs/audits/A2.md). Its remaining
+single-device questions were later closed by hardware experiments; the broader two-writer case
+still needs a second writing device.
 
-Both were model reviews, not human ones, and they do not soften the warning above.
+**Gate A3** reviewed the encrypted backup format before implementation, then reviewed the
+implementation separately. The format carries public test vectors reproduced by independent
+implementations. Findings and fixes are recorded in [docs/audits](docs/audits).
+
+**The vault design** was reviewed in two rounds before implementation. Those reviews found the
+incomplete Watch ECDH exchange, unspecified record layouts, ambiguous wrapped-key sync semantics,
+and missing-data detection that could silently report a destroyed vault as empty. The revised
+design, its remaining limits, and the hardware probes supporting it are all linked from
+[docs/VAULT.md](docs/VAULT.md).
+
+The reviews so far are model-assisted adversarial reviews, not professional human audits, and
+they do not soften the warning above.
 
 ## Documentation
 
 - [docs/ROADMAP.md](docs/ROADMAP.md), the PR by PR delivery plan
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), how the pieces fit and why
+- [docs/VAULT.md](docs/VAULT.md), the normative storage and key-management design
+- [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md), the portable encrypted archive format
 - [docs/UI_SPEC.md](docs/UI_SPEC.md), every screen and its behavior
 - [docs/PROJECT.md](docs/PROJECT.md), what is in the Xcode project, in plain language
 - [docs/audits/](docs/audits/), findings from each review gate
 - [SECURITY.md](SECURITY.md), threat model and how to report a vulnerability
 - [CONTRIBUTING.md](CONTRIBUTING.md), how changes get reviewed
+
+## Inspiration
+
+OpenFactor is inspired by [Step Two](https://steptwo.app/), whose focused, Apple-native design I
+use every day and admire. It is an independent implementation built from public standards. Step
+Two's creator has not participated in or endorsed this project, and no Step Two source code,
+assets, or artwork are used here.
+
+I built OpenFactor because if I am going to depend on something as consequential as an
+authenticator, I would rather be able to read the source and see how my data is handled. That is
+a preference for verification over trust, not a criticism of a very good app.
 
 ## License
 

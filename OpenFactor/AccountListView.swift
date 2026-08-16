@@ -446,13 +446,25 @@ private struct UnreadableAccountRow: View {
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: Tokens.Spacing.tight) {
-                Text("An account needs a newer version")
+                Text("An account this version cannot read")
                     .font(Tokens.Text.issuer)
 
+                // **Two causes now, and the old wording only covered one.** Before the vault
+                // this could only mean a newer version had written the record, so the row
+                // promised that updating would show it again. An account saved before the
+                // vault existed reads the same way and updating does nothing for it, so the
+                // promise would have been false for exactly the people who had one.
+                //
+                // The app does not claim to know which it is. Both sentences are true, the
+                // likelier cause is first, and neither says the account is lost: the secret is
+                // still in the Keychain either way.
                 Text(
                     """
-                    Its details were saved by a newer version of OpenFactor. \
-                    Its secret is safe and untouched, and updating will show it again.
+                    Its details are in a format this version does not understand, and its \
+                    secret is untouched. Usually a newer version of OpenFactor wrote it, and \
+                    updating will show it again. If it was saved before this device's vault, \
+                    export it from a device that still shows it, or remove it with Erase all \
+                    accounts.
                     """
                 )
                 .font(.footnote)

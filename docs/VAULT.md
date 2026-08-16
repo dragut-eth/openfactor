@@ -377,20 +377,42 @@ half to list, and opens the secret half only in `secret(for:)`. `update` re-seal
 copies the secret half verbatim, so a rename never decrypts a secret. `kSecAttrGeneric` is never
 written.*
 
-## Migration
+## Migration, and why there is no converter
 
-**Plaintext items are never removed without an explicit act.** The first draft said they are
-erased, justified by two people holding disposable data; nothing scoped it to those two, and the
-same path would have fired on the next person with no confirmation, in an app whose erase
-feature is gated behind Face ID and a typed word.
+**There is none, deliberately.** The first draft said plaintext items are erased, and the V1
+audit called that blocking because nothing scoped it: the same path would have fired on whoever
+installed next, silently, in an app whose erase feature is gated behind Face ID and a typed
+word. The objection was to the **silence**, not to the absence of a converter, and the
+distinction matters because it changes what is owed.
 
-On finding old items the app explains what will happen, offers an encrypted export first, and
-requires the same deliberate confirmation.
+Who holds plaintext items is a closed set. The app has never been released, so only the two
+TestFlight testers do, and both confirmed the data is disposable. Nothing creates more: turning
+iCloud sync on flips `kSecAttrSynchronizable` in place and touches no format, a new device is
+the passphrase path rather than a conversion, and a later format change is `OFV1` to `OFV2`,
+which is what the version bytes are for.
 
-**Conversion must clear `kSecAttrGeneric`.** Today's items carry issuer and name as JSON in that
-attribute. Encrypting the value and leaving the attribute satisfies the sentence "convert the
-accounts" and defeats the entire design, and an implementer would not be wrong to do it unless
-this says otherwise.
+So a converter would run at most twice and then live in the codebase forever as its least
+exercised path, in the area where this project's own history says failures happen: PR 14's
+access group migration is where "my accounts vanished" came from.
+
+**What exists instead is detection, which the store already does.** A legacy item fails to open
+as a record and is reported through `StoredRecords.unreadable`, the same path a record from a
+newer version takes, and the account list already shows a row for it. Nothing crashes, nothing
+is destroyed, nothing is silently skipped, and the secret stays in the Keychain.
+
+**What that row says had to change.** Before the vault, unreadable could only mean a newer
+version had written the record, so the row promised that updating would show it again. That
+promise is false for a legacy item, and false for precisely the people who would see one. It now
+names both causes, likelier first, and points at export or the existing erase flow rather than
+at an update that would not help.
+
+Grok's finding that a conversion must clear `kSecAttrGeneric` is satisfied trivially by there
+being no conversion: nothing writes that attribute any more, and a legacy item is erased rather
+than rewritten.
+
+**What would reopen this:** adding TestFlight testers before this ships. They would install a
+pre-vault build and join the population, and a set that keeps growing is a different argument
+from one of two people with disposable data.
 
 ## Invariants
 
