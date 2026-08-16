@@ -91,6 +91,12 @@ though it were one.
 `Application Support`, never `Caches` or `tmp`, which iOS purges under storage pressure with no
 user action and no signal.
 
+**Always located through `FileManager`, never through a remembered path.** An app update
+preserves the data and **moves the container**, measured in `docs/audits/E6-container-durability.md`:
+the file survived byte for byte while its directory changed identity. Anything that caches or
+persists the absolute path, including the tripwire anchor, breaks at the first update, and
+breaks by pointing at a container that is no longer there rather than by failing loudly.
+
 **Protection class `.complete`**, named rather than described as strongest. The consequence is
 deliberate: the key is unreadable whenever the device is locked, so nothing can read the vault in
 the background, and on watchOS it follows wrist-lock. The app has no background modes, so
@@ -362,5 +368,12 @@ this says otherwise.
 5. **An opaque service constant with UUID accounts leaves no queryability** the store depends on.
 6. **Rewrapping survives the two-writer case**, which this project has never tested, and which
    now applies to every account item rather than one.
-7. **The container survives Offload App, a restore, and Quick Start.** E4 proved privacy, not
-   durability.
+7. **The container survives a restore and Quick Start.** Narrowed by
+   `docs/audits/E6-container-durability.md` rather than closed. Measured there: the protection
+   class and the backup exclusion both stick and both survive an update, and an app update
+   preserves the data while **moving the container**, so nothing may ever cache the absolute
+   path. Offload is not offered for a development install and stays unmeasured, though Apple
+   documents it as preserving data. A restore and a Quick Start were not attempted, because
+   both require wiping or newly configuring somebody's personal phone. **The backup exclusion
+   is therefore verified as a flag and never as a restore**, and this document should not imply
+   otherwise.

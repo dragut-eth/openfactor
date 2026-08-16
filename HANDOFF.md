@@ -35,11 +35,22 @@ key. And **rewrapping is not revocation**: a passphrase change does not rotate t
 anyone holding an old wrapped item and the old passphrase keeps access forever, which version 1
 now states plainly rather than implying otherwise.
 
-**Still nothing implemented, deliberately.** Seven things must be proven first and they are at
-the end of `VAULT.md`. Two are measured, E1 and E4. The next worth running is item 2,
-WatchConnectivity routing exclusivity, now demoted from load bearing to defence in depth by the
-provisioning code but still worth knowing. Item 7, container durability across Offload App and
-Quick Start, is the other one that could still hurt.
+**Still nothing implemented, deliberately.** Seven things must be proven first, at the end of
+`VAULT.md`. Four have now been measured: E1 the Keychain hole, E4 the container refusing a
+sibling, E5 a sibling WatchConnectivity session activating and reaching nothing, E6 the file
+attributes sticking and an app update moving the container while preserving the data.
+
+**Two probes returned something nobody had asked for.** E5 showed `isPaired` is readable by any
+app of any team, so the existence of a watch leaks. E6 showed the container path changes on
+update, which means nothing may ever cache it, and the tripwire anchor is the part of the
+design most likely to have done so.
+
+**What remains unmeasured, and why.** A rogue watch app claiming to be OpenFactor's counterpart,
+which is a day of work and no longer changes the design because of the provisioning code. A
+restore and a Quick Start, which need a device wiped or newly configured and are not worth doing
+to a personal phone. Offload, which iOS does not offer for development installs at all. The
+backup exclusion is therefore verified as a flag and never as a restore, and `VAULT.md` says so
+rather than implying the round trip was exercised.
 
 **Everything now reads `dev.openfactor.*`.** The bundle identifiers were renamed because
 `com.openfactor.dev` claimed a domain this project does not own, and the Keychain access
