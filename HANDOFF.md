@@ -5,7 +5,18 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-15, PR 16 merged to main and PR 16a verified on hardware.
+**Last updated:** 2026-08-15, on TestFlight as `dev.openfactor.app`, 1.0 (2).
+
+**The app is being tested by someone other than Xavier**, which changes what evidence is
+available. Anything about the watch, about iCloud Keychain latency, or about a Google
+Authenticator export has until now been proved on one person's devices and one iCloud
+account. A second tester is the first chance to separate "it works" from "it works here".
+
+**Uploading no longer needs Xcode.** `scripts/ship-testflight.sh` does the whole cycle. The
+credentials it needs are on Xavier's machine and cannot be created by an agent: an App Store
+Connect API key authenticates the upload and cannot sign anything, and the distribution
+certificate that does the signing is account level and quota limited. The script's header
+says which is which, because conflating them is what makes this take an afternoon.
 
 | | |
 | --- | --- |
@@ -236,6 +247,8 @@ docs/audits/A2.md                          Gate A2, plus the dated re-verificati
 docs/audits/A2-prompt.md                   The prompt A2 was run with
 docs/audits/A3-implementation.md           A3's second half: the code, not the
                                            page. Five findings, all fixed
+scripts/ship-testflight.sh                 Archive, export, validate, upload. Read
+                                           its header before running it once
 docs/PROJECT.md                            The project file in plain language
 docs/POLISH.md                             Polish items, for PR 12
 docs/design/icon-dark.svg, icon-light.svg  The app icon, source of truth
