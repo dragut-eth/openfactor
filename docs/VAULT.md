@@ -345,7 +345,9 @@ this says otherwise.
   logged, and never leaves a device except sealed to a confirmed watch public key.
 - The **passphrase** is never persisted in any form.
 - **No plaintext secret** is ever written to a file, a container, or a log.
-- No Keychain item carries metadata in the clear, in `kSecValueData` or in any attribute.
+- No Keychain item carries **account** metadata in the clear, in `kSecValueData` or in any
+  attribute. The service constant and the `"OpenFactor"` label identify the app rather than the
+  person's accounts, and both are deliberate and already in the store today.
 - The complication and any extension hold neither key nor entitlement.
 - Queued WatchConnectivity transfer modes are never used for key material.
 - No key or passphrase material is placed in iCloud Drive, a ubiquitous container, **or an App
@@ -363,11 +365,17 @@ this says otherwise.
    ever removed this becomes blocking again.
 3. **Backup exclusion behaves as documented on a real restore**, and separately under Quick
    Start, which is a different mechanism.
-4. **A watch can hold a P-256 private key and complete the exchange** inside the interactive
-   channel's message size limits.
-5. **An opaque service constant with UUID accounts leaves no queryability** the store depends on.
+4. ~~A watch can hold a P-256 private key and complete the exchange inside the message size
+   limits.~~ **Measured**, `docs/audits/E7-exchange-and-queryability.md`: 85 bytes out and 145
+   back against a 65,536 byte limit, both sides agreeing, and the negative controls showing a
+   substituted key fails and the authentication string moves with the transcript.
+5. ~~An opaque service constant with UUID accounts leaves no queryability the store depends
+   on.~~ **Settled by reading the store**, same record: it selects only by the service constant,
+   the UUID, and the sync flag, and sorts in Swift. `kSecAttrGeneric` was never a selector.
 6. **Rewrapping survives the two-writer case**, which this project has never tested, and which
-   now applies to every account item rather than one.
+   now applies to every account item rather than one. Blocked on a second device: only the
+   iPhone and the watch are paired for development, and the watch is a reader under this design.
+   See `docs/audits/E7-exchange-and-queryability.md` for what it would and would not establish.
 7. **The container survives a restore and Quick Start.** Narrowed by
    `docs/audits/E6-container-durability.md` rather than closed. Measured there: the protection
    class and the backup exclusion both stick and both survive an update, and an app update

@@ -35,10 +35,19 @@ key. And **rewrapping is not revocation**: a passphrase change does not rotate t
 anyone holding an old wrapped item and the old passphrase keeps access forever, which version 1
 now states plainly rather than implying otherwise.
 
-**Still nothing implemented, deliberately.** Seven things must be proven first, at the end of
-`VAULT.md`. Four have now been measured: E1 the Keychain hole, E4 the container refusing a
-sibling, E5 a sibling WatchConnectivity session activating and reaching nothing, E6 the file
-attributes sticking and an app update moving the container while preserving the data.
+**Still nothing implemented, deliberately.** Seven things had to be proven first, at the end of
+`VAULT.md`. **Six are now settled**: E1 the Keychain hole, E4 the container refusing a sibling,
+E5 a sibling WatchConnectivity session activating and reaching nothing, E6 the file attributes
+sticking and an app update moving the container while preserving the data, and E7 the watch
+exchange fitting in 145 bytes against a 65,536 limit with its binding proved by negative
+controls, plus the store losing no queryability to an opaque item.
+
+**One remains and it is blocked on hardware.** The two-writer rewrap case needs a second device
+signed into the same iCloud account; only the iPhone and the watch are paired for development,
+and the watch is a reader under this design. The Vision Pro would serve, with developer mode
+enabled and pairing set up. `docs/audits/E7-exchange-and-queryability.md` records what it would
+and would not establish, and it matters more after the audit than before, because every account
+item is now rewritten on a rename or an HOTP counter rather than only the wrapped key.
 
 **Two probes returned something nobody had asked for.** E5 showed `isPaired` is readable by any
 app of any team, so the existence of a watch leaks. E6 showed the container path changes on
