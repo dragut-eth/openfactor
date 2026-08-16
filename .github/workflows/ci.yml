@@ -76,6 +76,14 @@ jobs:
             echo "ok: $1"
           }
           check "PRODUCT_BUNDLE_IDENTIFIER = com.openfactor.dev;"
+          # The watch app has to be EMBEDDED in the iOS app, not merely a sibling target
+          # in the same project. It was a sibling for three pull requests, which is
+          # invisible everywhere that matters: it builds, it installs from Xcode onto a
+          # paired watch, and every test passes. The first thing that noticed was
+          # TestFlight, which reported "Apple Watch: No" on a build that had already gone
+          # to a tester. A phase in a file nobody reads is exactly what this job is for.
+          check "Embed Watch Content"
+          check "dstSubfolderSpec = 16;"
           check "IPHONEOS_DEPLOYMENT_TARGET = 18.0;"
           check "TEST_HOST = "
           check "relativePath = .;"

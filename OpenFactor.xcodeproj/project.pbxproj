@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		50AA00000000000000AA0001 /* OpenFactorWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 50AA00000000000000000009 /* OpenFactorWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		50AA0000000000000000000B /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50AA0000000000000000000A /* OpenFactorCore */; };
 		50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 50ACFFFFFFFFFFFF00000009 /* OpenFactorComplication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		50D16262302F862B00211D42 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50D16261302F862B00211D42 /* OpenFactorCore */; };
@@ -34,6 +35,13 @@
 			remoteGlobalIDString = 50ACFFFFFFFFFFFF00000001;
 			remoteInfo = "OpenFactorWatch Complication";
 		};
+		50AA00000000000000AA0004 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 50AC3C90302F852300379FC2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50AA00000000000000000001;
+			remoteInfo = "OpenFactorWatch Watch App";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -46,6 +54,17 @@
 				50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50AA00000000000000AA0002 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				50AA00000000000000AA0001 /* OpenFactorWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -214,10 +233,12 @@
 				50AC3C94302F852300379FC2 /* Sources */,
 				50AC3C95302F852300379FC2 /* Frameworks */,
 				50AC3C96302F852300379FC2 /* Resources */,
+				50AA00000000000000AA0002 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				50AA00000000000000AA0003 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				50AB00000000000000000001 /* OpenFactorShared */,
@@ -429,6 +450,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		50AA00000000000000AA0003 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50AA00000000000000000001 /* OpenFactorWatch Watch App */;
+			targetProxy = 50AA00000000000000AA0004 /* PBXContainerItemProxy */;
+		};
 		50AC3CA7302F852400379FC2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 50AC3C97302F852300379FC2 /* OpenFactor */;
@@ -454,7 +480,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "OpenFactorWatch Watch App/OpenFactorWatch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = HST4KH9P2X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -485,7 +511,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "OpenFactorWatch Watch App/OpenFactorWatch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = HST4KH9P2X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -633,7 +659,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenFactor/OpenFactor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
@@ -680,7 +706,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenFactor/OpenFactor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
@@ -723,7 +749,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
@@ -748,7 +774,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
@@ -772,7 +798,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
@@ -796,7 +822,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
@@ -820,7 +846,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = HST4KH9P2X;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "OpenFactorComplication-Info.plist";
@@ -848,7 +874,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = HST4KH9P2X;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "OpenFactorComplication-Info.plist";

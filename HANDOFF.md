@@ -131,6 +131,14 @@ two exports, a file that outlives its screen, or an acknowledgement referring to
 that no longer exists. Reviewing the implementation separately, by a different model, found
 five of those, two of them blocking. Neither was reachable from the vector.
 
+**Some settings are only wrong in distribution.** The watch app was a sibling target of the
+iOS app rather than an embedded one, from PR 14 until a TestFlight build said "Apple Watch:
+No". Nothing local could have caught it: the project built, every test passed, and running
+from Xcode installed the watch app onto a paired watch exactly as expected, because Xcode
+installs each target it builds. Only a distributed build cares, because that is the only
+path where the watch app has to ride inside the phone app's bundle. It is asserted in CI
+now. When a setting only matters to the App Store, the local evidence is not evidence.
+
 **A comment can be the bug.** The labelled text reader defaulted sha1, 6 and 30 when a
 label was absent, under a comment claiming it did the opposite. Both audits read the comment
 and moved on. An absent label in a human readable report means the parse failed, not that
