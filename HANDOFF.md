@@ -5,8 +5,8 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-16, on TestFlight as `dev.openfactor.app`, 1.0 (2). Branch
-`pr-16d-vault`, not pushed.
+**Last updated:** 2026-08-16, on TestFlight as `dev.openfactor.app`, 1.0 (3). Branch
+`pr-16c-share-extension`, not pushed.
 
 **The storage is being redesigned, and the reason is measured rather than argued.** Gate E1
 proved on hardware that a second app signed by the same team reads another app's Keychain
@@ -85,7 +85,22 @@ of the app, which was frightening and false. A three-line Debug readout of the r
 found both in a minute, and it should have existed before the first fix rather than after the
 second.
 
-**PR 16c is built, both halves, and is unpushed on `pr-16c-share-extension`.** A backup opens
+**PR 16c is built, both halves, and is unpushed on `pr-16c-share-extension`.** Shipped to
+TestFlight as 1.0 (3), which is the first build carrying the vault.
+
+**A share extension cannot open its containing app, and that is now measured rather than
+assumed.** `extensionContext.open` was refused twice: from the completion handler of
+`completeRequest`, where it could be blamed on teardown, and from a live button somebody had just
+tapped. So the extension writes the image, says "Ready in OpenFactor", and the app collects for
+itself whenever it comes forward. The responder chain trick was considered and rejected: it
+reaches for `UIApplication` from a process the sandbox keeps away from it, and this project
+cannot answer "how did you launch yourself" with "we went around it".
+
+**One bug in that work is worth remembering because the cause was a name.** `Arrival.data` covered
+both a shared image and an opened file, so a shared QR screenshot went into the file importer,
+which looked for a backup or a JSON export and reported truthfully that it found no accounts. An
+image goes to the add flow, which decodes QR codes; a file goes to the importer, which parses
+them. They are `.image` and `.file` now. A backup opens
 from Files or Mail through declared document types, and `OpenFactorShare` takes a transfer QR out
 of Messages without it ever resting in Photos.
 

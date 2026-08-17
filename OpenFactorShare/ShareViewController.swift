@@ -25,39 +25,72 @@ import UniformTypeIdentifiers
 /// process reading hostile input is a second attack surface for no gain, and this one runs
 /// automatically on whatever somebody shares.
 ///
-/// **It writes bytes and a name.** The image goes into the group container with complete file
-/// protection, and the only thing that leaves this process is
-/// `openfactor://inbox?item=<uuid>`. A URL can be logged, can appear in handoff, and can end up
-/// in a diagnostic bundle, so it carries a name that reveals nothing rather than a payload.
+/// **It writes bytes and says so.** The image goes into the group container with complete file
+/// protection, and the app collects it the next time it comes forward.
+///
+/// **It cannot open the app, and that was measured rather than assumed.** `extensionContext.open`
+/// was tried twice: once inside the completion handler of `completeRequest`, which failed and
+/// could be explained away as calling it during teardown, and once from a button on this screen
+/// with the extension alive and somebody having just asked for it. Refused both times. There is
+/// no supported route, so this screen tells the person what to do instead of pretending.
+///
+/// The responder chain walk that some apps use is deliberately absent. It reaches for
+/// `UIApplication` from a process the sandbox keeps away from it, and an app whose argument is
+/// "check the claims against the source" should not answer "how did you launch yourself" with
+/// "we went around it".
+@objc(ShareViewController)
 final class ShareViewController: UIViewController {
+
+    /// The app's own mark, so the sheet says which app it belongs to before the words do.
+    ///
+    /// A copy of the icon artwork rather than a reference to the app's, because an extension is a
+    /// separate bundle and cannot read the containing app's assets. Two copies of one picture is
+    /// the cost; reaching up out of the bundle to avoid it would be worse.
+    private let mark = UIImageView(image: UIImage(named: "Mark"))
+    private let titleLabel = UILabel()
+    private let detail = UILabel()
+    private let closeButton = UIButton(type: .system)
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // No interface of its own. There is one thing to do and no decision to offer, so a
-        // sheet asking somebody to confirm what they already chose in the share sheet would be
-        // a step for its own sake.
-        view.backgroundColor = .clear
-
+        buildInterface()
         Task { await run() }
     }
 
     private func run() async {
         guard let data = await firstImage() else {
-            return finish(opening: nil)
+            return show(title: "Nothing to import", detail: "That does not look like an image.")
         }
 
         // Bounded here as well as in the app. This process is handed whatever somebody shares,
         // and an extension is a poor place to decide how much memory to spend.
         guard data.count <= 8 * 1024 * 1024 else {
-            return finish(opening: nil)
+            return show(title: "That image is too large", detail: "Share a smaller one.")
         }
 
-        guard let id = try? SharedInbox().write(data) else {
-            return finish(opening: nil)
+        guard (try? SharedInbox().write(data)) != nil else {
+            return show(
+                title: "Could not save it",
+                detail: "OpenFactor could not reach its own storage.")
         }
 
-        finish(opening: URL(string: "openfactor://inbox?item=\(id.uuidString)"))
+        show(
+            title: "Ready in OpenFactor",
+            detail: "Open OpenFactor to add the account.")
+    }
+
+    // MARK: - The one screen
+
+    /// **A silent close is indistinguishable from nothing happening.** That is what this target
+    /// did first, and the only reason anybody knew it had worked was being told so. The screen
+    /// exists to say what happened, and the button exists because it may be able to do better.
+    private func show(title: String, detail: String) {
+        titleLabel.text = title
+        self.detail.text = detail
+    }
+
+    @objc private func complete() {
+        extensionContext?.completeRequest(returningItems: nil)
     }
 
     /// The image the person shared, as bytes, without loading it as a `UIImage`.
@@ -88,21 +121,48 @@ final class ShareViewController: UIViewController {
         return nil
     }
 
-    /// Closes the sheet, then asks the system to open the app.
-    ///
-    /// **The order matters and the second half may not be granted.** Opening the containing app
-    /// from a share extension is not something Apple documents as supported, so this is written
-    /// to be correct when it silently does nothing: the app sweeps the inbox at launch, so an
-    /// item nobody came for is removed rather than left waiting. A person who is not taken to the
-    /// app has to share again, which is a worse experience and not a worse outcome.
-    private func finish(opening url: URL?) {
-        extensionContext?.completeRequest(returningItems: nil) { _ in
-            guard let url else { return }
+    private func buildInterface() {
+        view.backgroundColor = .systemBackground
 
-            // The documented API first. The responder chain walk that some apps use instead
-            // reaches for `UIApplication` from a process that is not supposed to have one, and a
-            // security tool should not be teaching itself that habit to save a tap.
-            self.extensionContext?.open(url, completionHandler: nil)
-        }
+        mark.contentMode = .scaleAspectFit
+        mark.layer.cornerRadius = 16
+        mark.layer.cornerCurve = .continuous
+        mark.clipsToBounds = true
+        mark.translatesAutoresizingMaskIntoConstraints = false
+        mark.isAccessibilityElement = false
+
+        titleLabel.font = .preferredFont(forTextStyle: .title2)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.textAlignment = .center
+        titleLabel.numberOfLines = 0
+        titleLabel.text = "Saving to OpenFactor"
+
+        detail.font = .preferredFont(forTextStyle: .body)
+        detail.adjustsFontForContentSizeCategory = true
+        detail.textAlignment = .center
+        detail.numberOfLines = 0
+        detail.textColor = .secondaryLabel
+
+        var close = UIButton.Configuration.plain()
+        close.title = "Close"
+        closeButton.configuration = close
+        closeButton.addTarget(self, action: #selector(complete), for: .touchUpInside)
+
+        let stack = UIStackView(arrangedSubviews: [mark, titleLabel, detail, closeButton])
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 12
+        stack.setCustomSpacing(20, after: mark)
+        stack.setCustomSpacing(24, after: detail)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            mark.widthAnchor.constraint(equalToConstant: 72),
+            mark.heightAnchor.constraint(equalTo: mark.widthAnchor),
+            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+        ])
     }
 }

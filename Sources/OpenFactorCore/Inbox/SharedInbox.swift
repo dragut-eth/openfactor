@@ -34,7 +34,17 @@ public struct SharedInbox: Sendable {
 
     /// Both targets read this constant rather than each spelling the group out, because a
     /// disagreement between them is a feature that silently does nothing.
-    public static let appGroup = "group.dev.openfactor.app"
+    ///
+    /// **The `group.` prefix is Apple's, not a style choice**, and iOS refuses an identifier
+    /// without it. What follows is the domain rather than the app's bundle identifier, because
+    /// the group is shared *between* targets and the app does not own it: the extension is an
+    /// equal member, and `group.dev.openfactor.app` would read as the app's private group.
+    ///
+    /// Unlike the Keychain access group, this is cheap to rename. A Keychain item lives in the
+    /// group it was written to, which is why renaming that one stranded every stored account.
+    /// Nothing durable lives here: an item exists for seconds and every launch sweeps the
+    /// directory, so a rename costs a re-registration and nothing else.
+    public static let appGroup = "group.dev.openfactor"
 
     /// A subdirectory rather than the container root, so a sweep can delete everything it finds
     /// without having to know what else might live alongside it.
@@ -94,6 +104,42 @@ public struct SharedInbox: Sendable {
     }
 
     // MARK: - The app's side
+
+    /// An item waiting to be collected, and when it arrived.
+    public struct Pending: Sendable, Equatable {
+        public let id: UUID
+        public let arrived: Date
+    }
+
+    /// **How long an item is still worth presenting.**
+    ///
+    /// The app collects on launch rather than being sent a URL, because a share extension is not
+    /// permitted to open its containing app. So the gap between sharing and collecting is however
+    /// long somebody takes to open OpenFactor, which in the real flow is seconds: they shared it
+    /// *in order* to import it, the sheet closed, and the next thing they do is open the app.
+    ///
+    /// Anything older is swept unread. Presenting an import sheet for something shared days ago
+    /// would be a confusing thing to open the app into, and re-sharing costs one gesture.
+    public static let freshness: TimeInterval = 10 * 60
+
+    /// What is waiting, newest first.
+    ///
+    /// **Reading does not remove**, unlike `take`, because the caller has to choose before it
+    /// consumes. Everything it does not choose must then be swept, which is what the app does.
+    public func pending() -> [Pending] {
+        guard let directory = try? directory(),
+            let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path)
+        else { return [] }
+
+        return names.compactMap { name -> Pending? in
+            guard let id = UUID(uuidString: name) else { return nil }
+            let attributes = try? FileManager.default.attributesOfItem(
+                atPath: directory.appendingPathComponent(name).path)
+            let arrived = (attributes?[.modificationDate] as? Date) ?? .distantPast
+            return Pending(id: id, arrived: arrived)
+        }
+        .sorted { $0.arrived > $1.arrived }
+    }
 
     /// Reads an item and removes it, whether or not the caller does anything with it.
     ///

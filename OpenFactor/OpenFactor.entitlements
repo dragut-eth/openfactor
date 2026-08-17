@@ -24,7 +24,7 @@
 	-->
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.dev.openfactor.app</string>
+		<string>group.dev.openfactor</string>
 	</array>
 
 	<key>keychain-access-groups</key>

@@ -22,6 +22,20 @@ struct AddAccountView: View {
         self.onAdded = onAdded
     }
 
+    /// Opens with an image somebody shared into OpenFactor rather than with the camera.
+    ///
+    /// The same path the photo picker uses, and deliberately so: one place decodes a QR code out
+    /// of a still image, and it already knows what to do with none, with several, and with a
+    /// transfer carrying forty accounts. The share extension does not decode anything, which is
+    /// why the bytes arrive here rather than as an account.
+    init(store: any SecretStore, image: Data, onAdded: @escaping () -> Void) {
+        self.store = store
+        let model = AddAccountViewModel(store: store)
+        model.handleImage(image)
+        _model = State(initialValue: model)
+        self.onAdded = onAdded
+    }
+
     var body: some View {
         NavigationStack {
             content

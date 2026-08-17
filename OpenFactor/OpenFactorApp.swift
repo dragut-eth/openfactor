@@ -112,12 +112,6 @@ struct OpenFactorApp: App {
             // For the plaintext vault that would be every secret in the clear, sitting in
             // the container with nothing ever revisiting it. Found by the security review.
             .task { ExportViewModel.discardOrphanedFiles() }
-            // The same sweep, for the share extension's inbox. It covers what taking an item
-            // cannot: the app never opened after the extension wrote, or was killed between the
-            // two. What sits there is a transfer QR, which is every secret its owner has in one
-            // image, and the whole argument for that container being acceptable rests on it
-            // living for seconds.
-            .task { SharedInbox().sweep() }
             .task { watchKeys.activate() }
             // Over whatever is on screen, because the watch may ask at any moment and the
             // answer is the same wherever the person happens to be in the app. It cannot

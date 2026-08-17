@@ -129,6 +129,40 @@ second replaces the vault.
 assumption that a watch with no key would reach the list. It does not, so "no accounts yet" keeps
 meaning exactly what it meant.
 
+## Screen 0c: Sharing an image into OpenFactor
+
+The share extension's whole interface, because it has one thing to say:
+
+> **[app mark]**
+> **Ready in OpenFactor**
+> Open OpenFactor to add the account.
+> `Close`
+
+**The screen exists because a silent close is indistinguishable from nothing happening.** The
+first version completed and dismissed without a word, and the only way to know it had worked was
+to be told.
+
+**There is no button that opens the app, and that is measured rather than assumed.**
+`extensionContext.open` was tried twice: once in the completion handler of `completeRequest`,
+which could be dismissed as calling it during teardown, and once from a button with the extension
+alive and somebody having just tapped it. Refused both times. A button that does nothing is worse
+than no button, so it was removed rather than left hopeful. The responder chain trick that some
+apps use is deliberately absent: it reaches for `UIApplication` from a process the sandbox keeps
+away from it.
+
+**So the app collects for itself**, every time it comes forward, taking the newest item and
+sweeping the rest. Anything older than ten minutes is swept unread rather than presented, because
+opening the app for a code should not drop somebody into an import sheet for something shared
+last week.
+
+The other three things this screen can say: an attachment that is not an image, one that is too
+large, and a failure to reach its own storage. Each gets its own line rather than a shrug.
+
+**An image goes to the add flow, not the importer.** They are different arrivals: an image holds
+a QR code and the add flow decodes it, a file is an export or a backup and the importer parses
+it. Blurring the two sent a shared screenshot into the file importer, which reported truthfully
+that it could find no accounts in it.
+
 ## Screen 1: Account list (root)
 
 **Reference behavior**

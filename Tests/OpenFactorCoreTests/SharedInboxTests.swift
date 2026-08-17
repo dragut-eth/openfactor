@@ -113,3 +113,66 @@ struct SharedInboxTests {
     }
 
 }
+
+/// Collecting at launch, which is how the app gets an item at all: a share extension is not
+/// permitted to open its containing app, so nothing arrives by URL.
+@Suite("Collecting from the inbox")
+struct SharedInboxCollectionTests {
+
+    private func makeInbox() -> (SharedInbox, URL) {
+        let container = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inbox-\(UUID().uuidString)")
+        return (SharedInbox(container: { container }), container)
+    }
+
+    @Test("Nothing waiting is an empty list rather than an error")
+    func emptyInbox() {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        #expect(inbox.pending().isEmpty)
+    }
+
+    @Test("Reading what is waiting does not consume it")
+    func pendingDoesNotConsume() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        let id = try inbox.write(Data("a QR code".utf8))
+        #expect(inbox.pending().map(\.id) == [id])
+        #expect(inbox.pending().map(\.id) == [id])
+        #expect(try inbox.take(id) == Data("a QR code".utf8))
+        #expect(inbox.pending().isEmpty)
+    }
+
+    /// Newest first, because somebody who shared twice meant the second one.
+    @Test("Items come back newest first")
+    func newestFirst() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        let first = try inbox.write(Data("one".utf8))
+        Thread.sleep(forTimeInterval: 1.1)
+        let second = try inbox.write(Data("two".utf8))
+
+        #expect(inbox.pending().map(\.id) == [second, first])
+    }
+
+    /// The window exists so the app does not open into an import sheet for something shared days
+    /// ago. This asserts the value is a real one rather than accidentally zero or enormous.
+    @Test("The freshness window is minutes, not seconds and not days")
+    func freshnessIsSensible() {
+        #expect(SharedInbox.freshness >= 60)
+        #expect(SharedInbox.freshness <= 60 * 60)
+    }
+
+    @Test("An item carries when it arrived")
+    func itemsCarryTheirAge() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        _ = try inbox.write(Data("a QR code".utf8))
+        let item = try #require(inbox.pending().first)
+        #expect(abs(item.arrived.timeIntervalSinceNow) < 5)
+    }
+}

@@ -13,6 +13,8 @@ struct AccountListView: View {
     /// What arrived from outside the app, if anything. Wrapped because `sheet(item:)` needs an
     /// identity and two files opened in a row are two presentations, not one.
     @State private var arrival: IdentifiedArrival?
+
+    @Environment(\.scenePhase) private var scenePhase
     @State private var editMode: EditMode = .inactive
 
     @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
@@ -74,13 +76,30 @@ struct AccountListView: View {
                 // Something the system handed the app: a backup opened from Files or Mail, or a
                 // transfer image the share extension put in the group container. Both land on
                 // the ordinary import screen, which is the one place that parses anything.
+                // An image and a file are different arrivals and go to different screens. An
+                // image holds a QR code and belongs to the add flow, which decodes it; a file is
+                // an export or a backup and belongs to the importer, which parses it.
                 .sheet(item: $arrival) { arrival in
-                    ImportView(store: store, arrival: arrival.value) {
-                        model.load(at: Date())
+                    switch arrival.value {
+                    case let .image(data):
+                        AddAccountView(store: store, image: data) { model.load(at: Date()) }
+                    case let .file(url):
+                        ImportView(store: store, arrival: .file(url)) {
+                            model.load(at: Date())
+                        }
                     }
                 }
                 .onOpenURL { url in
                     guard let value = InboxOpener.arrival(from: url) else { return }
+                    arrival = IdentifiedArrival(value: value)
+                }
+                // The share extension cannot open this app, measured on a phone rather than
+                // assumed: the sheet closes and nothing is delivered. So the app collects for
+                // itself whenever it comes forward, which is what somebody does next anyway,
+                // having shared the image in order to import it.
+                .onChange(of: scenePhase, initial: true) { _, phase in
+                    guard phase == .active, arrival == nil else { return }
+                    guard let value = InboxOpener.collect() else { return }
                     arrival = IdentifiedArrival(value: value)
                 }
                 .sheet(item: $editing) { row in

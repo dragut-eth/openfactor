@@ -6,8 +6,14 @@
 	<dict>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.share-services</string>
+		<!--
+		  Module qualified, which is not optional. A Swift class name is mangled, so a bare
+		  "ShareViewController" does not resolve through the ObjC runtime: the extension launches,
+		  presents nothing, and never completes its request, which on a phone is a black sheet that
+		  cannot be dismissed. The class is also marked @objc for the same reason, twice over.
+		-->
 		<key>NSExtensionPrincipalClass</key>
-		<string>ShareViewController</string>
+		<string>$(PRODUCT_MODULE_NAME).ShareViewController</string>
 		<!--
 		  Images only, one at a time, and no text, no URLs, no files of other kinds. A share
 		  extension that accepts everything is offered everywhere, which trains people to

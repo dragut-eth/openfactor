@@ -26,7 +26,7 @@ struct InboxOpenerTests {
         let id = try inbox.write(Data("a QR code".utf8))
         let url = URL(string: "openfactor://inbox?item=\(id.uuidString)")!
 
-        #expect(InboxOpener.arrival(from: url, inbox: inbox) == .data(Data("a QR code".utf8)))
+        #expect(InboxOpener.arrival(from: url, inbox: inbox) == .image(Data("a QR code".utf8)))
     }
 
     /// The lifecycle, asserted from the outside: following the link twice must not hand the same
@@ -69,5 +69,75 @@ struct InboxOpenerTests {
 
         let file = URL(fileURLWithPath: "/tmp/example.openfactor")
         #expect(InboxOpener.arrival(from: file, inbox: inbox) == .file(file))
+    }
+}
+
+/// Collecting at launch, which is the only route that works: a share extension cannot open its
+/// containing app, measured on a phone rather than assumed.
+@Suite("Collecting at launch")
+struct InboxCollectionTests {
+
+    private func makeInbox() -> (SharedInbox, URL) {
+        let container = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inbox-\(UUID().uuidString)")
+        return (SharedInbox(container: { container }), container)
+    }
+
+    @Test("An empty inbox produces nothing")
+    func nothingWaiting() {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        #expect(InboxOpener.collect(from: inbox) == nil)
+    }
+
+    @Test("A fresh item is collected")
+    func freshIsCollected() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        _ = try inbox.write(Data("a QR code".utf8))
+        #expect(InboxOpener.collect(from: inbox) == .image(Data("a QR code".utf8)))
+    }
+
+    /// The property the whole container argument rests on: nothing accumulates. Collecting once
+    /// must leave the directory empty, including anything it chose not to present.
+    @Test("Collecting empties the inbox, including what it did not use")
+    func collectingSweepsTheRest() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        for _ in 0..<3 { _ = try inbox.write(Data("a QR code".utf8)) }
+        #expect(InboxOpener.collect(from: inbox) != nil)
+        #expect(inbox.pending().isEmpty)
+    }
+
+    @Test("Collecting twice does not hand over the same image again")
+    func collectingIsSingleUse() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        _ = try inbox.write(Data("a QR code".utf8))
+        #expect(InboxOpener.collect(from: inbox) != nil)
+        #expect(InboxOpener.collect(from: inbox) == nil)
+    }
+
+    /// A stale item is swept unread rather than presented, so opening the app for a code does
+    /// not drop you into an import sheet for something shared last week.
+    @Test("A stale item is discarded rather than shown")
+    func staleIsDiscarded() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        let id = try inbox.write(Data("a QR code".utf8))
+        let url = container
+            .appendingPathComponent(SharedInbox.directoryName)
+            .appendingPathComponent(id.uuidString)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(-SharedInbox.freshness - 60)],
+            ofItemAtPath: url.path)
+
+        #expect(InboxOpener.collect(from: inbox) == nil)
+        #expect(inbox.pending().isEmpty, "and it must not be left behind")
     }
 }
