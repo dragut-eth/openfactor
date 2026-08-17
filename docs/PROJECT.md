@@ -79,6 +79,13 @@ Sources/OpenFactorCore/    The package. Where everything security sensitive live
 Tests/OpenFactorCoreTests/ The test suite, run twice, see below
 ```
 
+**The app declares that it does not open documents in place.** Apple's upload check flags a
+`CFBundleDocumentTypes` declaration that does not answer the question, and an unanswered one
+leaves iOS to decide. `LSSupportsOpeningDocumentsInPlace` is `NO`: the importer reads the bytes
+and is finished, so asking for the original file would be asking for write access to somebody's
+document for no reason. Found by an upload warning on 1.0 (3) rather than by anything here, which
+is worth remembering the next time a plist key is added.
+
 Two plists sit at the repository root rather than beside their targets:
 `OpenFactor-Info.plist` and `OpenFactorShare-Info.plist`, joining the complication's. A plist
 inside a file system synchronized folder is also copied as a resource, so the build fails with

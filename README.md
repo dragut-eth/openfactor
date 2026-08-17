@@ -67,6 +67,10 @@ finished release.
 6. **You can leave.** Export can write an encrypted OpenFactor backup whose format is public,
    or a plaintext Aegis-compatible file for moving to another authenticator. The interface makes
    the difference explicit because portability should not require hiding the security cost.
+7. **A transfer code never has to rest in Photos.** A QR holding every secret you own can be
+   shared straight into OpenFactor. Saving it to the photo library first would replicate it to
+   every device on your Apple Account, expose it to a browser, have it processed server side, and
+   keep it for thirty days after you deleted it.
 
 ## What it deliberately will not do
 

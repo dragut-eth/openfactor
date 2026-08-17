@@ -67,6 +67,18 @@
 	  recognize, so the plist being broad costs nothing: a JSON file that is not an Aegis
 	  vault is turned away by the parser, not by this list.
 	-->
+	<!--
+	  **A copy, not the original.** Apple's upload check flags a CFBundleDocumentTypes
+	  declaration that does not answer this, and leaving it unanswered means iOS decides for
+	  itself which one OpenFactor gets.
+
+	  NO is right here. The importer reads the bytes and is finished; asking to open in place
+	  would be asking for write access to somebody's file for no reason at all, and this app
+	  should hold the fewest permissions that do the job.
+	-->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<false/>
+
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

@@ -120,6 +120,10 @@ Dismissing it any other way counts as declining. A question about releasing a ke
 resolve as yes by default. It cannot appear while App Lock is showing, so the question waits
 rather than being answered by somebody holding a locked phone.
 
+**A backup opened from Files arrives as a copy**, never as the original: the app declares
+`LSSupportsOpeningDocumentsInPlace` as `NO`. The importer reads the bytes and is done, so write
+access to somebody's file would be a permission held for nothing.
+
 **A phone holding the wrong key is sent to this same screen.** No new screen and no new text:
 "this iPhone does not have the key to unlock them" is true whether it has no key or the wrong
 one, and the passphrase fixes both. It happens when two iPhones share an Apple Account and the

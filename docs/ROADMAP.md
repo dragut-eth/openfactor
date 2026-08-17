@@ -546,10 +546,15 @@ the extension; and `InboxOpener` turns either arrival into the one import screen
 anything. CI asserts the extension is embedded and that its entitlements contain the app group
 and nothing else.
 
-**What has not been exercised:** the extension has never been run from a real share sheet. In
-particular, opening the containing app from a share extension is not documented by Apple as
-supported. The code is written to be correct when it silently fails, since the app sweeps the
-inbox at launch, but whether somebody is actually carried into the app is unmeasured.
+**Exercised on hardware, and one assumption died.** A share extension **cannot** open its
+containing app. `extensionContext.open` was refused from the completion handler of
+`completeRequest` and refused again from a live button. So the extension shows one screen saying
+the image is ready, and the app collects for itself whenever it comes forward, taking the newest
+item and sweeping the rest. The responder chain workaround was rejected on principle.
+
+Shipped to TestFlight as 1.0 (3). Apple's upload check then pointed out that declaring document
+types without answering `LSSupportsOpeningDocumentsInPlace` is incomplete; it is `NO` now, so
+files arrive as copies and the app never holds write access to somebody else's document.
 
 #### Two risks to name before starting
 

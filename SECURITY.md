@@ -260,6 +260,14 @@ The app does not control those entries and cannot verify externally exactly what
 Anyone for whom that matters can disable the relevant system assistant features, which removes
 the entry. PR 17 must either establish the behavior or preserve the limitation explicitly.
 
+### Opening a file from elsewhere
+
+**Implemented in PR 16c.** OpenFactor declares document types so a backup can be opened from
+Files or a mail attachment. It declares `LSSupportsOpeningDocumentsInPlace` as `NO`, so the
+system hands it a copy rather than the original, and the app never holds write access to a
+document somebody else owns. The importer reads the copy, which is bounded before it is parsed,
+and the same parser handles it as any other import.
+
 ### The share extension
 
 **Implemented in PR 16c, never exercised from a real share sheet.** It exists so a transfer QR
