@@ -5,8 +5,7 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-16, on TestFlight as `dev.openfactor.app`, 1.0 (3). Branch
-`pr-16c-share-extension`, not pushed.
+**Last updated:** 2026-08-16, on TestFlight as `dev.openfactor.app`, 1.0 (4). On `main`.
 
 **The storage is being redesigned, and the reason is measured rather than argued.** Gate E1
 proved on hardware that a second app signed by the same team reads another app's Keychain
@@ -87,6 +86,23 @@ second.
 
 **PR 16c is built, both halves, and is unpushed on `pr-16c-share-extension`.** Shipped to
 TestFlight as 1.0 (3), which is the first build carrying the vault.
+
+**Two bugs from real use, and they were the same bug twice.** App Lock replaces the root view
+with the lock screen rather than covering it, so anything owned below it is destroyed. First the
+generated vault passphrase: Emmanuel copied his, went to another app to paste it, came back past
+the grace period, and was offered a fresh vault, holding a passphrase that opened nothing and
+with no way to tell. Then the shared image: collecting it is destructive, so a collection that
+ran moments before the lock screen appeared took the image out of the container and was thrown
+away with the view that asked for it, and sharing silently did nothing.
+
+**The pattern is worth more than either fix.** Anything the app must not lose belongs above the
+lock swap. Both now live on the app, and collecting additionally waits until the app is unlocked
+and the vault is open. The next thing added to the account list will be the third instance if
+nobody remembers this.
+
+**Also gone: the `openfactor` URL scheme.** Nothing could produce it once the extension turned
+out to be unable to open its containing app, while every app on the device could still send one.
+Files open through document types, which does not accept arbitrary senders.
 
 **A share extension cannot open its containing app, and that is now measured rather than
 assumed.** `extensionContext.open` was refused twice: from the completion handler of
