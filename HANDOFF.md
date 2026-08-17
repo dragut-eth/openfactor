@@ -71,8 +71,9 @@ vault of its own have not been tried on hardware.
 nothing.** Replacing the vault on the phone leaves the watch with the old key, and every record
 that arrives is sealed under the new one. The watch reported zero accounts while fifteen sat in
 its Keychain unopened. The signal is now `StoredRecords.suggestsAWrongKey` in the core, with
-tests, and the watch acts on it once and believes the second answer. **The phone has the same
-hole and it is not fixed.**
+tests, and both the watch and the phone act on it once and believe the second answer. The phone
+needed no new screen: the unlock screen's sentence is true whether a device has no key or the
+wrong one.
 
 **Two process failures worth keeping, because both cost real time.** The first diagnosis was
 wrong: "forget everything" resets every preference including the sync switch, so accounts
@@ -84,7 +85,7 @@ of the app, which was frightening and false. A three-line Debug readout of the r
 found both in a minute, and it should have existed before the first fix rather than after the
 second.
 
-**What is left in PR 16d.** The phone's wrong-key hole. A second model reviewing the exchange,
+**What is left in PR 16d.** A second model reviewing the exchange,
 since one model wrote the design, found its flaw and implemented its own fix. And the tripwire,
 which is **not** to be built yet: its container anchor has an unsolved staleness
 problem once several devices are churning, and E6 made it worse by showing the container path

@@ -23,7 +23,7 @@ struct VaultGateView<Content: View>: View {
     @Environment(\.scenePhase) private var scenePhase
 
     init(vault: Vault, store: any SecretStore, @ViewBuilder content: @escaping () -> Content) {
-        _model = State(initialValue: VaultGateModel(vault: vault))
+        _model = State(initialValue: VaultGateModel(vault: vault, store: store))
         self.store = store
         self.content = content
     }

@@ -56,8 +56,19 @@ final class VaultGateModel {
 
     private let vault: Vault
 
-    init(vault: Vault) {
+    /// Read to tell a key that works from one that merely exists. Optional so tests that are
+    /// about the three states do not have to build a store to talk about them.
+    private let store: (any SecretStore)?
+
+    /// Set once a key has been installed and the records still will not open, which means the
+    /// cause is a format this build does not understand rather than the wrong key. Without it
+    /// the gate would send somebody to the unlock screen, accept a correct passphrase, and send
+    /// them straight back.
+    private var hasInstalledAFreshKey = false
+
+    init(vault: Vault, store: (any SecretStore)? = nil) {
         self.vault = vault
+        self.store = store
     }
 
     // MARK: - Reading the state
@@ -72,10 +83,28 @@ final class VaultGateModel {
         if isWorking { return }
 
         switch vault.state() {
-        case .open: stage = .open
+        case .open: stage = keyOpensNothing ? .locked : .open
         case .locked: stage = .locked
         case .absent: stage = .introducing
         }
+    }
+
+    /// **Having a key is not the same as having the right one.** Two iPhones on one Apple
+    /// Account: the second replaces the vault, and the first keeps its old key while every
+    /// record that syncs is sealed under the new one. Before this, that phone drew the list and
+    /// showed every account as unreadable, blaming a legacy item or a newer version of the app,
+    /// neither of which was true, and never offered the passphrase that would have fixed it.
+    ///
+    /// The remedy is the unlock screen unchanged, because its sentence is true either way: a
+    /// phone holding the wrong key does not have the key that unlocks these accounts. Entering
+    /// the passphrase reads the current wrapped record and installs over whatever is there.
+    ///
+    /// The rule is `StoredRecords.suggestsAWrongKey`, which is in the core with tests.
+    private var keyOpensNothing: Bool {
+        guard !hasInstalledAFreshKey, let store, let records = try? store.records() else {
+            return false
+        }
+        return records.suggestsAWrongKey
     }
 
     // MARK: - Creating
@@ -132,6 +161,12 @@ final class VaultGateModel {
 
         guard let error = await Self.unlock(vault, with: attempt) else {
             typedPassphrase = ""
+
+            // The passphrase was right and a key is installed. Whether it opens anything is a
+            // different question, and the only honest way to answer it is to read with it. If it
+            // does not, the cause is the format rather than the key, and the list saying so is
+            // better than this screen asking again for a passphrase that already worked.
+            if keyOpensNothing { hasInstalledAFreshKey = true }
             stage = .open
             return
         }

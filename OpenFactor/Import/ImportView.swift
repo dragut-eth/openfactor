@@ -133,7 +133,14 @@ struct ImportView: View {
                 // Monospaced, like every other field in the app that takes a string a
                 // machine generated rather than a person invented: this one, the vault
                 // passphrase, and the secret key in manual setup.
-                SecureField("Backup passphrase", text: $passphrase)
+                //
+                // **Visible, not secured**, and the vault's unlock field matches. Both take 24
+                // generated characters copied off a card or out of a password manager, and
+                // hiding them means a mistyped character cannot be seen in the one string where
+                // the app has already admitted it cannot tell a typo from a wrong passphrase.
+                // Shoulder surfing is the cost, and it is a smaller one for something done once
+                // per device on a screen that faces its owner.
+                TextField("Backup passphrase", text: $passphrase, axis: .vertical)
                     .font(.body.monospaced())
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()

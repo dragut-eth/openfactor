@@ -291,6 +291,78 @@ struct VaultGateModelTests {
         #expect(gate.stage == .locked)
     }
 
+    // MARK: - A key that opens nothing
+
+    /// The two-iPhone case, reproduced rather than described: this device holds a key, the vault
+    /// was replaced elsewhere, and every record that synced is sealed under the new one.
+    ///
+    /// Before this, the gate saw a key, said open, and drew a list of accounts none of which
+    /// could be read, blaming a legacy item or a newer version of the app. Neither was true, and
+    /// the passphrase that would have fixed it in seconds was never offered.
+    @Test("A device holding the wrong key is sent to the unlock screen")
+    func wrongKeyAsksForThePassphrase() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("gate-\(UUID().uuidString)")
+        let keys = VaultKeyStore(directory: { directory })
+        let wrapped = WrappedKeyStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+        let vault = Vault(keys: keys, wrapped: wrapped)
+        defer { try? wrapped.delete() }
+
+        _ = try vault.create()
+        let store = KeychainSecretStore(
+            service: "app.openfactor.tests.\(UUID().uuidString)",
+            synchronizable: false,
+            vaultKeys: keys)
+        _ = try store.add(
+            OTPAccount(
+                issuer: "Example", name: "someone", secret: Data("12345678901234567890".utf8),
+                generator: .totp(.standard)),
+            color: .blue)
+
+        // Everything is fine until the vault is replaced somewhere else.
+        let openGate = VaultGateModel(vault: vault, store: store)
+        openGate.refresh()
+        #expect(openGate.stage == .open)
+
+        try keys.install(SymmetricKey(size: .bits256))
+
+        let staleGate = VaultGateModel(vault: vault, store: store)
+        staleGate.refresh()
+        #expect(staleGate.stage == .locked)
+    }
+
+    /// The case that would send a device to the unlock screen every time it got ahead of iCloud.
+    @Test("An empty store with a key is open, not locked")
+    func emptyStoreStaysOpen() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("gate-\(UUID().uuidString)")
+        let keys = VaultKeyStore(directory: { directory })
+        let wrapped = WrappedKeyStore(service: "app.openfactor.tests.\(UUID().uuidString)")
+        let vault = Vault(keys: keys, wrapped: wrapped)
+        defer { try? wrapped.delete() }
+
+        _ = try vault.create()
+        let store = KeychainSecretStore(
+            service: "app.openfactor.tests.\(UUID().uuidString)",
+            synchronizable: false,
+            vaultKeys: keys)
+
+        let gate = VaultGateModel(vault: vault, store: store)
+        gate.refresh()
+        #expect(gate.stage == .open)
+    }
+
+    /// A gate with no store to consult must behave exactly as it did before this existed.
+    @Test("Without a store the three states are unchanged")
+    func noStoreIsUnchanged() throws {
+        let (gate, vault, _, wrapped) = makeGate()
+        defer { try? wrapped.delete() }
+
+        _ = try vault.create()
+        gate.refresh()
+        #expect(gate.stage == .open)
+    }
+
     // MARK: - Starting over
 
     @Test("Destroying returns the device to the beginning")

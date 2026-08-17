@@ -428,8 +428,10 @@ build understands, which is what `unreadable` was for and has nothing to do with
 then re-reads; if a freshly installed key still opens nothing, the cause is a format this build
 does not understand and asking again would fetch the same key forever.
 
-*The watch implements this. **The phone does not yet**, and has the same hole: a phone holding an
-old key shows every account as unreadable and is not offered the passphrase that would fix it.*
+*Both implement it as of PR 16d.* The phone needs no new screen and no new words for it: the
+unlock screen's sentence is true either way, because a device holding the wrong key does not have
+the key that unlocks these accounts, and entering the passphrase reads the current wrapped record
+and installs over whatever is there.
 
 *The phone's two screens exist as of PR 16d.* `VaultGateView` stands between the app lock and the
 account list and renders one of three things. The list is never drawn while the key is missing:

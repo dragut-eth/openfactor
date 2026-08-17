@@ -120,6 +120,11 @@ Dismissing it any other way counts as declining. A question about releasing a ke
 resolve as yes by default. It cannot appear while App Lock is showing, so the question waits
 rather than being answered by somebody holding a locked phone.
 
+**A phone holding the wrong key is sent to this same screen.** No new screen and no new text:
+"this iPhone does not have the key to unlock them" is true whether it has no key or the wrong
+one, and the passphrase fixes both. It happens when two iPhones share an Apple Account and the
+second replaces the vault.
+
 **The existing empty state does not gain a third cause.** `docs/VAULT.md` asked for one, on the
 assumption that a watch with no key would reach the list. It does not, so "no accounts yet" keeps
 meaning exactly what it meant.
@@ -292,6 +297,10 @@ iOS offers and deleted when the sheet goes away, whichever way it went away. No 
 exports is kept. The file name carries a date and nothing else: no device name, no account
 count, no issuer, because a file name is visible in every share sheet and every screenshot
 of one.
+
+**Both passphrase fields show what you type.** They take 24 generated characters copied off a
+card or out of a password manager, and hiding them means a mistyped character cannot be seen in
+the one string where the app has already admitted it cannot tell a typo from a wrong passphrase.
 
 **Importing a backup asks for the passphrase and says nothing encouraging.** No attempt
 counter, no "close", no distinction between a wrong passphrase and an altered file, because

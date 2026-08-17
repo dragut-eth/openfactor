@@ -28,8 +28,6 @@ struct VaultUnlockView: View {
                         .textContentType(.password)
                         .focused($isTyping)
                         .disabled(model.isWorking)
-                } header: {
-                    Text("Vault passphrase")
                 } footer: {
                     // `docs/VAULT.md` requires the two passphrases be distinguishable where they
                     // are asked for as well as where they are shown. Somebody who exported a
