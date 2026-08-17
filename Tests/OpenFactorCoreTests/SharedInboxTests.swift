@@ -9,6 +9,15 @@ import Testing
 /// this directory is a transfer QR, which is every secret its owner has in one image, and the
 /// entire argument for the inbox being acceptable rests on it living for seconds. A round trip
 /// that left the file behind would pass a naive suite and be the whole bug.
+///
+/// **What these tests cannot see, stated first.** Nothing here proves the file's protection class
+/// is applied, and there is no portable way to check it. A test asserting the attribute was
+/// written twice and was wrong both times: macOS reports `NSFileProtectionComplete` for a file it
+/// does not protect, and the iOS simulator reports nothing for one it writes with the option set.
+/// Either assertion would pass on one platform, fail on the other, and prove nothing on either.
+///
+/// So the option is asserted by reading `SharedInbox.write`, and the class itself belongs on the
+/// list of things measured on hardware, where the vault key's was in gate E6.
 @Suite("Shared inbox")
 struct SharedInboxTests {
 
@@ -103,24 +112,4 @@ struct SharedInboxTests {
         #expect(throws: Never.self) { inbox.sweep() }
     }
 
-    /// **Asserts the attribute, not the enforcement**, and the difference matters.
-    ///
-    /// This was written expecting macOS to drop the attribute, on the reasoning that macOS has
-    /// no data protection. It does not drop it: the attribute is recorded on both platforms, and
-    /// what differs is whether the system acts on it. So this proves the option was passed and
-    /// survived the write, and proves nothing at all about a locked device refusing to hand the
-    /// file over. That is a hardware question, as it was for the vault key in gate E6.
-    @Test("The file is written with complete protection requested")
-    func requestsCompleteProtection() throws {
-        let (inbox, container) = makeInbox()
-        defer { try? FileManager.default.removeItem(at: container) }
-
-        let id = try inbox.write(Data("a QR code".utf8))
-        let url = container
-            .appendingPathComponent(SharedInbox.directoryName)
-            .appendingPathComponent(id.uuidString)
-
-        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-        #expect(attributes[.protectionKey] as? FileProtectionType == .complete)
-    }
 }

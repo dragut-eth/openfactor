@@ -483,9 +483,18 @@ motp is MD5, and Blizzard has no `otpauth://` representation to import from at a
 
 **The problem, stated precisely.** A transfer QR is every secret its owner has, in the
 clear, in one image. When one arrives by Messages, Mail, AirDrop or Files, the only route
-into OpenFactor today is to save it to Photos first, and the photo library is the worst
-resting place available: it is long lived, it is searchable, and it syncs to iCloud Photos.
-The extension removes that step.
+into OpenFactor without this is to save it to Photos first.
+
+**Photos is not one copy, and calling this "a step saved" understates it by a lot.** On a
+default iPhone the library backs up to iCloud, which replicates it to every Mac, iPad, iPhone
+and Apple TV on the account, makes it reachable from a browser, and has it processed
+server-side for indexing and search. Deleting it does not delete it: it moves to Recently
+Deleted for thirty days, which most people do not know exists.
+
+So the choice is not between two places to keep a file. It is between an exposure surface
+nobody can realistically audit, holding every secret its owner has, and a file that exists
+for seconds. That is what pays for a new signed target, a new entitlement, and the audit
+surface named below.
 
 **What it does not fix, said up front.** An image already in Photos stays there. The
 ordinary case, pointing the camera at another phone's screen, never creates a file at all
