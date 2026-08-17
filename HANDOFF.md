@@ -85,6 +85,32 @@ of the app, which was frightening and false. A three-line Debug readout of the r
 found both in a minute, and it should have existed before the first fix rather than after the
 second.
 
+**PR 16c is built, both halves, and is unpushed on `pr-16c-share-extension`.** A backup opens
+from Files or Mail through declared document types, and `OpenFactorShare` takes a transfer QR out
+of Messages without it ever resting in Photos.
+
+**Xavier corrected the justification and it belongs on the record.** The roadmap called saving to
+Photos an extra step, and this session's first response called the win narrow. Both were wrong.
+On a default iPhone the library replicates to every Mac, iPad, iPhone and Apple TV on the
+account, is reachable from a browser, is processed server-side, and survives deletion for thirty
+days in a folder most people do not know about. For an image holding every secret its owner has,
+that is an unauditable exposure surface, and it is what pays for a new signed target.
+
+**The extension's security is an absence**, so CI asserts it: its entitlements must contain the
+app group and nothing else, checked by parsing the plist rather than grepping it. The grep
+version passed while lying, because the comment explaining why the Keychain key is absent
+contains the Keychain key. It was then run against a deliberately broken copy to prove it fails.
+
+**What has not been exercised: the extension has never run from a real share sheet.** Opening the
+containing app from a share extension is not documented by Apple as supported. The code is
+written to be correct when that silently fails, since the app sweeps the inbox at launch, but
+whether somebody is actually carried into the app is unmeasured. **That is the first thing to
+test.**
+
+**A process note, because it happened twice today.** Two commits went in on top of a failing test
+because the commit was chained onto the test run in one command instead of the result being read
+first. Neither reached anyone, both were corrected, and the cure is to stop chaining them.
+
 **What is left in PR 16d.** A second model reviewing the exchange,
 since one model wrote the design, found its flaw and implemented its own fix. And the tripwire,
 which is **not** to be built yet: its container anchor has an unsolved staleness
