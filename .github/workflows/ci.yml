@@ -150,6 +150,32 @@ jobs:
           check "INFOPLIST_KEY_WKCompanionAppBundleIdentifier = dev.openfactor.app;"
           check "OpenFactorWatch.entitlements"
           check "WATCHOS_DEPLOYMENT_TARGET = 11.0;"
+          # The share extension has to be embedded too, and for the same reason the watch
+          # app did: a sibling target builds, passes, and reaches nobody.
+          check "PRODUCT_BUNDLE_IDENTIFIER = dev.openfactor.app.share;"
+          check "Embed Foundation Extensions"
+          check "dstSubfolderSpec = 13;"
+
+      # The share extension's security claim is what it CANNOT do, and the absence of an
+      # entitlement is the whole of it. An absence is invisible in review and costs one
+      # line to reintroduce, so it is asserted here instead of promised in a comment.
+      #
+      # Structurally, not by grep. The first version of this check counted occurrences of
+      # the string in the file and passed while lying, because the comment in that file
+      # explains why the key is absent and therefore contains it.
+      - name: The share extension cannot reach the Keychain
+        run: |
+          set -e
+          keys=$(plutil -convert json -o - OpenFactorShare/OpenFactorShare.entitlements \
+            | python3 -c 'import json,sys; print(" ".join(sorted(json.load(sys.stdin))))')
+          echo "entitlement keys: $keys"
+          if [ "$keys" != "com.apple.security.application-groups" ]; then
+            echo "The share extension must declare the app group and nothing else."
+            echo "It must never gain keychain-access-groups: it cannot be allowed to read"
+            echo "an account or write one. See OpenFactorShare/ShareViewController.swift."
+            exit 1
+          fi
+          echo "ok: one entitlement, and it is not the Keychain"
 
   package:
     name: Package tests

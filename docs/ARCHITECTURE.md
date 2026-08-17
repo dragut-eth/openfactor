@@ -383,6 +383,34 @@ keeps the old key while every record that arrives is sealed under the new one. B
 the phone check for it, using `StoredRecords.suggestsAWrongKey`, and recover: the watch asks its
 phone again, the phone asks for the passphrase.
 
+## Getting a transfer image in without Photos
+
+*Exists as of PR 16c.*
+
+A transfer QR is every secret its owner has, in one image. Saving it to Photos to import it is
+not one extra copy: on a default iPhone the library replicates to every device on the account, is
+reachable from a browser, is processed server-side, and survives deletion for thirty days. The
+share extension exists to avoid that, and almost all of its design is about what it may not do.
+
+**It holds no entitlement but the app group**, so it cannot read or write an account. **It does
+not parse**, so the QR decoder, the protobuf reader and `otpauth-migration` stay in one place
+that is already fuzzed rather than being duplicated into a process that runs automatically on
+whatever somebody shares. It does not even decode the image, because image decoders are among the
+most attacked code on the platform; the bytes are carried, not read.
+
+**What crosses is bytes and a name.** The image goes to `SharedInbox` in the group container with
+complete file protection, and the only thing leaving the extension is
+`openfactor://inbox?item=<uuid>`. A URL can be logged, can appear in handoff, and can end up in a
+diagnostic bundle, so it carries an identifier that says nothing.
+
+**The lifecycle is the other half.** The app takes the item once, destructively, and sweeps the
+whole directory at launch for anything nobody came back for. The argument that this container is
+acceptable rests entirely on the item living for seconds, so the removal is the feature.
+
+**The App Group is a grant, not a boundary**, exactly as gate E1 proved of Keychain access
+groups. Nothing here depends on it being private: what sits in it is an image the sender already
+had, and no key material may ever be written there.
+
 ## Open decisions
 
 Recorded here so they are not silently defaulted.

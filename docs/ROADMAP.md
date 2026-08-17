@@ -540,6 +540,17 @@ type for `.openfactor` and accepting Aegis JSON means an archive can be opened s
 Files or from a mail attachment with "Open in OpenFactor", rather than going through the
 in-app picker. Info.plist only.
 
+**Status: built.** Both halves. Document types and the exported `.openfactor` identifier let a
+backup open from Files or Mail; `SharedInbox` in the core is the container; `OpenFactorShare` is
+the extension; and `InboxOpener` turns either arrival into the one import screen that parses
+anything. CI asserts the extension is embedded and that its entitlements contain the app group
+and nothing else.
+
+**What has not been exercised:** the extension has never been run from a real share sheet. In
+particular, opening the containing app from a share extension is not documented by Apple as
+supported. The code is written to be correct when it silently fails, since the app sweeps the
+inbox at launch, but whether somebody is actually carried into the app is unmeasured.
+
 #### Two risks to name before starting
 
 **Touching entitlements is how sync broke before.** Adding an app group sits beside the

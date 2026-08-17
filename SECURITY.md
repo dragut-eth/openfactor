@@ -260,6 +260,25 @@ The app does not control those entries and cannot verify externally exactly what
 Anyone for whom that matters can disable the relevant system assistant features, which removes
 the entry. PR 17 must either establish the behavior or preserve the limitation explicitly.
 
+### The share extension
+
+**Implemented in PR 16c, never exercised from a real share sheet.** It exists so a transfer QR
+does not have to be saved to Photos first, which on a default iPhone replicates it to every
+device on the account, exposes it to a browser, has it processed server-side, and keeps it for
+thirty days after deletion.
+
+Its security is what it cannot do. It declares one entitlement, the app group, and no Keychain
+access, so it can neither read an account nor write one. It does not parse the QR, decode the
+image, or read any import format; those stay in the app. It writes the bytes it was handed to a
+group container with complete file protection and passes a URL carrying only an identifier.
+
+The container is an App Group, which is a grant rather than a boundary, so the design does not
+depend on it being private. What lands there is an image the sender already had, held for
+seconds, and no key or passphrase material may ever be written to it.
+
+**New signed target, new audit surface.** Gate A4 must cover it, and PR 18's reproducible build
+notes gain another binary.
+
 ### Explicitly out of scope
 
 - A jailbroken or already compromised device. If the operating system is controlled, nothing in

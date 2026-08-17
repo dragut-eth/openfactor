@@ -72,11 +72,30 @@ exactly what this document exists to compensate for.
 
 ```
 OpenFactor/            App sources
+OpenFactorShare/       Share extension. Writes an image to the group inbox, nothing else
 OpenFactorTests/       Test target. Empty on disk, see below
 OpenFactorUITests/     Template placeholder
 Sources/OpenFactorCore/    The package. Where everything security sensitive lives
 Tests/OpenFactorCoreTests/ The test suite, run twice, see below
 ```
+
+Two plists sit at the repository root rather than beside their targets:
+`OpenFactor-Info.plist` and `OpenFactorShare-Info.plist`, joining the complication's. A plist
+inside a file system synchronized folder is also copied as a resource, so the build fails with
+"multiple commands produce Info.plist". The root is where it has to live, not a preference.
+
+## The share extension, and the entitlement it must never have
+
+`OpenFactorShare` is an app extension embedded in the iOS app, bundle identifier
+`dev.openfactor.app.share`. It exists so a transfer QR never has to rest in Photos; the reasoning
+is in `docs/ROADMAP.md` and the code.
+
+**Its entitlements file must contain exactly one key**, the app group. It must never gain
+`keychain-access-groups`: the extension cannot be allowed to read an account or write one, and
+the absence of the entitlement is what enforces that rather than any code in it. CI asserts this
+structurally, by parsing the plist and comparing the key set, because the first version of that
+check counted a string and passed while lying, the comment in the file being the thing that
+contained it.
 
 ## How one test suite runs in two places
 
