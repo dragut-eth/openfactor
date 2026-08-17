@@ -14,6 +14,19 @@
 	  group it was written to and moving one afterwards is a migration whose failure mode
 	  reads as "my accounts vanished".
 	-->
+	<!--
+	  The share extension's inbox, and nothing else.
+
+	  **An App Group is a grant, not a boundary**, which is the same thing gate E1 proved about
+	  Keychain access groups. Nothing here relies on it being private. What lands in it is an
+	  image the sender already had, held for seconds, with complete file protection. No key or
+	  passphrase material may ever be written here; that is an invariant in docs/VAULT.md.
+	-->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.dev.openfactor.app</string>
+	</array>
+
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)dev.openfactor.shared</string>

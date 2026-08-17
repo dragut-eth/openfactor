@@ -7,13 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		50AA00000000000000AA0001 /* OpenFactorWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 50AA00000000000000000009 /* OpenFactorWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		50AA0000000000000000000B /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50AA0000000000000000000A /* OpenFactorCore */; };
+		50AA00000000000000AA0001 /* OpenFactorWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 50AA00000000000000000009 /* OpenFactorWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 50ACFFFFFFFFFFFF00000009 /* OpenFactorComplication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		50D16262302F862B00211D42 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50D16261302F862B00211D42 /* OpenFactorCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		50AA00000000000000AA0004 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 50AC3C90302F852300379FC2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50AA00000000000000000001;
+			remoteInfo = "OpenFactorWatch Watch App";
+		};
 		50AC3CA6302F852400379FC2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 50AC3C90302F852300379FC2 /* Project object */;
@@ -35,27 +42,9 @@
 			remoteGlobalIDString = 50ACFFFFFFFFFFFF00000001;
 			remoteInfo = "OpenFactorWatch Complication";
 		};
-		50AA00000000000000AA0004 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 50AC3C90302F852300379FC2 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 50AA00000000000000000001;
-			remoteInfo = "OpenFactorWatch Watch App";
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		50ACFFFFFFFFFFFF0000000C /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		50AA00000000000000AA0002 /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -65,6 +54,17 @@
 				50AA00000000000000AA0001 /* OpenFactorWatch.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50ACFFFFFFFFFFFF0000000C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -664,6 +664,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "OpenFactor-Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "OpenFactor uses the camera only to scan setup codes. Nothing is recorded, and no image leaves your device.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "OpenFactor uses Face ID only to unlock the app.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -711,6 +712,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "OpenFactor-Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "OpenFactor uses the camera only to scan setup codes. Nothing is recorded, and no image leaves your device.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "OpenFactor uses Face ID only to unlock the app.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

@@ -9,6 +9,10 @@ struct AccountListView: View {
     @State private var copied: UUID?
     @State private var isAdding = false
     @State private var isShowingSettings = false
+
+    /// What arrived from outside the app, if anything. Wrapped because `sheet(item:)` needs an
+    /// identity and two files opened in a row are two presentations, not one.
+    @State private var arrival: IdentifiedArrival?
     @State private var editMode: EditMode = .inactive
 
     @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
@@ -66,6 +70,18 @@ struct AccountListView: View {
                 }
                 .sheet(isPresented: $isShowingSettings) {
                     SettingsView(store: store) { model.load(at: Date()) }
+                }
+                // Something the system handed the app: a backup opened from Files or Mail, or a
+                // transfer image the share extension put in the group container. Both land on
+                // the ordinary import screen, which is the one place that parses anything.
+                .sheet(item: $arrival) { arrival in
+                    ImportView(store: store, arrival: arrival.value) {
+                        model.load(at: Date())
+                    }
+                }
+                .onOpenURL { url in
+                    guard let value = InboxOpener.arrival(from: url) else { return }
+                    arrival = IdentifiedArrival(value: value)
                 }
                 .sheet(item: $editing) { row in
                     EditAccountView(record: row.record) { issuer, name, colour in

@@ -510,9 +510,19 @@ removes the *additional* copy, not every copy.
 - **The app reads it once and deletes it**, then sweeps the whole directory at launch, which
   is the same lifecycle the export file already has and can reuse.
 
-**Why the shared container is acceptable when Photos is not.** It is app private, it carries
-complete file protection, it holds one item for seconds rather than years, and nothing syncs
-it anywhere. That is a different thing from a permanent, cloud replicated library.
+**Why the shared container is acceptable when Photos is not**, corrected after gate E1. The
+original justification said the container is "app private". **It is not**, and that is exactly
+the claim E1 demolished about Keychain access groups: an App Group is a grant the account holder
+controls, not a boundary, so a sibling app can be authorized into it. `docs/VAULT.md` records it
+as a grant for that reason.
+
+The real justification does not depend on privacy at all. **What lands in the inbox is an image
+the sender already had**, which arrived through Messages or Mail and is sitting in that app's
+storage regardless. It lives for seconds, it carries complete file protection, nothing syncs it,
+and no key material ever goes near it. A sibling app that could read the group would learn a QR
+code it could have read from the Messages attachment anyway. That is a different thing from a
+permanent, cloud replicated library, and it is a different argument from the one first written
+down here.
 
 #### The cheaper half, worth doing in the same pull request
 

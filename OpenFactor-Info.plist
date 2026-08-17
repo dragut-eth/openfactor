@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Only the keys Xcode cannot generate. GENERATE_INFOPLIST_FILE stays on and merges the
+	  rest in, so the usage strings and scene manifest still live in build settings where
+	  they were. Arrays of dictionaries have no INFOPLIST_KEY form, which is the whole
+	  reason this file exists.
+	-->
+
+	<!--
+	  The URL the share extension opens, and the only thing it is allowed to carry.
+
+	  openfactor://inbox?item=<uuid> and nothing else. A URL is the wrong place for secret
+	  material: it can be logged, it appears in handoff, and it is the sort of thing that
+	  ends up in a diagnostic bundle. The name reveals nothing and the app looks the file up
+	  by it.
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>dev.openfactor.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>openfactor</string>
+			</array>
+		</dict>
+	</array>
+
+	<!--
+	  This project's own backup, declared so it has a name and an icon in Files and Mail
+	  rather than being an unknown blob. Exported rather than imported, because this project
+	  defines the format: docs/BACKUP_FORMAT.md is its specification.
+	-->
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>dev.openfactor.backup</string>
+			<key>UTTypeDescription</key>
+			<string>OpenFactor backup</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>openfactor</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+
+	<!--
+	  What "Open in OpenFactor" offers, from Files or a mail attachment, so a backup does not
+	  have to be routed through the in-app picker.
+
+	  **Aegis is declared as JSON rather than as its own type.** Aegis does not publish a
+	  uniform type identifier, and inventing one here would claim ownership of somebody
+	  else's format. The importer already sniffs the contents and refuses what it does not
+	  recognize, so the plist being broad costs nothing: a JSON file that is not an Aegis
+	  vault is turned away by the parser, not by this list.
+	-->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>OpenFactor backup</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>dev.openfactor.backup</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Authenticator export</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.json</string>
+				<string>public.plain-text</string>
+				<string>public.rtf</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -96,6 +96,16 @@ final class ImportViewModel {
             return
         }
 
+        read(data)
+    }
+
+    /// The same path for bytes that arrived without a file, which is what the share extension's
+    /// inbox produces.
+    ///
+    /// Split out rather than duplicated, because everything below is the part that matters: the
+    /// bound, the archive check, and the parser. A second entry point that skipped any of them
+    /// would be a second, weaker importer.
+    func read(_ data: Data) {
         // Bounded before anything parses it. A file the user picked is untrusted input, and
         // an importer should not be the thing that decides how much memory to spend.
         guard data.count <= 8 * 1024 * 1024 else {

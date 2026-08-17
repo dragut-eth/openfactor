@@ -46,6 +46,25 @@ struct ImportView: View {
         self.origin = .file
     }
 
+    /// Opens with something the system handed the app: a file through "Open in OpenFactor", or
+    /// bytes the share extension left in the group container.
+    init(
+        store: any SecretStore,
+        arrival: InboxOpener.Arrival,
+        onImported: @escaping () -> Void
+    ) {
+        let model = ImportViewModel(store: store)
+        switch arrival {
+        case let .data(data): model.read(data)
+        case let .file(url): model.read(url)
+        }
+
+        _model = State(initialValue: model)
+        self.onImported = onImported
+        self.onFinished = nil
+        self.origin = .file
+    }
+
     /// Opens straight into the preview, for accounts that arrived from a scanned transfer.
     init(
         store: any SecretStore,
