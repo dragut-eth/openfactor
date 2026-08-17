@@ -18,46 +18,18 @@ struct InboxOpenerTests {
         return (SharedInbox(container: { container }), container)
     }
 
-    @Test("An inbox link produces the bytes the extension wrote")
-    func inboxLinkArrives() throws {
-        let (inbox, container) = makeInbox()
-        defer { try? FileManager.default.removeItem(at: container) }
-
-        let id = try inbox.write(Data("a QR code".utf8))
-        let url = URL(string: "openfactor://inbox?item=\(id.uuidString)")!
-
-        #expect(InboxOpener.arrival(from: url, inbox: inbox) == .image(Data("a QR code".utf8)))
-    }
-
-    /// The lifecycle, asserted from the outside: following the link twice must not hand the same
-    /// image over twice, because the first read is supposed to have removed it.
-    @Test("The same link cannot be followed twice")
-    func linksAreSingleUse() throws {
-        let (inbox, container) = makeInbox()
-        defer { try? FileManager.default.removeItem(at: container) }
-
-        let id = try inbox.write(Data("a QR code".utf8))
-        let url = URL(string: "openfactor://inbox?item=\(id.uuidString)")!
-
-        #expect(InboxOpener.arrival(from: url, inbox: inbox) != nil)
-        #expect(InboxOpener.arrival(from: url, inbox: inbox) == nil)
-    }
-
+    /// The scheme is gone, so nothing custom is accepted any more. Declaring one means every
+    /// app on the device can send this one a URL, and after the extension turned out to be
+    /// unable to open its containing app, nothing could produce it.
     @Test(
-        "A link that is not ours, or not shaped right, is ignored",
+        "A URL that is not a file is refused",
         arguments: [
-            "openfactor://inbox",
-            "openfactor://inbox?item=not-a-uuid",
-            "openfactor://inbox?other=x",
-            "openfactor://elsewhere?item=6F1B0C0A-6D3A-4A1F-9A2E-2A3B4C5D6E7F",
             "openfactor://inbox?item=6F1B0C0A-6D3A-4A1F-9A2E-2A3B4C5D6E7F",
-            "https://example.com/inbox?item=6F1B0C0A-6D3A-4A1F-9A2E-2A3B4C5D6E7F",
+            "openfactor://inbox",
+            "https://example.com/inbox",
         ])
-    func refusesRubbish(raw: String) {
-        let (inbox, container) = makeInbox()
-        defer { try? FileManager.default.removeItem(at: container) }
-
-        #expect(InboxOpener.arrival(from: URL(string: raw)!, inbox: inbox) == nil)
+    func refusesEveryNonFileURL(raw: String) {
+        #expect(InboxOpener.arrival(from: URL(string: raw)!) == nil)
     }
 
     /// A file from Files or Mail is handed on as a file, because the importer reads it itself
@@ -68,7 +40,7 @@ struct InboxOpenerTests {
         defer { try? FileManager.default.removeItem(at: container) }
 
         let file = URL(fileURLWithPath: "/tmp/example.openfactor")
-        #expect(InboxOpener.arrival(from: file, inbox: inbox) == .file(file))
+        #expect(InboxOpener.arrival(from: file) == .file(file))
     }
 }
 

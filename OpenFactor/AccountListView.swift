@@ -10,11 +10,13 @@ struct AccountListView: View {
     @State private var isAdding = false
     @State private var isShowingSettings = false
 
-    /// What arrived from outside the app, if anything. Wrapped because `sheet(item:)` needs an
-    /// identity and two files opened in a row are two presentations, not one.
-    @State private var arrival: IdentifiedArrival?
-
-    @Environment(\.scenePhase) private var scenePhase
+    /// What arrived from outside the app, if anything.
+    ///
+    /// **Owned by the app, not by this view.** Collecting from the share extension's inbox is
+    /// destructive: it takes the image out of the container. If this view held the result, App
+    /// Lock swapping the root would destroy it after the image was already gone, and sharing
+    /// would silently do nothing. The same lesson as the vault passphrase, one screen along.
+    @Binding var arrival: IdentifiedArrival?
     @State private var editMode: EditMode = .inactive
 
     @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
@@ -35,7 +37,8 @@ struct AccountListView: View {
     /// The single timer for the whole screen. Ten accounts do not get ten timers.
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    init(store: any SecretStore) {
+    init(store: any SecretStore, arrival: Binding<IdentifiedArrival?> = .constant(nil)) {
+        _arrival = arrival
         self.store = store
         _model = State(initialValue: AccountListViewModel(store: store))
     }
@@ -88,19 +91,6 @@ struct AccountListView: View {
                             model.load(at: Date())
                         }
                     }
-                }
-                .onOpenURL { url in
-                    guard let value = InboxOpener.arrival(from: url) else { return }
-                    arrival = IdentifiedArrival(value: value)
-                }
-                // The share extension cannot open this app, measured on a phone rather than
-                // assumed: the sheet closes and nothing is delivered. So the app collects for
-                // itself whenever it comes forward, which is what somebody does next anyway,
-                // having shared the image in order to import it.
-                .onChange(of: scenePhase, initial: true) { _, phase in
-                    guard phase == .active, arrival == nil else { return }
-                    guard let value = InboxOpener.collect() else { return }
-                    arrival = IdentifiedArrival(value: value)
                 }
                 .sheet(item: $editing) { row in
                     EditAccountView(record: row.record) { issuer, name, colour in

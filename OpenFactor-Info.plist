@@ -10,26 +10,16 @@
 	-->
 
 	<!--
-	  The URL the share extension opens, and the only thing it is allowed to carry.
+	  **There is deliberately no CFBundleURLTypes here.**
 
-	  openfactor://inbox?item=<uuid> and nothing else. A URL is the wrong place for secret
-	  material: it can be logged, it appears in handoff, and it is the sort of thing that
-	  ends up in a diagnostic bundle. The name reveals nothing and the app looks the file up
-	  by it.
+	  An earlier version declared an `openfactor` scheme so the share extension could hand the
+	  app an item by name. A share extension turned out not to be permitted to open its
+	  containing app at all, measured twice, so nothing can produce that URL any more.
+
+	  Declaring a scheme means every app on the device can send this one a URL. Keeping one
+	  that nothing produces would be surface with no purpose, so it is gone. Files still open
+	  through the document types below, which is a different mechanism.
 	-->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLName</key>
-			<string>dev.openfactor.app</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>openfactor</string>
-			</array>
-		</dict>
-	</array>
 
 	<!--
 	  This project's own backup, declared so it has a name and an icon in Files and Mail

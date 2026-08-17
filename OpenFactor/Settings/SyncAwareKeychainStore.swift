@@ -17,9 +17,13 @@ import OpenFactorCore
 /// the switch the user had just touched.
 struct SyncAwareKeychainStore: SynchronizableSecretStore {
 
-    /// Where the preference is read from. Injectable so tests do not touch the real
-    /// defaults, and so the suite can run in any order without leaking state.
-    private let defaults: UserDefaults
+    /// Whether accounts should be offered to iCloud, **asked at the moment of the call**.
+    ///
+    /// A closure rather than the `UserDefaults` object itself. Storing one made this struct
+    /// non-Sendable, which the compiler currently reports as a warning and Swift 6 will report
+    /// as an error. It also states the dependency more honestly: this type needs one boolean,
+    /// not a whole preferences database.
+    private let syncEnabled: @Sendable () -> Bool
 
     /// Only tests pass a service. The default is the one the app uses, so no caller in the
     /// app can accidentally point at a different set of items.
@@ -39,13 +43,16 @@ struct SyncAwareKeychainStore: SynchronizableSecretStore {
         service: String? = nil,
         vaultKeys: VaultKeyStore = VaultKeyStore()
     ) {
-        self.defaults = defaults
+        // Captured, not stored. The preference is still read on every call, which is the whole
+        // point of this type: an account added after the switch moves inherits the new setting
+        // without anything being rebuilt.
+        syncEnabled = { defaults.bool(forKey: PreferenceKey.syncEnabled) }
         self.service = service
         self.vaultKeys = vaultKeys
     }
 
     private var store: KeychainSecretStore {
-        let shouldSync = defaults.bool(forKey: PreferenceKey.syncEnabled)
+        let shouldSync = syncEnabled()
         let accessibility: SecretAccessibility =
             shouldSync ? .whenUnlocked : .whenUnlockedThisDeviceOnly
 

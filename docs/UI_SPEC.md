@@ -43,6 +43,13 @@ question by itself.
 
 Six groups of four in a monospaced grid, a copy button, an acknowledgement toggle, then Continue.
 
+**Collecting happens above App Lock, and only when there is somewhere to show it.** Taking an
+item is destructive, so a collection that ran moments before the lock screen replaced the root
+took the image out of the container and was then thrown away with the view that asked for it:
+sharing appeared to do nothing. It now waits for the app to be unlocked and the vault to be open,
+and unlocking triggers the check, so an image shared while the app sat locked appears as soon as
+you authenticate.
+
 **Leaving and coming back keeps the passphrase.** It is held by the app rather than by this
 screen, because App Lock replaces the root view and would otherwise take it with it. Somebody
 copying it into a password manager is the expected behavior, not an edge case.
@@ -157,6 +164,11 @@ alive and somebody having just tapped it. Refused both times. A button that does
 than no button, so it was removed rather than left hopeful. The responder chain trick that some
 apps use is deliberately absent: it reaches for `UIApplication` from a process the sandbox keeps
 away from it.
+
+**The app declares no URL scheme.** One existed so the extension could hand over an item by
+name; once the extension turned out to be unable to open the app at all, nothing could produce
+it. A declared scheme lets every app on the device send this one a URL, so keeping a dead one
+would be surface for nothing.
 
 **So the app collects for itself**, every time it comes forward, taking the newest item and
 sweeping the rest. Anything older than ten minutes is swept unread rather than presented, because

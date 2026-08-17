@@ -275,6 +275,12 @@ does not have to be saved to Photos first, which on a default iPhone replicates 
 device on the account, exposes it to a browser, has it processed server-side, and keeps it for
 thirty days after deletion.
 
+**The app declares no custom URL scheme.** An earlier design had the extension hand over an item
+by name through one. Since an extension cannot open its containing app, nothing can produce that
+URL, and a declared scheme is an entry point every app on the device can use. It was removed
+rather than left dormant. Files still open through declared document types, which is a different
+mechanism and does not accept arbitrary senders.
+
 Its security is what it cannot do. It declares one entitlement, the app group, and no Keychain
 access, so it can neither read an account nor write one. It does not parse the QR, decode the
 image, or read any import format; those stay in the app. It writes the bytes it was handed to a

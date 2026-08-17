@@ -32,6 +32,15 @@ struct OpenFactorApp: App {
     /// come back to the same screen.
     @State private var gate: VaultGateModel
 
+    /// What arrived from outside: a file opened elsewhere, or an image the share extension left
+    /// in the group container.
+    ///
+    /// **Owned here for the same reason the gate is.** Collecting is destructive, so a collection
+    /// that happens moments before App Lock swaps the root would take the image out of the
+    /// container and then be thrown away with the view that asked for it. Sharing would appear to
+    /// do nothing at all, which is what it did.
+    @State private var arrival: IdentifiedArrival?
+
     init() {
         let keys = VaultKeyStore()
         let store = SyncAwareKeychainStore(vaultKeys: keys)
@@ -72,7 +81,7 @@ struct OpenFactorApp: App {
                     // never had a vault must be offered one: the list cannot render either
                     // state honestly, because to it both look like a shelf of unreadable rows.
                     VaultGateView(model: gate, store: store) {
-                        AccountListView(store: store)
+                        AccountListView(store: store, arrival: $arrival)
                         // Accounts saved before the shared access group was declared are
                         // still in the app's bundle group. The phone reads them either
                         // way, so nothing looks wrong here; the watch cannot see them at
@@ -135,9 +144,18 @@ struct OpenFactorApp: App {
             .onChange(of: scenePhase, initial: true) { _, phase in
                 lock.scenePhaseChanged(to: phase)
                 updateShield(for: phase)
+                collectWhatArrived()
             }
             .onChange(of: lock.isLocked) {
                 updateShield(for: scenePhase)
+                // Unlocking does not change the scene phase, so without this an image shared
+                // while the app was locked would wait for the next time it came forward.
+                collectWhatArrived()
+            }
+            .onChange(of: gate.stage) { collectWhatArrived() }
+            .onOpenURL { url in
+                guard let value = InboxOpener.arrival(from: url) else { return }
+                arrival = IdentifiedArrival(value: value)
             }
             // The root swap and the shield hide land in the same transaction, so there is
             // no frame between them for the interface to show through.
@@ -163,6 +181,20 @@ struct OpenFactorApp: App {
         Binding(
             get: { watchKeys.isAsking && !lock.isLocked },
             set: { _ in })
+    }
+
+    /// Takes whatever the share extension left, once there is somewhere to show it.
+    ///
+    /// **All three conditions are load bearing.** Not while locked, because the account list does
+    /// not exist then and the image would be consumed with nothing to receive it. Not before the
+    /// vault is open, because an import sheet over a setup screen is nonsense. And not if
+    /// something is already waiting, or a second look would discard the first.
+    private func collectWhatArrived() {
+        guard scenePhase == .active, !lock.isLocked, gate.stage == .open, arrival == nil else {
+            return
+        }
+        guard let value = InboxOpener.collect() else { return }
+        arrival = IdentifiedArrival(value: value)
     }
 
     /// The cover shows when the app is not active and not locked. Not when locked,

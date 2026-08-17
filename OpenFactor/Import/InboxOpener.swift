@@ -1,11 +1,12 @@
 import Foundation
 import OpenFactorCore
 
-/// Turning something the system handed the app into bytes the importer can look at.
+/// Turning something the system handed the app into something a screen can use.
 ///
-/// Two ways in, one answer out. The share extension sends `openfactor://inbox?item=<uuid>`, and
-/// Files or Mail send a file URL through "Open in OpenFactor". Both end at the same import
-/// screen, which is the one place that parses anything.
+/// Two ways in. Files or Mail send a file URL through "Open in OpenFactor", and the share
+/// extension leaves an image in the group container for the app to collect. There is no third
+/// way: an extension cannot open its containing app, so nothing arrives by custom URL and the
+/// app no longer declares a scheme for one.
 enum InboxOpener {
 
     /// What arrived, or nothing if this URL was not for us.
@@ -22,15 +23,12 @@ enum InboxOpener {
         case file(URL)
     }
 
-    static let scheme = "openfactor"
-
     /// What the share extension left behind, if anything worth showing.
     ///
-    /// **This is how an item actually arrives.** The extension sends
-    /// `openfactor://inbox?item=<uuid>` as well, and that is kept because it costs nothing and
-    /// is the better experience where it works, but a share extension is not permitted to open
-    /// its containing app: on a phone the sheet simply closes and the app is never told. So the
-    /// app looks for itself, every time it becomes active.
+    /// **This is the only way an image arrives.** A share extension is not permitted to open its
+    /// containing app, measured twice on a phone: `extensionContext.open` was refused from the
+    /// completion handler of `completeRequest`, and refused again from a live button somebody had
+    /// just tapped. So the app looks for itself instead.
     ///
     /// Takes the newest and **sweeps the rest**, so nothing accumulates. An item older than
     /// `SharedInbox.freshness` is swept unread rather than presented, because opening the app
@@ -47,28 +45,13 @@ enum InboxOpener {
         return .image(data)
     }
 
-    /// **Nothing is parsed here.** This decides where bytes came from and hands them on. Deciding
+    /// A file the system handed us, from Files, Mail, or anywhere offering "Open in".
+    ///
+    /// **Nothing is parsed here.** This says where bytes came from and hands them on. Deciding
     /// what they mean is the importer's job, in one place, already fuzzed. A second reader of
     /// hostile input is a second attack surface for no gain.
-    static func arrival(from url: URL, inbox: SharedInbox = SharedInbox()) -> Arrival? {
-        guard url.scheme == scheme else {
-            // A file, from Files, Mail, or anywhere else that offers "Open in".
-            return url.isFileURL ? .file(url) : nil
-        }
-
-        guard url.host == "inbox",
-            let item = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first(where: { $0.name == "item" })?.value,
-            let id = UUID(uuidString: item),
-            let data = try? inbox.take(id)
-        else {
-            // A malformed or stale link is silence rather than an error. The person did not type
-            // it, so there is nothing for them to correct, and the only thing an alert would
-            // tell them is that something they never saw did not work.
-            return nil
-        }
-
-        return .image(data)
+    static func arrival(from url: URL) -> Arrival? {
+        url.isFileURL ? .file(url) : nil
     }
 }
 
