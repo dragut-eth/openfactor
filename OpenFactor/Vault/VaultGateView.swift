@@ -14,7 +14,19 @@ import SwiftUI
 /// vault that strands the first.
 struct VaultGateView<Content: View>: View {
 
-    @State private var model: VaultGateModel
+    /// **Owned by the app, not by this view**, and that is a bug fix rather than a preference.
+    ///
+    /// It used to be `@State` here. App Lock replaces the whole root with the lock screen, which
+    /// tears this view down and takes its state with it. Somebody who copied their passphrase,
+    /// left to paste it somewhere, and came back past the grace period returned to a screen
+    /// offering to create a vault. Worse than losing their place: they were holding a passphrase
+    /// that opened nothing, with no way to tell.
+    ///
+    /// The passphrase still lives only in memory and is still never written down, which
+    /// `docs/VAULT.md` requires. It now survives a lock and unlock, because the object holding it
+    /// outlives the view. It does not survive the process being killed, and nothing can fix that
+    /// without persisting it, which is the one thing this design will not do.
+    let model: VaultGateModel
 
     let store: any SecretStore
 
@@ -22,8 +34,11 @@ struct VaultGateView<Content: View>: View {
 
     @Environment(\.scenePhase) private var scenePhase
 
-    init(vault: Vault, store: any SecretStore, @ViewBuilder content: @escaping () -> Content) {
-        _model = State(initialValue: VaultGateModel(vault: vault, store: store))
+    init(
+        model: VaultGateModel, store: any SecretStore,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.model = model
         self.store = store
         self.content = content
     }

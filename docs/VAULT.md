@@ -438,6 +438,17 @@ account list and renders one of three things. The list is never drawn while the 
 to it a locked device is a shelf of unreadable rows, which is a true statement about the storage
 and a frightening and wrong one about somebody's accounts.
 
+**Nothing that holds the passphrase may be owned by a view that can be torn down.** Found by a
+tester: he copied it, went to another app to paste it, and came back past the App Lock grace
+period to a screen offering to create a vault. App Lock replaces the root view, which destroyed
+the object holding the only copy. He was then holding a passphrase that opened nothing, with
+nothing on screen to tell him so, which is worse than losing his place.
+
+The state lives on the app now, above the lock. **It is still never persisted**, and it still
+does not survive the process being killed; nothing can fix that without writing it down, which is
+the one thing this design will not do. What it does survive is every ordinary interruption:
+locking, switching apps, and coming back.
+
 **The passphrase is generated before the vault is, not after.** `Vault.create()` creates and then
 returns the string, so a process killed in that gap leaves a vault whose passphrase no longer
 exists anywhere. The screen therefore generates, shows, waits for the acknowledgement, and only

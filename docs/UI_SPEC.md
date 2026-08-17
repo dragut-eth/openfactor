@@ -43,6 +43,10 @@ question by itself.
 
 Six groups of four in a monospaced grid, a copy button, an acknowledgement toggle, then Continue.
 
+**Leaving and coming back keeps the passphrase.** It is held by the app rather than by this
+screen, because App Lock replaces the root view and would otherwise take it with it. Somebody
+copying it into a password manager is the expected behavior, not an edge case.
+
 **Nothing is stored until Continue.** The passphrase is generated, displayed, and only written
 once the toggle is on and the button is pressed, so a process killed on this screen leaves the
 device exactly as it was found. `Vault.create()` cannot give that property, which is why the app

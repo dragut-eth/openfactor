@@ -26,12 +26,18 @@ struct OpenFactorApp: App {
     /// two would behave identically today, and the day somebody changes where the key lives is
     /// the day two would silently disagree: the gate would report a vault open that the store
     /// could not read.
-    private let vault: Vault
+    /// **Held here so App Lock cannot destroy it.** The lock screen replaces the root view, and
+    /// anything owned below it goes with it. A generated passphrase lives only in this object,
+    /// so owning it at the top is what lets somebody copy it, go and paste it somewhere, and
+    /// come back to the same screen.
+    @State private var gate: VaultGateModel
 
     init() {
         let keys = VaultKeyStore()
-        store = SyncAwareKeychainStore(vaultKeys: keys)
-        vault = Vault(keys: keys)
+        let store = SyncAwareKeychainStore(vaultKeys: keys)
+        self.store = store
+        _gate = State(
+            initialValue: VaultGateModel(vault: Vault(keys: keys), store: store))
     }
 
     /// The lock and the snapshot cover. See `PrivacyShield` for why they live in their
@@ -65,7 +71,7 @@ struct OpenFactorApp: App {
                     // ask for its passphrase before anything is drawn, and a device that has
                     // never had a vault must be offered one: the list cannot render either
                     // state honestly, because to it both look like a shelf of unreadable rows.
-                    VaultGateView(vault: vault, store: store) {
+                    VaultGateView(model: gate, store: store) {
                         AccountListView(store: store)
                         // Accounts saved before the shared access group was declared are
                         // still in the app's bundle group. The phone reads them either
