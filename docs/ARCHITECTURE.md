@@ -96,19 +96,34 @@ sensitive: the issuer and account name say which services someone uses and under
 email address. In a plist or a database file that sits in the clear on the device and in
 every unencrypted backup.
 
-So each account is a single Keychain item. The secret is in `kSecValueData`, the metadata
-is JSON in `kSecAttrGeneric`, and both are encrypted at rest. The separation comes from
-the queries instead: listing accounts asks for attributes and explicitly sets
-`kSecReturnData` to false, so it decrypts no secrets at all, and only `secret(for:)` asks
-for data, for one account, at the moment a code is generated. There is deliberately no
-call that returns every account with its secret.
+So each account is a single Keychain item.
+
+**Rewritten in PR 16d, and the property survived the rewrite by being rebuilt differently.**
+Until then the secret was in `kSecValueData`, the metadata was JSON in `kSecAttrGeneric`, and
+the separation came from the queries: listing asked for attributes with `kSecReturnData` set to
+false, so it decrypted nothing. Gate E1 then measured that a Keychain access group is not a
+boundary between apps of one developer team, which made "encrypted at rest by the Keychain" a
+weaker claim than it read as. `docs/VAULT.md` is the design that followed.
+
+Now the whole item is one sealed record under a key that lives in the app's private container,
+which E4 measured *is* a boundary, and **`kSecAttrGeneric` is never written**. Listing has to
+read `kSecValueData` now, because the metadata is inside it, so the old mechanism for not
+touching secrets is gone. The property is preserved by the record's shape instead: metadata and
+secret are sealed **separately** inside one record, listing opens only the metadata half, and
+`secret(for:)` opens the secret half for one account at the moment a code is generated. A rename
+re-seals the metadata and copies the secret half verbatim.
+
+That the old mechanism was being discarded, and with it a property this document states, was
+caught by an external reviewer of the design rather than by the design. It is recorded in
+`docs/audits/V2-grok.md`. There is still deliberately no call that returns every account with
+its secret.
 
 **No hand rolled cryptography.** HMAC and the hash functions come from CryptoKit. The only
 cryptographic code written here is the RFC 4226 dynamic truncation, which is arithmetic on
 the HMAC output and is covered by the published vectors.
 
-**The metadata schema must evolve without stranding old readers.** Metadata is JSON in the
-Keychain, and a record written by a newer version will one day be read by an older one, on
+**The metadata schema must evolve without stranding old readers.** Metadata is JSON, sealed
+inside the record, and one written by a newer version will one day be read by an older one, on
 a second device that has not updated. Two rules, set at gate A1. New fields must be
 optional with a default, so an old reader can ignore them. And values that change code
 generation, the algorithm, digits, period, and counter, are never given fallbacks: an
@@ -223,9 +238,18 @@ act on.
 
 *Storage exists as of PR 4. Sync exists as of PR 13.*
 
-Secrets are Keychain items with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` by default.
+*Sealed records as of PR 16d.*
+
+Accounts are Keychain items with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` by default.
 Turning on sync flips them to synchronizable, which puts them in iCloud Keychain, end to
 end encrypted with keys Apple does not hold.
+
+**What syncs is ciphertext.** The vault key never does, and is never written to the Keychain at
+all: it lives in each device's private container. So iCloud Keychain is a transport for sealed
+records rather than for secrets, and a device that receives them can read nothing until it has
+the key. The wrapped key record, which is the vault key sealed under a generated passphrase,
+follows the same sync preference as the accounts, because a device that syncs its accounts and
+not the means of recovering them would sync nothing usable.
 
 **Sync requires weakening the protection class.** A synchronizable item cannot be
 `ThisDeviceOnly`, by definition, so turning sync on moves those items to
@@ -346,6 +370,18 @@ migration, with a diagnostic screen showing the correct state the whole time.
 The watch reads the same synchronizable Keychain items rather than receiving secrets over
 WatchConnectivity. A bespoke transfer channel is another place for secret material to
 leak, and iCloud Keychain already solves the problem correctly.
+
+**The one exception is the vault key**, which cannot arrive that way by construction: a key that
+syncs is a key in the Keychain. It is asked for once, over the interactive WatchConnectivity
+channel, in an exchange specified in `docs/VAULT.md` and implemented as `WatchProvisioning`.
+Both sides generate an ephemeral P-256 keypair and bind the whole transcript into the derivation
+and the AEAD's additional data. Afterwards the watch needs the phone for nothing: it reads
+ciphertext from iCloud Keychain and generates codes with the phone off, absent, or out of range.
+
+**Having a key is not the same as having the right one.** Replace the vault and any other device
+keeps the old key while every record that arrives is sealed under the new one. Both the watch and
+the phone check for it, using `StoredRecords.suggestsAWrongKey`, and recover: the watch asks its
+phone again, the phone asks for the passphrase.
 
 ## Open decisions
 
