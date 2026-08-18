@@ -8,6 +8,35 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**A4 scope 2, the Watch exchange, is two thirds done and found that yesterday's fixes created
+two new defects.** Recorded in `docs/audits/A4-scope2-watch.md`. ChatGPT and Fable independently
+reached the same one: the `guard pendingRequest == nil else { return .asking }` added yesterday
+correctly stops a second request replacing the approved one, and then tells the watch "you are
+being asked" while the phone discards it. The watch waits for a message that cannot arrive, and
+the wearer's approval seals to the abandoned attempt. Reachable by the ordinary path, because the
+watch retries automatically on a raised wrist.
+
+The second is a gap in the flow type written the same day. Every message in the protocol is bound
+to its attempt except the one that says no: `decline()` sends a bare status string, and
+`phoneDeclined()` takes no token, so a decline of an abandoned attempt clears the current one.
+
+**Fable's best finding was not a defect in shipped code but a hole in the net.** It claimed a
+regression giving the phone a static ECDH keypair would pass the entire suite. That was checked
+by doing it: with a single static keypair, **all 358 tests pass**. `exchangesAreFresh` varies the
+request each time, so responses differ regardless of whether the phone's key is fresh, and its
+name claims more than it observes. That is the fourth test in this project found checking less
+than its name promised. A static phone key turns a captured response plus a later phone compromise
+into vault-key recovery, which is precisely what the ephemeral design exists to prevent.
+
+**One methodological cost is now on the record.** Fable opened by noting this scope cannot be read
+cold by anyone any more, because the code comments narrate the previous review's findings in
+detail. That is true and it is a direct cost of a practice this project otherwise benefits from.
+Both engines found the defect sitting directly beneath a comment describing the fix that created
+it, and neither found anything in the cryptography, which carries the same density of explanation.
+No change proposed; the comments are worth more to a maintainer than cold-review purity is worth
+to a gate that runs a handful of times. But a reader comparing scope 1's yield with scope 2's
+should know the two were not equally readable.
+
 **Gate A4 has started, and its first pass found a defect that loses every synced account.**
 ChatGPT 5.6 Sol reviewed scope 1, the vault at rest, against commit `74fe841`. The pass and the
 triage are in `docs/audits/A4-scope1-vault.md`. Eight findings, all eight confirmed against the
