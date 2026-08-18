@@ -8,6 +8,31 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**A4 fixes have started, on branch `a4-fixes`. The first pair is in: the wrapped key now
+syncs, and `save` can no longer twin.** They had to land together, and the tests demonstrate why
+rather than asserting it.
+
+`WrappedKeyStore.setSynchronizable` is new and moves the record in place, never by delete and
+re-add, since a crash between those two would destroy the only route back into the vault.
+`SyncAwareKeychainStore` calls it alongside the accounts, **key first when enabling and last when
+disabling**, so the intermediate state is always the safe one: the means of reading arrives before
+the thing to read, and stops syncing after it.
+
+`save` now looks for an existing record under either sync flag and updates it as found. Two
+consequences. It cannot create the twin that `kSecAttrSynchronizable` being part of a Keychain
+item's primary key would otherwise allow. And a passphrase change no longer relocates the record
+between iCloud and this device as a side effect, because the flag is no longer in the change
+dictionary: where the record lives is `setSynchronizable`'s decision alone.
+
+**Seven tests in `OpenFactorTests/WrappedKeySyncTests.swift`, proved in both directions.** With
+`setSynchronizable` neutered the suite fails; with `save` restored to its old add-then-update
+shape, `savingAfterASyncChangeDoesNotTwin` fails specifically. That second proof is the pairing
+made visible: the twin test can only fail once the sync fix exists, because the sync fix is what
+creates a differing flag in the first place.
+
+`docs/VAULT.md` needed no change. Its Sync section has always said the wrapped key record follows
+the preference; the code now does what the document already promised.
+
 **A4 round one is complete. Scope 4 found the first confidentiality failure of the gate, and it
 is mine.** `PrivacyShield` keeps one process-global cover and one process-global lock, both bound
 to `connectedScenes.first`. The shipped `Info.plist` declares

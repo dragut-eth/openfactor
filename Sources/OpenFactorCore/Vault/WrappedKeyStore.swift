@@ -88,9 +88,54 @@ public struct WrappedKeyStore: Sendable {
     /// Stores the record, replacing any earlier one.
     ///
     /// **This is the one item in the design that is written more than once**, on a passphrase
-    /// change. Replacing rather than adding matters: two records under one account identifier is
-    /// the twin case gate A2 flagged and this project has never been able to test.
+    /// change.
+    ///
+    /// ## Why this looks before it adds
+    ///
+    /// `kSecAttrSynchronizable` is part of a Keychain item's primary key. An `SecItemAdd` whose
+    /// sync flag differs from the existing record's therefore does not collide: it succeeds, and
+    /// leaves **two** records under one account identifier. `load` asks with
+    /// `kSecAttrSynchronizableAny` and `kSecMatchLimitOne`, so which of the twins a later unlock
+    /// reads is unspecified, and a correct passphrase can fail against the wrong one.
+    ///
+    /// The A4 review found this, and found that it could not fire only because the wrapped key's
+    /// flag was permanently `false`: nothing ever made this record synchronizable, which was the
+    /// separate and more serious defect fixed alongside it. Making the record follow the sync
+    /// preference is exactly what creates the differing flag, so the two had to land together.
+    ///
+    /// Looking first also stops a passphrase change from silently relocating the record. The old
+    /// `SecItemUpdate` put `kSecAttrSynchronizable` in its change dictionary, so changing a
+    /// passphrase on a device whose preference had drifted would move the only recovery record
+    /// between iCloud and this device as a side effect. **Where the record lives is
+    /// `setSynchronizable`'s decision and nothing else's.**
     public func save(_ record: Data) throws(SecretStoreError) {
+        // Any, so an existing record is found whichever flag it carries.
+        var find = query()
+        find[kSecMatchLimit as String] = kSecMatchLimitOne
+        find[kSecReturnAttributes as String] = true
+
+        var existing: CFTypeRef?
+        let found = SecItemCopyMatching(find as CFDictionary, &existing)
+
+        if found == errSecSuccess {
+            // Matched on its own flag, so the update cannot create a twin, and the flag is
+            // absent from the changes, so the record does not move.
+            var target = query()
+            let attributes = existing as? [String: Any]
+            target[kSecAttrSynchronizable as String] =
+                (attributes?[kSecAttrSynchronizable as String] as? Bool) ?? kSecAttrSynchronizableAny
+
+            let changes: [String: Any] = [
+                kSecValueData as String: record,
+                kSecAttrAccessible as String: accessibility.attribute,
+            ]
+            let updated = SecItemUpdate(target as CFDictionary, changes as CFDictionary)
+            guard updated == errSecSuccess else { throw error(for: updated) }
+            return
+        }
+
+        guard found == errSecItemNotFound else { throw error(for: found) }
+
         var attributes = query()
         attributes[kSecAttrSynchronizable as String] = synchronizable
         attributes[kSecAttrAccessible as String] = accessibility.attribute
@@ -98,19 +143,44 @@ public struct WrappedKeyStore: Sendable {
         attributes[kSecValueData as String] = record
 
         let status = SecItemAdd(attributes as CFDictionary, nil)
-
-        if status == errSecDuplicateItem {
-            let changes: [String: Any] = [
-                kSecValueData as String: record,
-                kSecAttrSynchronizable as String: synchronizable,
-                kSecAttrAccessible as String: accessibility.attribute,
-            ]
-            let updated = SecItemUpdate(query() as CFDictionary, changes as CFDictionary)
-            guard updated == errSecSuccess else { throw error(for: updated) }
-            return
-        }
-
         guard status == errSecSuccess else { throw error(for: status) }
+    }
+
+    /// Moves the record between iCloud and this device, following the account items.
+    ///
+    /// **Nothing did this before, which is the defect that loses every account.** The record was
+    /// created with `synchronizable: false` and no code path ever changed it, while
+    /// `KeychainSecretStore.setSynchronizable` operated on the accounts service alone. Turning
+    /// sync on therefore offered iCloud Keychain the ciphertext and kept the only means of
+    /// reading it on one device. Replacing that device found every account present and
+    /// unreadable, with the passphrase having nothing to unwrap, which is precisely the recovery
+    /// the vault design exists to provide.
+    ///
+    /// Updated in place, and never by deleting and re-adding: a crash between the two would
+    /// destroy the only copy of the record that makes recovery possible.
+    ///
+    /// - Returns: whether a record existed to convert. `false` is not an error; a device with no
+    ///   vault has nothing to move.
+    @discardableResult
+    public func setSynchronizable(_ shouldSync: Bool) throws(SecretStoreError) -> Bool {
+        var find = query()
+        find[kSecAttrSynchronizable as String] = !shouldSync
+
+        let changes: [String: Any] = [
+            kSecAttrSynchronizable as String: shouldSync,
+            // A synchronizable item cannot be device-only by definition, so this follows.
+            kSecAttrAccessible as String: shouldSync
+                ? SecretAccessibility.whenUnlocked.attribute
+                : SecretAccessibility.whenUnlockedThisDeviceOnly.attribute,
+        ]
+
+        let status = SecItemUpdate(find as CFDictionary, changes as CFDictionary)
+
+        // Nothing to convert: no vault on this device, or it is already on the right side.
+        // Idempotent on purpose, so a partial failure can simply be run again.
+        if status == errSecItemNotFound { return false }
+        guard status == errSecSuccess else { throw error(for: status) }
+        return true
     }
 
     /// Removes it. Used by erase, and never as a way to lock a device: deleting this while

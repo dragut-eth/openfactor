@@ -38,11 +38,18 @@ struct SyncAwareKeychainStore: SynchronizableSecretStore {
     /// its accounts made unreadable by a preference.
     private let vaultKeys: VaultKeyStore
 
+    /// The wrapped vault key's store, so the sync switch can move it alongside the accounts.
+    /// Held rather than rebuilt per call, because unlike the account store it carries no
+    /// setting that can go stale: where the record lives is read from the Keychain each time.
+    private let wrapped: WrappedKeyStore
+
     init(
         defaults: UserDefaults = .standard,
         service: String? = nil,
-        vaultKeys: VaultKeyStore = VaultKeyStore()
+        vaultKeys: VaultKeyStore = VaultKeyStore(),
+        wrapped: WrappedKeyStore = WrappedKeyStore()
     ) {
+        self.wrapped = wrapped
         // Captured, not stored. The preference is still read on every call, which is the whole
         // point of this type: an account added after the switch moves inherits the new setting
         // without anything being rebuilt.
@@ -90,9 +97,34 @@ struct SyncAwareKeychainStore: SynchronizableSecretStore {
         try store.delete(id: id)
     }
 
+    /// Moves the accounts **and the wrapped vault key** to the requested side.
+    ///
+    /// **The wrapped key was left behind for the whole life of this feature**, which the A4
+    /// review found: `KeychainSecretStore.setSynchronizable` works through a query whose service
+    /// is the accounts service, so nothing in the app ever touched
+    /// `app.openfactor.vault.key`. Turning sync on offered iCloud Keychain the account
+    /// ciphertext and kept the only means of reading it on one device, so replacing that device
+    /// produced a phone full of unreadable accounts and a passphrase with nothing to unwrap.
+    /// `docs/VAULT.md` had promised the opposite in its Sync section since before the code
+    /// existed.
+    ///
+    /// **The key goes first when enabling and last when disabling**, so the intermediate state
+    /// is always the safe one. Enabling: the means of reading arrives before, or with, the thing
+    /// to read. Disabling: the accounts stop syncing before their key does, so no window exists
+    /// where iCloud holds ciphertext whose key has already been withdrawn.
+    ///
+    /// A partial failure throws, and both halves are idempotent, so the remedy is to run it
+    /// again rather than to reason about what got through.
     @discardableResult
     func setSynchronizable(_ shouldSync: Bool) throws(SecretStoreError) -> Int {
-        try store.setSynchronizable(shouldSync)
+        if shouldSync {
+            try wrapped.setSynchronizable(true)
+            return try store.setSynchronizable(true)
+        }
+
+        let converted = try store.setSynchronizable(false)
+        try wrapped.setSynchronizable(false)
+        return converted
     }
 
     func syncState() throws(SecretStoreError) -> SyncState {
