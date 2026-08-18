@@ -17,7 +17,7 @@ early second look than to a first.
 | --- | --- |
 | ChatGPT 5.6 Sol | Returned, below. Triaged. Not cold, see above |
 | Fable 5 | Returned, below. Triaged |
-| Grok 4.6 | Not yet run |
+| Grok 4.6 | Returned, below. Triaged |
 
 ---
 
@@ -316,10 +316,137 @@ worth to a gate that runs a handful of times. But it belongs in the record, beca
 reader comparing scope 1's yield against scope 2's should know that the two scopes were not
 equally readable.
 
+---
+
+## Grok 4.6
+
+*Read-only pass over commit `74fe841`. Reproduced as returned, abridged where it repeats findings
+already recorded above.*
+
+> **Medium — the watch installs the vault key without requesting `.complete` protection.**
+> [Same defect as both passes above, reached by following `phoneSent` into `install`.] The
+> provisioned key is written with `[.atomic]` only. The comment immediately above the call, and
+> `docs/VAULT.md:102-106`, both say the opposite, including that
+> `.completeUntilFirstUserAuthentication` "is a materially weaker and different promise and is not
+> what this means."
+>
+> The phone path is not this bug. I did not read the protection class back on a watch. There is no
+> `NSFileProtection*` key in the watch target, so the usual default is complete-until-first-unlock,
+> which stays readable after first unlock while the watch is locked. I am not claiming a
+> demonstrated extraction.
+>
+> Related, same function, weaker: `install` writes the 32 bytes first and only then sets
+> `isExcludedFromBackup`. A kill between those two leaves a usable key that a later `load` will
+> accept, so nothing retries the exclusion. On the watch it is how a restored watch could come back
+> already provisioned.
+>
+> **On the cryptography.** The transcript binding is complete; the only response field not in the
+> transcript is `sealed`, and that is GCM with the transcript as AAD. The nonce is compared before
+> the public key is parsed and before HKDF, and the two-fault test returns `.notForThisRequest`,
+> which is only possible if the nonce check runs first. A response from one exchange cannot be
+> replayed into another. HKDF info is label plus a fixed-width transcript, and neither side parses
+> info, so an attacker cannot choose a different split. GCM nonces cannot repeat under one derived
+> key in production, since each `respond` creates a new private key. P-256 has cofactor 1. I did
+> not find a cryptographic break.
+>
+> **On parsing.** Both directions require exact length before any slice, magic is checked before
+> the layout is trusted, and a 65-byte field of zeros becomes `.invalidPublicKey` rather than a
+> trap. A request that is not `Data` never reaches the parser. I did not find a crash or a slice
+> that can run off the buffer.
+>
+> **On the state machine.** The phone does not seal to a request that arrived after the alert was
+> shown; `approve` copies the stored request before the `defer` clears it, and the type is
+> `@MainActor`, so a later answer cannot arrive in between. `approve()` has one call site, the
+> affirmative button. The alert binding's setter is a no-op, so SwiftUI clearing `isPresented`
+> cannot approve. `watchAsking` is false while App Lock is up. Queued WatchConnectivity modes have
+> no handlers at all, so a key cannot be installed from a persisted queue.
+>
+> Two things that are not key theft but are real: the first-message status is a bare string with no
+> nonce, so a retry while the phone still holds the first request is told `.asking` about a request
+> the phone is not actually asking about, and `pendingRequest` has no lifetime short of process
+> death. And `phoneDeclined()` takes no token while every other watch callback is token-gated, so
+> it is the one second-message path that cannot tell a stale decline from a current one.
+>
+> **Tests that would catch a real regression.**
+>
+> 1. `WatchKeyProvider`: a second valid request must not change what `approve` seals to. This is
+>    the substitution bug that already shipped once. It has no test. `SECURITY.md` says the four
+>    review fixes are "all now tested"; this one is not. The type lives in the app target, which is
+>    why. Pulling the pending-request rule into a core value type, the way the watch flow was
+>    pulled out, is the same fix they already made once.
+> 2. `answer` must never produce a 145-byte payload. Only `approve` may call `respond`.
+> 3. `applicationState != .active` must not set `pendingRequest`.
+> 4. **The HKDF label is domain separation and is untested.** `wrappingKey` with the same ECDH
+>    secret and transcript but a different label must yield a different key. Today both sides share
+>    one function; deleting `label +` would still pass every existing test.
+> 5. Decide whether a stale decline may kill a newer attempt, then test that.
+> 6. Two `respond` calls on the same `ValidatedRequest` must produce different responses, and both
+>    must open.
+>
+> The exchange itself is doing what it claims. The defect is on the far side of a successful open:
+> the watch writes the delivered key without the protection class the design says that write uses.
+
+### Triage of the Grok 4.6 pass
+
+**The protection-class finding is confirmed for the third time in this scope and the fifth overall.**
+No engine has missed it once it had `SharedInbox` in reach.
+
+**The two state-machine observations match findings already recorded**, reached independently: the
+phone answering `.asking` to a request it discards, and `phoneDeclined()` being the one untokened
+path. Grok adds the sentence that names the shape best: it is the one second-message path that
+cannot tell a stale decline from a current one.
+
+**Test gap 4 is confirmed empirically, exactly as gap 1 was in the Fable pass.** The
+domain-separation label was deleted from the HKDF info and the full suite was run: **358 tests,
+all passing.** So the label that separates this exchange's key derivation from every other use of
+the same shared secret is protected by nothing. Both sides build the info from one function, so
+its removal is symmetric and invisible to every round-trip test in the suite.
+
+**That is the second hole of this kind found in one scope**, after the static ephemeral key. Both
+share a cause worth naming: the suite tests the two sides against each other, and any change made
+symmetrically to both sides passes. A round trip cannot detect a weakened construction, only a
+disagreement.
+
+**Test gap 1 contains a claim about this repository's own documentation, and it is correct.**
+`SECURITY.md:43` says the four defects from the earlier watch review were "all fixed and all now
+tested". No test in this repository references `WatchKeyProvider` at all, and the `.noRandomness`
+path is not tested either. **Two of those four fixes have no test**, and the sentence claiming
+otherwise was written the same day the fixes were.
+
+That is a false claim in the security document, about the review process the document describes,
+found by a reviewer reading the document against the code. It is the strongest single argument in
+this gate for the basis labels added in PR 17, and for the rule that a claim carrying **tested**
+must mean a machine fails when it stops being true.
+
+## Scope 2 complete
+
+| Finding | ChatGPT | Fable 5 | Grok 4.6 |
+| --- | --- | --- | --- |
+| watchOS protection class | Found | Found | Found |
+| Phone answers "asking" to a request it drops | Found | Found | Found |
+| Decline is not bound to its attempt | Found | Missed | Found |
+| Install writes before excluding from backup | Found, scope 1 | Missed | Found |
+| CSPRNG catch leaves a stale attempt | Missed | Found | Missed |
+| `responseDidNotOpen` has no outstanding guard | Missed | Found | Missed |
+| Consent can be arbitrarily stale | Missed | Found | Found |
+| Secure Enclave sentence is untrue | Missed | Found | Missed |
+| Static phone key would pass the suite | Missed | Found | Found, as gap 6 |
+| Removing the HKDF label would pass the suite | Missed | Missed | Found |
+| `SECURITY.md` "all now tested" is false | Missed | Missed | Found |
+
+**Three findings were reported by all three engines**, unlike scope 1 where none were. The most
+valuable items were still single-engine: the two verified holes in the test suite came from one
+engine each, and neither would have been found by running any single engine alone.
+
+**No engine found a cryptographic defect**, and all three said so with specific mechanisms rather
+than assurances. That is the strongest statement available about this exchange so far, and it is
+worth exactly what three code reviews are worth: nothing about behaviour on hardware, and nothing
+about the routing assumption the design rests on.
+
 ### Not yet acted on
 
-**Nothing has been changed.** Fable 5 and Grok 4.6 run this scope against the same commit. Fixes
-begin when round one is complete, and findings 2 and 3 join the ordered list in
+**Nothing has been changed.** Scopes 3 and 4 run against the same commit. Fixes begin when round
+one is complete, and findings 2 and 3 join the ordered list in
 `docs/audits/A4-scope1-vault.md`, which they belong beside: they are the same family as the twin
 record and the creation race, all of them a message or a tap arriving against state that has moved
 on.

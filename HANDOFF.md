@@ -28,6 +28,25 @@ name claims more than it observes. That is the fourth test in this project found
 than its name promised. A static phone key turns a captured response plus a later phone compromise
 into vault-key recovery, which is precisely what the ephemeral design exists to prevent.
 
+**Grok completed scope 2 and found a second hole in the test net, plus a false claim in
+`SECURITY.md`.** Deleting the HKDF domain-separation label was tried and the full suite still
+passes: 358 tests. So the label separating this exchange's key derivation from any other use of
+the same shared secret is protected by nothing. Both holes share a cause worth naming: the suite
+tests the two sides against each other, and any change made symmetrically to both passes. **A
+round trip cannot detect a weakened construction, only a disagreement.**
+
+**`SECURITY.md:43` says the four defects from the earlier watch review were "all fixed and all now
+tested". That is false.** No test in this repository references `WatchKeyProvider` at all, and the
+`.noRandomness` path is untested, so two of the four have no test. The sentence was written the
+same day as the fixes. A reviewer found it by reading the document against the code, which is the
+strongest argument this gate has produced for the basis labels added in PR 17: **tested** has to
+mean a machine fails when the claim stops being true.
+
+**Scope 2 is complete.** Three findings were reported by all three engines, unlike scope 1 where
+none were. The most valuable items were still single-engine: both verified test holes came from
+one engine each. No engine found a cryptographic defect, and each said so with mechanisms rather
+than assurances.
+
 **One methodological cost is now on the record.** Fable opened by noting this scope cannot be read
 cold by anyone any more, because the code comments narrate the previous review's findings in
 detail. That is true and it is a direct cost of a practice this project otherwise benefits from.
