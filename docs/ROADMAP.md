@@ -756,8 +756,11 @@ that dissolved on inspection. A review that came to nothing is evidence.
 
 ##### The closing opinion
 
-Each engine is asked, last, for a short comprehensive opinion of ten to fifteen sentences, written
-for somebody deciding whether to trust the app. Those go in `README.md`, published whole and
+Each engine is asked, last and in a fresh conversation, to read its own published passes and then
+write a short comprehensive opinion of ten to fifteen sentences, for somebody deciding whether to
+trust the app. Reading its own record rather than continuing a conversation is what makes the
+opinion rest on everything that engine found rather than on whichever scope it happened to finish
+with, and it is what lets a reader reproduce the opinion from this repository. Those go in `README.md`, published whole and
 attributed to the engine that wrote them, unflattering parts included. If an opinion is bland,
 that is a fact about it worth publishing rather than a reason to re-ask until it improves.
 

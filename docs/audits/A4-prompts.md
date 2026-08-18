@@ -288,21 +288,37 @@ WHAT CHANGED:
 
 ## The closing opinion
 
-Asked once per engine, after round two, in the conversation where that engine did its last pass.
-Published in `README.md`, whole and attributed.
+Asked once per engine, after round two, **in a fresh conversation**, pointing the engine at its
+own published passes rather than continuing one of them.
+
+Continuing a pass was the first plan and it was wrong. An engine's last conversation holds one
+scope out of four, so its opinion would rest on a quarter of what it looked at, and which quarter
+would depend on the order the scopes happened to be run in. Reading its own recorded passes gives
+it everything it found, and has the property a published opinion ought to have: anybody can
+reproduce it from this repository, rather than taking on trust a conversation only one person
+saw.
 
 ```
-You have now reviewed parts of this app in detail. Write a short opinion of ten to fifteen
-sentences, for somebody deciding whether to trust it with their two-factor codes.
+In docs/audits/ of this repository are the passes you wrote while reviewing this app, across four
+scopes and two rounds. Read your own passes, and the triage notes recorded beneath them, which
+say which of your findings were accepted, which were rejected, and why.
+
+Then write a short opinion of ten to fifteen sentences, for somebody deciding whether to trust
+this app with their two-factor codes.
 
 Write it for a security-conscious friend rather than for the developer. Say what you would warn
 them about, and what you would not trust this app with. If there is something you could not
-assess from what you were shown, say that, and say why it matters.
+assess from what you were shown, say that, and say why it matters. If any of your findings were
+rejected and you still think you were right, say that too.
 
 Do not summarise the project's own claims back to me; assume the reader can read the README. I am
 publishing this whole, including anything unflattering, so write what you actually think rather
 than what would be encouraging.
 ```
+
+**A session is worth keeping only until its pass has been triaged**, in case a finding needs one
+clarifying question put to the engine that wrote it. After that the conversation is disposable:
+round two starts fresh, and so does this.
 
 **A bland opinion is a fact about the method worth publishing, not a reason to ask again.**
 Nothing here is re-asked until it improves, and nothing is trimmed to read better.
