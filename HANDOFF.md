@@ -8,6 +8,40 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**A4 scope 3, the parsers, found a data-loss path that needs no attacker.** Fable's pass is in
+`docs/audits/A4-scope3-parsers.md`. The backup format demands a secret decode to at least ten
+bytes and a counter stay under 2^53. The archive reader enforces both. **Three of the four
+enrollment paths do not**, and `BackupPayload.write` serializes whatever the account holds, so an
+account with a short secret works every day, exports into a backup, and is refused when that
+backup is restored.
+
+**Proved end to end rather than read.** A probe enrolled `otpauth://totp/x?secret=GEZDGNBV`
+through the real URI parser, wrote it, and read it back: five-byte secret accepted, payload
+written, **zero accounts restored**. The refusal reads `secretNotBase32` for a secret that is
+perfectly valid Base32, so the message sends whoever hits it looking for a bad character that does
+not exist.
+
+It needs no hostile input, since a service issuing a short secret is enough, and it is discovered
+at the worst possible moment: on a new device that no longer has the originals. A hostile QR code
+triggers it deliberately, planting an account that silently drops out of every backup.
+
+**Three smaller ones, all confirmed.** The import front door caps files at 8 MiB before the
+archive sniff while a conforming archive can reach about 12.2 MB, so the routing layer narrows a
+bound the format froze; `BackupArchive`'s own comments describe that exact mistake being caught
+inside the reader, and it now sits in front of it. A UTF-8 BOM defeats the JSON sniff, so a mangled
+archive never reaches the passphrase prompt, even though the layer below strips that BOM
+deliberately. And `sortIndex` is read from every format and discarded by the store.
+
+**The pattern of this gate is becoming clear: the audited artifact holds and its neighbours do
+not.** The backup format is the most carefully specified thing in this project, with a frozen
+document, published vectors and a reader enforcing every rule. Nothing enforces those rules on the
+way in.
+
+Two things the pass did beyond its findings are worth keeping: it re-derived both published test
+vector keys independently in Python, the first external check of those vectors, and it verified
+`UnicodeScalar(Int)` is failable by executing it rather than assuming, which is the difference
+between believing a parser is trap-free and knowing it.
+
 **A4 scope 2, the Watch exchange, is two thirds done and found that yesterday's fixes created
 two new defects.** Recorded in `docs/audits/A4-scope2-watch.md`. ChatGPT and Fable independently
 reached the same one: the `guard pendingRequest == nil else { return .asking }` added yesterday
