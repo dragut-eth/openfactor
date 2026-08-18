@@ -8,6 +8,35 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**Gate A4 has started, and its first pass found a defect that loses every synced account.**
+ChatGPT 5.6 Sol reviewed scope 1, the vault at rest, against commit `74fe841`. The pass and the
+triage are in `docs/audits/A4-scope1-vault.md`. Eight findings, all eight confirmed against the
+code, none rejected: the second consecutive cold review with no false positives.
+
+**The one that matters: the wrapped vault key never syncs.** `WrappedKeyStore` defaults to
+`synchronizable: false` and nothing ever changes it, because `setSynchronizable` operates on the
+accounts service alone. Enable sync, lose the phone, and the replacement receives every account
+as ciphertext with no wrapped key for the passphrase to unwrap. `docs/VAULT.md` promises the
+opposite in its Sync section, and the property's own comment three lines above the default says
+it follows the account items. The code contradicts a comment directly above it, which is why
+nobody reading either noticed.
+
+**This is live.** It affects the maintainer's own phone and build 5 on TestFlight. An encrypted
+export is the only recovery path that currently exists, and was advised immediately.
+
+Three mediums and four documentation mismatches are also confirmed. One of the mediums is a
+regression introduced the same day: `VaultKeyStore.install` was pointed at
+`SharedInbox.writingOptions` when macOS started refusing `completeFileProtection`, and that
+helper's `#if os(iOS)` is narrower than the `#if os(iOS) || os(watchOS) || os(tvOS)` branch
+around the call, so the watch writes the vault key with no protection class under a comment
+claiming `.complete`.
+
+**Nothing is being fixed yet, deliberately.** Grok 4.6 and Fable 5 run the same scope against the
+same commit, and changing code between passes would mean the later engines review something else
+and their findings could not be compared with these. Fixes begin when scope 1 is complete on all
+three, in the order: the sync gap first and alone, then the duplicate-refusal and error state,
+then the watch regression, then the install ordering, then the document mismatches together.
+
 **CI now refuses statements about the maintainer's circumstances in public documents.** Added
 after a sentence explaining why a security gate was met one way rather than another went into the
 roadmap, the handoff and a commit message. Nothing had been pushed, which was luck rather than
