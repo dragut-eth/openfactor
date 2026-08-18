@@ -58,6 +58,13 @@ public enum GoogleAuthenticatorImport {
         }
     }
 
+    /// The largest value accepted for a batch's index, size, or identifier.
+    ///
+    /// Deliberately small. A transfer split into more parts than this is not a transfer anybody
+    /// is going to scan, so a larger number is a malformed message rather than an ambitious
+    /// export, and refusing it here keeps every arithmetic on these fields trivially safe.
+    static let maximumBatchField = 10_000
+
     /// One scanned code: the accounts it held, and where it sits in a set.
     ///
     /// A large export does not fit in one QR code, so Google Authenticator splits it. Each
@@ -75,7 +82,12 @@ public enum GoogleAuthenticatorImport {
         public var isComplete: Bool { size <= 1 }
 
         /// Which part this is, counting from one, the way it would be said aloud.
-        public var position: Int { index + 1 }
+        ///
+        /// The addition is safe because `index` is refused above `maximumBatchField` when the
+        /// message is read. It is written as a saturating add anyway: this property is
+        /// evaluated while a SwiftUI sheet is being built, which is the worst place in the app
+        /// to discover that an invariant moved, and the belt costs one character.
+        public var position: Int { index &+ 1 }
     }
 
     /// Whether a scanned string is one of these at all.
@@ -127,9 +139,26 @@ public enum GoogleAuthenticatorImport {
                     )
                 }
 
-            case let .varint(3, value): size = Int(clamping: value)
-            case let .varint(4, value): index = Int(clamping: value)
-            case let .varint(5, value): id = Int(clamping: value)
+            // **Refused rather than clamped, and the difference crashed the app.** These were
+            // `Int(clamping:)`, which turns a nonsensical `UInt64.max` into a perfectly valid
+            // `Int.max`, and `Batch.position` then computed `index + 1` and trapped. Gate A4
+            // reproduced it from a URL any app on the device can send, since
+            // `otpauth-migration://` is a declared scheme, so this was a crash with no user
+            // action beyond the link being opened.
+            //
+            // Clamping is the wrong instinct for a value somebody else chose. It converts
+            // "this cannot be true" into "this is the largest thing that can be true", which is
+            // still a lie and now an unrefusable one. A batch cannot have more parts than a
+            // person could ever scan, so anything outside a sane range is a malformed message.
+            case let .varint(3, value):
+                guard value <= UInt64(Self.maximumBatchField) else { throw .malformed }
+                size = Int(value)
+            case let .varint(4, value):
+                guard value <= UInt64(Self.maximumBatchField) else { throw .malformed }
+                index = Int(value)
+            case let .varint(5, value):
+                guard value <= UInt64(Self.maximumBatchField) else { throw .malformed }
+                id = Int(value)
 
             // Everything else, including `version`, is ignored the way an unknown field is.
             default: continue

@@ -316,3 +316,91 @@ struct GoogleAuthenticatorImportTests {
         #expect(batch.result.accounts.count == 1)
     }
 }
+
+/// The batch header's three integers, which arrive from a QR code or from any app on the device
+/// through the `otpauth-migration://` scheme.
+///
+/// **Gate A4 found a crash here and this suite is the reason it can only happen once.** The
+/// fields were read with `Int(clamping:)`, so `UInt64.max` became `Int.max`, and `Batch.position`
+/// then added one to it and trapped while a SwiftUI sheet was being built. The payload below is
+/// the one the review used, reproduced exactly.
+@Suite("Migration batch bounds")
+struct MigrationBatchBoundsTests {
+
+    /// `0a 00` is an empty account record, so the message parses; `20 ff…01` is field 4,
+    /// `batch_index`, carrying `UInt64.max`.
+    private var theCrashingPayload: String {
+        let bytes: [UInt8] = [
+            0x0a, 0x00, 0x20, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01,
+        ]
+        let encoded = Data(bytes).base64EncodedString()
+            .addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+        return "otpauth-migration://offline?data=" + encoded
+    }
+
+    @Test("The payload that crashed the app is refused")
+    func theCrashingPayloadIsRefused() {
+        #expect(throws: GoogleAuthenticatorImport.FileError.malformed) {
+            _ = try GoogleAuthenticatorImport.read(theCrashingPayload)
+        }
+    }
+
+    /// The property that trapped. Reading it must be safe for anything that parsed, which is
+    /// what the refusal above buys.
+    @Test("Position is safe for every batch that parses")
+    func positionIsSafeForAnythingThatParses() throws {
+        let batch = try GoogleAuthenticatorImport.read(theOrdinaryPayload)
+        #expect(batch.position == batch.index + 1)
+    }
+
+    /// A batch field one past the accepted range is malformed, not clamped. Checked for all
+    /// three fields, because two of them were clamped the same way and only one was reachable
+    /// from the reported crash.
+    @Test("Every batch field is refused above the bound")
+    func everyFieldIsBounded() {
+        for field: UInt8 in [0x18, 0x20, 0x28] {  // size, index, id
+            var bytes: [UInt8] = [0x0a, 0x00, field]
+            bytes.append(contentsOf: varint(UInt64(GoogleAuthenticatorImport.maximumBatchField) + 1))
+            let encoded = Data(bytes).base64EncodedString()
+                .addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+
+            #expect(throws: GoogleAuthenticatorImport.FileError.malformed) {
+                _ = try GoogleAuthenticatorImport.read(
+                    "otpauth-migration://offline?data=" + encoded)
+            }
+        }
+    }
+
+    /// And the bound itself is accepted, so the refusal is a bound rather than a ban.
+    @Test("A batch field at the bound is accepted")
+    func theBoundItselfIsAccepted() throws {
+        var bytes: [UInt8] = [0x0a, 0x00, 0x20]
+        bytes.append(contentsOf: varint(UInt64(GoogleAuthenticatorImport.maximumBatchField)))
+        let encoded = Data(bytes).base64EncodedString()
+            .addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+
+        let batch = try GoogleAuthenticatorImport.read(
+            "otpauth-migration://offline?data=" + encoded)
+        #expect(batch.index == GoogleAuthenticatorImport.maximumBatchField)
+        #expect(batch.position == GoogleAuthenticatorImport.maximumBatchField + 1)
+    }
+
+    private var theOrdinaryPayload: String {
+        let bytes: [UInt8] = [0x0a, 0x00, 0x20, 0x02]
+        let encoded = Data(bytes).base64EncodedString()
+            .addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+        return "otpauth-migration://offline?data=" + encoded
+    }
+
+    private func varint(_ value: UInt64) -> [UInt8] {
+        var v = value
+        var out: [UInt8] = []
+        repeat {
+            var byte = UInt8(v & 0x7f)
+            v >>= 7
+            if v != 0 { byte |= 0x80 }
+            out.append(byte)
+        } while v != 0
+        return out
+    }
+}

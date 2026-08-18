@@ -8,6 +8,22 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**The crash is fixed, and two small watch defects with it.** `GoogleAuthenticatorImport` read
+the three batch header fields with `Int(clamping:)`, which turns an impossible `UInt64.max` into a
+perfectly valid `Int.max`, and `Batch.position` then added one and trapped while a SwiftUI sheet
+was being built. All three fields are now refused above a deliberately small bound, because
+clamping a value somebody else chose converts "this cannot be true" into "this is the largest
+thing that can be true", which is still a lie and now an unrefusable one. `position` uses a
+saturating add as a belt.
+
+Four tests, including the exact payload the review used, proved by restoring the clamp: two fail,
+one of them the reproduction.
+
+Also fixed: the `.noRandomness` catch in `ask()` left a stale attempt behind while telling the
+flow a fresh one had failed, so a very late response could install a key with nothing outstanding;
+and `responseDidNotOpen` was the one transition in the flow type with no guard of its own, so a
+call with nothing outstanding demoted any stage including `.ready`. Both proved by reverting them.
+
 **Multiple window scenes are switched off, which closes the gate's only confidentiality
 finding.** The app was shipping with `UIApplicationSupportsMultipleScenes = true` while
 `PrivacyShield` kept one lock window and one cover window on `connectedScenes.first`, so a second

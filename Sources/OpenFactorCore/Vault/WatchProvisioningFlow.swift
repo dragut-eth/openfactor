@@ -157,6 +157,12 @@ public struct WatchProvisioningFlow: Equatable, Sendable {
     /// Anything else is a real failure of the current attempt.
     public mutating func responseDidNotOpen(obsolete: Bool) {
         guard !obsolete else { return }
+        // **Guarded like every sibling transition.** Without this, a call with nothing
+        // outstanding demotes any stage, including `.ready`, so a watch showing its accounts
+        // would revert to "Not set up". Gate A4 found it unreachable today and filed it anyway,
+        // correctly: this type exists to be the place those guarantees are tested, and it was
+        // the one method carrying no guard of its own.
+        guard outstanding != nil else { return }
         outstanding = nil
         stage = .notSetUp
     }

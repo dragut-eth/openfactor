@@ -122,6 +122,34 @@ struct WatchProvisioningFlowTests {
         #expect(!flow.isAsking)
     }
 
+    /// Gate A4: this was the one transition carrying no guard of its own, so a call with
+    /// nothing outstanding demoted any stage, including a watch that was already reading its
+    /// accounts. Unreachable when it was found, and filed anyway, which is the right call for a
+    /// type whose whole job is to be the place these guarantees are pinned.
+    @Test("A failure with nothing outstanding cannot demote a ready watch")
+    func failureWithNothingOutstandingIsInert() {
+        var flow = WatchProvisioningFlow()
+        _ = flow.beganAsking()
+        flow.installedKey(opensAccounts: true)
+        #expect(flow.stage == .ready)
+        #expect(!flow.isAsking)
+
+        flow.responseDidNotOpen(obsolete: false)
+        #expect(flow.stage == .ready, "a late failure must not unset a working watch")
+    }
+
+    /// The same guard from the other side: a genuine failure while an attempt is outstanding
+    /// must still end it, so the guard cannot be a blanket refusal.
+    @Test("A failure while an attempt is outstanding still ends it")
+    func failureWhileOutstandingStillEnds() {
+        var flow = WatchProvisioningFlow()
+        _ = flow.beganAsking()
+
+        flow.responseDidNotOpen(obsolete: false)
+        #expect(flow.stage == .notSetUp)
+        #expect(!flow.isAsking)
+    }
+
     // MARK: - The rest of the surface
 
     @Test("A key that arrives and opens nothing says so rather than claiming success")

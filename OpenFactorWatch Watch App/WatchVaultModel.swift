@@ -119,6 +119,12 @@ final class WatchVaultModel: NSObject {
             // as the phone not answering, which is the screen with the button.
             attempt = try WatchProvisioning.Attempt()
         } catch {
+            // Cleared, the same as every other synthesized failure. Without this the stale
+            // attempt from a previous try survives with nothing outstanding in the flow, and a
+            // very late response to it installs a key while the screen says the phone is not
+            // answering. Found in gate A4, and it contradicted the comment on `attempt` above.
+            self.attempt = nil
+            self.token = nil
             flow.sendFailed(flow.beganAsking())
             return
         }
