@@ -535,6 +535,13 @@ machine rather than promised in a comment.
 No credential belongs in this repository. CI refuses private-key blocks, credential files, and
 values shaped like the App Store Connect credentials used by the release process.
 
+**Nor does anything about the maintainer's circumstances.** A public repository reaches everybody
+who clones it, and a document should say what was done and what it does not claim rather than why
+some other option was not taken. CI refuses the crude phrasings, which is a backstop under a
+judgment call rather than a substitute for one: the same fact said carefully would pass. It was
+added after such a sentence was written into the roadmap, the handoff and a commit message, and
+caught before any of it was pushed.
+
 The Apple development team identifier is the deliberate exception. It is not a secret, appears
 inside signed applications, and is documented in `docs/PROJECT.md`.
 

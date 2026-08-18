@@ -62,6 +62,35 @@ jobs:
           fi
           echo "No network code and no logging found."
 
+      # This repository is public and its maintainer's circumstances are not part of it.
+      # A statement about what the project can or cannot pay for is private information that
+      # reaches everybody who ever clones this, and it is worth nothing to a reader: what a
+      # document should say is what was done, not what could not be.
+      #
+      # Added after "there is no budget for a commissioned review" was written into the
+      # roadmap, the handoff, and a commit message, explaining why a security gate was met the
+      # way it was. Nothing had been pushed, which was luck rather than a process.
+      #
+      # This catches crude phrasings only. It cannot catch the same fact said carefully, so it
+      # is a backstop under a judgment call rather than a replacement for one. The patterns are
+      # anchored to phrases rather than to words, so the character and byte budgets discussed
+      # elsewhere in these documents do not match, and this file excludes itself since it
+      # necessarily contains them.
+      #
+      # `git grep -E` does not support `\b`, which the credentials check above records the hard
+      # way, so nothing here relies on it.
+      - name: No private circumstances in public documents
+        run: |
+          if git grep -n -I -E \
+            "no budget|(cannot|can not|could not|can'?t|could'?nt) afford|out of (my|our) pocket|too expensive|(do not|don'?t) have the money|my (salary|income|savings|rent|mortgage)|personal finances" \
+            -- '*.md' ':!.github/workflows/ci.yml'; then
+            echo "Found something about the maintainer's circumstances rather than the project's."
+            echo "This repository is public. Say what was done and what it does not claim;"
+            echo "the reason a different option was not taken is nobody else's business."
+            exit 1
+          fi
+          echo "No private circumstances found."
+
       # SECURITY.md's answer to the malicious-dependency attacker is that there are none. That
       # was the one claim in that section nothing enforced, sitting beside claims a machine
       # checks, and the supply chain is exactly where a promise in prose is worth least: a

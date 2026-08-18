@@ -8,6 +8,14 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**CI now refuses statements about the maintainer's circumstances in public documents.** Added
+after a sentence explaining why a security gate was met one way rather than another went into the
+roadmap, the handoff and a commit message. Nothing had been pushed, which was luck rather than
+process. The check is anchored to phrases rather than words, so the character and byte budgets
+discussed elsewhere do not match it, and it was proved against six real phrasings and three
+legitimate ones. It catches crude wording only and cannot catch the same fact said carefully, so
+it is a backstop under a judgment call rather than a replacement for one.
+
 **Gate A4 is now three cold reviews by three vendors, run twice.** Fable 5, Grok 4.6 and
 ChatGPT 5.6 Sol, each given the code cold with no history and no account of what previous
 reviewers found. Three vendors rather than three prompts to one model, because two models from
