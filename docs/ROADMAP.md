@@ -679,7 +679,15 @@ so "no accounts yet" keeps its old meaning.
 
 - Complete `SECURITY.md`: attacker with the unlocked device, the locked device, the iCloud
   account, the App Store binary, or a malicious dependency
-- Pasteboard, screenshot, and background snapshot behavior audited
+- Done: pasteboard, screenshot, and background snapshot behavior audited. The pasteboard
+  audit is written up in `SECURITY.md` and changed one decision, codes may now travel through
+  Universal Clipboard while passphrases may not, with all three behaviours measured on hardware
+  against a positive control. Screenshots cannot be prevented on iOS and are not detected here,
+  deliberately: detection buys nothing actionable once the image exists. Snapshots were settled
+  in PR 15b, including the limitation `docs/APP_LOCK.md` records. **One decision deferred:**
+  `UIScreen.isCaptured` is not observed, so a code is visible during screen recording, AirPlay
+  or mirroring. Small to build, and left alone because codes are displayed to be read and expire
+  in seconds
 - Done: confirmation in writing that the binary makes no network calls, with the check
   automated in CI. The `binary` job builds Release unsigned, sweeps every Mach-O in the
   bundle, and fails on any networking framework or symbol; proved in both directions,

@@ -8,6 +8,32 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**Codes now reach other devices through Universal Clipboard; passphrases still do not.** PR 17's
+pasteboard audit found the copy path already doing everything right, all three copies through one
+type, both narrowing options set, the app never reading the clipboard, and the watch unable to
+copy at all. What it also found was that `localOnly` on codes was the wrong call, and the argument
+is Xavier's: this project already accepts Apple's transport for iCloud Keychain sync, off by
+default and enabled by its owner, so forbidding the same shape of thing for the clipboard is an
+inconsistency with no principle behind it, and it overrides a choice made at the system level.
+Every comparable authenticator allows the paste, which is why the old behaviour was first
+reported here as OpenFactor being broken.
+
+**Three facts were measured on hardware, with a positive control, and the third changed the
+reasoning.** A code now reaches the Mac. The expiry clears the originating phone. The expiry does
+**not** travel, so a code stays on the Mac's clipboard until something replaces it. That last one
+turns the passphrase rule from belt-and-braces into the only thing standing between a passphrase
+and a permanent entry in a Mac clipboard and any clipboard manager watching it, so it was tested
+in its own right rather than assumed: a copied passphrase does not paste on the Mac.
+
+The first attempt at this test was worthless and worth remembering. Universal Clipboard was not
+enabled on the Mac, so nothing pasted from anywhere, and "the code did not arrive" looked
+identical to the protection working. The positive control, pasting from Notes first, is what made
+the later measurements mean anything. Same failure mode as a CI check that passes while lying.
+
+`SECURITY.md` has a clipboard section now, which the audit found was the one real documentation
+gap: the design was exemplary and entirely unwritten, so an auditor would have flagged the
+best-handled surface in the app as an open question.
+
 **The no-network claim is now enforced against the shipped artifact, not only the source.**
 PR 17's CI item is done: a `binary` job builds Release unsigned, finds every Mach-O in the
 bundle rather than naming them, and fails on any linked networking framework or referenced

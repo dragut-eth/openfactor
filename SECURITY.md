@@ -100,6 +100,40 @@ with no passcode.
 The Watch has no separate App Lock. It relies on the Watch passcode and wrist detection, which
 locks the device when it leaves the wearer's wrist.
 
+### The clipboard
+
+**The one place this app deliberately hands secret material to the rest of the system**, and the
+behaviour below was measured on real devices rather than taken from documentation.
+
+**A copied code may reach your other devices.** With Universal Clipboard enabled, a code copied on
+the iPhone can be pasted on a Mac or iPad signed into the same Apple Account. This is deliberate.
+The same bargain is already accepted for iCloud Keychain sync: Apple's transport, off until its
+owner turns it on, documented rather than forbidden. Refusing it here while permitting it there
+would be an inconsistency with no principle behind it, and it overrides a choice its owner already
+made at the system level. It is also what every comparable authenticator does, so the earlier
+behaviour read as OpenFactor being broken rather than as a protection.
+
+**A copied code expires, but only on the device it was copied on.** The clipboard entry carries an
+expiration set to the moment the code itself stops working, and the originating iPhone clears it
+then. Measured: that expiry does **not** travel. On a Mac that received the code it remains on the
+clipboard until something else replaces it.
+
+**So the exposure, named rather than implied:** macOS shows no paste notification and lets any app
+read the clipboard silently, and clipboard managers are common and keep their history on disk.
+A code can therefore land in a searchable plaintext store and outlive its own validity there. This
+is accepted for codes. Six digits that stop working in seconds are close to worthless once used,
+and the person is typing them into that same Mac in any case.
+
+**A backup passphrase never travels.** It is copied device-local, and that rule is load bearing
+rather than tidy, precisely because the expiry does not propagate: a passphrase that reached
+another device would sit in its clipboard, and in any clipboard manager's history, indefinitely.
+A passphrase opens an archive holding every secret its owner has and never expires on its own, so
+it is the one thing here that must not leave the device it was shown on.
+
+**OpenFactor never reads the clipboard.** Nothing in the app inspects what is on it, so there is no
+paste-snooping surface and no reason for the system to attribute a paste to this app. The Watch
+app cannot copy at all.
+
 ### Attacker with your iCloud account
 
 Sync is off by default. **Implemented in PR 16d:** when it is enabled, iCloud Keychain carries encrypted
