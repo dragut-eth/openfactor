@@ -8,6 +8,18 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**The no-network claim is now enforced against the shipped artifact, not only the source.**
+PR 17's CI item is done: a `binary` job builds Release unsigned, finds every Mach-O in the
+bundle rather than naming them, and fails on any linked networking framework or referenced
+networking symbol. Proving it earned its keep twice. The first probe was dead-stripped by the
+Release link and the check passed, which is correct, and is why the source grep and the binary
+check are complementary rather than redundant. The second probe, actually reachable, exposed
+that the guessed pattern missed `_OBJC_CLASS_$_NSURLSession`, the shape Swift actually emits,
+so the pattern was rewritten from `nm` output and the check now goes red on that build and
+green on the real one. The source sweep also gained `dlsym`, `dlopen` and `NSClassFromString`,
+which are how a symbol check gets evaded and which the binary check cannot flag because the
+Swift runtime itself references `dlsym`.
+
 **PR 15b passed its checklist, ten of ten on hardware.** Xavier reviewed the specification
 and said go, and the build order was the spec's own: `AppLockPresentation`, a pure value
 type wrapping the untouched `AppLockEngine`, went in first with the required sequences as

@@ -680,8 +680,11 @@ so "no accounts yet" keeps its old meaning.
 - Complete `SECURITY.md`: attacker with the unlocked device, the locked device, the iCloud
   account, the App Store binary, or a malicious dependency
 - Pasteboard, screenshot, and background snapshot behavior audited
-- Confirmation in writing that the binary makes no network calls, with the check automated
-  in CI if practical
+- Done: confirmation in writing that the binary makes no network calls, with the check
+  automated in CI. The `binary` job builds Release unsigned, sweeps every Mach-O in the
+  bundle, and fails on any networking framework or symbol; proved in both directions,
+  including against a build that called `URLSession`, which the first draft of the pattern
+  missed. `SECURITY.md` records what the check can and cannot claim
 
 #### Gate A4: audit the finished app
 

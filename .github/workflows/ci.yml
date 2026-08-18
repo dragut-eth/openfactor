@@ -48,6 +48,18 @@ jobs:
             echo "Found logging. A code or an account name must never reach a log."
             exit 1
           fi
+          # A symbol check on the built binary cannot fail on these: the Swift runtime
+          # references dlsym itself, so it is present in every binary this project produces
+          # whatever we write. That makes source the only place the distinction can be drawn,
+          # and it matters, because dynamic lookup is exactly how a symbol check gets evaded.
+          # Neither belongs in this codebase, so their absence is part of the argument that
+          # the binary check means something.
+          if git grep -n -I -E 'dlsym|dlopen|NSClassFromString' \
+            -- '*.swift' ':!OpenFactorUITests/*'; then
+            echo "Found dynamic symbol lookup. It has no use here, and it is how the"
+            echo "binary-level network check would be evaded. See the 'No network' job."
+            exit 1
+          fi
           echo "No network code and no logging found."
 
       # Added after an App Store Connect API key identifier was committed to this public
@@ -250,6 +262,102 @@ jobs:
 
           sys.exit(1 if failed else 0)
           PY
+
+  binary:
+    name: No network in the binary
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the newest Xcode
+        run: sudo xcode-select -switch "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+
+      # **This is the claim the README leads with, checked against the artifact rather than
+      # against the source.** The Style job greps our Swift, which is most of the story here
+      # because there are no third-party dependencies, but it is a statement about what we
+      # wrote. This is a statement about what ships, and it is the one an auditor can repeat.
+      #
+      # The two checks overlap on purpose and cover each other's blind spot. Proving this one
+      # against a broken build found the blind spot the hard way: a URLSession call that
+      # nothing reached was dead-stripped by the Release link, and this check passed, rightly,
+      # since code that does not ship cannot phone home. The source grep sees dead code; this
+      # sees what ships. Neither alone says what both together do.
+      #
+      # Release rather than Debug, because Release is what ships and Debug carries extra
+      # dylibs that are not in it. Simulator rather than device, because the check needs no
+      # signing and CI holds no distribution certificate.
+      - name: Build Release, unsigned
+        run: |
+          set -e
+          NAME=$(xcrun simctl list devices available | grep -oE 'iPhone [0-9]+[^(]*' | head -1 | sed 's/ *$//')
+          [ -n "$NAME" ] || { echo "No iPhone simulator on this runner."; exit 1; }
+          xcodebuild build -project OpenFactor.xcodeproj -scheme OpenFactor \
+            -configuration Release -destination "platform=iOS Simulator,name=$NAME" \
+            -derivedDataPath build/rel CODE_SIGNING_ALLOWED=NO > build.log 2>&1 \
+            || { tail -40 build.log; exit 1; }
+
+      - name: Nothing in the bundle can reach the network
+        run: |
+          set -e
+          APP=build/rel/Build/Products/Release-iphonesimulator/OpenFactor.app
+          [ -d "$APP" ] || { echo "No app at $APP."; exit 1; }
+
+          # Every Mach-O that ships, found rather than listed: the app, the share extension,
+          # the watch app and the complication today, and whatever is added tomorrow. A check
+          # naming its targets is a check that goes stale, which this file already learned
+          # once from the Swift file sweep above.
+          BINARIES=$(find "$APP" -type f -perm +111 \
+            ! -path "*_CodeSignature*" ! -name "*.plist" ! -name "*.png" ! -name "*.car")
+          [ -n "$BINARIES" ] || { echo "Found no binaries to check. That is a bug in this check."; exit 1; }
+          echo "Checking:"; echo "$BINARIES" | sed "s|$APP|  .|"
+
+          # Linked frameworks. Necessary but nowhere near sufficient on its own: URLSession
+          # lives in Foundation, which every app links, so the absence of CFNetwork proves
+          # much less than it appears to. The symbols below are the real check.
+          FRAMEWORKS='CFNetwork|/Network\.framework|NetworkExtension'
+
+          # Exact symbol names, anchored, and **the ObjC shapes were measured rather than
+          # guessed**. Swift's URLSession reaches the binary as an ObjC class reference,
+          # _OBJC_CLASS_$_NSURLSession, which the first draft of this pattern missed: it was
+          # proved against a deliberately broken build that called URLSession, passed while
+          # lying, and was rewritten from what nm actually printed. The BSD names are pinned
+          # whole because "connect" and "bind" appear inside plenty of innocent identifiers.
+          SYMBOLS='OBJC_CLASS_\$_NSURL(Session|Connection)'
+          SYMBOLS="$SYMBOLS"'|\$_NSNetService|\$_NSStream'
+          SYMBOLS="$SYMBOLS"'|^_+(NS)?URLSession|^_+NSURLConnection'
+          SYMBOLS="$SYMBOLS"'|^_+CF(ReadStreamCreate|WriteStreamCreate|Host|NetService|Socket|URLRequest|URLConnection|HTTPMessage)'
+          SYMBOLS="$SYMBOLS"'|^_+nw_(connection|endpoint|listener|browser|path_monitor|parameters)'
+          SYMBOLS="$SYMBOLS"'|^_(socket|connect|bind|listen|accept|sendto|recvfrom|getaddrinfo|gethostbyname|res_query)$'
+          SYMBOLS="$SYMBOLS"'|^_+SSL(CreateContext|Handshake|Write|Read)'
+          SYMBOLS="$SYMBOLS"'|swift_FoundationNetworking'
+
+          FAILED=0
+          for B in $BINARIES; do
+            SHORT=$(echo "$B" | sed "s|$APP|.|")
+
+            if otool -L "$B" | tail -n +2 | grep -qE "$FRAMEWORKS"; then
+              echo "FAIL: $SHORT links a networking framework:"
+              otool -L "$B" | tail -n +2 | grep -E "$FRAMEWORKS"
+              FAILED=1
+            fi
+
+            HITS=$(nm -u "$B" 2>/dev/null | sed 's/^ *//' | grep -E "$SYMBOLS" | sort -u || true)
+            if [ -n "$HITS" ]; then
+              echo "FAIL: $SHORT references networking symbols:"
+              echo "$HITS" | sed 's/^/    /'
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo
+            echo "The README says this app makes no network requests of its own, and SECURITY.md"
+            echo "explains that iCloud Keychain traffic is the operating system's rather than"
+            echo "this app's. Something here now contradicts that. Either it is a mistake, or"
+            echo "both documents need changing before this check does."
+            exit 1
+          fi
+          echo "No networking framework linked and no networking symbol referenced."
 
   package:
     name: Package tests

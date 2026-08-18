@@ -224,9 +224,21 @@ gone.
 
 ### Attacker on the network
 
-**Implemented.** There is no network code. The app makes no requests of its own, so there is
-nothing from OpenFactor to intercept. CI searches every Swift file for `URLSession`, the
-`Network` framework, raw sockets, and logging, and fails if any appears.
+**Implemented, and checked at two layers.** There is no network code. The app makes no requests
+of its own, so there is nothing from OpenFactor to intercept.
+
+CI enforces this against the source and against the artifact, and the two cover each other's
+blind spot. The source check searches every Swift file for `URLSession`, the `Network`
+framework, raw sockets, dynamic symbol lookup, and logging, and fails if any appears. The
+binary check builds Release, finds every Mach-O in the bundle rather than naming them, and
+fails if any links a networking framework or references a networking symbol; its patterns were
+measured from a deliberately broken build that called `URLSession`, not guessed, because the
+first draft missed the Objective-C class reference Swift actually emits and passed while lying.
+The source check sees code the linker would strip; the binary check sees what ships.
+
+What no check here can claim: iOS offers no entitlement that denies an app the network, so this
+is evidence rather than a sandbox, and it says nothing about traffic Apple's own frameworks
+produce on the system's behalf.
 
 iCloud Keychain traffic is the operating system's, not this app's. The interface therefore says
 that OpenFactor makes no network requests of its own.
