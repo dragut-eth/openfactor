@@ -45,7 +45,7 @@ list with real codes is what to show.
 | Field | Value | Note |
 | --- | --- | --- |
 | Name | `OpenFactor` | 30 character limit, well under |
-| Subtitle | `Two factor codes, offline` | 30 character limit, 25 used |
+| Subtitle | `Two factor codes, open source` | 30 character limit, 29 used. See below |
 | Primary category | Utilities | Where authenticators sit |
 | Secondary category | Productivity | Optional, and low value; leaving it empty is defensible |
 | Age rating | 4+ | No objectionable content, no web views, no user generated content |
@@ -54,6 +54,15 @@ list with real codes is what to show.
 
 **Not "Security" as a category**, because Apple does not offer one and Utilities is where every
 comparable app is found.
+
+**The subtitle changed from "offline" to "open source", and it is a positioning call rather than
+a correctness one.** Both are true. Plenty of authenticators work offline, so that word says
+little about which one this is; few publish their source, their design documents and their
+review findings, so that word does. It also costs nothing in search, because "two factor" stays
+in the subtitle and "2fa", "totp" and "authenticator" are all in the keywords.
+
+The alternatives considered, if this reads wrong: `Offline authenticator`, `Open source
+authenticator`, `Offline two factor codes`.
 
 ## Keywords
 
@@ -72,15 +81,30 @@ That is 89 characters. Deliberately absent: any competitor's name, which Apple r
 Drawn from `README.md` so the two cannot drift into different claims.
 
 ```
-OpenFactor generates two factor authentication codes on iPhone and Apple Watch.
+OpenFactor is a minimal authenticator for people who want an open source app with no account,
+no backend, and nothing holding their accounts hostage.
+
+It generates two factor authentication codes on iPhone and Apple Watch.
 
 It has no account to create, no server, no browser extension, and no analytics. Your accounts
-stay on your devices. If you turn on iCloud sync, they travel through iCloud Keychain, where
-Apple cannot read them.
+stay on your devices. If you turn on iCloud sync, encrypted account records travel through
+iCloud Keychain. The key that decrypts them stays on your devices.
 
 Accounts are encrypted before they are stored. The key that opens them stays in the app's
-private container on each device and is never synced, never written to the Keychain, and never
-included in a backup.
+private container on each device, is never synced, is never written to the Keychain, and is
+excluded from device backups.
+
+DESIGN PRINCIPLES
+
+No account.
+
+No backend.
+
+No telemetry.
+
+Open source.
+
+Exports you can take elsewhere.
 
 WHAT IT DOES
 
@@ -105,19 +129,26 @@ WHAT IT DELIBERATELY DOES NOT DO
 No Mac app and no browser extension. A second factor is worth less the moment it lives on the
 machine asking for it.
 
-No password storage, no autofill, no accounts, no telemetry.
+No password storage and no autofill. This is an authenticator, not a password manager.
+
+No accounts, no telemetry, no crash reporting.
 
 OPEN SOURCE
 
-The source is public and built in the open from the first commit, including the design documents
-and the findings from each review. Read it at github.com/dragut-eth/openfactor
+The source is public and built in the open from the first commit, including the design
+documents, the security reviews, and the hardware experiments behind them, with the findings
+published whether or not they were flattering. Read it at github.com/dragut-eth/openfactor
 ```
 
-**"Where Apple cannot read them" is the one claim worth checking before submission.** It is
-Apple's own description of iCloud Keychain end to end encryption, and `SECURITY.md` discusses the
-escrow caveat at length. The sentence is defensible because the vault means what syncs is
-ciphertext under a key that never leaves the device, so it is true twice over. If that stops
-being true the sentence goes.
+**A claim was removed here, and the reason generalizes.** The description said iCloud Keychain
+carries your accounts "where Apple cannot read them". That is defensible, being Apple's own
+description of the service and doubly true once the vault means only ciphertext syncs. It is
+still gone, because it is a claim about someone else's platform rather than about this app.
+
+The replacement says what OpenFactor's own design guarantees: encrypted records travel, the key
+that decrypts them does not. That is provable from this repository alone. **Every important claim
+in a listing should be one the project can prove from its own design**, because a platform
+property can change without warning and takes the sentence with it.
 
 ## Promotional text
 
@@ -239,7 +270,7 @@ protects nobody.
 ```markdown
 # Privacy policy
 
-OpenFactor collects nothing.
+OpenFactor collects no data.
 
 There is no OpenFactor account, no OpenFactor server, and no analytics, crash reporting, or
 telemetry of any kind. The app makes no network requests of its own. This is checked
@@ -287,6 +318,31 @@ through GitHub Security Advisories.
 
 This policy is versioned with the source. Its history is visible in the repository.
 ```
+
+## Review, and the one suggestion declined
+
+This document was reviewed externally on 2026-08-17. Seven suggestions were taken, most of them
+above. Two are worth recording because of what they say about the failure mode this document
+exists to prevent.
+
+**The one that mattered: "Apple cannot read them".** The reviewer said an important claim should
+rest on OpenFactor's own design rather than on a platform property, and they were right. Worse,
+this document had already flagged that sentence as "the one claim worth checking" and then kept
+it anyway. Flagging a risk is not the same as acting on one, and a note that says "worth
+checking" will be read later as "checked".
+
+**The one declined: describing the published material as a "threat model".** The suggestion was
+to replace "the findings from each review" with "design documents, threat model, and security
+reviews", on the grounds that it is more concrete. It is more concrete and it is not yet true.
+`SECURITY.md` opens by saying the threat model is incomplete and that PR 17 completes it. Putting
+the phrase in a store listing would claim a finished artifact that does not exist, which is
+exactly what the rule at the top of this document forbids, and the fact that the suggestion came
+from a review does not exempt it.
+
+The wording used instead is concrete without the claim: the design documents, the security
+reviews, and the hardware experiments behind them, published whether or not they were flattering.
+When PR 17 lands and the threat model is complete, this sentence should change and this paragraph
+should be deleted.
 
 ## What this document is not
 
