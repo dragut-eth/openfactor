@@ -103,6 +103,8 @@ public enum WatchProvisioning {
     }
 
     public enum ExchangeError: Error, Equatable, Sendable {
+        /// The system refused to produce randomness. Nothing proceeds on a predictable nonce.
+        case noRandomness
         /// The message is not the length this version defines.
         case malformed
         /// The magic did not match. Another version, or not ours at all.
@@ -130,10 +132,23 @@ public enum WatchProvisioning {
         /// The bytes to send to the phone. 85 of them.
         public let request: Data
 
-        public init() {
+        /// **Throws rather than shipping a predictable nonce.** The result of
+        /// `SecRandomCopyBytes` used to be discarded, and the buffer it writes into starts as
+        /// sixteen zero bytes, so a refusal produced an all-zero nonce and claimed it was fresh.
+        /// `VaultKeyStore.create` checks the same call in the same situation, so the project
+        /// disagreed with itself; found by an independent review of this file.
+        ///
+        /// No exploit was demonstrated from the zero nonce alone, because a fresh ephemeral key
+        /// changes both the shared secret and the transcript on every attempt. That is an
+        /// argument for it being survivable, not for it being correct, and it is the shape of
+        /// thing that becomes a break the moment something upstream reuses a key.
+        public init() throws(ExchangeError) {
             let privateKey = P256.KeyAgreement.PrivateKey()
             var nonce = Data(count: WatchProvisioning.nonceCount)
-            nonce.withUnsafeMutableBytes { _ = SecRandomCopyBytes(kSecRandomDefault, $0.count, $0.baseAddress!) }
+            let status = nonce.withUnsafeMutableBytes {
+                SecRandomCopyBytes(kSecRandomDefault, $0.count, $0.baseAddress!)
+            }
+            guard status == errSecSuccess else { throw .noRandomness }
             self.init(privateKey: privateKey, nonce: nonce)
         }
 
@@ -215,12 +230,22 @@ public enum WatchProvisioning {
         try respond(to: request, with: vaultKey, phonePrivateKey: P256.KeyAgreement.PrivateKey())
     }
 
-    /// The deterministic seam, for test vectors only.
-    static func respond(
-        to request: Data, with vaultKey: SymmetricKey,
-        phonePrivateKey: P256.KeyAgreement.PrivateKey,
-        sealNonce: AES.GCM.Nonce? = nil
-    ) throws(ExchangeError) -> Data {
+    /// A request that has been parsed and found well formed.
+    ///
+    /// **It exists so the phone can refuse rubbish before it loads a key or asks a human.** The
+    /// phone used to hand raw bytes straight to its owner: it read the vault key, put an alert on
+    /// screen, and only discovered the request was malformed after the tap, at which point it
+    /// silently sent nothing and left the watch on a spinner. An independent review found it.
+    /// Nothing here proves the sender is the paired watch, which no parse can do; it proves only
+    /// that the bytes are a request this version understands.
+    public struct ValidatedRequest: Sendable {
+        let nonce: Data
+        let watchPublicKeyBytes: Data
+        let watchPublicKey: P256.KeyAgreement.PublicKey
+    }
+
+    /// Parses a request, or refuses it. Cheap, and touches no secret.
+    public static func validate(_ request: Data) throws(ExchangeError) -> ValidatedRequest {
         guard request.count == requestCount else { throw .malformed }
 
         var index = request.startIndex
@@ -235,10 +260,43 @@ public enum WatchProvisioning {
 
         let watchPublicKey: P256.KeyAgreement.PublicKey
         do {
-            watchPublicKey = try P256.KeyAgreement.PublicKey(x963Representation: watchPublicKeyBytes)
+            watchPublicKey = try P256.KeyAgreement.PublicKey(
+                x963Representation: watchPublicKeyBytes)
         } catch {
             throw .invalidPublicKey
         }
+
+        return ValidatedRequest(
+            nonce: nonce, watchPublicKeyBytes: watchPublicKeyBytes, watchPublicKey: watchPublicKey)
+    }
+
+    /// The deterministic seam, for test vectors only.
+    static func respond(
+        to request: Data, with vaultKey: SymmetricKey,
+        phonePrivateKey: P256.KeyAgreement.PrivateKey,
+        sealNonce: AES.GCM.Nonce? = nil
+    ) throws(ExchangeError) -> Data {
+        try respond(
+            to: try validate(request), with: vaultKey, phonePrivateKey: phonePrivateKey,
+            sealNonce: sealNonce)
+    }
+
+    /// Seals for a request that has already been parsed and approved.
+    public static func respond(
+        to request: ValidatedRequest, with vaultKey: SymmetricKey
+    ) throws(ExchangeError) -> Data {
+        try respond(
+            to: request, with: vaultKey, phonePrivateKey: P256.KeyAgreement.PrivateKey())
+    }
+
+    static func respond(
+        to request: ValidatedRequest, with vaultKey: SymmetricKey,
+        phonePrivateKey: P256.KeyAgreement.PrivateKey,
+        sealNonce: AES.GCM.Nonce? = nil
+    ) throws(ExchangeError) -> Data {
+        let nonce = request.nonce
+        let watchPublicKeyBytes = request.watchPublicKeyBytes
+        let watchPublicKey = request.watchPublicKey
 
         let phonePublicKeyBytes = phonePrivateKey.publicKey.x963Representation
         let transcript = transcript(

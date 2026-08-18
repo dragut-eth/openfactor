@@ -26,7 +26,7 @@ struct WatchProvisioningTests {
 
     @Test("The watch recovers exactly the key the phone sealed")
     func roundTrips() throws {
-        let attempt = WatchProvisioning.Attempt()
+        let attempt = try WatchProvisioning.Attempt()
         let response = try WatchProvisioning.respond(to: attempt.request, with: vaultKey())
 
         let recovered = try attempt.open(response)
@@ -37,7 +37,7 @@ struct WatchProvisioningTests {
     /// than a surprise on a wrist.
     @Test("The messages are the sizes the design states")
     func sizes() throws {
-        let attempt = WatchProvisioning.Attempt()
+        let attempt = try WatchProvisioning.Attempt()
         #expect(attempt.request.count == 85)
 
         let response = try WatchProvisioning.respond(to: attempt.request, with: vaultKey())
@@ -53,7 +53,7 @@ struct WatchProvisioningTests {
         var responses: Set<Data> = []
 
         for _ in 0..<8 {
-            let attempt = WatchProvisioning.Attempt()
+            let attempt = try WatchProvisioning.Attempt()
             requests.insert(attempt.request)
             responses.insert(try WatchProvisioning.respond(to: attempt.request, with: vaultKey()))
         }
@@ -68,7 +68,7 @@ struct WatchProvisioningTests {
     /// existed, and it is the difference between a bound exchange and a decorative one.
     @Test("A substituted phone public key does not open it")
     func substitutedPhoneKeyFails() throws {
-        let attempt = WatchProvisioning.Attempt()
+        let attempt = try WatchProvisioning.Attempt()
         let response = try WatchProvisioning.respond(to: attempt.request, with: vaultKey())
 
         // Replace the phone's public key with another valid point, leaving everything else.
@@ -85,8 +85,8 @@ struct WatchProvisioningTests {
     /// A response meant for a different request, which is what a replayed one is.
     @Test("A response to somebody else's request is refused before anything is derived")
     func replayIsRefused() throws {
-        let first = WatchProvisioning.Attempt()
-        let second = WatchProvisioning.Attempt()
+        let first = try WatchProvisioning.Attempt()
+        let second = try WatchProvisioning.Attempt()
 
         let forFirst = try WatchProvisioning.respond(to: first.request, with: vaultKey())
 
@@ -97,7 +97,7 @@ struct WatchProvisioningTests {
 
     @Test("An altered sealed payload does not open")
     func alteredPayloadFails() throws {
-        let attempt = WatchProvisioning.Attempt()
+        let attempt = try WatchProvisioning.Attempt()
         var response = try WatchProvisioning.respond(to: attempt.request, with: vaultKey())
 
         response[response.count - 1] ^= 0x01
@@ -109,7 +109,7 @@ struct WatchProvisioningTests {
 
     @Test("A response of the wrong length is refused")
     func wrongLengthIsRefused() throws {
-        let attempt = WatchProvisioning.Attempt()
+        let attempt = try WatchProvisioning.Attempt()
         let response = try WatchProvisioning.respond(to: attempt.request, with: vaultKey())
 
         #expect(throws: WatchProvisioning.ExchangeError.malformed) {
@@ -122,7 +122,7 @@ struct WatchProvisioningTests {
 
     @Test("A message from another version is refused rather than misread")
     func versionIsChecked() throws {
-        let attempt = WatchProvisioning.Attempt()
+        let attempt = try WatchProvisioning.Attempt()
         var response = try WatchProvisioning.respond(to: attempt.request, with: vaultKey())
         response.replaceSubrange(0..<4, with: Data("OFW2".utf8))
 
@@ -139,7 +139,7 @@ struct WatchProvisioningTests {
 
     @Test("A request whose public key is not a point is refused")
     func invalidPublicKeyIsRefused() throws {
-        let attempt = WatchProvisioning.Attempt()
+        let attempt = try WatchProvisioning.Attempt()
         var request = attempt.request
         request.replaceSubrange(20..<85, with: Data(repeating: 0xAA, count: 65))
 
@@ -153,6 +153,115 @@ struct WatchProvisioningTests {
         #expect(throws: WatchProvisioning.ExchangeError.malformed) {
             _ = try WatchProvisioning.respond(to: Data(repeating: 0, count: 40), with: vaultKey())
         }
+    }
+
+    // MARK: - Negative controls added after an independent review
+
+    /// **The ordering test that actually observes the ordering.** `replayIsRefused` above claims
+    /// in its name that nothing is derived before the nonce is checked, and it cannot see that:
+    /// its response carries a valid phone public key, so the same error comes back whichever
+    /// order the two checks run in. A review pointed that out. This response is wrong in both
+    /// ways at once, so the error names which check ran first: the nonce, as intended.
+    @Test("The nonce is checked before the public key is even parsed")
+    func nonceIsCheckedBeforeParsingTheKey() throws {
+        let mine = try WatchProvisioning.Attempt()
+        let other = try WatchProvisioning.Attempt()
+
+        // Somebody else's nonce, and a public key field that is not a point at all.
+        var response = WatchProvisioning.magic
+        response.append(other.request[4..<4 + WatchProvisioning.nonceCount])
+        response.append(Data(repeating: 0, count: WatchProvisioning.publicKeyCount))
+        response.append(Data(repeating: 0, count: WatchProvisioning.sealedCount))
+
+        #expect(throws: WatchProvisioning.ExchangeError.notForThisRequest) {
+            try mine.open(response)
+        }
+    }
+
+    /// The response direction of a check only the request direction had.
+    @Test("A response whose public key is not a point is refused")
+    func responseWithInvalidPublicKeyIsRefused() throws {
+        let attempt = try WatchProvisioning.Attempt()
+
+        var response = WatchProvisioning.magic
+        response.append(attempt.request[4..<4 + WatchProvisioning.nonceCount])
+        response.append(Data(repeating: 0, count: WatchProvisioning.publicKeyCount))
+        response.append(Data(repeating: 0, count: WatchProvisioning.sealedCount))
+
+        #expect(throws: WatchProvisioning.ExchangeError.invalidPublicKey) {
+            try attempt.open(response)
+        }
+    }
+
+    /// Every boundary either side of the exact length, in both directions, because slice
+    /// arithmetic on a length nobody checked is how a message crashes an app.
+    @Test("Every length but the exact one is refused, in both directions")
+    func lengthsAreExact() throws {
+        let attempt = try WatchProvisioning.Attempt()
+
+        for count in [0, 1, WatchProvisioning.requestCount - 1, WatchProvisioning.requestCount + 1] {
+            #expect(throws: WatchProvisioning.ExchangeError.malformed) {
+                _ = try WatchProvisioning.validate(Data(repeating: 0, count: count))
+            }
+        }
+
+        for count in [
+            0, 1, WatchProvisioning.responseCount - 1, WatchProvisioning.responseCount + 1,
+        ] {
+            #expect(throws: WatchProvisioning.ExchangeError.malformed) {
+                try attempt.open(Data(repeating: 0, count: count))
+            }
+        }
+    }
+
+    /// The request the phone answers is bound into the key, so a watch cannot be handed a key
+    /// sealed for a public key it did not send. Pins `w_pub` specifically: the phone answers a
+    /// request carrying somebody else's public key, and the original attempt cannot open it even
+    /// though the nonce matches.
+    @Test("A substituted watch public key does not open with the original attempt")
+    func substitutedWatchKeyDoesNotOpen() throws {
+        let mine = try WatchProvisioning.Attempt()
+        let other = try WatchProvisioning.Attempt()
+
+        // My magic and my nonce, somebody else's public key.
+        var forged = WatchProvisioning.magic
+        forged.append(mine.request[4..<4 + WatchProvisioning.nonceCount])
+        forged.append(other.request[(4 + WatchProvisioning.nonceCount)...])
+
+        let response = try WatchProvisioning.respond(to: forged, with: vaultKey())
+
+        // **Neither attempt can open it, and the two reasons are the two bindings.** Writing
+        // this test the obvious way asserted that the holder of the substituted key could open
+        // it, and that was wrong: the response echoes the forged request's nonce, which is mine,
+        // so it does not answer the other attempt at all. The failure modes name which field
+        // stopped each one.
+        #expect(throws: WatchProvisioning.ExchangeError.couldNotOpen) {
+            try mine.open(response)
+        }
+        #expect(throws: WatchProvisioning.ExchangeError.notForThisRequest) {
+            try other.open(response)
+        }
+    }
+
+    /// The bytes a review used as its example: the magic, then eighty-one zeroes. It must be
+    /// refused by parsing, which is what lets the phone refuse it before loading a key or
+    /// putting a question on somebody's screen.
+    @Test("A well formed header over rubbish is refused by validation alone")
+    func validationRefusesRubbish() {
+        var request = WatchProvisioning.magic
+        request.append(Data(repeating: 0, count: WatchProvisioning.requestCount - 4))
+
+        #expect(throws: WatchProvisioning.ExchangeError.invalidPublicKey) {
+            _ = try WatchProvisioning.validate(request)
+        }
+    }
+
+    /// A valid request validates, and validating touches no secret: it is the cheap check the
+    /// phone runs before it reads its vault key.
+    @Test("A real request validates")
+    func realRequestValidates() throws {
+        let attempt = try WatchProvisioning.Attempt()
+        #expect(throws: Never.self) { _ = try WatchProvisioning.validate(attempt.request) }
     }
 
     // MARK: - The derivation itself

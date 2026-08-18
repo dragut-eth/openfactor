@@ -354,8 +354,16 @@ because two apps happened to be open.
 than failing silently. **If the phone has no key itself**, which happens when both are replaced
 together, it says that instead, and the watch retries after the phone is recovered.
 
-The watch's private key may live in the Secure Enclave rather than the container. It is used
-once and discarded, so this is hygiene rather than a hole.
+The watch's private key may live in the Secure Enclave rather than the container. It is
+ephemeral, generated per attempt and never persisted.
+
+**It is not discarded the instant the exchange ends**, and an earlier version of this paragraph
+said otherwise. An attempt is deliberately kept through a timeout, because a slow answer is
+still a good answer, and `WatchProvisioning.Attempt.open` is non-mutating and enforces nothing
+about being opened once. What prevents a stale attempt being spoken for is
+`WatchProvisioningFlow`, which issues a token per attempt and ignores any callback carrying an
+older one. That is a bound on liveness rather than on secrecy: the key never leaves memory and
+never outlives the process either way.
 
 **Provisioning needs the phone once. Operation never does.** Afterwards accounts arrive through
 iCloud Keychain as ciphertext with no phone involvement, and codes are generated with the phone

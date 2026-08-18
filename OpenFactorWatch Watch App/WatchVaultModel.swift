@@ -16,32 +16,29 @@ import WatchConnectivity
 @Observable
 final class WatchVaultModel: NSObject {
 
-    enum Stage: Equatable {
-        /// Before anything has been read.
-        case checking
-        /// This watch has the key. The list can be drawn.
-        case ready
-        /// A request is out and the phone has not answered.
-        case waiting
-        /// The phone did not answer, or answered from the background where it can do nothing.
-        ///
-        /// **One state rather than three**, because the remedy is identical and naming the cause
-        /// sent people to check the wrong thing. "Not reachable" also fires when the phone is on
-        /// the table with OpenFactor closed, which reads as a distance problem and is not one.
-        case needsPhoneApp
-        /// The phone has no vault of its own yet.
-        case phoneNotSetUp
-        /// The person said no, or something did not open.
-        case notSetUp
-        /// This watch has a key, asked again, and still cannot read anything.
-        case cannotRead
-    }
+    /// **The decisions live in `WatchProvisioningFlow`, in the core, where tests reach them.**
+    /// An independent review found two races in them while they were scene state in this file,
+    /// both reachable by walking away and coming back, and neither catchable by any test that
+    /// existed. This type now carries out what that one decides.
+    private var flow = WatchProvisioningFlow()
 
-    private(set) var stage: Stage = .checking
+    /// The token of the attempt currently outstanding, carried into every callback that can
+    /// outlive it. A callback holding an older token is ignored rather than believed.
+    private var token: WatchProvisioningFlow.Token?
+
+    var stage: WatchProvisioningFlow.Stage { flow.stage }
+
 
     private let keys: VaultKeyStore
 
-    /// Held between the two messages, and only then. The private key inside it is used once.
+    /// The half-finished exchange, holding the ephemeral private key the phone's answer is
+    /// sealed to.
+    ///
+    /// **It outlives the two messages in every case but success**, which an earlier comment here
+    /// denied. A timeout keeps it deliberately, because a slow answer is still a good answer; a
+    /// send error, a refusal and an unreadable reply all clear it. `WatchProvisioning.Attempt.open`
+    /// is non-mutating and enforces nothing about being used once, so the guarantee that a stale
+    /// one cannot be spoken for is `flow.isCurrent`, not this property.
     private var attempt: WatchProvisioning.Attempt?
 
     /// The store, so the model can tell a key that works from one that merely exists.
@@ -84,7 +81,7 @@ final class WatchVaultModel: NSObject {
     func refreshAndAsk() {
         if ((try? keys.load()) ?? nil) != nil {
             guard keyOpensNothing else {
-                stage = .ready
+                flow.foundWorkingKey()
                 return
             }
 
@@ -92,13 +89,13 @@ final class WatchVaultModel: NSObject {
             // wrote them rather than a different key having sealed them. Asking again would
             // fetch the same key and produce the same result, forever.
             guard !hasReplacedStaleKey else {
-                stage = .cannotRead
+                flow.foundKeyThatOpensNothing()
                 return
             }
         }
 
         // Not while a request is already out, or raising the wrist twice would send two.
-        guard stage != .waiting else { return }
+        guard flow.stage != .waiting else { return }
         ask()
     }
 
@@ -113,30 +110,52 @@ final class WatchVaultModel: NSObject {
     // MARK: - Asking
 
     func ask() {
-        guard stage != .ready else { return }
+        guard flow.stage != .ready else { return }
 
-        let attempt = WatchProvisioning.Attempt()
+        let attempt: WatchProvisioning.Attempt
+        do {
+            // Throws only if the system CSPRNG refuses, which must not degrade quietly into a
+            // predictable nonce. Nothing to tell the wearer to go and do about it, so it reads
+            // as the phone not answering, which is the screen with the button.
+            attempt = try WatchProvisioning.Attempt()
+        } catch {
+            flow.sendFailed(flow.beganAsking())
+            return
+        }
+
         self.attempt = attempt
-        stage = .waiting
+        let token = flow.beganAsking()
+        self.token = token
 
         // A spinner with nothing behind it is the worst of the states this screen can be in,
         // and it is reachable: the phone answers "asking", then the person walks away, or the
         // second message never arrives. After a while, say the thing that leads somewhere.
+        //
+        // **The token is what makes this safe.** This timer used to check only whether the
+        // stage was still waiting, which is true again the instant a new attempt begins, so it
+        // demoted the attempt that replaced it.
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(25))
-            guard let self, self.stage == .waiting else { return }
-            self.stage = .needsPhoneApp
+            guard let self else { return }
+            self.flow.timedOut(token)
         }
 
         WCSession.default.sendMessage(
             [WatchProvisioning.MessageKey.request: attempt.request]
         ) { reply in
-            Task { @MainActor in self.phoneAnswered(reply) }
+            Task { @MainActor in self.phoneAnswered(reply, token: token) }
         } errorHandler: { _ in
             // Not reachable, not paired, or the counterpart is not running. All of them mean
             // the same thing to somebody standing there: the phone is not answering.
-            Task { @MainActor in self.stage = .needsPhoneApp }
+            Task { @MainActor in self.sendFailed(token) }
         }
+    }
+
+    private func sendFailed(_ token: WatchProvisioningFlow.Token) {
+        guard flow.isCurrent(token) else { return }
+        attempt = nil
+        self.token = nil
+        flow.sendFailed(token)
     }
 
     /// **The vocabulary is `WatchProvisioning.Answer`, not string literals**, so the phone and
@@ -148,13 +167,17 @@ final class WatchVaultModel: NSObject {
     /// Anything unrecognised still lands on "not set up", deliberately. A watch that cannot
     /// understand the answer has, as far as its wearer is concerned, not been set up, and the
     /// remedy that screen offers is to try again.
-    private func phoneAnswered(_ reply: [String: Any]) {
+    private func phoneAnswered(_ reply: [String: Any], token: WatchProvisioningFlow.Token) {
+        guard flow.isCurrent(token) else { return }
+
         let status = reply[WatchProvisioning.MessageKey.status] as? String
-        switch status.flatMap(WatchProvisioning.Answer.init(rawValue:)) {
-        case .asking: stage = .waiting
-        case .needsApp: stage = .needsPhoneApp
-        case .noVault: stage = .phoneNotSetUp
-        case .declined, .none: stage = .notSetUp
+        let answer = status.flatMap(WatchProvisioning.Answer.init(rawValue:))
+        flow.phoneAnswered(answer, token: token)
+
+        // Anything but "asking" ends this attempt, so the key it holds is of no further use.
+        if answer != .asking {
+            attempt = nil
+            self.token = nil
         }
     }
 
@@ -170,18 +193,29 @@ final class WatchVaultModel: NSObject {
             do {
                 try keys.install(try attempt.open(response))
                 self.attempt = nil
+                token = nil
 
                 // The key arrived. Whether it was the right one is a different question, and the
                 // only honest way to answer it is to try reading with it.
-                if keyOpensNothing {
-                    hasReplacedStaleKey = true
-                    stage = .cannotRead
-                } else {
-                    stage = .ready
+                let opens = !keyOpensNothing
+                if !opens { hasReplacedStaleKey = true }
+                flow.installedKey(opensAccounts: opens)
+            } catch let error as WatchProvisioning.ExchangeError {
+                // **A response answering an older attempt is obsolete, not wrong.** It used to
+                // land in one generic catch that cleared the attempt, so a late reply destroyed
+                // the attempt still waiting and the genuine answer that followed had nothing to
+                // open it with and was dropped in silence.
+                let obsolete = error == .notForThisRequest
+                if !obsolete {
+                    self.attempt = nil
+                    token = nil
                 }
+                flow.responseDidNotOpen(obsolete: obsolete)
             } catch {
+                // Installing the key failed, which is this attempt's failure.
                 self.attempt = nil
-                stage = .notSetUp
+                token = nil
+                flow.responseDidNotOpen(obsolete: false)
             }
             return
         }
@@ -190,7 +224,8 @@ final class WatchVaultModel: NSObject {
             == WatchProvisioning.Answer.declined.rawValue
         {
             attempt = nil
-            stage = .notSetUp
+            token = nil
+            flow.phoneDeclined()
         }
     }
 }

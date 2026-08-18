@@ -29,7 +29,15 @@ final class WatchKeyProvider: NSObject {
     /// on whatever is on screen.
     private(set) var isAsking = false
 
-    private var pendingRequest: Data?
+    /// The request the alert on screen is asking about, parsed before it was ever shown.
+    ///
+    /// **Never overwritten while it is set.** A second request used to replace it silently, so a
+    /// tap that had been offered for one watch key sealed the vault to whichever key arrived
+    /// last. Under WatchConnectivity's routing exclusivity both come from the genuine watch, so
+    /// no exploit follows today, but `SECURITY.md` states that exclusivity is load bearing and
+    /// undocumented by Apple, and this is exactly the defect that would turn a weakening of it
+    /// into key exfiltration. Found by an independent review.
+    private var pendingRequest: WatchProvisioning.ValidatedRequest?
 
     private let keys: VaultKeyStore
 
@@ -80,11 +88,24 @@ final class WatchKeyProvider: NSObject {
     /// The frontmost check is doing real work rather than being polite. The key file is
     /// `.complete` protected, so a phone woken in the background cannot read it; and nobody is
     /// looking at a screen, so nobody can agree to anything.
+    /// **Parsed before anything else happens.** Rubbish is refused here rather than after the
+    /// owner has been shown an alert and tapped it, which is what used to happen: the phone read
+    /// its vault key, raised the question, and only found the request malformed afterwards, then
+    /// sent nothing and left the watch waiting on a spinner.
+    ///
+    /// The order of the remaining checks is deliberate. The frontmost check does real work rather
+    /// than being polite: the key file is `.complete` protected, so a phone woken in the
+    /// background cannot read it, and nobody is looking at a screen to agree to anything.
     private func answer(to request: Data) -> WatchProvisioning.Answer {
+        guard let validated = try? WatchProvisioning.validate(request) else { return .declined }
         guard UIApplication.shared.applicationState == .active else { return .needsApp }
         guard ((try? keys.load()) ?? nil) != nil else { return .noVault }
 
-        pendingRequest = request
+        // A question already on screen is not replaced by a later one. The watch's own retry
+        // supersedes it from the other side, once this one is answered or goes away.
+        guard pendingRequest == nil else { return .asking }
+
+        pendingRequest = validated
         isAsking = true
         return .asking
     }

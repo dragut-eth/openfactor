@@ -32,6 +32,49 @@ only happens when the system is dissolving its own snapshot. The documented leve
 looking like protection. The behavior is on record from iOS 7 onward with no Apple answer.
 The switcher card, the artifact anyone can browse to, stays blank.
 
+**A cold independent review of the watch key exchange found four real defects, all now
+fixed.** Run by Xavier on a fresh model with no context, after two attempts from here died on
+server errors. Nothing it reported dissolved on inspection, which is the first time that has
+happened in this project, and it found nothing wrong with the cryptography itself: the
+transcript binding, the ordering of the nonce check, the AEAD's additional data and the exact
+length guards all hold.
+
+**The one that mattered was a pair of races in the watch's asking flow**, needing no attacker
+and reachable by walking away and coming back. A timer started for one attempt checked only
+whether the stage was still `waiting`, which is true again the moment a new attempt begins, so
+it demoted its own replacement. And a late response to an abandoned attempt failed to open,
+correctly, then landed in one generic catch that cleared the attempt still waiting, so the
+genuine answer that followed had nothing to open it with and was dropped in silence. Two
+ordinary taps and the watch could not be provisioned until the app was restarted.
+
+Those decisions now live in `WatchProvisioningFlow` in the core, for the reason
+`AppLockPresentation` exists: they were scene state in the watch target, where no test could
+reach them, which is why nothing caught this. Both sequences are tests, and both were proved to
+fail against the old behavior before the fix was kept.
+
+**Three smaller ones.** The phone overwrote the request its alert was asking about, so a second
+request could substitute the key a tap had been offered for; harmless under routing exclusivity,
+and exactly the defect that converts a weakening of it into key exfiltration, which is why
+`SECURITY.md` calls that exclusivity load bearing. The phone loaded its vault key and put a
+question on screen before parsing the request at all, so malformed bytes reached the human path
+and, once approved, produced no reply and left the watch on a spinner; there is a
+`ValidatedRequest` before any of that now. And `SecRandomCopyBytes`'s result was discarded in
+`Attempt.init`, where the buffer starts as sixteen zero bytes, so a refusal would have shipped a
+predictable nonce while claiming freshness; `VaultKeyStore.create` checks the same call, so the
+project disagreed with itself.
+
+**Two comments were materially false and are corrected**, in this file's own terms: an attempt
+does outlive the two messages on every path but success, and `open` enforces nothing about being
+used once.
+
+**The sharpest observation was about a test rather than the code.** One test's name claimed the
+nonce is checked before anything is derived, and its response carried a valid public key, so it
+could not observe that ordering at all. The replacement is wrong in both ways at once, so the
+error names which check ran first. Writing the new binding test also produced a wrong assertion
+of mine, caught by the suite: a response built on a substituted watch key cannot be opened by the
+holder of that key either, because the nonce still binds it to the original attempt. The code was
+right and the test was wrong.
+
 **A correction, and a diagnosis withdrawn: the complication's octagon is still unexplained.**
 Yesterday's commit said an app icon set was added to the complication target. It was not. The
 build setting landed and the asset catalog never existed, on any branch, so
