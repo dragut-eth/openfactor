@@ -18,18 +18,74 @@ struct InboxOpenerTests {
         return (SharedInbox(container: { container }), container)
     }
 
-    /// The scheme is gone, so nothing custom is accepted any more. Declaring one means every
-    /// app on the device can send this one a URL, and after the extension turned out to be
-    /// unable to open its containing app, nothing could produce it.
+    /// The two standard schemes, which is how a code scanned by the Camera app or found in
+    /// Photos reaches this app at all.
     @Test(
-        "A URL that is not a file is refused",
+        "A setup or transfer code arrives verbatim",
+        arguments: [
+            "otpauth://totp/Example:someone@example.com?secret=GEZDGNBVGY3TQOJQ&issuer=Example",
+            "otpauth-migration://offline?data=CjEKCkhlbGxvId6tvu8",
+        ])
+    func codesArriveWhole(raw: String) {
+        #expect(InboxOpener.arrival(from: URL(string: raw)!) == .code(raw))
+    }
+
+    /// Case is not the sender's to decide. iOS lowercases schemes, but a URL built by hand
+    /// elsewhere may not, and refusing one on that basis would be a confusing failure.
+    @Test("The scheme comparison ignores case")
+    func schemeIsCaseInsensitive() {
+        let raw = "OTPAUTH://totp/Example?secret=GEZDGNBVGY3TQOJQ"
+        #expect(InboxOpener.arrival(from: URL(string: raw)!) == .code(raw))
+    }
+
+    /// **Everything else is refused**, which matters more than what is accepted. A declared
+    /// scheme is an entry point every app on the device can use, so the accepted set is exactly
+    /// the two schemes declared plus file URLs. OpenFactor's own scheme was removed once nothing
+    /// could produce it, and must not creep back in through this door.
+    @Test(
+        "Any other URL is refused",
         arguments: [
             "openfactor://inbox?item=6F1B0C0A-6D3A-4A1F-9A2E-2A3B4C5D6E7F",
             "openfactor://inbox",
             "https://example.com/inbox",
+            "otpauth-fake://totp/Example?secret=GEZDGNBVGY3TQOJQ",
+            "javascript:alert(1)",
         ])
-    func refusesEveryNonFileURL(raw: String) {
+    func refusesEverythingElse(raw: String) {
         #expect(InboxOpener.arrival(from: URL(string: raw)!) == nil)
+    }
+
+    /// The ceiling a QR code used to provide for free. Before the scheme existed, a payload
+    /// could only come from a camera frame or a decoded image, both limited by what a QR can
+    /// physically hold. A URL has no such limit and another app supplies it.
+    @Test("A payload longer than any real QR code could hold is refused")
+    func oversizedPayloadIsRefused() {
+        let padding = String(repeating: "A", count: InboxOpener.longestCode)
+        let raw = "otpauth-migration://offline?data=\(padding)"
+        #expect(raw.utf8.count > InboxOpener.longestCode)
+        #expect(InboxOpener.arrival(from: URL(string: raw)!) == nil)
+    }
+
+    /// And the bound must not refuse a real one. A migration QR carrying several accounts is
+    /// large, and turning those away would break the case the scheme exists for.
+    @Test("A payload the size of a full QR code is accepted")
+    func realisticPayloadIsAccepted() {
+        // 4,296 characters is a QR code's alphanumeric capacity, so nothing scannable exceeds it.
+        let padding = String(repeating: "A", count: 4_296)
+        let raw = "otpauth-migration://offline?data=\(padding)"
+        #expect(InboxOpener.arrival(from: URL(string: raw)!) == .code(raw))
+    }
+
+    /// Handed on verbatim rather than rebuilt. A round trip through `URLComponents` can change
+    /// percent encoding, and the secret is inside those query items.
+    @Test("The payload is not rewritten on the way through")
+    func payloadIsVerbatim() {
+        let raw = "otpauth://totp/Example%20Inc:a%2Bb@example.com?secret=GEZDGNBVGY3TQOJQ"
+        guard case let .code(payload) = InboxOpener.arrival(from: URL(string: raw)!) else {
+            Issue.record("expected a code")
+            return
+        }
+        #expect(payload == raw)
     }
 
     /// A file from Files or Mail is handed on as a file, because the importer reads it itself

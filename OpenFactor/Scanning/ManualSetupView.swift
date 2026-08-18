@@ -9,9 +9,12 @@ import SwiftUI
 /// use the defaults and the ones that do not will tell you exactly what to change.
 struct ManualSetupView: View {
 
-    @State private var model: ManualSetupViewModel
+    /// Owned by the `AddAccountSession` rather than this view, so a lock and unlock returns to
+    /// a form with everything still in it. The typing in these fields is the whole reason the
+    /// session exists.
+    @Bindable private var model: ManualSetupViewModel
+
     @State private var now = Date()
-    @State private var showsAdvanced = false
     @State private var isChoosingColour = false
 
     @Environment(\.dismiss) private var dismiss
@@ -24,8 +27,8 @@ struct ManualSetupView: View {
 
     let onAdded: () -> Void
 
-    init(store: any SecretStore, onAdded: @escaping () -> Void) {
-        _model = State(initialValue: ManualSetupViewModel(store: store))
+    init(model: ManualSetupViewModel, onAdded: @escaping () -> Void) {
+        self.model = model
         self.onAdded = onAdded
     }
 
@@ -141,7 +144,7 @@ struct ManualSetupView: View {
 
     private var advancedSection: some View {
         Section {
-            DisclosureGroup("Advanced", isExpanded: $showsAdvanced) {
+            DisclosureGroup("Advanced", isExpanded: $model.showsAdvanced) {
                 Picker("Algorithm", selection: $model.algorithm) {
                     ForEach(OTPAlgorithm.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
@@ -165,7 +168,7 @@ struct ManualSetupView: View {
         } footer: {
             if let problem = model.counterProblem ?? model.periodProblem {
                 Text(problem).foregroundStyle(.red)
-            } else if showsAdvanced {
+            } else if model.showsAdvanced {
                 Text("Leave these alone unless the service told you otherwise. Almost none do.")
             }
         }
@@ -210,6 +213,6 @@ struct ManualSetupView: View {
 
 #Preview {
     NavigationStack {
-        ManualSetupView(store: InMemorySecretStore(), onAdded: {})
+        ManualSetupView(model: ManualSetupViewModel(store: InMemorySecretStore()), onAdded: {})
     }
 }

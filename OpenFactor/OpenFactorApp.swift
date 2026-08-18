@@ -20,17 +20,18 @@ struct OpenFactorApp: App {
     /// disagree. The entitlement is the single place it is written down.
     private let store: SyncAwareKeychainStore
 
-    /// This device's vault, sharing the very same key store the accounts are read through.
+    /// The vault gate's state, which includes a generated passphrase when one is on screen.
     ///
-    /// One `VaultKeyStore` instance rather than two. Both defaults point at the same file, so
-    /// two would behave identically today, and the day somebody changes where the key lives is
-    /// the day two would silently disagree: the gate would report a vault open that the store
-    /// could not read.
     /// **Held here so App Lock cannot destroy it.** The lock screen replaces the root view, and
     /// anything owned below it goes with it. A generated passphrase lives only in this object,
     /// so owning it at the top is what lets somebody copy it, go and paste it somewhere, and
     /// come back to the same screen.
     @State private var gate: VaultGateModel
+
+    /// The add flow's state: the sheet's presence, the pushed manual screen, and every typed
+    /// field. Owned here so App Lock cannot destroy a half typed secret; leaving the app to copy
+    /// the key out of an email or a password manager is how manual entry is actually used.
+    @State private var addSession: AddAccountSession
 
     /// What arrived from outside: a file opened elsewhere, or an image the share extension left
     /// in the group container.
@@ -47,6 +48,7 @@ struct OpenFactorApp: App {
         self.store = store
         _gate = State(
             initialValue: VaultGateModel(vault: Vault(keys: keys), store: store))
+        _addSession = State(initialValue: AddAccountSession(store: store))
     }
 
     /// The lock and the snapshot cover. See `PrivacyShield` for why they live in their
@@ -73,6 +75,12 @@ struct OpenFactorApp: App {
                 // renders first is what the person sees first, so the lock screen has to
                 // BE the root, not arrive on top of it. Swapping the branch also tears
                 // down any open sheet, so nothing locked lingers mid air.
+                //
+                // **A window above the interface was tried and reverted**, to let state
+                // survive the lock. It regressed the app switcher snapshot, the exact
+                // property this arrangement exists for, and broke arriving shares against
+                // surviving sheets. State that must outlive the lock is owned above this
+                // branch instead; the pattern is the vault gate and the arrival.
                 if lock.isLocked {
                     LockScreenView(controller: lock)
                 } else {
@@ -81,7 +89,7 @@ struct OpenFactorApp: App {
                     // never had a vault must be offered one: the list cannot render either
                     // state honestly, because to it both look like a shelf of unreadable rows.
                     VaultGateView(model: gate, store: store) {
-                        AccountListView(store: store, arrival: $arrival)
+                        AccountListView(store: store, arrival: $arrival, addSession: addSession)
                         // Accounts saved before the shared access group was declared are
                         // still in the app's bundle group. The phone reads them either
                         // way, so nothing looks wrong here; the watch cannot see them at
@@ -152,6 +160,12 @@ struct OpenFactorApp: App {
                 // while the app was locked would wait for the next time it came forward.
                 collectWhatArrived()
             }
+            // A dismissal is the person's decision to discard the draft; a lock never flips
+            // this, because the binding lives above the lock. That one asymmetry is the whole
+            // mechanism by which typed text survives a lock and not a swipe down.
+            .onChange(of: addSession.isPresented) { _, presented in
+                if !presented { addSession.reset() }
+            }
             .onChange(of: gate.stage) { collectWhatArrived() }
             .onOpenURL { url in
                 guard let value = InboxOpener.arrival(from: url) else { return }
@@ -197,6 +211,18 @@ struct OpenFactorApp: App {
         arrival = IdentifiedArrival(value: value)
     }
 
+    /// One place decides what stands between the interface and the world, because the two
+    /// windows and the root swap have an ordering between them that must not be spread across
+    /// call sites.
+    ///
+    /// **The lock window is shown before the cover is hidden.** On a locked return both change
+    /// in the same update, and hiding the cover first would leave a gap with the live interface
+    /// visible in it, which is the exact frame leak the cover exists to prevent.
+    ///
+    /// The cover shows when the app is not active and not locked. Not when locked, because the
+    /// lock, whether root or window, hides the interface just as thoroughly and is what belongs
+    /// in the system's snapshot. When the lock is off the cover still appears for everyone,
+    /// since the app switcher photograph must never contain a code.
     /// The cover shows when the app is not active and not locked. Not when locked,
     /// because the lock screen is the root view then: it hides the interface just as
     /// thoroughly, and it is what belongs in the system's snapshot. When the lock is off

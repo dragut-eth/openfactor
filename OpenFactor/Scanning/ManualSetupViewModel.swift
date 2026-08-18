@@ -28,6 +28,11 @@ final class ManualSetupViewModel {
     var period: Int = 30
     var counterText: String = "0"
 
+    /// Whether the Advanced group is open. Session state rather than view state: somebody who
+    /// opened it and changed the algorithm, then left to copy the secret, must not come back to
+    /// a collapsed group hiding what they changed.
+    var showsAdvanced = false
+
     /// Set when saving itself failed, which is a different thing from the form being
     /// incomplete and is shown differently.
     private(set) var saveFailure: String?

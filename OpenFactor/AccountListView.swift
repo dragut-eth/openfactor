@@ -7,7 +7,20 @@ struct AccountListView: View {
 
     @State private var model: AccountListViewModel
     @State private var copied: UUID?
-    @State private var isAdding = false
+    /// The add flow's state, owned by the app rather than this view so App Lock cannot destroy
+    /// a half typed secret. `nil` only in previews. See `AddAccountSession`.
+    private let addSession: AddAccountSession?
+
+    @State private var fallbackAdding = false
+
+    /// The presentation bit, from the session when there is one. The fallback exists so
+    /// previews need not build a session to compile.
+    private var isAdding: Binding<Bool> {
+        guard let addSession else { return $fallbackAdding }
+        return Binding(
+            get: { addSession.isPresented },
+            set: { addSession.isPresented = $0 })
+    }
     @State private var isShowingSettings = false
 
     /// What arrived from outside the app, if anything.
@@ -37,8 +50,13 @@ struct AccountListView: View {
     /// The single timer for the whole screen. Ten accounts do not get ten timers.
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    init(store: any SecretStore, arrival: Binding<IdentifiedArrival?> = .constant(nil)) {
+    init(
+        store: any SecretStore,
+        arrival: Binding<IdentifiedArrival?> = .constant(nil),
+        addSession: AddAccountSession? = nil
+    ) {
         _arrival = arrival
+        self.addSession = addSession
         self.store = store
         _model = State(initialValue: AccountListViewModel(store: store))
     }
@@ -70,22 +88,26 @@ struct AccountListView: View {
                     current == nil ? nil : .success
                 }
                 .toolbar { toolbar }
-                .sheet(isPresented: $isAdding) {
-                    AddAccountView(store: store) { model.load(at: Date()) }
+                .sheet(isPresented: isAdding) {
+                    if let addSession {
+                        AddAccountView(session: addSession) { model.load(at: Date()) }
+                    }
                 }
                 .sheet(isPresented: $isShowingSettings) {
                     SettingsView(store: store) { model.load(at: Date()) }
                 }
                 // Something the system handed the app: a backup opened from Files or Mail, or a
-                // transfer image the share extension put in the group container. Both land on
-                // the ordinary import screen, which is the one place that parses anything.
-                // An image and a file are different arrivals and go to different screens. An
-                // image holds a QR code and belongs to the add flow, which decodes it; a file is
-                // an export or a backup and belongs to the importer, which parses it.
+                // Three kinds of arrival, three destinations, and the distinctions matter.
+                // An image and a code both hold a setup code and belong to the add flow, which
+                // decodes one and reads the other; a file is an export or a backup and belongs
+                // to the importer, which parses it. Nothing here is saved without a confirmation
+                // screen, which is what makes an incoming URL safe to accept at all.
                 .sheet(item: $arrival) { arrival in
                     switch arrival.value {
                     case let .image(data):
                         AddAccountView(store: store, image: data) { model.load(at: Date()) }
+                    case let .code(payload):
+                        AddAccountView(store: store, code: payload) { model.load(at: Date()) }
                     case let .file(url):
                         ImportView(store: store, arrival: .file(url)) {
                             model.load(at: Date())
@@ -190,7 +212,7 @@ struct AccountListView: View {
 
         ToolbarItem(placement: .primaryAction) {
             Button {
-                isAdding = true
+                isAdding.wrappedValue = true
             } label: {
                 Label("Add account", systemImage: "plus")
             }
@@ -213,7 +235,7 @@ struct AccountListView: View {
             } actions: {
                 // See `PrimaryAction`, which now owns these proportions and the reasoning
                 // behind them, so this button and the vault setup's cannot drift apart.
-                Button { isAdding = true } label: {
+                Button { isAdding.wrappedValue = true } label: {
                     PrimaryActionLabel("Add an account")
                 }
                 .primaryActionStyle()

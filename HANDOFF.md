@@ -120,12 +120,22 @@ them. They are `.image` and `.file` now. A backup opens
 from Files or Mail through declared document types, and `OpenFactorShare` takes a transfer QR out
 of Messages without it ever resting in Photos.
 
-**Xavier corrected the justification and it belongs on the record.** The roadmap called saving to
-Photos an extra step, and this session's first response called the win narrow. Both were wrong.
-On a default iPhone the library replicates to every Mac, iPad, iPhone and Apple TV on the
-account, is reachable from a browser, is processed server-side, and survives deletion for thirty
-days in a folder most people do not know about. For an image holding every secret its owner has,
-that is an unauditable exposure surface, and it is what pays for a new signed target.
+**Xavier corrected the justification twice, and the second correction narrowed the first.** The
+roadmap originally called saving to Photos an extra step, which understated it. The replacement
+overstated it, asserting that the image would necessarily be replicated everywhere and processed
+server-side. What is defensible and now written everywhere: a transfer QR may contain every OTP
+secret in the vault, and Photos is a persistent store, so with iCloud Photos enabled the image
+can be synced through iCloud to the owner's other devices and reached from iCloud.com, with
+deletion retaining it in Recently Deleted for up to 30 days. Avoiding that copy is what pays for
+a new signed target.
+
+**The App Group justification was narrowed in the same pass.** It had argued that a sibling
+authorized into the group would only learn a QR it could have read from the Messages or Mail
+attachment anyway, which assumes something about another app's access to Messages storage that
+this project has not established. The security model now states the exposure plainly instead: the
+container is not a confidentiality boundary, an authorized sibling could read the inbox item, and
+that is accepted because the item is transient, protected, unsynced, free of key material, and
+deleted on consumption.
 
 **The extension's security is an absence**, so CI asserts it: its entitlements must contain the
 app group and nothing else, checked by parsing the plist rather than grepping it. The grep

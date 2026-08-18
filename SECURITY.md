@@ -270,25 +270,51 @@ and the same parser handles it as any other import.
 
 ### The share extension
 
-**Implemented in PR 16c, never exercised from a real share sheet.** It exists so a transfer QR
-does not have to be saved to Photos first, which on a default iPhone replicates it to every
-device on the account, exposes it to a browser, has it processed server-side, and keeps it for
-thirty days after deletion.
+**Implemented in PR 16c.** It exists so a transfer QR does not have to be saved to Photos first.
+A transfer QR may contain every OTP secret in the vault, and Photos is a persistent store: with
+iCloud Photos enabled the image can become part of the user's synchronized photo library,
+accessible across their devices and through iCloud.com, and deleting it retains it in Recently
+Deleted for up to 30 days. Avoiding that copy is the point of the extension.
 
-**The app declares no custom URL scheme.** An earlier design had the extension hand over an item
-by name through one. Since an extension cannot open its containing app, nothing can produce that
-URL, and a declared scheme is an entry point every app on the device can use. It was removed
-rather than left dormant. Files still open through declared document types, which is a different
-mechanism and does not accept arbitrary senders.
+**The app declares the two standard authenticator schemes and none of its own.** `otpauth` and
+`otpauth-migration` are declared so iOS offers OpenFactor when the Camera app or Photos finds one
+in a QR code. An earlier `openfactor` scheme, used to hand the app an item by name, was removed
+once an extension turned out to be unable to open its containing app: nothing could produce it,
+while every app on the device could still send one.
+
+**Accepting a scheme is an entry point, and `otpauth://` carries the secret in the clear.** Two
+consequences follow, and neither is avoidable while the scheme is supported. Any app on the
+device can send OpenFactor a setup code; the guard is that it lands on the confirm screen and
+nothing is saved until somebody has read the issuer and name. And the secret passes through the
+system on its way in, rather than staying inside this process as it does when this app's own
+camera decodes the frame. Anything that is not one of those two schemes, or a file URL, is
+refused.
+
+**An incoming code is bounded.** Every other untrusted input is: an imported file and a shared
+image both cap at 8MB. The scanned path never needed a bound because a QR code cannot physically
+hold more than about three kilobytes, and declaring a scheme removed that ceiling without
+replacing it. A code arriving by URL is now capped at eight kilobytes, comfortably above a QR
+code's alphanumeric capacity, so nothing that could really have been scanned is turned away and
+no unbounded work is done on a sender's say so.
+
+Files also open through declared document types, which is a different mechanism and does not
+accept arbitrary senders.
 
 Its security is what it cannot do. It declares one entitlement, the app group, and no Keychain
 access, so it can neither read an account nor write one. It does not parse the QR, decode the
 image, or read any import format; those stay in the app. It writes the bytes it was handed to a
 group container with complete file protection and passes a URL carrying only an identifier.
 
-The container is an App Group, which is a grant rather than a boundary, so the design does not
-depend on it being private. What lands there is an image the sender already had, held for
-seconds, and no key or passphrase material may ever be written to it.
+**The shared App Group container is not treated as a confidentiality boundary.** A sibling app
+explicitly authorized into that App Group could read the temporary inbox item. That is an
+accepted exposure: the image exists there only during an explicit share operation, uses complete
+file protection, is never synced by OpenFactor, contains no OpenFactor key material, and is
+deleted immediately after the containing app consumes it. Any leftovers are swept when OpenFactor
+launches.
+
+Photos creates a different exposure. When iCloud Photos is enabled, the image can become part of
+the user's persistent synchronized photo library, accessible across their devices and through
+iCloud.com, and deletion retains it in Recently Deleted for up to 30 days.
 
 **New signed target, new audit surface.** Gate A4 must cover it, and PR 18's reproducible build
 notes gain another binary.

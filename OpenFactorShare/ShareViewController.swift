@@ -7,12 +7,11 @@ import UniformTypeIdentifiers
 ///
 /// ## Why this target exists
 ///
-/// A transfer QR is every secret its owner has, in the clear, in one image. Without this the only
-/// route into OpenFactor is to save it to Photos first, and Photos is not one copy: on a default
-/// iPhone it replicates to every Mac, iPad, iPhone and Apple TV on the account, is reachable from
-/// a browser, is processed server-side for indexing, and survives deletion for thirty days in a
-/// folder most people do not know exists. That is an exposure surface nobody can audit, holding
-/// the most sensitive thing this app handles.
+/// A transfer QR may contain every OTP secret in the vault, in the clear, in one image. Without
+/// this the only route into OpenFactor is to save it to Photos first, which writes it to a
+/// persistent store: with iCloud Photos enabled the image can be synced through iCloud to the
+/// owner's other devices and reached from iCloud.com, and deleting it retains it in Recently
+/// Deleted for up to 30 days. Avoiding that copy is the whole reason this target exists.
 ///
 /// ## What this is not allowed to do, which is most of the design
 ///

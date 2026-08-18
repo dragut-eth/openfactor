@@ -10,8 +10,9 @@
 		50AA0000000000000000000B /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50AA0000000000000000000A /* OpenFactorCore */; };
 		50AA00000000000000AA0001 /* OpenFactorWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 50AA00000000000000000009 /* OpenFactorWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		50ACFFFFFFFFFFFF0000000D /* OpenFactorComplication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 50ACFFFFFFFFFFFF00000009 /* OpenFactorComplication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		50D16262302F862B00211D42 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50D16261302F862B00211D42 /* OpenFactorCore */; };
+		50CBEFD530342BF900760611 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50CE0000000000000000000A /* OpenFactorCore */; };
 		50CE0000000000000000000B /* OpenFactorShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 50CE00000000000000000009 /* OpenFactorShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		50D16262302F862B00211D42 /* OpenFactorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 50D16261302F862B00211D42 /* OpenFactorCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -133,15 +134,15 @@
 			path = "OpenFactorWatch Complication";
 			sourceTree = "<group>";
 		};
+		50CE00000000000000000008 /* OpenFactorShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OpenFactorShare;
+			sourceTree = "<group>";
+		};
 		50CF0RE0000000000000A1 /* OpenFactorCoreTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = OpenFactorCoreTests;
 			path = Tests/OpenFactorCoreTests;
-			sourceTree = "<group>";
-		};
-		50CE00000000000000000008 /* OpenFactorShare */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = OpenFactorShare;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -188,6 +189,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				50CBEFD530342BF900760611 /* OpenFactorCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -768,7 +770,8 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -817,7 +820,8 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1124,11 +1128,11 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = OpenFactorCore;
 		};
-		50D16261302F862B00211D42 /* OpenFactorCore */ = {
+		50CE0000000000000000000A /* OpenFactorCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = OpenFactorCore;
 		};
-		50CE0000000000000000000A /* OpenFactorCore */ = {
+		50D16261302F862B00211D42 /* OpenFactorCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = OpenFactorCore;
 		};

@@ -6,19 +6,38 @@ import SwiftUI
 /// The add flow: point the camera at a code, or import a picture of one, then confirm.
 struct AddAccountView: View {
 
-    @State private var model: AddAccountViewModel
+    /// Everything this flow must not lose, owned outside the view. The lock tears views down;
+    /// the session survives it. See `AddAccountSession` for the whole argument.
+    @Bindable private var session: AddAccountSession
+
     @State private var cameraStatus = CameraAccess.status
     @State private var photoItem: PhotosPickerItem?
-    @State private var isEnteringManually = false
 
     @Environment(\.dismiss) private var dismiss
 
-    private let store: any SecretStore
     let onAdded: () -> Void
 
-    init(store: any SecretStore, onAdded: @escaping () -> Void) {
-        self.store = store
-        _model = State(initialValue: AddAccountViewModel(store: store))
+    private var model: AddAccountViewModel { session.scan }
+    private var store: any SecretStore { session.store }
+
+    /// The ordinary opening, from the add button. The session is the app's, so a lock and
+    /// unlock returns to this exact screen with everything still typed.
+    init(session: AddAccountSession, onAdded: @escaping () -> Void) {
+        self.session = session
+        self.onAdded = onAdded
+    }
+
+    /// Opens with a code the system read out of a QR, from the Camera app or Photos.
+    ///
+    /// The same path a code scanned by this app's own camera takes, deliberately: one place
+    /// decides whether a payload is a single account or a transfer, and it already knows what to
+    /// say when it is neither. What differs is only who did the reading.
+    /// A one-shot session, not the app's: an arrival is re-collected and re-read after a lock
+    /// by the arrival's own survival path, so its session has nothing it needs to keep.
+    init(store: any SecretStore, code: String, onAdded: @escaping () -> Void) {
+        let session = AddAccountSession(store: store)
+        session.scan.handleScan(code)
+        self.session = session
         self.onAdded = onAdded
     }
 
@@ -29,10 +48,9 @@ struct AddAccountView: View {
     /// transfer carrying forty accounts. The share extension does not decode anything, which is
     /// why the bytes arrive here rather than as an account.
     init(store: any SecretStore, image: Data, onAdded: @escaping () -> Void) {
-        self.store = store
-        let model = AddAccountViewModel(store: store)
-        model.handleImage(image)
-        _model = State(initialValue: model)
+        let session = AddAccountSession(store: store)
+        session.scan.handleImage(image)
+        self.session = session
         self.onAdded = onAdded
     }
 
@@ -57,7 +75,7 @@ struct AddAccountView: View {
                     // capsules padding their labels identically: a NavigationLink insets
                     // its title differently, which showed as uneven margins.
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("Enter manually") { isEnteringManually = true }
+                        Button("Enter manually") { session.isEnteringManually = true }
                     }
                 }
                 .task {
@@ -66,8 +84,8 @@ struct AddAccountView: View {
                         cameraStatus = CameraAccess.status
                     }
                 }
-                .navigationDestination(isPresented: $isEnteringManually) {
-                    ManualSetupView(store: store) {
+                .navigationDestination(isPresented: $session.isEnteringManually) {
+                    ManualSetupView(model: session.manual) {
                         onAdded()
                         dismiss()
                     }
@@ -284,5 +302,5 @@ private struct ConfirmAccountView: View {
 }
 
 #Preview("Confirming") {
-    AddAccountView(store: InMemorySecretStore(), onAdded: {})
+    AddAccountView(session: AddAccountSession(store: InMemorySecretStore()), onAdded: {})
 }

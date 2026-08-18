@@ -485,15 +485,13 @@ motp is MD5, and Blizzard has no `otpauth://` representation to import from at a
 clear, in one image. When one arrives by Messages, Mail, AirDrop or Files, the only route
 into OpenFactor without this is to save it to Photos first.
 
-**Photos is not one copy, and calling this "a step saved" understates it by a lot.** On a
-default iPhone the library backs up to iCloud, which replicates it to every Mac, iPad, iPhone
-and Apple TV on the account, makes it reachable from a browser, and has it processed
-server-side for indexing and search. Deleting it does not delete it: it moves to Recently
-Deleted for thirty days, which most people do not know exists.
+**Photos is a persistent store, and calling this "a step saved" understates it.** With iCloud
+Photos enabled the image can be synced through iCloud to the owner's other devices and made
+accessible from iCloud.com, and deleting it retains it in Recently Deleted for up to 30 days.
 
-So the choice is not between two places to keep a file. It is between an exposure surface
-nobody can realistically audit, holding every secret its owner has, and a file that exists
-for seconds. That is what pays for a new signed target, a new entitlement, and the audit
+So the choice is not between two equivalent places to keep a file. It is between a durable item
+in a synchronized library, holding what may be every OTP secret in the vault, and a transient
+item in a container. That is what pays for a new signed target, a new entitlement, and the audit
 surface named below.
 
 **What it does not fix, said up front.** An image already in Photos stays there. The
@@ -510,14 +508,18 @@ removes the *additional* copy, not every copy.
   not touch `otpauth-migration`. All of that stays in the app, in one place, already fuzzed.
   A second process parsing hostile input is a second attack surface for no gain.
 - **What it actually does:** writes the received image into a dedicated `Inbox` directory in
-  a shared app group container, with the strongest file protection class, and opens the
-  containing app.
-- **The URL carries a name, never a payload.** `openfactor://inbox?item=<uuid>` and nothing
-  else. A URL is the wrong place for secret material: it can be logged, it appears in
-  handoff, and it is the sort of thing that ends up in a diagnostic bundle. The app looks up
-  the file by name and the name reveals nothing.
+  a shared app group container, with the strongest file protection class. Nothing else leaves
+  the extension.
+- **A URL may carry a name, never a payload.** The original design handed the app an opaque
+  item UUID as `openfactor://inbox?item=<uuid>`, on the rule that a URL can be logged, appears
+  in handoff, and ends up in diagnostic bundles, so it must never carry content. **The rule
+  stands and the URL is gone:** a share extension cannot open its containing app, measured
+  twice, so the scheme was removed rather than left declared for anything on the device to
+  send. The app collects from the inbox itself instead.
 - **The app reads it once and deletes it**, then sweeps the whole directory at launch, which
   is the same lifecycle the export file already has and can reuse.
+- **No queued or persistent handling.** The interactive path only; nothing that would leave the
+  image sitting somewhere waiting to be delivered.
 
 **Why the shared container is acceptable when Photos is not**, corrected after gate E1. The
 original justification said the container is "app private". **It is not**, and that is exactly
@@ -525,13 +527,34 @@ the claim E1 demolished about Keychain access groups: an App Group is a grant th
 controls, not a boundary, so a sibling app can be authorized into it. `docs/VAULT.md` records it
 as a grant for that reason.
 
-The real justification does not depend on privacy at all. **What lands in the inbox is an image
-the sender already had**, which arrived through Messages or Mail and is sitting in that app's
-storage regardless. It lives for seconds, it carries complete file protection, nothing syncs it,
-and no key material ever goes near it. A sibling app that could read the group would learn a QR
-code it could have read from the Messages attachment anyway. That is a different thing from a
-permanent, cloud replicated library, and it is a different argument from the one first written
-down here.
+**The shared App Group container is therefore not treated as a confidentiality boundary.** A
+sibling app explicitly authorized into that App Group could read the temporary inbox item. That
+is an accepted exposure, and these are the reasons it is accepted: the image exists there only
+during an explicit share operation, uses complete file protection, is never synced by OpenFactor,
+contains no OpenFactor key material, and is deleted immediately after the containing app consumes
+it. Any leftovers are swept when OpenFactor launches.
+
+**Photos creates a different exposure.** When iCloud Photos is enabled, the image can become part
+of the user's persistent synchronized photo library, accessible across their devices and through
+iCloud.com, and deletion retains it in Recently Deleted for up to 30 days. The comparison is
+between a transient item in a container and a durable item in a synchronized store.
+
+#### Recognized as a handler for scanned codes
+
+**Declaring `otpauth` and `otpauth-migration` is what makes iOS offer OpenFactor** when the
+Camera app or Photos finds one of them in a QR code. Without it, a setup code scanned outside
+this app has no route in except retyping it.
+
+Both go to the add screen, which already tells a single account from a transfer because the
+payload names its own format. Nothing is saved without the confirm screen, which is what makes
+accepting an incoming URL defensible at all.
+
+**Two costs, stated rather than buried.** A declared scheme is an entry point every app on the
+device can use. And an `otpauth://` URL carries the secret in the clear, so accepting the scheme
+means the secret passes through the system rather than staying inside this process as it does
+when this app's own camera decodes the frame. That is unavoidable if the scheme is supported,
+and it is why OpenFactor declares the two standard schemes and none of its own: the `openfactor`
+scheme was removed once nothing could produce it, and must not return through this door.
 
 #### The cheaper half, worth doing in the same pull request
 

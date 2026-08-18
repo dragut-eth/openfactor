@@ -80,9 +80,25 @@ struct ComplicationView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
         default:
-            mark
+            // Sized to match the app icon rather than to fill the space. See `iconCubeFraction`.
+            mark.scaleEffect(Self.iconCubeFraction)
         }
     }
+
+    /// How much of the icon's canvas the cube occupies, **measured rather than chosen**.
+    ///
+    /// In `AppIcon-1024.png` the cube's ink is 720 of 1024 pixels tall, centered: 0.703. The
+    /// first version of this view used `.padding(2)` instead, which filled the complication's
+    /// circle to about 92 per cent, so on a watch face the cube stood visibly larger than the
+    /// same cube in the app grid one screen away. Two renderings of one mark have to agree, and
+    /// the icon artwork is the original, so the complication follows it.
+    ///
+    /// **Applied by scaling, not by a `GeometryReader`.** The reader version measured the space
+    /// offered and sized the mark against it, which is fine in a circle and wrong in a corner:
+    /// `.accessoryCorner` shares this branch, has a small curved content area, and a greedy
+    /// reader inside it is how a corner mark ends up tiny or displaced. Scaling needs no
+    /// measurement, changes no layout, and gives every family the same proportion.
+    private static let iconCubeFraction: CGFloat = 0.703
 
     /// The extracted piece, which is also the watch app's icon.
     ///
@@ -99,7 +115,6 @@ struct ComplicationView: View {
         }
         .aspectRatio(0.866, contentMode: .fit)
         .widgetAccentable()
-        .padding(2)
     }
 }
 

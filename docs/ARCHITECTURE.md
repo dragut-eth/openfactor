@@ -387,10 +387,11 @@ phone again, the phone asks for the passphrase.
 
 *Exists as of PR 16c.*
 
-A transfer QR is every secret its owner has, in one image. Saving it to Photos to import it is
-not one extra copy: on a default iPhone the library replicates to every device on the account, is
-reachable from a browser, is processed server-side, and survives deletion for thirty days. The
-share extension exists to avoid that, and almost all of its design is about what it may not do.
+A transfer QR may contain every OTP secret in the vault, in one image. Importing it through
+Photos means writing it to a persistent store: with iCloud Photos enabled the image can be synced
+through iCloud to the owner's other devices and reached from iCloud.com, and deleting it retains
+it in Recently Deleted for up to 30 days. The share extension exists so that copy is never made,
+and almost all of its design is about what it may not do.
 
 **It holds no entitlement but the app group**, so it cannot read or write an account. **It does
 not parse**, so the QR decoder, the protobuf reader and `otpauth-migration` stay in one place
@@ -398,18 +399,31 @@ that is already fuzzed rather than being duplicated into a process that runs aut
 whatever somebody shares. It does not even decode the image, because image decoders are among the
 most attacked code on the platform; the bytes are carried, not read.
 
-**What crosses is bytes and a name.** The image goes to `SharedInbox` in the group container with
-complete file protection, and the only thing leaving the extension is
-`openfactor://inbox?item=<uuid>`. A URL can be logged, can appear in handoff, and can end up in a
-diagnostic bundle, so it carries an identifier that says nothing.
+**What crosses is bytes.** The image goes to `SharedInbox` in the group container with complete
+file protection, and nothing else leaves the extension.
+
+An earlier design had it hand the app an opaque item UUID through an `openfactor://` URL, on the
+rule that a URL is the wrong place for a payload: it can be logged, can appear in handoff, and
+can end up in a diagnostic bundle, so it may carry a name and never content. That rule stands but
+has nothing left to govern. A share extension cannot open its containing app, measured twice, so
+the URL could not be delivered and the scheme was removed rather than left declared.
 
 **The lifecycle is the other half.** The app takes the item once, destructively, and sweeps the
 whole directory at launch for anything nobody came back for. The argument that this container is
 acceptable rests entirely on the item living for seconds, so the removal is the feature.
 
-**The App Group is a grant, not a boundary**, exactly as gate E1 proved of Keychain access
-groups. Nothing here depends on it being private: what sits in it is an image the sender already
-had, and no key material may ever be written there.
+**The App Group is not treated as a confidentiality boundary**, exactly as gate E1 proved of
+Keychain access groups. A sibling app explicitly authorized into that App Group could read the
+temporary inbox item. That is an accepted exposure: the image exists there only during an
+explicit share operation, uses complete file protection, is never synced by OpenFactor, contains
+no OpenFactor key material, and is deleted immediately after the app consumes it. Any leftovers
+are swept at launch.
+
+Photos creates a different exposure. When iCloud Photos is enabled the image can become part of a
+persistent synchronized library, accessible across devices and through iCloud.com, with deletion
+retaining it in Recently Deleted for up to 30 days. The comparison is between a transient item in
+a container and a durable item in a synchronized store, not between a private place and a public
+one.
 
 ## Open decisions
 

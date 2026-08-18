@@ -4,24 +4,26 @@ import Foundation
 ///
 /// ## What this is for
 ///
-/// A transfer QR is every secret its owner has, in the clear, in one image. When one arrives by
-/// Messages, Mail, AirDrop or Files, the only route into OpenFactor without this is to save it to
-/// Photos first, which is the worst resting place available: long lived, searchable, and synced
-/// to iCloud Photos. This removes that step.
+/// A transfer QR may contain every OTP secret in the vault, in the clear, in one image. When one
+/// arrives by Messages, Mail, AirDrop or Files, the only route into OpenFactor without this is to
+/// save it to Photos first, which writes it to a persistent store: with iCloud Photos enabled it
+/// can be synced through iCloud to the owner's other devices and reached from iCloud.com, and
+/// deleting it retains it in Recently Deleted for up to 30 days. This removes that step.
 ///
 /// It does not remove every copy. The image still sits in the sending app's storage, and one
-/// already in Photos stays there. It removes the **additional** copy.
+/// already in Photos stays there. It removes the **additional, persistent** copy.
 ///
 /// ## Why an App Group is acceptable here, when it is not for keys
 ///
-/// **An App Group is a grant, not a boundary.** Gate E1 demolished exactly this assumption about
-/// Keychain access groups, and `docs/VAULT.md` classifies an App Group the same way: a sibling
-/// app of the same team can be authorized into it. Nothing here relies on it being private.
+/// **This container is not treated as a confidentiality boundary.** Gate E1 demolished exactly
+/// that assumption about Keychain access groups, and `docs/VAULT.md` classifies an App Group the
+/// same way: a sibling app of the same team can be authorized into it, and one that was could
+/// read the item waiting here.
 ///
-/// What makes it acceptable is what lands in it. **An image the sender already had**, which is
-/// sitting in Messages or Mail regardless, held for seconds, with complete file protection, never
-/// synced. A sibling that could read this group would learn a QR code it could have read from the
-/// original attachment. **No key or passphrase material may ever be written here**, which is an
+/// That is an accepted exposure, for reasons that are all properties of the item rather than of
+/// the container. It exists only during an explicit share, carries complete file protection, is
+/// never synced by OpenFactor, holds no OpenFactor key material, and is deleted as soon as the
+/// app consumes it. **No key or passphrase material may ever be written here**, which is an
 /// invariant in `docs/VAULT.md` rather than a preference.
 ///
 /// ## The lifecycle, which is the other half of the point

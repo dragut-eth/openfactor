@@ -10,16 +10,39 @@
 	-->
 
 	<!--
-	  **There is deliberately no CFBundleURLTypes here.**
+	  **The two standard authenticator schemes, and nothing of our own.**
 
-	  An earlier version declared an `openfactor` scheme so the share extension could hand the
-	  app an item by name. A share extension turned out not to be permitted to open its
-	  containing app at all, measured twice, so nothing can produce that URL any more.
+	  Declaring these is what makes iOS offer OpenFactor when the Camera app or Photos finds a
+	  QR code holding one. Without them a setup code scanned outside this app has no route in
+	  except retyping it.
 
-	  Declaring a scheme means every app on the device can send this one a URL. Keeping one
-	  that nothing produces would be surface with no purpose, so it is gone. Files still open
-	  through the document types below, which is a different mechanism.
+	  `otpauth` is one account. `otpauth-migration` is a transfer carrying many, which is what
+	  Google Authenticator's export QR encodes. Both go to the same place, because the payload
+	  names its own format and the add screen already tells them apart.
+
+	  **Two costs, neither hidden.** A declared scheme is an entry point every app on the
+	  device can use; the guard is that a code arriving this way lands on the confirm screen
+	  and nothing is ever saved without somebody reading the issuer and name. And an
+	  `otpauth://` URL carries the secret in the clear, so accepting one means it passes
+	  through the system rather than staying inside this process as it does when our own
+	  camera decodes the frame. That is unavoidable if the scheme is supported at all, and it
+	  is the reason no scheme of OpenFactor's own exists here: an earlier `openfactor` scheme
+	  was removed once nothing could produce it.
 	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>dev.openfactor.app.otpauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>otpauth</string>
+				<string>otpauth-migration</string>
+			</array>
+		</dict>
+	</array>
 
 	<!--
 	  This project's own backup, declared so it has a name and an icon in Files and Mail

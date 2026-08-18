@@ -6,12 +6,6 @@ where noted. Sync, the watch, the app lock, the backup format and the vault are 
 own. Step Two's creator has not participated in or endorsed this project, and no Step Two source
 code, assets, or artwork are used here.
 
-Naming it is deliberate. "The app credited in the README as the product reference" was the
-earlier phrasing, and a euphemism for a public fact reads as something being hidden.
-
-Reference screenshots are kept locally in `assets/`, which is gitignored and never
-committed.
-
 ## Screen 0: The vault gate
 
 **Not derived from the reference.** The reference has no vault, so none of this is adapted from
@@ -165,10 +159,14 @@ than no button, so it was removed rather than left hopeful. The responder chain 
 apps use is deliberately absent: it reaches for `UIApplication` from a process the sandbox keeps
 away from it.
 
-**The app declares no URL scheme.** One existed so the extension could hand over an item by
-name; once the extension turned out to be unable to open the app at all, nothing could produce
-it. A declared scheme lets every app on the device send this one a URL, so keeping a dead one
-would be surface for nothing.
+**The app declares `otpauth` and `otpauth-migration`, and no scheme of its own.** Declaring them
+is what makes iOS offer OpenFactor when the Camera app or Photos finds a setup or transfer code
+in a QR. Such a code opens the **add** screen, which already tells one account from a transfer,
+and nothing is saved until it is confirmed there.
+
+OpenFactor's own `openfactor` scheme was removed once the extension turned out to be unable to
+open the app, since nothing could produce it while every app on the device could still send one.
+Anything that is not one of the two standard schemes, or a file, is refused.
 
 **So the app collects for itself**, every time it comes forward, taking the newest item and
 sweeping the rest. Anything older than ten minutes is swept unread rather than presented, because
