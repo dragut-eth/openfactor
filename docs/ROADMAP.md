@@ -341,6 +341,19 @@ gets the fewest capabilities.
   second factor on a watch face readable by anyone glancing at a wrist, which is against
   the spirit of the rest of this. One that only launches the app is harmless
 
+#### A note for anyone verifying the complication
+
+**A watchOS complication cannot be verified from a Debug build installed with `devicectl`.** The
+extension carries `OpenFactorComplication.debug.dylib` and `__preview.dylib` in Debug, and a
+widget extension launched by the system rather than by Xcode cannot use that indirection, so
+watchOS draws its placeholder: an octagon with an exclamation mark, whatever the code says.
+Confirmed on 2026-08-18, when build 5 through TestFlight rendered the mark correctly and at the
+right size after four rounds of diagnosis had chased the drawn mark and then a missing app icon.
+The complication needs no icon of its own: extensions do not carry one on watchOS, the picker
+uses the containing app's, and this one draws its mark in SwiftUI shapes with no image asset at
+all.
+
+
 ### PR 15: App lock
 
 **App Lock ships off by default.** An independent review argued for on by default, and the
@@ -683,18 +696,6 @@ change the app before strangers depend on it.
   than no README
 - Findings published, including the ones that came to nothing
 - Tag the audited commit. This is the tag every later diff is measured against
-
-#### A note for anyone verifying the complication
-
-**A watchOS complication cannot be verified from a Debug build installed with `devicectl`.** The
-extension carries `OpenFactorComplication.debug.dylib` and `__preview.dylib` in Debug, and a
-widget extension launched by the system rather than by Xcode cannot use that indirection, so
-watchOS draws its placeholder: an octagon with an exclamation mark, whatever the code says.
-Confirmed on 2026-08-18, when build 5 through TestFlight rendered the mark correctly and at the
-right size after four rounds of diagnosis had chased the drawn mark and then a missing app icon.
-The complication needs no icon of its own: extensions do not carry one on watchOS, the picker
-uses the containing app's, and this one draws its mark in SwiftUI shapes with no image asset at
-all.
 
 ### PR 18: Release preparation
 
