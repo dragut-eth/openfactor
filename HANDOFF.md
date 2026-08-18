@@ -8,6 +8,45 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**A4 round one is complete. Scope 4 found the first confidentiality failure of the gate, and it
+is mine.** `PrivacyShield` keeps one process-global cover and one process-global lock, both bound
+to `connectedScenes.first`. The shipped `Info.plist` declares
+`UIApplicationSupportsMultipleScenes = true` for iPhone and iPad, verified in the built artifact.
+So on an iPad with two windows, the second has no cover in the app switcher and no lock over it,
+which breaks `SECURITY.md`'s "the app switcher card never contains a code" and `APP_LOCK.md`'s R2
+in their own words.
+
+**The observation about the tests is the part to keep.** `AppLockPresentation` was extracted so
+the lock's decisions could be tested, and that was right; it caught a real leak before it shipped.
+But it models *when* to lock, and this defect is about *which surface* gets locked. The tests are
+complete for what they cover, and their existence made the uncovered dimension harder to see.
+
+**The inbox is never swept at launch, found by all three engines.** `sweep()` has one caller, the
+`defer` inside `collect()`, which four guards can refuse. Open the app with App Lock on, cancel
+Face ID, and a transfer QR holding every secret stays in the group container with no upper bound.
+Fable added the half nobody else had and it is verified: **nothing sets `isExcludedFromBackup` on
+the inbox**, while `VaultKeyStore` sets exactly that on the vault key, so a stranded image is
+eligible for the device backup. The extension exists to keep that image out of a persistent
+cloud-reachable store, and the inbox reproduces the exposure with a different folder name. Fable
+also named the trap in the obvious fix: an unconditional launch sweep would delete a share the
+owner is about to unlock into, so the fix is an age-bounded sweep.
+
+**Grok found the crash from scope 3 again from the other side**, and sharpened it: the trap fires
+in `ImportView.init` as the sheet is built, and with a warm App Lock the account list is still in
+the tree beneath the lock window, so the process can die while the app is showing its lock screen.
+
+**Two more, both mine from 2026-08-18.** The confirm-add screen and the manual-entry preview draw
+live codes and never read `isScreenCaptured`, so "codes become bullets while captured" is true of
+one screen out of three. And `docs/APP_LOCK.md`'s transition table says `didBecomeActive` sets
+`coldLock = false`, which the code deliberately does not and a test pins; the page declares that
+where code and page disagree the page wins, so anyone obeying it would break a tested guarantee
+and reinstate the orientation latch the page exists to prevent.
+
+**One engine was factually wrong and it is recorded.** Grok asked the multi-scene question,
+concluded multiple scenes were not declared, and filed it as a maybe it would not promote. It
+reasoned from the project file; the shipped `Info.plist` says otherwise. Its instinct to flag
+uncertainty was right and it would still have left the defect in place had it been the only engine.
+
 **A4 scope 3, the parsers, found a data-loss path that needs no attacker.** Fable's pass is in
 `docs/audits/A4-scope3-parsers.md`. The backup format demands a secret decode to at least ten
 bytes and a counter stay under 2^53. The archive reader enforces both. **Three of the four
