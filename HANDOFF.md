@@ -32,6 +32,29 @@ only happens when the system is dissolving its own snapshot. The documented leve
 looking like protection. The behavior is on record from iOS 7 onward with no Apple answer.
 The switcher card, the artifact anyone can browse to, stays blank.
 
+**A correction, and a diagnosis withdrawn: the complication's octagon is still unexplained.**
+Yesterday's commit said an app icon set was added to the complication target. It was not. The
+build setting landed and the asset catalog never existed, on any branch, so
+`ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` has been pointing at nothing the whole time. That
+was found by checking the built extension instead of trusting the claim, while preparing the
+TestFlight build whose purpose was to verify it.
+
+Adding the catalog was then tried and reverted, because looking at the rest of the evidence
+dismantled the diagnosis rather than supporting it. Three facts, none of which were checked
+yesterday. A filesystem-synchronized catalog placed in that target does not compile into the
+appex at all, so the change was inert. App extensions do not carry their own icons on watchOS;
+the picker uses the containing app's, and the watch app's `Assets.car` and its
+`CFBundleIconName` are both present and correct. And the complication draws its mark entirely
+in SwiftUI shapes, with no image asset anywhere in it, so it cannot fail to render for a missing
+icon.
+
+**The likeliest cause is the one guessed and dismissed early: it is a Debug build.** The appex
+that reaches the watch contains `OpenFactorComplication.debug.dylib` and `__preview.dylib`, and
+a widget extension launched by the system rather than by Xcode is a known failure case for that
+indirection, which renders as the system's placeholder. Stated as the leading hypothesis, not a
+finding: nothing here has been measured. The Release build settles it, which is exactly what
+Xavier said when he chose to wait for it.
+
 **The privacy manifest was incomplete, and is now declared and guarded.** Reported by the
 session doing PR 18 metadata work, verified here against Apple's published data rather than
 the report: `SharedInbox.pending()` reads a file modification date, file timestamps are a
@@ -97,10 +120,8 @@ it did not ship at all.
 **Also in the day, committed on the same branch:** the Photos and App Group claims narrowed
 to what is defensible, at Xavier's direction. The `otpauth` and `otpauth-migration` schemes
 declared, routed to the add screen, bounded at eight kilobytes, everything else refused.
-The complication's octagon diagnosed as a missing icon, not the drawn mark; icon added,
-verification waiting on the next TestFlight build by Xavier's decision. Two rounds went to
-the mark before the missing icon was seen, and the finding was in output already printed:
-the target had no `ASSETCATALOG_COMPILER_APPICON_NAME` and no asset catalog.
+The complication got `ASSETCATALOG_COMPILER_APPICON_NAME`, and the claim made at the time that
+an icon set was added with it **was wrong**: see the correction below.
 
 **The storage is being redesigned, and the reason is measured rather than argued.** Gate E1
 proved on hardware that a second app signed by the same team reads another app's Keychain
