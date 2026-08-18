@@ -20,14 +20,50 @@ say so and we will agree on a disclosure date rather than let it sit.
 
 ## Threat model
 
-This document is incomplete while the app is being built. The complete threat model is reviewed
-in PR 17. A statement marked **implemented** describes code that exists. A statement marked
-**vault design** describes a property specified in `docs/VAULT.md` that is not yet built. There
-is deliberately no migration path; `docs/VAULT.md` explains why a converter would be the least
-exercised code in the project. Nothing here has had an implementation review.
+**This is the PR 17 review.** Every claim below was checked against the code as it stands rather
+than carried forward from when it was written, and three of them were wrong and are corrected in
+place: that the Watch screens were unbuilt, that nothing here had been reviewed, and that the app
+switcher never contains a code.
 
-The distinction matters. A security design can be sound while the product implementing it is
-unfinished or wrong.
+Claims carry their basis, because "we believe this" and "a machine fails if this stops being
+true" are different kinds of statement and a reader deserves to know which one they are getting:
+
+- **Measured** means observed on real hardware, once, by a person. It can rot silently.
+- **Tested** means something in this repository fails if it stops being true.
+- **Reasoned** means it follows from the design, and nothing checks it automatically.
+
+A statement marked **vault design** describes a property specified in `docs/VAULT.md` that is not
+yet built. One remains, the tripwire. There is deliberately no migration path; `docs/VAULT.md`
+explains why a converter would be the least exercised code in the project.
+
+**Two independent implementation reviews have happened**, which an earlier version of this
+document denied. A second model reviewed App Lock's presentation core and found a real leak, an
+unlock landing after backgrounding that tore the lock window down over a live interface, before
+that build reached a device. A cold review of the Watch key exchange, run with no prior context,
+found no fault in the cryptography and four defects around it, all fixed and all now tested.
+
+**Neither is a professional audit.** Gate A4 in `docs/ROADMAP.md` is that, and it has not
+happened. A security design can be sound while the product implementing it is unfinished or
+wrong, which is the distinction this whole document turns on.
+
+### Where the five attackers are answered
+
+`docs/ROADMAP.md` names five for this review. They do not map one-to-one onto sections, because
+some are answered in several places and some sections answer more than one, so this is the index
+rather than a restructuring:
+
+| Attacker | Answered in |
+| --- | --- |
+| Your unlocked device | Attacker with your unlocked device; The clipboard; System-added menu entries |
+| Your locked device | Attacker with your locked device; Another app signed by the same developer team |
+| Your iCloud account | Attacker with your iCloud account; What turning sync off does; Deletion, replay, and missing data |
+| The App Store binary | Attacker who has the App Store binary; Attacker who publishes a modified build |
+| A malicious dependency | Malicious or compromised dependency; Attacker on the network |
+
+Two further attackers are answered here that the roadmap did not name, and both came from
+hardware experiments rather than from reasoning: a sibling app signed by the same team, which
+gate E1 showed can read this team's Keychain items, and a device holding the vault key that is
+not this one, which is the Watch.
 
 ### What OpenFactor protects
 
@@ -44,10 +80,10 @@ cannot stop an authorized Keychain writer from deleting or replaying encrypted r
 
 ### Another app signed by the same developer team
 
-**Implemented on iPhone in PR 16d, supported by hardware experiments.** OpenFactor does not
-treat a Keychain access group as a confidentiality boundary. Gate E1 demonstrated that another app signed by the same
-team can be authorized to read items in any of that team's Keychain access groups, including the
-default group.
+**Implemented on iPhone and Watch in PR 16d. Measured: gates E1 and E4 on real hardware.**
+OpenFactor does not treat a Keychain access group as a confidentiality boundary. Gate E1
+demonstrated that another app signed by the same team can be authorized to read items in any of
+that team's Keychain access groups, including the default group.
 
 The vault is the response. Keychain contains encrypted account records and a wrapped recovery
 key. The key that opens account records is stored only in the app's private container. Gate E4
@@ -81,9 +117,19 @@ behavior through a restore and Quick Start has not been measured and is not clai
 **Implemented in PR 15 and extended in PR 17.** Three defenses exist, two always on and one
 optional.
 
-**The app switcher never contains a code.** iOS photographs the app as it leaves the foreground
-and shows that photograph in the app switcher. OpenFactor covers itself as soon as it stops being
-active, so the captured surface is blank. This protection does not depend on App Lock.
+**The app switcher card never contains a code. Measured, repeatedly.** iOS photographs the app as
+it leaves the foreground and shows that photograph in the switcher. OpenFactor covers itself as
+soon as it stops being active, so that card is blank. This protection does not depend on App Lock.
+
+**It does not cover every picture iOS keeps of the app, and an earlier version of this sentence
+claimed it did.** iOS holds a second snapshot cache, used for the zoom that plays when the app is
+opened from the home screen, written at a moment the cover is not up. A screen recording read
+frame by frame showed the previous screen there, with an account legible, for about a sixth of a
+second before the lock appeared. It is not reachable from the app: the documented lever,
+`ignoreSnapshotOnNextApplicationLaunch`, was tried and did nothing, and the behavior is on record
+from iOS 7 onward with no answer from Apple. `docs/APP_LOCK.md` carries the evidence and the
+reasoning. The durable artifact, the card anybody can browse to at leisure, stays blank; the leak
+is a fraction of a second, visible only to somebody already holding the phone.
 
 **Secrets are hidden while the screen is being captured.** iOS reports when the screen is being
 recorded, mirrored, or shared, and OpenFactor follows that: codes become bullets, and a vault or
@@ -210,9 +256,13 @@ a particular item has reached another device, so the interface does not claim ei
 
 ### The Watch is another device holding the vault key
 
-**Exchange implemented in PR 16d, the screens are not built yet.** Account records reach the
-Watch as ciphertext through iCloud Keychain. The vault key does not. It is provisioned once from
-an unlocked, foregrounded phone over the interactive WatchConnectivity channel.
+**Implemented in PR 16d, screens included, and exercised on hardware.** The successful path, a
+declined request, and a phone with no vault of its own have all run between a real phone and a
+real Watch, along with recovery: the passphrase restored a dropped key, and a Watch that had just
+been refused twice was provisioned afterwards with no reset and no reinstall, so a refusal is not
+a dead end. Account records reach the Watch as ciphertext through iCloud Keychain. The vault key
+does not. It is provisioned once from an unlocked, foregrounded phone over the interactive
+WatchConnectivity channel.
 
 The Watch and phone each generate an ephemeral P-256 keypair, derive a shared secret with ECDH,
 and bind the protocol version, request nonce, and both public keys into the HKDF context and the
@@ -221,8 +271,19 @@ before deriving anything.
 
 The protocol and byte layouts are specified in `docs/VAULT.md`. The negative controls that make
 the binding meaningful are kept as tests rather than only as a one-off experiment: a substituted
-phone public key does not open the payload, an altered transcript derives a different key, and a
-response to a different request is refused.
+phone public key does not open the payload, a substituted Watch public key does not open with the
+original attempt, an altered transcript derives a different key, and a response to a different
+request is refused before any key material is derived.
+
+**A cold independent review of this exchange found no fault in the cryptography** and four
+defects around it, all fixed. The transcript binding is complete, the nonce is checked before
+anything is derived, the transcript is the AEAD's additional data as well as the HKDF context,
+and both parsers enforce exact length before any slice arithmetic. What it found instead were two
+races in the Watch's asking flow that no test could reach while that logic lived in the Watch
+target, a request substitution against the phone's own approval alert, malformed bytes reaching
+the vault key and the human prompt before being parsed, and a discarded `SecRandomCopyBytes`
+result that would have shipped a predictable nonce had the system ever refused. The flow
+decisions now live in a tested value type in the core.
 
 **Routing exclusivity is load bearing here, and that is a change.** An earlier design had both
 screens show a six-digit authentication string so that routing would be defense in depth. That
@@ -268,9 +329,10 @@ rotation path and must not present a passphrase replacement as though it did.
 
 ### Device loss and recovery
 
-The vault passphrase is generated with 120 bits of entropy, shown once, acknowledged, and never
-stored by OpenFactor. A new phone recovers by receiving the wrapped-key record, asking for the
-passphrase, unwrapping the vault key, and installing it in the new private container.
+**Reasoned, with one part measured.** The vault passphrase is generated with 120 bits of entropy,
+shown once, acknowledged, and never stored by OpenFactor. A new phone recovers by receiving the
+wrapped-key record, asking for the passphrase, unwrapping the vault key, and installing it in the
+new private container.
 
 With sync off, the wrapped key exists only on that device. Losing the device then loses the vault
 unless an encrypted export exists. This is deliberate and must be stated before someone disables
@@ -308,13 +370,40 @@ that OpenFactor makes no network requests of its own.
 
 ### Malicious or compromised dependency
 
-There are no third-party dependencies. The supply chain is this repository, the Swift toolchain,
-and Apple's platform frameworks.
+**Tested.** There are no third-party dependencies. The supply chain is this repository, the Swift
+toolchain, and Apple's platform frameworks.
+
+This was the one claim in this document that nothing enforced, sitting beside claims a machine
+checks, and the supply chain is where a promise in prose is worth least: a dependency arrives by
+somebody adding one line in a pull request about something else. CI now fails if `Package.swift`
+declares a remote package, if the Xcode project gains a remote package reference, or if a
+`Package.resolved` is ever committed. Proved in both directions, and the first version of the
+check failed on a clean tree because it matched the reference kind the local core package uses.
 
 Cryptography comes from CryptoKit, with one exception. CryptoKit has no password-based key
 derivation, so PBKDF2 comes from CommonCrypto. Both are Apple frameworks and neither is vendored.
 The HOTP dynamic truncation required by RFC 4226 is the only cryptographic construction written
 directly in this repository, and it is tested against the RFC vectors.
+
+### Attacker who has the App Store binary
+
+**Reasoned, and the answer is that it matters less here than almost anywhere.** Anybody can
+download the app and take it apart. They will find the same thing a reader of this repository
+finds, because the source is public and the binary is built from it.
+
+**Nothing secret is embedded in the shipped binary**, and there is nothing that could be: no API
+key, no server, no account, no shared secret, no license check, and no obfuscation standing in
+for any of those. Every secret this app handles arrives from its owner and lives in the Keychain
+or the vault key file on their device. CI refuses credential-shaped strings and credential files
+in the repository, so the same property is enforced upstream of the build rather than hoped for.
+
+**Obfuscation is deliberately absent, and that is a position rather than an omission.** An
+authenticator whose security depended on nobody reading it would be making the opposite claim to
+the one on the front of this repository. Reverse engineering the binary yields the design, and
+the design is meant to survive being known.
+
+The one thing an attacker does learn from a binary they could not learn from the source is which
+commit it was built from, and only approximately. See below.
 
 ### Attacker who publishes a modified build
 
@@ -324,16 +413,28 @@ Until then, this remains an open supply-chain limitation.
 
 ### System-added menu entries
 
-**Known and accepted, to be re-examined in PR 17.**
+**Re-examined in PR 17. The limitation is preserved rather than established, and this says why.**
 
-Long-pressing an account card opens a system context menu. iOS may add entries that OpenFactor
-does not define. On current systems that can include an assistant action. Invoking a system-added
-action may pass visible content, including a live code and account name, to a service that can
-process requests away from the device.
+Long-pressing an account card opens a system context menu. iOS may add entries OpenFactor does
+not define, which on current systems can include an assistant action. Invoking one may pass
+visible content, including a live code and an account name, to a service that can process
+requests away from the device.
 
-The app does not control those entries and cannot verify externally exactly what they transmit.
-Anyone for whom that matters can disable the relevant system assistant features, which removes
-the entry. PR 17 must either establish the behavior or preserve the limitation explicitly.
+PR 17 was supposed to either establish the behavior or preserve the limitation explicitly. It
+cannot establish it. What a system service transmits is not observable from inside the app, and
+the network checks in this document deliberately prove something about OpenFactor's own binary,
+which says nothing about what a system service does on its own behalf. Claiming to have verified
+it would be the kind of false confidence this document exists to avoid.
+
+**What is done rather than claimed:** the menu's preview is the card with its digits masked, so
+a preview handed to a system feature carries the account but not a live code. That is a
+narrowing, not a fix; the underlying view still holds the code, and an action that reads the row
+rather than the preview is unaffected.
+
+The menu is kept because the lift and preview are what make an account list feel native, and
+removing it to defend against an entry the person can turn off in their own settings is a poor
+trade. Anyone for whom it matters can disable the relevant assistant features, which removes the
+entry entirely.
 
 ### Opening a file from elsewhere
 

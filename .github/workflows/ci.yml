@@ -62,6 +62,36 @@ jobs:
           fi
           echo "No network code and no logging found."
 
+      # SECURITY.md's answer to the malicious-dependency attacker is that there are none. That
+      # was the one claim in that section nothing enforced, sitting beside claims a machine
+      # checks, and the supply chain is exactly where a promise in prose is worth least: a
+      # dependency arrives by somebody adding one line, in a pull request about something else.
+      #
+      # Three ways one can appear, so three checks. The package can declare one, Xcode can
+      # reference one in the project file, and a resolved file appearing at all means something
+      # was fetched.
+      - name: No third-party dependencies
+        run: |
+          set -e
+          if git grep -n -E '\.package\(' -- 'Package.swift'; then
+            echo "Package.swift declares a remote dependency."
+            echo "SECURITY.md tells readers the supply chain is this repository, the Swift"
+            echo "toolchain, and Apple's frameworks. Change that document first, deliberately."
+            exit 1
+          fi
+          # Only the *remote* reference kind. XCSwiftPackageProductDependency is how the
+          # project consumes the local OpenFactorCore package and is present by design; the
+          # first version of this check matched it and failed on a clean tree.
+          if git grep -n -E 'XCRemoteSwiftPackageReference' -- '*.pbxproj'; then
+            echo "The Xcode project references a remote Swift package."
+            exit 1
+          fi
+          if git ls-files | grep -iE '(^|/)Package\.resolved$'; then
+            echo "A Package.resolved is tracked, so something was fetched."
+            exit 1
+          fi
+          echo "No third-party dependencies."
+
       # Added after an App Store Connect API key identifier was committed to this public
       # repository and pushed. Nothing was compromised: an identifier is not the key, and
       # neither the key nor the issuer identifier was ever here. But a project whose premise

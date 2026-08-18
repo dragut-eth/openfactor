@@ -677,8 +677,15 @@ so "no accounts yet" keeps its old meaning.
 
 ### PR 17: Security review and threat model
 
-- Complete `SECURITY.md`: attacker with the unlocked device, the locked device, the iCloud
-  account, the App Store binary, or a malicious dependency
+- Done: `SECURITY.md` completed for all five attackers, with an index at the top of the threat
+  model mapping each to the sections that answer it. Every claim was checked against the code
+  rather than carried forward, and three were wrong and are corrected in place: that the Watch
+  screens were unbuilt, that nothing had been reviewed, and that the app switcher never contains
+  a code. Claims now carry their basis, measured, tested, or reasoned, so a reader can tell which
+  kind of statement they are reading. Two sections were added, the attacker who has the shipped
+  binary and the index; two deferred items were resolved, the context menu limitation preserved
+  with its reasoning rather than deferred again, and the zero-dependency claim turned from prose
+  into a CI check
 - Done: pasteboard, screenshot, and background snapshot behavior audited. The pasteboard
   audit is written up in `SECURITY.md` and changed one decision, codes may now travel through
   Universal Clipboard while passphrases may not, with all three behaviours measured on hardware

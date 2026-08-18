@@ -8,6 +8,32 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**PR 17's threat model is written, and the job was verification rather than prose.** Every claim
+in `SECURITY.md` was checked against the code as it stands, and three were false: that the Watch
+screens were not built, that nothing in the document had had an implementation review, and that
+the app switcher never contains a code. The last one is the interesting one, because it was true
+when written and PR 15b measured the exception: iOS keeps a second snapshot cache behind the home
+screen zoom that the cover cannot reach.
+
+Claims now carry their basis. **Measured** means seen once on hardware and can rot silently,
+**tested** means something here fails if it stops being true, **reasoned** means nothing checks
+it. Making that distinction visible is what turns the document from prose into something an
+auditor can work through, and it immediately exposed the weakest claim in it.
+
+**That weakest claim was the supply chain.** "There are no third-party dependencies" was pure
+prose sitting beside claims a machine enforces, and a dependency arrives by one line in a pull
+request about something else. CI now fails on a remote package in `Package.swift`, a remote
+reference in the Xcode project, or a committed `Package.resolved`. Proved both ways, and the
+first version failed on a clean tree because it matched `XCSwiftPackageProductDependency`, which
+is how the project consumes the local core package.
+
+**Two long-deferred items are closed rather than deferred again.** The context menu's exposure to
+system-added entries cannot be established from inside the app, so the limitation is preserved
+with the reason it cannot be verified, and the existing narrowing is stated: the preview is the
+card with its digits masked. And the roadmap's five attackers now have an index at the top of the
+threat model, because they never mapped one-to-one onto sections and pretending otherwise would
+have meant restructuring a document that is organised sensibly already.
+
 **Secrets are now hidden while the screen is captured, and a screenshot of a passphrase warns
 you.** Three things on one mechanism, all measured on hardware: codes become bullets during a
 screen recording, a vault or backup passphrase is withheld with an explanation rather than
