@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenFactor</title>
+  <meta name="description" content="An open source two factor authenticator for iPhone and Apple Watch. No account, no server, no tracking.">
+  <link rel="icon" href="assets/icon-light.png">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <main>
+    <header class="hero">
+      <img class="icon" src="assets/icon-light.png" alt="OpenFactor icon" width="96" height="96">
+      <h1>OpenFactor</h1>
+      <p class="tagline">Open source two factor codes. No account, no server, no tracking.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/dragut-eth/openfactor">View the source</a>
+        <a class="btn" href="privacy.html">Privacy</a>
+      </div>
+
+      <div class="status">
+        <strong>Beta, in testing.</strong> OpenFactor works and is being tried on real devices,
+        but it has not had an independent security audit. Do not trust it with an account you
+        cannot recover yet. The reviews and hardware experiments so far are in the repository.
+      </div>
+    </header>
+
+    <section>
+      <h2>What it is</h2>
+      <p>
+        OpenFactor generates two factor authentication codes on iPhone and Apple Watch. There is
+        no account to create, no server to trust, and no analytics. Your accounts stay on your
+        devices, encrypted before they are stored. If you turn on iCloud sync, encrypted records
+        travel through iCloud Keychain and the key that decrypts them stays on your devices.
+      </p>
+    </section>
+
+    <section>
+      <h2>What it does</h2>
+      <ul class="points">
+        <li>
+          <strong>Codes on your wrist</strong>
+          <span>Shows one code at a time on Apple Watch, and keeps working with your iPhone off,
+          absent, or out of range.</span>
+        </li>
+        <li>
+          <strong>Bring your accounts with you</strong>
+          <span>Imports from other authenticators, including Google Authenticator transfer codes
+          and Aegis vaults, and reads a setup code from the Camera app or a screenshot.</span>
+        </li>
+        <li>
+          <strong>Backups you can take elsewhere</strong>
+          <span>Exports an encrypted backup whose format is public and documented, or a plain
+          file for moving to another app. The difference is stated on screen.</span>
+        </li>
+        <li>
+          <strong>Locked to you</strong>
+          <span>An optional lock behind Face ID, Touch ID, or your passcode.</span>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>What it deliberately does not do</h2>
+      <ul class="points">
+        <li>
+          <strong>No Mac app and no browser extension</strong>
+          <span>A second factor is worth less the moment it lives on the machine asking for
+          it.</span>
+        </li>
+        <li>
+          <strong>No passwords and no autofill</strong>
+          <span>This is an authenticator, not a password manager.</span>
+        </li>
+        <li>
+          <strong>No accounts, no telemetry, no crash reporting</strong>
+          <span>The app makes no network requests of its own.</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- The screenshots section, held back until the images exist. It expects
+         assets/screenshots/list.png, watch.png and add.png, which are the same images
+         App Store Connect needs. Uncomment once they are in place.
+
+    <section>
+      <h2>See it</h2>
+      <div class="shots">
+        <img src="assets/screenshots/list.png" alt="The account list showing codes">
+        <img src="assets/screenshots/watch.png" alt="A single code on Apple Watch">
+        <img src="assets/screenshots/add.png" alt="Adding an account">
+      </div>
+    </section>
+    -->
+
+    <section>
+      <h2>Built in the open</h2>
+      <p>
+        The source is public from the first commit, including the design documents, the security
+        reviews, and the hardware experiments behind them, with the findings published whether or
+        not they were flattering.
+        <a href="https://github.com/dragut-eth/openfactor">Read it on GitHub.</a>
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <nav>
+      <a href="https://github.com/dragut-eth/openfactor">Source</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/dragut-eth/openfactor/issues">Support</a>
+    </nav>
+    <div>OpenFactor is published by ReVeNG System. The source is open; the name is not.</div>
+  </footer>
+</body>
+</html>

@@ -45,23 +45,47 @@ list with real codes is what to show.
 | Field | Value | Note |
 | --- | --- | --- |
 | Name | `OpenFactor` | 30 character limit, well under |
-| Subtitle | `Two factor codes, open source` | 30 character limit, 29 used. See below |
+| Subtitle | `Open source 2FA, no account` | 30 character limit, 27 used. See below |
 | Primary category | Utilities | Where authenticators sit |
 | Secondary category | Productivity | Optional, and low value; leaving it empty is defensible |
 | Age rating | 4+ | No objectionable content, no web views, no user generated content |
+| Copyright | `2026 ReVeNG System` | The publishing entity, which must match the Apple Developer account exactly |
+| Content rights | No third party content | No issuer logos ship: the asset catalog holds the accent color and three app icon sets |
 | Price | Free | |
 | Availability | All territories | Nothing here is region specific |
 
 **Not "Security" as a category**, because Apple does not offer one and Utilities is where every
 comparable app is found.
 
-**The subtitle changed from "offline" to "open source", and it is a positioning call rather than
-a correctness one.** Both are true. Plenty of authenticators work offline, so that word says
-little about which one this is; few publish their source, their design documents and their
-review findings, so that word does. It also costs nothing in search, because "two factor" stays
-in the subtitle and "2fa", "totp" and "authenticator" are all in the keywords.
+**The store copyright and `LICENSE` name different holders on purpose.** `LICENSE` says
+`OpenFactor contributors`, which covers the source and stays collective so contributions need no
+reassignment. The store field covers the published app and names who publishes it. Nothing to
+reconcile between them, but the privacy policy is a statement by that same publishing entity and
+should name it, which the draft below does not yet do.
 
-The alternatives considered, if this reads wrong: `Offline authenticator`, `Open source
+**The subtitle was chosen against the competition rather than in the abstract.** Five listings
+were read for what they actually do with the field:
+
+| App | Name | Subtitle |
+| --- | --- | --- |
+| Step Two | Step Two | Simple two-step verification |
+| Microsoft Authenticator | Microsoft Authenticator | Protects your online identity |
+| Ente Auth | Ente Auth - 2FA Authenticator | Secure sync across devices |
+| Raivo | Raivo - 2FA Authenticator app | tOTP, OTP & MFA Authentication |
+| 2FAS | 2FA Authenticator (2FAS) | #1 Rated 2FA Authenticator |
+
+Two things follow. **The category word lives in the name for most of them**, which is why Ente,
+Raivo and 2FAS can spend the subtitle on something else, and it is a disadvantage we carry:
+`OpenFactor` is indexed as a brand and nothing more, so the subtitle is the only high weight
+field that can say what the app is. And **"2FA" is the term people type**. The polished listings
+write it out in prose, but the searches are on the abbreviation.
+
+So the subtitle does both jobs in 27 characters: `2FA` is what it is, and `Open source` and
+`no account` are the two things none of those five claim. It is not keyword duplication, because
+Apple weights the subtitle above the keyword field, so a term promoted out of keywords into the
+subtitle ranks better than the same term sitting in keywords alone.
+
+The alternatives considered, if this reads wrong: `Open source, no account`, `Open source
 authenticator`, `Offline two factor codes`.
 
 ## Keywords
@@ -70,15 +94,32 @@ authenticator`, `Offline two factor codes`.
 so repeating it wastes the budget.
 
 ```
-2fa,totp,otp,authenticator,two-factor,hotp,offline,open source,watch,backup,import,export
+totp,otp,authenticator,two-factor,hotp,mfa,two-step,verification,offline,watch,backup,import,export
 ```
 
-That is 89 characters. Deliberately absent: any competitor's name, which Apple rejects, and
-"secure" and "private", which are claims rather than search terms.
+That is 99 characters.
+
+**`2fa` and `open source` were removed from this list when they moved into the subtitle.** Apple
+indexes name, subtitle and keywords as one pool and weights them in that order, so a term in both
+the subtitle and the keywords is not indexed twice, it just spends 16 characters of the smaller
+budget saying something the higher weighted field already says. Removing them freed room for
+`mfa`, `two-step` and `verification`.
+
+`two-step` and `verification` are separate entries rather than one phrase on purpose, because
+Apple combines keywords across the list into phrases. Two entries match "two-step verification"
+and also match each word alone.
+
+Deliberately absent: any competitor's name, which Apple rejects, and "secure" and "private",
+which are claims rather than search terms.
 
 ## Description
 
 Drawn from `README.md` so the two cannot drift into different claims.
+
+**The block below is hard wrapped for this file and must not be pasted that way.** App Store
+Connect treats every newline literally, so pasting the wrapped form puts a break in the middle of
+most sentences. Paste it with each paragraph on one line and the blank lines between paragraphs
+kept. It is 2,042 characters of the 4,000 allowed.
 
 ```
 OpenFactor is a minimal authenticator for people who want an open source app with no account,
@@ -121,8 +162,7 @@ Exports an encrypted backup whose format is public and documented, or a plain fi
 another app. The difference is stated on screen, because portability should not require hiding
 the security cost.
 
-Locks behind Face ID, Touch ID, or your passcode, and never lets a code appear in the app
-switcher.
+Locks behind Face ID, Touch ID, or your passcode.
 
 WHAT IT DELIBERATELY DOES NOT DO
 
@@ -322,6 +362,48 @@ through GitHub Security Advisories.
 
 This policy is versioned with the source. Its history is visible in the repository.
 ```
+
+## A claim removed after PR 15b measured it
+
+The description said the app "never lets a code appear in the app switcher". That is gone, at
+Xavier's direction, and the reason belongs on the record because it is the rule at the top of
+this document working as intended.
+
+PR 15b's checklist found that iOS keeps a second snapshot cache, the one behind the zoom from the
+home screen, written at a moment the cover is not up. A screen recording read frame by frame
+showed the previous screen for roughly a sixth of a second before the lock appeared. The finding
+is accepted rather than fixed, and written up in `docs/APP_LOCK.md`.
+
+**A narrower sentence would still be true**, since the switcher card itself, the artifact anyone
+can browse to, does stay blank. It is still not in the listing. A store description is read once,
+by somebody deciding whether to trust the app, and "never" is what they will remember rather than
+the qualification. The lock is worth mentioning; the guarantee is not ours to make.
+
+**This is the third time the same shape of error has been caught here**, after the Photos claim
+and the App Group justification. Each was written from what the design intended rather than from
+what had been measured, and each was narrowed by somebody who had looked. The rule at the top of
+this document is not decoration.
+
+## Entered into App Store Connect, and what still gates a submission
+
+The text fields were entered on 2026-08-18, field by field, against the `dev.openfactor.app`
+listing: subtitle, promotional text, keywords, description, categories, age rating, content
+rights, copyright, the support and marketing URLs, and the review notes. Everything in this
+document that is a value to paste is now in the form.
+
+**No build is attached and none should be yet.** This is metadata work, well ahead of a
+submission. Attaching a build is the last step, once there is one worth shipping and the export
+compliance call has been made.
+
+**Three things gate a submission, and none is drafting:**
+
+- **The privacy policy URL**, which is required and does not exist. The plan is GitHub Pages
+  serving `PRIVACY.md`, decided separately.
+- **Screenshots**, which do not exist. See the note under blocked items about what to show.
+- **The export compliance answer**, which is Xavier's legal call, recorded under its own heading.
+
+The copyright was entered as `2026 ReVeNG System`, the publishing entity, which must match the
+Apple Developer account.
 
 ## Review, and the one suggestion declined
 

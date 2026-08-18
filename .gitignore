@@ -1,5 +1,8 @@
-# Reference material, not part of the project
-assets/
+# Reference material, not part of the project.
+# Anchored with a leading slash so it means the assets/ directory at the repository
+# root and nothing else. Unanchored, it also matched site/assets/, which silently
+# excluded the website's stylesheet and icon from every commit.
+/assets/
 
 # Xcode
 build/

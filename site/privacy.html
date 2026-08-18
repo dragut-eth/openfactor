@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenFactor Privacy Policy</title>
+  <meta name="description" content="OpenFactor collects no data. No account, no server, no analytics.">
+  <link rel="icon" href="assets/icon-light.png">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <main>
+    <header class="hero" style="padding-bottom:2rem">
+      <h1>Privacy policy</h1>
+      <p class="tagline">OpenFactor collects no data.</p>
+      <div class="actions">
+        <a class="btn" href="index.html">Back to OpenFactor</a>
+      </div>
+    </header>
+
+    <section>
+      <p>
+        There is no OpenFactor account, no OpenFactor server, and no analytics, crash reporting,
+        or telemetry of any kind. The app makes no network requests of its own. This is checked
+        automatically: continuous integration searches every source file for networking and
+        logging code and fails the build if any appears.
+      </p>
+    </section>
+
+    <section>
+      <h2>What is stored, and where</h2>
+      <p>
+        Your accounts and their secrets are stored on your devices, encrypted, in the iOS
+        Keychain. The key that decrypts them is held in the app's private container on each
+        device. It is never synced, never written to the Keychain, and never included in a device
+        backup.
+      </p>
+      <p>
+        Your preferences, meaning sort order, appearance, chosen icon, whether sync is on, and the
+        app lock settings, are stored on the device. They never include an account name or a
+        secret.
+      </p>
+    </section>
+
+    <section>
+      <h2>iCloud</h2>
+      <p>
+        iCloud sync is off until you turn it on. When it is on, your encrypted accounts are
+        offered to iCloud Keychain, which is Apple's service and is end to end encrypted.
+        OpenFactor does not operate it and cannot read what it carries. Apple's own privacy policy
+        governs it.
+      </p>
+      <p>
+        Turning sync off stops offering new changes to iCloud Keychain and returns the accounts on
+        that device to device only protection.
+      </p>
+    </section>
+
+    <section>
+      <h2>Sharing</h2>
+      <p>
+        Nothing is shared with anyone. There are no third party libraries in this app, so no other
+        company's code runs inside it.
+      </p>
+      <p>
+        When you export a backup, that file is yours and goes wherever you send it. When you import
+        one, it is read on the device.
+      </p>
+    </section>
+
+    <section>
+      <h2>Children</h2>
+      <p>The app collects no data from anyone, including children.</p>
+    </section>
+
+    <section>
+      <h2>Contact</h2>
+      <p>
+        OpenFactor is published by ReVeNG System.
+        Questions and reports:
+        <a href="https://github.com/dragut-eth/openfactor/issues">the project's issues page</a>.
+      </p>
+      <p>
+        Security vulnerabilities: see <code>SECURITY.md</code> in the repository, which asks for
+        private disclosure through GitHub Security Advisories.
+      </p>
+    </section>
+
+    <section>
+      <h2>Changes</h2>
+      <p>This policy is versioned with the source. Its history is visible in the repository.</p>
+    </section>
+  </main>
+
+  <footer>
+    <nav>
+      <a href="index.html">OpenFactor</a>
+      <a href="https://github.com/dragut-eth/openfactor">Source</a>
+      <a href="https://github.com/dragut-eth/openfactor/issues">Support</a>
+    </nav>
+    <div>Published by ReVeNG System.</div>
+  </footer>
+</body>
+</html>
