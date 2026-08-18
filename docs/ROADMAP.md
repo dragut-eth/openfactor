@@ -649,7 +649,7 @@ so "no accounts yet" keeps its old meaning.
   drops the phone's key keeps the accounts and the passphrase brings it back. Recovery ran in the
   same session and is the more important half: the passphrase restored the key, and a watch that
   had just been refused twice was then provisioned successfully with no reset and no reinstall,
-  so a refusal is not a dead end. What has not
+  so a refusal is not a dead end
 - **Done: a second model reviewed the exchange.** Run cold by Xavier on a fresh model with no
   context, which is what the shared blind spot argument asks for. It found no fault in the
   cryptography and four real defects around it: two races in the watch's asking flow that no test
@@ -657,7 +657,7 @@ so "no accounts yet" keeps its old meaning.
   phone's own alert, malformed bytes reaching the vault key and the human prompt before being
   parsed, and a discarded `SecRandomCopyBytes` result that would have shipped a predictable nonce
   on failure. All fixed, with the two races extracted into `WatchProvisioningFlow` in the core and
-  proved to fail there before the fix was kept. What has not
+  proved to fail there before the fix was kept
 - **The tripwire is deliberately not being built yet.** Its container anchor has an unsolved
   staleness problem once several devices are writing, and E6 made it worse by measuring the
   container path changing on update. A tripwire that cries wolf is worse than none
