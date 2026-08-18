@@ -503,9 +503,17 @@ holds the platform condition behind the watch defect. Fable said so at the time,
 listing what it could not assess. The other two engines read those files because they had
 filesystem access and went looking.
 
-**That is the lesson for the remaining scopes.** The file list should name what a reviewer needs
-to follow a claim to its end, not what seems central to the subject, and an engine reading from
-disk should be told it may open anything the attached files reference.
+**That lesson is applied rather than only noted.** The file lists for scopes 2, 3 and 4 in
+`A4-prompts.md` were rebuilt before those scopes ran: each now names what a reviewer needs to
+follow a claim to its end rather than what is central to the subject, and every scope says
+outright that anything an attached file references may be opened.
+
+Three gaps of the same kind were found and closed in the process. Scope 2 asked whether approval
+can happen without a human tap while omitting `OpenFactorApp.swift`, which is the only place that
+question is answerable. Scope 3 asked what an importer can do to accounts that already exist
+while attaching no store and neither view model. Scope 4 asked about App Lock's correctness
+without `docs/APP_LOCK.md`, its normative design, or the file wiring the lock, the cover and the
+arrival together.
 
 ### Not yet acted on
 

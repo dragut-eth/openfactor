@@ -12,9 +12,15 @@ this is where that shows.
 engines is twelve conversations in round one. A scope carried over into the same conversation as
 another is no longer a cold read of it.
 
-**Attach the files each scope lists.** The engines cannot clone a repository, and pointing them
-at a URL invites them to review whatever the search returns rather than the code in front of
-them. Attach, or paste.
+**Give the engine the files each scope lists.** Attach them, or let an engine with filesystem
+access read them from the repository. Do not point one at a URL, which invites it to review
+whatever a search returns rather than the code in front of it.
+
+**An engine may open anything an attached file references, and should be told so.** Scope 1 was
+run without that permission and it cost a finding: the one engine that stayed inside its list
+missed the most serious defect in the scope and said, correctly, that it could not assess the two
+mechanisms involved because the files holding them were not attached. The other two read from disk
+and found it. A list is a starting point rather than a boundary, and the scopes below now say so.
 
 **Review a pushed commit and record which one.** Every pass is recorded with the commit it read,
 because a finding against code that has since changed is worth knowing about and worth telling
@@ -102,10 +108,17 @@ Specifically:
 
 ## Scope 2: the Watch key exchange
 
-*Attach: `Sources/OpenFactorCore/Vault/WatchProvisioning.swift`, `WatchProvisioningFlow.swift`,
-`OpenFactor/Vault/WatchKeyProvider.swift`, `OpenFactorWatch Watch App/WatchVaultModel.swift`,
-`Tests/OpenFactorCoreTests/WatchProvisioningTests.swift`, and the Watch section of
-`docs/VAULT.md`.*
+*Files: `Sources/OpenFactorCore/Vault/WatchProvisioning.swift`, `WatchProvisioningFlow.swift`,
+`VaultKeyStore.swift`, `Vault.swift`; `OpenFactor/Vault/WatchKeyProvider.swift`;
+`OpenFactor/OpenFactorApp.swift`, which is where the approval alert is wired and therefore where
+the question "can approval happen without a human tap" is actually answered;
+`OpenFactorWatch Watch App/WatchVaultModel.swift`, `WatchVaultGateView.swift`,
+`OpenFactorWatchApp.swift`; `Tests/OpenFactorCoreTests/WatchProvisioningTests.swift` and
+`WatchProvisioningFlowTests.swift`; the Watch sections of `docs/VAULT.md` and `SECURITY.md`.*
+
+*Open anything these reference. The key this exchange delivers is installed by `VaultKeyStore`
+and read by the rest of the vault, and a question about what the watch ends up holding cannot be
+answered without following it there.*
 
 ```
 SCOPE: handing a symmetric vault key from an iPhone to a paired Apple Watch, over
@@ -148,9 +161,16 @@ Attack:
 
 ## Scope 3: everything that parses bytes somebody else wrote
 
-*Attach: `Sources/OpenFactorCore/Backup/` (all seven files), `Sources/OpenFactorCore/Import/`
-(all six files), `OTPAuthURI.swift`, `OTPAuthURISerialization.swift`, `Base32.swift`,
-`AccountLabel.swift`, and `docs/BACKUP_FORMAT.md`.*
+*Files: `Sources/OpenFactorCore/Backup/` (all seven), `Sources/OpenFactorCore/Import/` (all six),
+`OTPAuthURI.swift`, `OTPAuthURISerialization.swift`, `OTPAuthURIError.swift`, `Base32.swift`,
+`Base32Error.swift`, `AccountLabel.swift`, `OTPAccount.swift`, `AccountMetadata.swift`,
+`OTPGenerator.swift`, `SecretStore.swift`; `OpenFactor/Import/ImportViewModel.swift` and
+`OpenFactor/Export/ExportViewModel.swift`, which hold the size bounds, the routing between
+parsers, and everything about what an import does to accounts that already exist; and
+`docs/BACKUP_FORMAT.md`.*
+
+*Open anything these reference. Question 4 asks what an importer can do to existing data, which
+cannot be answered from a parser alone: it needs the store the import writes through.*
 
 ```
 SCOPE: hostile input. Every byte here came from a file, a QR code, a URL, or another app, and
@@ -187,10 +207,19 @@ Attack:
 
 ## Scope 4: the app's boundaries
 
-*Attach: `OpenFactorShare/ShareViewController.swift`,
-`Sources/OpenFactorCore/Inbox/SharedInbox.swift`, `OpenFactor/Import/InboxOpener.swift`,
-`OpenFactor/Lock/` (all four files), `OpenFactor/CodeClipboard.swift`,
-`OpenFactor/Design/ScreenCapture.swift`, and `SECURITY.md`.*
+*Files: `OpenFactorShare/ShareViewController.swift` and `OpenFactorShare/OpenFactorShare.entitlements`,
+since the extension's security claim is what it cannot reach;
+`Sources/OpenFactorCore/Inbox/SharedInbox.swift`; `OpenFactor/Import/InboxOpener.swift`;
+`OpenFactor/Lock/` (all four); `OpenFactor/CodeClipboard.swift`;
+`OpenFactor/Design/ScreenCapture.swift`; `OpenFactor/OpenFactorApp.swift`, where the lock, the
+cover, the arrival and the capture flag are wired together and where their ordering lives;
+`OpenFactor/AccountListView.swift` and `OpenFactor/Scanning/AddAccountSession.swift`, which hold
+the arrival rule and the state that survives a lock; `OpenFactor/Vault/VaultGateModel.swift`,
+which sits between the lock and the list; `OpenFactorTests/AppLockPresentationTests.swift` and
+`AppLockEngineTests.swift`; `docs/APP_LOCK.md`, which is the normative design for the lock and
+states what it does not cover; and `SECURITY.md`.*
+
+*Open anything these reference.*
 
 ```
 SCOPE: everywhere this app touches the rest of the system. A share extension writing to an app
@@ -211,7 +240,10 @@ Attack:
 3. App Lock. It is a gate in front of the interface, not encryption, and it is not claimed to
    stop somebody who can run code as this app. Within that: can any sequence of scene events
    leave the interface visible when it should be locked, or leave the app switcher snapshot
-   showing content? The decisions are in AppLockPresentation, which is a pure value type.
+   showing content? The decisions are in AppLockPresentation, which is a pure value type, and
+   docs/APP_LOCK.md is normative for them. That document also records one limitation already
+   measured and accepted, a second iOS snapshot cache the cover cannot reach; do not spend the
+   pass rediscovering it, but do say if it is described wrongly.
 
 4. The clipboard. Codes are allowed to travel between the owner's devices; passphrases are
    copied device-local. Both carry an expiry. Is that distinction actually enforced at every call
