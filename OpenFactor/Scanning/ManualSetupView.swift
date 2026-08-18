@@ -101,6 +101,7 @@ struct ManualSetupView: View {
             LabeledContent("Service") {
                 TextField("GitHub", text: $model.issuer)
                     .multilineTextAlignment(.trailing)
+                    .boundedLabel($model.issuer)
             }
 
             LabeledContent("Account") {
@@ -109,6 +110,7 @@ struct ManualSetupView: View {
                     .autocorrectionDisabled()
                     .keyboardType(.emailAddress)
                     .multilineTextAlignment(.trailing)
+                    .boundedLabel($model.name)
             }
 
             // A row opening the grid, rather than the strip the scan screen uses. In a

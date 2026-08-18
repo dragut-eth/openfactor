@@ -40,6 +40,7 @@ struct EditAccountView: View {
                     LabeledContent("Service") {
                         TextField("GitHub", text: $issuer)
                             .multilineTextAlignment(.trailing)
+                            .boundedLabel($issuer)
                     }
 
                     LabeledContent("Account") {
@@ -47,6 +48,7 @@ struct EditAccountView: View {
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .multilineTextAlignment(.trailing)
+                            .boundedLabel($name)
                     }
                 } footer: {
                     Text("These are just labels. Changing them does not affect the codes.")

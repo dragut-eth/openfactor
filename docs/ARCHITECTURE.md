@@ -174,6 +174,21 @@ Importers live in the core, beside the `otpauth://` parser, for the same reason 
 they are hostile input readers that produce secrets, and that is the part of the project
 meant to be audited on its own.
 
+**The labels those importers produce are bounded, and that is where the bound lives.**
+`AccountLabel` caps an issuer and a name at sixty-four characters, applied in
+`OTPAccount.init` and `AccountMetadata`, so every route into storage passes through it:
+typing, a scanned code, a transfer from another app, a restored backup, and a rename. There
+was no bound at any layer before, and a label grew a stored record byte for byte, which was
+measured rather than assumed at a hundred thousand characters producing about a hundred
+kilobytes of sealed metadata in one Keychain item, offered to iCloud Keychain if sync is on.
+
+The bound is in the core rather than in the two text fields because the path worth
+defending is the one where labels arrive from a file rather than from a person. It
+truncates instead of refusing, since a restore that rejected a whole file over one long
+name would cost somebody every account in it. Records already stored are left exactly as
+they are: decoding deliberately does not clamp, because silently rewriting somebody's saved
+data on read is worse than an untidy label.
+
 ### Reading other apps' exports
 
 **They return a result rather than writing anything.** No importer touches the Keychain. It

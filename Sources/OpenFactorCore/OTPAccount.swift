@@ -31,8 +31,12 @@ public struct OTPAccount: Sendable, Equatable {
     public let generator: OTPGenerator
 
     public init(issuer: String?, name: String, secret: Data, generator: OTPGenerator) {
-        self.issuer = issuer
-        self.name = name
+        // Bounded here as well as in `AccountMetadata`, so the confirmation screen shows
+        // the label that will actually be saved. Clamping only at the storage boundary
+        // would let a transfer preview promise a name it was about to cut. See
+        // `AccountLabel` for why the bound exists and why it truncates rather than refuses.
+        self.issuer = AccountLabel.clamped(issuer)
+        self.name = AccountLabel.clamped(name)
         self.secret = secret
         self.generator = generator
     }

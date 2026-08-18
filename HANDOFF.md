@@ -46,8 +46,28 @@ reason code is worse than none.
 the same shape as the share extension's entitlement check and for the same reason. The
 defect was invisible by construction: it built, it ran, it passed every test, it arrived by
 addition rather than by edit so no diff review would show it, and it would have surfaced as
-an automated notice from Apple at upload. Proved in both directions before commit. The whole codebase was swept
-while there: no boot time, no disk space, no active keyboard.
+an automated notice from Apple at upload. Proved in both directions before commit. The
+whole codebase was swept while there: no boot time, no disk space, no active keyboard.
+
+**Account labels are now bounded, and the reason is the import path rather than typing.**
+Xavier asked whether the Service field had a character limit. It did not, at any layer, and
+a label grew a stored record byte for byte: a hundred thousand characters produced about a
+hundred kilobytes of sealed metadata in one Keychain item, synced if sync is on. What made
+it worth fixing was not somebody typing but an imported transfer or a restored backup, where
+labels arrive from a file bounded only by the eight megabyte file limit. `AccountLabel` caps
+both issuer and name at sixty-four characters in the core, so typing, scanning, importing,
+restoring and renaming all pass through one number. Both text fields stop at the same bound,
+so nothing is silently cut at save time.
+
+The rename path is the one an initializer alone would have missed, since it assigns to a
+property of an existing value; `didSet` covers it and there is a test for exactly that.
+
+**A pre-existing build quirk, found while verifying and left alone:** the
+`OpenFactorWatch Watch App` scheme cannot be built directly, failing with a watchOS object
+linked into an iOS binary. It fails identically on a clean tree with no local changes and a
+fresh derived data path, so it is not new. The watch is built through the `OpenFactor`
+scheme, which is how it reaches the device and TestFlight, and that path builds the watch
+app and the complication correctly.
 
 **Two speculative fixes were spent on that flash before anyone looked at it**, and both
 were reverted. The lesson is the project's oldest one and it repeated exactly: a screen

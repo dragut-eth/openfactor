@@ -14,10 +14,18 @@ import Foundation
 public struct AccountMetadata: Sendable, Equatable, Codable {
 
     /// Who issued the account, for example `GitHub`.
-    public var issuer: String?
+    ///
+    /// Bounded by `AccountLabel`. The `didSet` is what covers assignment after the fact,
+    /// which is how a rename arrives, and it does not recurse: assigning inside a property's
+    /// own observer does not call it again.
+    public var issuer: String? {
+        didSet { issuer = AccountLabel.clamped(issuer) }
+    }
 
     /// Which account at that issuer, usually an email address or a username.
-    public var name: String
+    public var name: String {
+        didSet { name = AccountLabel.clamped(name) }
+    }
 
     /// How this account's codes are produced. Stored because it is fixed at enrollment
     /// and cannot be recovered from the secret.
@@ -36,8 +44,9 @@ public struct AccountMetadata: Sendable, Equatable, Codable {
         color: AccountColor,
         sortIndex: Int
     ) {
-        self.issuer = issuer
-        self.name = name
+        // Clamped here as well as in the observers, which do not fire during init.
+        self.issuer = AccountLabel.clamped(issuer)
+        self.name = AccountLabel.clamped(name)
         self.generator = generator
         self.color = color
         self.sortIndex = sortIndex
