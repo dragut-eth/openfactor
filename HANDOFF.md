@@ -75,28 +75,34 @@ of mine, caught by the suite: a response built on a substituted watch key cannot
 holder of that key either, because the nonce still binds it to the original attempt. The code was
 right and the test was wrong.
 
-**A correction, and a diagnosis withdrawn: the complication's octagon is still unexplained.**
-Yesterday's commit said an app icon set was added to the complication target. It was not. The
-build setting landed and the asset catalog never existed, on any branch, so
-`ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` has been pointing at nothing the whole time. That
-was found by checking the built extension instead of trusting the claim, while preparing the
-TestFlight build whose purpose was to verify it.
+**Settled: the complication's octagon was the Debug build, and the icon diagnosis was wrong
+twice over.** Build 5 on TestFlight renders the mark correctly and at the right size, which is
+the measurement that closes this.
 
-Adding the catalog was then tried and reverted, because looking at the rest of the evidence
-dismantled the diagnosis rather than supporting it. Three facts, none of which were checked
-yesterday. A filesystem-synchronized catalog placed in that target does not compile into the
-appex at all, so the change was inert. App extensions do not carry their own icons on watchOS;
-the picker uses the containing app's, and the watch app's `Assets.car` and its
-`CFBundleIconName` are both present and correct. And the complication draws its mark entirely
-in SwiftUI shapes, with no image asset anywhere in it, so it cannot fail to render for a missing
-icon.
+What was claimed on 2026-08-17 was that the complication gained an app icon set and the build
+setting pointing at it. **Neither landed.** There is no `Assets.xcassets` under
+`OpenFactorWatch Complication` in any commit on any branch, and the complication target's own
+build configurations carry no `ASSETCATALOG_COMPILER_APPICON_NAME`. An intermediate account
+written the next morning said the setting had landed and only the catalog was missing; that was
+also wrong, from reading a setting that belonged to a neighbouring target's configuration block.
 
-**The likeliest cause is the one guessed and dismissed early: it is a Debug build.** The appex
-that reaches the watch contains `OpenFactorComplication.debug.dylib` and `__preview.dylib`, and
-a widget extension launched by the system rather than by Xcode is a known failure case for that
-indirection, which renders as the system's placeholder. Stated as the leading hypothesis, not a
-finding: nothing here has been measured. The Release build settles it, which is exactly what
-Xavier said when he chose to wait for it.
+**The complication never needed an icon at all**, which the working Release build now proves.
+App extensions carry no icon of their own on watchOS, the picker uses the containing app's, and
+the watch app's `Assets.car` and `CFBundleIconName` were correct throughout. The complication
+also draws its mark entirely in SwiftUI shapes with no image asset anywhere in it, so a missing
+icon could never have been what failed to render. An attempt to add the catalog was made and
+reverted once those three facts were checked.
+
+The actual cause is what the appex carries in a Debug build: `OpenFactorComplication.debug.dylib`
+and `__preview.dylib`. A widget extension launched by the system rather than by Xcode cannot use
+that indirection, so watchOS drew its placeholder, which is the octagon.
+
+**The reusable fact, which is the only part worth remembering: a watchOS complication cannot be
+verified from a Debug build installed with `devicectl`.** It has to be a Release build through
+TestFlight. Four rounds of diagnosis went into this, three of them guessing at the drawn mark and
+one at an icon, and every one of them was working from a build that could not have rendered
+correctly whatever the code said. This belongs with the caution about simulator taps below:
+know what your test rig cannot show you before you trust what it does.
 
 **The privacy manifest was incomplete, and is now declared and guarded.** Reported by the
 session doing PR 18 metadata work, verified here against Apple's published data rather than
@@ -163,8 +169,8 @@ it did not ship at all.
 **Also in the day, committed on the same branch:** the Photos and App Group claims narrowed
 to what is defensible, at Xavier's direction. The `otpauth` and `otpauth-migration` schemes
 declared, routed to the add screen, bounded at eight kilobytes, everything else refused.
-The complication got `ASSETCATALOG_COMPILER_APPICON_NAME`, and the claim made at the time that
-an icon set was added with it **was wrong**: see the correction below.
+The complication was changed only in its drawn mark, which keeps the other session's measured
+0.703 proportion. The icon claims made that day were wrong in both halves: see below.
 
 **The storage is being redesigned, and the reason is measured rather than argued.** Gate E1
 proved on hardware that a second app signed by the same team reads another app's Keychain
