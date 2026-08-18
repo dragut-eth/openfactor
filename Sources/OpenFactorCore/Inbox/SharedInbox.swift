@@ -93,16 +93,37 @@ public struct SharedInbox: Sendable {
         let directory = try directory()
         try FileManager.default.createDirectory(
             at: directory, withIntermediateDirectories: true,
-            attributes: [.protectionKey: FileProtectionType.complete])
+            attributes: Self.protectionAttributes)
 
         let id = UUID()
-        try data.write(to: directory.appendingPathComponent(id.uuidString), options: [
-            // Unreadable while the device is locked. The app has to be opened to take it, so
-            // nothing is lost by the strongest class here.
-            .completeFileProtection,
-            .atomic,
-        ])
+        try data.write(
+            to: directory.appendingPathComponent(id.uuidString), options: Self.writingOptions)
         return id
+    }
+
+    /// Complete protection on iOS, and nothing on macOS, **because macOS refuses the option**.
+    ///
+    /// Data protection classes do not exist on macOS. For two days this machine silently
+    /// accepted the option anyway, even reporting the attribute back, and then began refusing
+    /// it with `EPERM` mid-evening, which failed every writing test in this file while the code
+    /// was untouched. The honest reading is that the option is meaningless off iOS and only
+    /// sometimes tolerated, so it is passed exactly where it means something. iOS behavior is
+    /// unchanged: unreadable while the device is locked, and the app must be open to take an
+    /// item, so nothing is lost by the strongest class.
+    static var writingOptions: Data.WritingOptions {
+        #if os(iOS)
+            [.completeFileProtection, .atomic]
+        #else
+            [.atomic]
+        #endif
+    }
+
+    static var protectionAttributes: [FileAttributeKey: Any] {
+        #if os(iOS)
+            [.protectionKey: FileProtectionType.complete]
+        #else
+            [:]
+        #endif
     }
 
     // MARK: - The app's side

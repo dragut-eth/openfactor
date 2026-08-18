@@ -104,7 +104,11 @@ public struct VaultKeyStore: Sendable {
             // implementation could satisfy two ways. The consequence is deliberate: the key is
             // unreadable while the device is locked, so nothing reads the vault in the
             // background. This app declares no background modes, so nothing is lost.
-            try data.write(to: url, options: [.atomic, .completeFileProtection])
+            // Complete protection where it exists. macOS has no data protection and was
+            // measured refusing the option outright with EPERM, after days of silently
+            // accepting it; `SharedInbox.writingOptions` records the incident. On iOS this
+            // stays the strongest class, which E6 verified on hardware.
+            try data.write(to: url, options: SharedInbox.writingOptions)
         #else
             // macOS, which is only ever the test host. Data protection classes do not exist
             // here, so the tests that matter for it are the ones that run on a device.
