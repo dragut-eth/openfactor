@@ -40,7 +40,7 @@ They are gates, not suggestions. Each one is marked inline in the plan below, an
 | **A1** | PR 4 | The whole of `OpenFactorCore`: Base32, HOTP, TOTP, URI parsing, Keychain storage | Independent model review, plus a public call for eyes |
 | **A2** | PR 13 | iCloud Keychain sync, and the sync section of the threat model | Independent model review. **Done**, see `docs/audits/A2.md` |
 | **A3** | PR 16 | The export format and its cryptography, before any user has a backup in it | Independent model review. **Done**, four passes: three on the document before the code, in `docs/audits/A3.md` and `A3-grok.md`, then one on the implementation, in `A3-implementation.md`. Not professionally reviewed |
-| **A4** | PR 17 | The complete threat model against the finished app | Paid professional review or a funded open source audit programme |
+| **A4** | PR 17 | The complete threat model against the finished app | Cold review by three vendors' models, two rounds, published in full. Not professionally reviewed |
 | **A5** | Before each release | Diff since the last audited tag | Independent model review, escalating to professional if the diff touches secrets |
 
 ### Why these five points
@@ -66,9 +66,13 @@ the last audited tag, which keeps the claim honest and the work small.
 - **A public call for eyes.** Once the repository is public: an issue tagged for review,
   posted somewhere people who read authenticator code will see it. Free, slow, and the
   quality is whoever happens to turn up.
-- **Paid professional review.** A firm that does applied cryptography and mobile work.
-  Realistically several thousand to several tens of thousands, which is the honest reason
-  it is scoped to A3 and A4 rather than every gate.
+- **Multi-vendor cold review.** The same thing as above, run by models from different
+  vendors rather than one, and run twice: once to find, and once more after the fixes with
+  each engine told what changed. Different training is what buys genuinely different
+  misses, and the second round is what catches a fix that did not address its finding. This
+  is what gate A4 is.
+- **Paid professional review.** A firm that does applied cryptography and mobile work. The
+  strongest option and the one this project has not used.
 - **Funded open source audit programmes.** Several organizations fund security audits for
   open source tools, particularly ones with a privacy or safety rationale. Worth applying
   to well before A4, since the lead times are long. Verify current programmes and terms at
@@ -484,8 +488,8 @@ a version 2 can be added but every version 1 archive still has to open.
 
 - Review of the format before the code is written, not after. The document is the artefact
   under audit
-- Paid professional review if it can be funded, since this is applied cryptography and the
-  failure mode is every secret at once
+- Paid professional review would suit this gate, since it is applied cryptography and the
+  failure mode is every secret at once. Not used
 - Independent model review regardless
 - Verify the format can be decrypted by an independent implementation written only from
   `docs/BACKUP_FORMAT.md`, which is the real test of whether the document is complete
@@ -703,19 +707,90 @@ so "no accounts yet" keeps its old meaning.
   including against a build that called `URLSession`, which the first draft of the pattern
   missed. `SECURITY.md` records what the check can and cannot claim
 
-#### Gate A4: audit the finished app
+#### Gate A4: cold review by three engines
 
 **Stop here.** Everything above is built. This is the last point where a finding can
 change the app before strangers depend on it.
 
-- Paid professional review, or a funded open source audit programme. Apply early, the lead
-  times are months rather than weeks
-- The whole threat model tested against the built app rather than against the source
-- Every claim in `README.md` and `SECURITY.md` verified, particularly "makes no network
-  requests" and "nothing is stored online". A false claim in a security README is worse
-  than no README
-- Findings published, including the ones that came to nothing
-- Tag the audited commit. This is the tag every later diff is measured against
+The gate is met by independent passes from three frontier models, each from a different vendor,
+each given the code cold. Findings are digested and fixed, then every engine runs again knowing
+what changed.
+
+**The three engines: Fable 5, Grok 4.6, and ChatGPT 5.6 Sol.** Three vendors rather than three
+prompts to one, because the point is not volume. Two models trained by the same lab share the
+blind spot that matters most, the one nobody in the room knows they have. Different training
+gives genuinely different things missed.
+
+**Cold means cold.** Each is given the repository and a scope, with no conversation history, no
+summary of what was already believed to be safe, and no account of what previous reviewers found.
+The prompts are written from the code rather than from the design's own claims, so a model is not
+being asked to agree.
+
+##### Round one, finding
+
+Scoped rather than "audit this app", because a model asked to review everything returns a
+plausible survey of nothing. One pass per area, per engine:
+
+- The vault: record format, key wrapping, the key file, and what a device holds at rest
+- The Watch key exchange, which already had one cold review and gets another from two more
+- Import and export: the backup format, the three importers, and everything that parses bytes
+  somebody else wrote
+- The app's own boundaries: the share extension, URL schemes, the lock, and the clipboard
+
+Every finding is triaged rather than accepted. A finding that survives inspection is fixed; one
+that does not is recorded with the reason it was rejected, because a review's false positives
+say as much about the method as its hits.
+
+##### Round two, verifying
+
+The same three engines, the same scopes, now told exactly what changed and why. This is the
+round that catches the two things a single pass cannot: a fix that does not actually address the
+finding, and a fix that introduced something new. A model that accepts its own finding as
+resolved without checking is itself a finding about the method.
+
+##### Publication
+
+Each pass is published in `docs/audits/`, whole: what was asked, what came back, what was fixed,
+what was rejected and why. Including the passes that found nothing, and including the findings
+that dissolved on inspection. A review that came to nothing is evidence.
+
+##### The closing opinion
+
+Each engine is asked, last, for a short comprehensive opinion of ten to fifteen sentences, written
+for somebody deciding whether to trust the app. Those go in `README.md`, published whole and
+attributed to the engine that wrote them, unflattering parts included. If an opinion is bland,
+that is a fact about it worth publishing rather than a reason to re-ask until it improves.
+
+**The question is framed so that praise is not the easy answer.** Each is asked what it would
+warn a security-conscious friend about, and what it would not trust this app with, rather than
+for a general impression.
+
+##### What this is and is not
+
+**It is not a professional audit and `README.md` must not imply one.** The honest description is
+independent review by three models from three vendors, published in full, with no commissioned
+human audit.
+
+Three limits, stated rather than left for a reader to discover:
+
+- **The prompts are still written here.** That is the residual dependence no amount of vendor
+  diversity removes, which is why every prompt is published with its pass. A reader can then
+  judge whether the questions were leading.
+- **A model reads code and cannot run the app.** It finds nothing about behavior on hardware, so
+  the platform assumptions stay where they are: gate E1 on Keychain access groups, the vault key
+  file through a restore and Quick Start, and WatchConnectivity routing exclusivity all remain
+  measured by hand or not at all.
+- **Agreement is not proof.** Three engines missing the same thing is likelier than three
+  independent humans missing it, and less likely than one. It narrows the gap; it does not close
+  it.
+
+**Done means a full round where no engine reports a new finding that survives triage.** Not a
+fixed number of rounds.
+
+##### Then tag it
+
+Tag the reviewed commit, with a name that says what it was rather than implying more. This is the
+reference Gate A5 measures every later diff against.
 
 #### An open question this raised, not yet answered
 

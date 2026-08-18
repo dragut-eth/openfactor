@@ -8,6 +8,34 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**Gate A4 is now three cold reviews by three vendors, run twice.** Fable 5, Grok 4.6 and
+ChatGPT 5.6 Sol, each given the code cold with no history and no account of what previous
+reviewers found. Three vendors rather than three prompts to one model, because two models from
+the same lab share the blind spot that matters most.
+
+Round one finds, scoped into four areas per engine rather than "audit this app", since a model
+asked to review everything returns a plausible survey of nothing; the Watch review that found
+four real defects worked because it was narrow. Round two runs the same engines over the same
+scopes, told exactly what changed and why, which is what catches a fix that does not address its
+finding and a fix that broke something else. Every pass is published whole in `docs/audits/`,
+including the ones that found nothing and the findings that dissolved on inspection. Done means a
+full round with no new finding that survives triage, not a fixed number of rounds.
+
+Each engine is then asked for a ten to fifteen sentence opinion for `README.md`, published whole
+and attributed. **That is the part to watch.** Three model opinions in a README can read as
+"reviewed and approved", which is the false confidence `SECURITY.md` exists to prevent, and
+models skew flattering when asked for a general impression. So the question is framed as what
+they would warn a security-conscious friend about and what they would not trust the app with, the
+answers are published unflattering parts included, and there is no re-asking until an opinion
+improves.
+
+Three limits are written into the gate rather than left to be discovered: the prompts are still
+authored here, so each is published with its pass and a reader can judge whether it was leading;
+a model reads code and cannot run the app, so gate E1, the vault key file through a restore and
+Quick Start, and WatchConnectivity routing exclusivity stay hand-measured or unmeasured; and
+three engines agreeing narrows the gap rather than closing it. The gate says plainly that this is
+not a professional audit and that `README.md` must not imply one.
+
 **PR 17's threat model is written, and the job was verification rather than prose.** Every claim
 in `SECURITY.md` was checked against the code as it stands, and three were false: that the Watch
 screens were not built, that nothing in the document had had an implementation review, and that
