@@ -31,11 +31,36 @@ helper's `#if os(iOS)` is narrower than the `#if os(iOS) || os(watchOS) || os(tv
 around the call, so the watch writes the vault key with no protection class under a comment
 claiming `.complete`.
 
-**Nothing is being fixed yet, deliberately.** Grok 4.6 and Fable 5 run the same scope against the
-same commit, and changing code between passes would mean the later engines review something else
-and their findings could not be compared with these. Fixes begin when scope 1 is complete on all
-three, in the order: the sync gap first and alone, then the duplicate-refusal and error state,
-then the watch regression, then the install ordering, then the document mismatches together.
+**Fable 5 then ran the same scope and found six things ChatGPT did not**, including the two
+sharpest. `replacePassphrase()` saves the new wrap before returning the passphrase string, so a
+crash or a torn-down view between them silently invalidates a working recovery credential nobody
+ever saw; the project already learned that lesson for `create()` and never applied it to
+replacement. And `create(with:)` has no existence check, so on a second device reading the stale
+`absent` state, which the design itself measures as lasting close to half an hour, one tap
+overwrites an arrived wrapped record.
+
+**The two passes overlap on only two of eight findings each.** ChatGPT found the sync gap Fable
+missed; Fable found six ChatGPT missed. That is the multi-vendor argument working rather than
+being asserted, and it is recorded in the audit file as the method's own result.
+
+**One finding has a sequencing consequence that must not be lost.** `kSecAttrSynchronizable` is
+part of a Keychain item's primary key, so `save()` writing a differing flag produces a twin record
+rather than a duplicate error, and `load()` picks between twins unspecified. That cannot fire
+today only because the sync gap keeps the flag permanently false. **Fixing the sync gap without
+fixing `save()` in the same change would create the twin case.** They land together or not at all.
+
+**A defect in the prompt, not in either review.** Fable flagged that it could not confirm the twin
+finding because `SyncAwareKeychainStore` was not among the attached files, and that is precisely
+the file showing the sync gap. Scope 1's file list in `A4-prompts.md` also omitted `PBKDF2.swift`
+and `BackupPassphrase.swift`, which the pass named as unverifiable assumptions. Later scopes'
+file lists should be built by asking what a reviewer would need, not what seems central.
+
+**Nothing is being fixed yet, deliberately.** Grok 4.6 runs the same scope against the same
+commit, and changing code between passes would mean it reviews something else and its findings
+could not be compared. Fixes begin when scope 1 is complete on all three, in the order: the sync
+gap and the `save()` twin fix together, then `replacePassphrase` and the creation guard, then the
+error states and the wrong-passphrase mapping, then the watch regression, then the install
+ordering, then the document mismatches together.
 
 **CI now refuses statements about the maintainer's circumstances in public documents.** Added
 after a sentence explaining why a security gate was met one way rather than another went into the

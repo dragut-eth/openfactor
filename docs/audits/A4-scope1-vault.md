@@ -13,8 +13,8 @@ reordered, including the parts that turn out to be wrong.
 | Engine | Status |
 | --- | --- |
 | ChatGPT 5.6 Sol | Returned, below. Triaged |
+| Fable 5 (high effort) | Returned, below. Triaged |
 | Grok 4.6 | Not yet run |
-| Fable 5 | Not yet run |
 
 ---
 
@@ -212,9 +212,178 @@ the absent `.sortedKeys`, the `kSecReturnData` claim that the two-halves design 
 replaced without the document following, and a comment referencing a converter the design says
 does not exist.
 
+---
+
+## Fable 5, high effort
+
+*Read-only pass over commit `74fe841`. Reproduced as returned, abridged only where noted.*
+
+> **F1 — Medium. `Vault.replacePassphrase()` writes the new wrap before anyone has seen the new
+> passphrase.** `Vault.swift:130`.
+>
+> `docs/VAULT.md` states the invariant: "No vault exists without its passphrase having been shown
+> and acknowledged." The doc comment on `Vault.create()` explains exactly why the one-shot shape
+> is dangerous and why the interface takes the two-step path. `replacePassphrase()` is the same
+> one-shot shape with no two-step alternative: generate, save the wrap under the new passphrase,
+> and only then return the string. The old passphrase is dead at the save. If the process dies or
+> the view is torn down before the string reaches the screen, the device stays `open` so nothing
+> looks wrong, and the user's written-down passphrase now opens nothing. They discover it at
+> recovery time on a new device. This is strictly worse than the creation case the project
+> already fixed, because a working recovery credential is invalidated rather than merely never
+> issued.
+>
+> Smallest fix: add `replacePassphrase(with passphrase: String)` mirroring `create(with:)`, have
+> the screen generate and show first, and demote or delete the one-shot form.
+>
+> **F2 — Medium. `Vault.create(with:)` will pave over an existing vault, and the state it acts on
+> can go stale.** `Vault.swift:87`, `WrappedKeyStore.swift:93`.
+>
+> `create(with:)` performs no check that a vault does not already exist, and
+> `WrappedKeyStore.save` replaces any existing record. The only guard is the setup screen's
+> wording plus a human tap, and the doc itself establishes the screen can be looking at stale
+> state: "Absent and locked are indistinguishable for as long as iCloud Keychain takes to deliver
+> the wrapped record, measured here at close to half an hour."
+>
+> Second device reads `absent`; the user eventually taps create anyway; meanwhile the real wrapped
+> record arrives. `save` overwrites it. If that overwrite syncs, the only recovery record for the
+> original vault is destroyed on every device, and every synced account item is ciphertext under a
+> key that exists solely on the first phone. Permanent loss of the recovery path from one tap on a
+> screen that told the user something true but stale. A pure-UI guard cannot close a TOCTOU
+> against a half-hour-latency sync channel.
+>
+> Smallest fix: in `create(with:)`, `guard !wrapped.exists else { throw .vaultAlreadyExists }`, a
+> fresh re-read at write time, with a separately named override for erase-and-recreate.
+>
+> **F3 — Medium, with a stated uncertainty. Saving the wrapped record can create a twin or
+> silently flip its sync state.** `WrappedKeyStore.swift:93`, `Vault.swift:46`.
+>
+> `kSecAttrSynchronizable` is part of a Keychain item's primary key. `save()` calls `SecItemAdd`
+> with the store's own `synchronizable` value, while the duplicate check only fires when primary
+> keys collide. If the existing record is synced and the store writes local, or the reverse,
+> `SecItemAdd` succeeds and there are now two wrapped records under
+> `("app.openfactor.vault.key", "wrapped")`. `load()` queries with `kSecAttrSynchronizableAny` and
+> `kSecMatchLimitOne`, so which one a later unlock reads is unspecified: a passphrase change
+> followed by an unlock that reads the other twin reports `wrongPassphrase` for a correct
+> passphrase. If the flags collide the other way, the `SecItemUpdate` path sets
+> `kSecAttrSynchronizable` in its change dictionary, converting a synced record to local or the
+> reverse as a side effect of a passphrase change.
+>
+> The code's own comment concedes the exposure: "two records under one account identifier is the
+> twin case gate A2 flagged and this project has never been able to test." I cannot confirm
+> exploitability from the attached files alone; I can confirm the attached files do not prevent
+> it.
+>
+> Smallest fix: in `save()`, first query with `kSecAttrSynchronizableAny` for the existing item and
+> update it as found, matching its current sync flag rather than forcing a new one; only
+> `SecItemAdd` when nothing exists. Sync-flag changes should be the exclusive job of the code that
+> flips accounts.
+>
+> **F4 — Low. A wrapped record from a future version, or a corrupted one, is reported as a wrong
+> passphrase.** `Vault.swift:116`.
+>
+> `unlock(with:)` catches every `WrappedVaultKey.WrapError` as `.wrongPassphrase`. But
+> `notAWrappedKey`, for instance an `OFK2` magic written by a newer version, and
+> `iterationsOutOfRange` are detected before any derivation and are provably not a wrong
+> passphrase. The account-record path got this right. Failure: a user downgrades or restores onto
+> an older build, types their correct passphrase, is told it is wrong, and the locked screen's
+> only offered exit is erase, destroying accounts a newer build could have opened.
+>
+> **F5 — Low. Every error on the "does a vault exist" question collapses to `absent`, which is the
+> answer that offers creation.** `WrappedKeyStore.swift:82`, `Vault.swift:51`. Rated low rather
+> than medium because the mitigations are real, but it is the same pattern the design elsewhere
+> forbids: the reassuring answer produced by an unreadable state. Combined with F2's missing
+> write-time guard, error-as-absent is the setup for the destructive tap.
+>
+> **F6 — Low. `docs/VAULT.md` and the code disagree in four places.** The page declares itself
+> normative. Service constant: the page says `"app.openfactor.vault"`, the code uses
+> `"app.openfactor.accounts"`; since items are already written under `accounts`, the page must
+> change, but today a v2 implementer working from the normative page queries the wrong service and
+> finds nothing. UUID case: the page says lower case, `id.uuidString` renders upper case, the same
+> class of interop break. Sorted JSON keys: claimed by the page, absent from the encoder, and the
+> published test vector achieved sorted keys only by bypassing `encode` and supplying raw bytes.
+> And a comment describing a conversion the design says does not exist.
+>
+> **F7 — Informational. The two halves of an account record authenticate independently, not as a
+> pair.** `VaultRecord.swift:56`. Each half's AAD is `magic ‖ tag ‖ uuid`, so nothing binds a
+> metadata half to the secret half written beside it. An adversary with Keychain write access can
+> splice an old metadata half onto the current record and both halves open cleanly, rewinding an
+> HOTP counter without disturbing the secret. Filed as informational because `docs/VAULT.md`
+> already cedes integrity against that adversary and whole-record replay achieves the same
+> rollback. Worth a sentence so the property is not discovered by surprise.
+>
+> **F8 — Informational. Secret plaintext and vault key bytes live in non-zeroizing `Data`.**
+> `VaultRecord.swift:151`, `VaultKeyStore.swift:76`. Swift `Data` cannot be reliably zeroized,
+> iOS does not swap to disk, and no path logs or persists either value. An accepted-risk note
+> rather than an exploit.
+>
+> **Where the code held, and why.** No attribute carries an issuer, a name, or a secret: an
+> enumerator sees a constant service, a constant label, a UUID, the accessibility class, the sync
+> flag, and system timestamps. Half substitution fails on the `0x6D`/`0x73` AAD byte and
+> cross-account substitution on the UUID. Listing never decrypts a secret: `openSecret` is called
+> only from `secret(for:)`, `records()` opens metadata only, and `update()` moves the secret
+> half's bytes without decrypting. Both parsers bounds-check before slicing and no byte sequence
+> could be constructed that traps either. The wrapped record gives an attacker salt, iterations,
+> nonce and AEAD output and nothing else derived from the passphrase; iterations are clamped
+> before derivation and authenticated as AAD, so a hostile record can neither zero the work factor
+> nor buy a stall. Creation writes the record before the key, so a crash between them yields
+> `locked`, which the passphrase recovers.
+>
+> **What I could not assess from this scope.** `PBKDF2.deriveKey`,
+> `BackupPassphrase.canonical`/`generate`, and `SharedInbox.writingOptions` are referenced but
+> were not among the attached files, so three assumptions went unverified: that PBKDF2 is invoked
+> with a 32-byte output and a byte-identical canonical encoding between wrap and unwrap; that the
+> generate/grouped/canonical round trip is exact, a mismatch making every vault silently
+> unrecoverable; and that `writingOptions` includes `.atomic`.
+
+### Triage of the Fable 5 pass
+
+**F1 confirmed, and it is the sharpest finding of the two passes.** `replacePassphrase` at
+`Vault.swift:137` saves the new wrap and returns the string afterwards. The project already
+learned this lesson once: `create(with:)` exists precisely because the one-shot `create()` shape
+was dangerous, and the reasoning is written in the comment above it. Nobody applied it to
+replacement. A crash or a torn-down view between the save and the screen leaves a vault whose
+only recovery credential was never seen by anybody, and the device keeps working so nothing
+signals it.
+
+**F2 confirmed.** `create(with:)` calls `wrapped.save` with no existence check, and `save`
+overwrites on duplicate. The stale-state window is the project's own measured half hour.
+
+**F3 confirmed as written, and it carries a sequencing consequence.** `kSecAttrSynchronizable` is
+part of a Keychain item's primary key, so a differing flag produces a twin rather than a
+duplicate error. **It cannot fire today only because of the high-severity defect above:** the
+wrapped key's flag is always `false`, so it never differs. Fixing the sync gap without fixing
+`save` at the same time would create exactly the twin case this finding describes. The two must
+land together.
+
+**F4 confirmed.** `Vault.swift:116` catches every `WrapError` as `.wrongPassphrase`, including
+the two that are decided before any derivation runs.
+
+**F5 confirmed**, and it is the same defect ChatGPT filed as its third medium. Two engines, two
+severities, one finding.
+
+**F6 confirmed, and it found a fifth mismatch the other pass missed:** `id.uuidString` renders
+upper case while the normative page specifies lower case.
+
+**F7 and F8 accepted as informational**, both correctly reasoned and neither requiring code. F7
+deserves the sentence it asks for in `docs/VAULT.md`.
+
+### What the two passes together say about the method
+
+The overlap is small. Of eight findings from each engine, **only two are the same**: error-as-absent,
+and the documentation mismatches. ChatGPT found the high-severity sync gap that Fable did not.
+Fable found six that ChatGPT did not, including the two most dangerous write-ordering defects.
+
+**The gap in Fable's coverage was caused by this scope's file list, not by the engine.** It flagged
+that it could not confirm F3's exploitability because `SyncAwareKeychainStore` was not among the
+attached files, and that is the exact file that would have shown it the sync gap. The scope list
+in `A4-prompts.md` omitted it, along with `PBKDF2.swift` and `BackupPassphrase.swift`, which the
+pass also named as unverifiable assumptions. That is a defect in the prompt rather than in either
+review, and it is recorded here rather than quietly corrected, because the next scope's file list
+should be built by asking what a reviewer would need rather than what seems central.
+
 ### Not yet acted on
 
-**Nothing has been changed.** The remaining two engines run this same scope against the same
+**Nothing has been changed.** The remaining engine runs this same scope against the same
 commit, and fixing between passes would mean the later ones review different code and their
 findings could not be compared with these. Fixes begin when scope 1 is complete on all three.
 
