@@ -30,6 +30,61 @@ struct AccountListView: View {
     /// Lock swapping the root would destroy it after the image was already gone, and sharing
     /// would silently do nothing. The same lesson as the vault passphrase, one screen along.
     @Binding var arrival: IdentifiedArrival?
+
+    /// Whether the arrival sheet may present right now. False for exactly the gap between
+    /// an arrival closing whatever was open and that sheet finishing its dismissal, because
+    /// presenting one sheet while another animates out is a request SwiftUI drops on the
+    /// floor: the arrival sheet would silently never appear, which is precisely what the
+    /// share extension's flow cannot survive. Each closed sheet's `onDisappear` reopens
+    /// this once the stage is actually clear.
+    @State private var canPresentArrival = true
+
+    /// The arrival, withheld while another sheet is still leaving. See `canPresentArrival`.
+    private var presentedArrival: Binding<IdentifiedArrival?> {
+        Binding(
+            get: { canPresentArrival ? arrival : nil },
+            set: { arrival = $0 })
+    }
+
+    /// Whether any sheet other than the arrival's is up. These are what an arrival closes.
+    private var somethingElseIsPresented: Bool {
+        isAdding.wrappedValue || isShowingSettings || editing != nil || recolouring != nil
+    }
+
+    /// An arrival takes precedence: whatever was open closes, and the import presents
+    /// clean from the root. The rule is Xavier's, verbatim in `docs/APP_LOCK.md`, and one
+    /// consequence is deliberate: closing the add sheet is a dismissal, and a dismissal
+    /// discards the draft. Somebody halfway through typing a secret who shares an image
+    /// into the app has chosen the image.
+    ///
+    /// Nothing here waits or watches the lock. An arrival delivered while the app is
+    /// locked runs this same closing under the lock window, and the sheet it presents is
+    /// simply there after Face ID, never over the lock and never lost to it.
+    private func arrivalChanged() {
+        guard arrival != nil else {
+            canPresentArrival = true
+            return
+        }
+
+        guard somethingElseIsPresented else {
+            canPresentArrival = true
+            return
+        }
+
+        canPresentArrival = false
+        isAdding.wrappedValue = false
+        isShowingSettings = false
+        editing = nil
+        recolouring = nil
+        pendingDeletion = nil
+    }
+
+    /// A closed sheet has finished leaving. If an arrival was waiting on that, let it in.
+    private func sheetDidClose() {
+        if arrival != nil && !somethingElseIsPresented {
+            canPresentArrival = true
+        }
+    }
     @State private var editMode: EditMode = .inactive
 
     @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
@@ -88,21 +143,23 @@ struct AccountListView: View {
                     current == nil ? nil : .success
                 }
                 .toolbar { toolbar }
+                .onChange(of: arrival?.id) { arrivalChanged() }
                 .sheet(isPresented: isAdding) {
                     if let addSession {
                         AddAccountView(session: addSession) { model.load(at: Date()) }
+                            .onDisappear(perform: sheetDidClose)
                     }
                 }
                 .sheet(isPresented: $isShowingSettings) {
                     SettingsView(store: store) { model.load(at: Date()) }
+                        .onDisappear(perform: sheetDidClose)
                 }
-                // Something the system handed the app: a backup opened from Files or Mail, or a
                 // Three kinds of arrival, three destinations, and the distinctions matter.
                 // An image and a code both hold a setup code and belong to the add flow, which
                 // decodes one and reads the other; a file is an export or a backup and belongs
                 // to the importer, which parses it. Nothing here is saved without a confirmation
                 // screen, which is what makes an incoming URL safe to accept at all.
-                .sheet(item: $arrival) { arrival in
+                .sheet(item: presentedArrival) { arrival in
                     switch arrival.value {
                     case let .image(data):
                         AddAccountView(store: store, image: data) { model.load(at: Date()) }
@@ -121,11 +178,13 @@ struct AccountListView: View {
                             model.setColor(colour, for: row)
                         }
                     }
+                    .onDisappear(perform: sheetDidClose)
                 }
                 .sheet(item: $recolouring) { row in
                     AccountColorPicker(selected: row.record.metadata.color) { colour in
                         model.setColor(colour, for: row)
                     }
+                    .onDisappear(perform: sheetDidClose)
                 }
                 .alert(
                     "Remove \(pendingDeletion?.record.metadata.displayIssuer ?? "this account")?",

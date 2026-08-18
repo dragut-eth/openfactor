@@ -69,19 +69,15 @@ struct OpenFactorApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                // While locked the interface does not exist, rather than existing behind
-                // a cover. The first version drew the list as the root and locked over
-                // it, which leaked a frame of the list at every locked launch: whatever
-                // renders first is what the person sees first, so the lock screen has to
-                // BE the root, not arrive on top of it. Swapping the branch also tears
-                // down any open sheet, so nothing locked lingers mid air.
-                //
-                // **A window above the interface was tried and reverted**, to let state
-                // survive the lock. It regressed the app switcher snapshot, the exact
-                // property this arrangement exists for, and broke arriving shares against
-                // surviving sheets. State that must outlive the lock is owned above this
-                // branch instead; the pattern is the vault gate and the arrival.
-                if lock.isLocked {
+                // Two kinds of lock, and only the cold one lives here. A lock that began
+                // at launch has no interface to preserve, so the lock screen IS the root:
+                // whatever renders first is what the person sees first, which is why it
+                // cannot arrive on top of anything. A lock on return is not this branch
+                // at all: it is a window PrivacyShield raises above the interface, and
+                // the whole view tree beneath survives untouched, sheets, navigation and
+                // half typed text included. That split, and the sequences that prove it,
+                // are docs/APP_LOCK.md; the decisions are AppLockPresentation, tested.
+                if lock.presentsRootLock {
                     LockScreenView(controller: lock)
                 } else {
                     // The vault gate, not the list. A device that has accounts and no key must
@@ -151,11 +147,11 @@ struct OpenFactorApp: App {
             }
             .onChange(of: scenePhase, initial: true) { _, phase in
                 lock.scenePhaseChanged(to: phase)
-                updateShield(for: phase)
+                PrivacyShield.apply(lock)
                 collectWhatArrived()
             }
             .onChange(of: lock.isLocked) {
-                updateShield(for: scenePhase)
+                PrivacyShield.apply(lock)
                 // Unlocking does not change the scene phase, so without this an image shared
                 // while the app was locked would wait for the next time it came forward.
                 collectWhatArrived()
@@ -211,24 +207,4 @@ struct OpenFactorApp: App {
         arrival = IdentifiedArrival(value: value)
     }
 
-    /// One place decides what stands between the interface and the world, because the two
-    /// windows and the root swap have an ordering between them that must not be spread across
-    /// call sites.
-    ///
-    /// **The lock window is shown before the cover is hidden.** On a locked return both change
-    /// in the same update, and hiding the cover first would leave a gap with the live interface
-    /// visible in it, which is the exact frame leak the cover exists to prevent.
-    ///
-    /// The cover shows when the app is not active and not locked. Not when locked, because the
-    /// lock, whether root or window, hides the interface just as thoroughly and is what belongs
-    /// in the system's snapshot. When the lock is off the cover still appears for everyone,
-    /// since the app switcher photograph must never contain a code.
-    /// The cover shows when the app is not active and not locked. Not when locked,
-    /// because the lock screen is the root view then: it hides the interface just as
-    /// thoroughly, and it is what belongs in the system's snapshot. When the lock is off
-    /// the cover still appears for everyone, since the app switcher photograph must never
-    /// contain a code.
-    private func updateShield(for phase: ScenePhase) {
-        PrivacyShield.setCovered(!lock.isLocked && phase != .active)
-    }
 }

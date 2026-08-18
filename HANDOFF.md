@@ -8,15 +8,29 @@ first when picking the work back up.
 **Last updated:** 2026-08-17, on TestFlight as `dev.openfactor.app`, 1.0 (4). The day's
 work and the PR 15b specification are committed on `pr-15b-app-lock`, not pushed.
 
-**The next action belongs to Xavier: read `docs/APP_LOCK.md`.** The lock's root swap
-destroys every screen beneath it, and the vault made that destructive in practice, four
-field losses in one day with one cause. A window-based fix was attempted without a design,
-shipped three defects in an afternoon, regressed the app switcher snapshot, the exact
-property the lock exists for, and was reverted. The specification exists so the second
-attempt is a reviewed design with the three defects as required regression tests and one
-manual checklist pass at the end, instead of live iteration on a phone. The current build
-is safe: the shipped lock mechanism, byte-identical to PR 15, plus per-screen survival for
-the vault gate, the arrival, and manual entry.
+**PR 15b is implemented, and the next action is the checklist in `docs/APP_LOCK.md`.**
+Xavier reviewed the specification in the morning and said go. The build order was the
+spec's own: `AppLockPresentation`, a pure value type wrapping the untouched `AppLockEngine`,
+went in first with the required sequences as thirteen passing tests, the first attempt's
+black flash and snapshot leak among them by name. Then the glue: `PrivacyShield` now owns
+both windows and applies the core's three outputs in the one safe order, shows before
+hides, with the lock window built once at `.alert + 2` and the auto prompt driven on the
+transition to visible. Cold launches still lock as the root, exactly as PR 15 shipped.
+The arrival rule lives in `AccountListView`: an arrival closes every open sheet and
+withholds its own until the closing sheet's `onDisappear`, because presenting during
+another sheet's dismissal is a request SwiftUI silently drops, which is what broke
+share-mid-flow in the first attempt. Ten scenarios in the specification are the one
+manual pass that remains; nothing merges before they run on hardware.
+
+**The adversarial review paid for itself before the build reached a phone.** A second
+model, asked only whether any event sequence leaves the interface photographable while
+unlocked, brute-forced the core's state space and found one: an unlock landing after the
+app has already reached the background, a biometric match racing a swipe home, suppressed
+the cover through the looser `settling` condition and actively tore the lock window down
+with nothing behind it. One line fixed it, `settling` keyed on inactive rather than not
+active, a second outcome made inert, and the sequence is now test ten in the suite and in
+the specification. Yesterday this class of defect shipped to hardware three times; today
+it did not ship at all.
 
 **Also in the day, committed on the same branch:** the Photos and App Group claims narrowed
 to what is defensible, at Xavier's direction. The `otpauth` and `otpauth-migration` schemes

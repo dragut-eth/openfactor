@@ -132,7 +132,7 @@ coverVisible      = !isLocked && !settling && lastPhase != .active
 | `willEnterForeground` | phase bookkeeping only |
 | `didBecomeActive` | locks if enabled and elapsed is negative or at least the grace period, and then `coldLock = false`; always `settling = false`; forgets `backgroundedAt` |
 | `promptRaised` | `hasPrompted = true` |
-| `unlockSucceeded` | `isLocked = false`, `coldLock = false`, `settling = (lastPhase != .active)` |
+| `unlockSucceeded` | ignored if already unlocked; `isLocked = false`, `coldLock = false`, `settling = (lastPhase == .inactive)` |
 | `unlockFailed` | nothing; locked is already correct |
 
 Becoming active only ever adds a lock, never removes one. A negative elapsed time is
@@ -155,6 +155,16 @@ normal Face ID sequence the resign arrives before the unlock outcome, so the sup
 set by the outcome survives exactly until the scene settles, which is the one window it is
 for.
 
+**Settling is keyed on the scene standing at inactive, never merely "not active".** The
+first cut of the implementation wrote the looser condition, and the adversarial review this
+document requires found the sequence that turns the difference into a leak before the build
+reached a phone: an unlock landing after the app has already reached the background, a
+biometric match racing a swipe home. The loose condition suppressed the cover and hid the
+lock window with the app photographable and nothing behind it, and held that state through
+the entire return transit. A background unlock has no Face ID gap to bridge, so it covers
+like any other departure. A second unlock outcome is ignored outright, because two prompts
+can be in flight and only the first may move state.
+
 ## Required regression sequences
 
 Each is a unit test against the pure core before any interface work starts. The first three
@@ -176,6 +186,10 @@ are the first attempt's defects, kept as tests so they cannot return.
    photograph is the lock screen. Documented stance, now asserted.
 9. Unlock, then immediate background before active: cover shows. `settling` cleared by the
    departure.
+10. `locked → promptRaised → willResignActive → didEnterBackground → unlockSucceeded`: the
+    cover **must** show at the final step and hold through the return transit. The
+    adversarial review's counterexample, found in the first cut before it reached a phone,
+    and the reason the review is part of this design rather than a nicety.
 
 **Glue invariants**, stated because the first attempt broke each one:
 

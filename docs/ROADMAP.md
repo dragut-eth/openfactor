@@ -368,9 +368,11 @@ The design is `docs/APP_LOCK.md`, written after that failure and normative: a lo
 above an untouched view tree for locks on return, the root swap kept for cold launches
 where nothing exists to preserve, a pure tested decision core with the first attempt's
 three defects as required regression tests, and one rule for arrivals, they close what is
-open and present clean. Status: **specified, awaiting review.** Implementation only after
-the review, tests before interface work, and one manual checklist pass at the end instead
-of live iteration on a phone.
+open and present clean. Status: **implemented on `pr-15b-app-lock`,
+awaiting the checklist pass.** Xavier reviewed the specification, the decision core went in
+first with the required sequences as thirteen passing tests, the glue followed, and the ten
+scenario checklist in the specification is now the one manual pass that stands between this
+and merging.
 
 ### PR 16: Encrypted export and import
 
