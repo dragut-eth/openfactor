@@ -14,7 +14,7 @@ reordered, including the parts that turn out to be wrong.
 | --- | --- |
 | ChatGPT 5.6 Sol | Returned, below. Triaged |
 | Fable 5 (high effort) | Returned, below. Triaged |
-| Grok 4.6 | Not yet run |
+| Grok 4.6 (high effort) | Returned, below. Triaged |
 
 ---
 
@@ -381,11 +381,151 @@ pass also named as unverifiable assumptions. That is a defect in the prompt rath
 review, and it is recorded here rather than quietly corrected, because the next scope's file list
 should be built by asking what a reviewer would need rather than what seems central.
 
+---
+
+## Grok 4.6, high effort
+
+*Read-only pass over commit `74fe841`. Reproduced as returned, abridged where it repeats findings
+already recorded above.*
+
+> The confidentiality claim for a current vault item is mostly held: a reader of Keychain
+> attributes and values gets ciphertext, UUIDs, timestamps, and coarse sizes, not an issuer,
+> account name, or secret. The availability claim is not. The recovery record that the design says
+> must follow sync never does, so a device can present "no vault" while account ciphertext is
+> already sitting in the Keychain.
+>
+> **Finding 1 — High. The wrapped vault key is never offered to iCloud Keychain, so sync-on
+> recovery does not exist.** [Mechanism as recorded in the ChatGPT pass above.] iPhone B installs
+> OpenFactor, synced `OFV1` account items arrive, the wrapped item does not, `Vault.state()` is
+> `.absent`, and the setup screen is shown. Waiting cannot help. The passphrase from A has nothing
+> to unwrap. It is also "an empty vault where records exist": `records()` would list those items as
+> unreadable, but the gate never looks, because state is `.absent`.
+>
+> **A correct sync fix also has to close a second hole or it will destroy data.**
+> `VaultGateModel.refresh()` returns immediately while `stage == .showingPassphrase`, and
+> `Vault.create(with:)` does not refuse an existing wrap, since `save` replaces on duplicate.
+> `docs/VAULT.md` says a record arriving while setup is open moves the device to unlock by itself.
+> That is true on the intro screen and false once a passphrase is being shown. Today the race
+> cannot fire, because the wrap never arrives.
+>
+> **Finding 2 — Medium. On watchOS the vault key is not written with class `.complete`.**
+> `os(iOS)` is false when `SharedInbox.writingOptions` is compiled for the watch, so the watch
+> writes `vault.key` with `.atomic` only. I did not measure the default class a watch file gets. I
+> am sure complete protection is not requested. Default file protection is
+> complete-until-first-unlock, which remains readable after the first unlock of the boot,
+> including while the wrist is locked.
+>
+> **On padding.** What padding is meant to hide is issuer and name length. A normal TOTP account
+> with issuer GitHub and name octocat is around 139 bytes of JSON, so with the prefix it takes two
+> 128-byte buckets, not one. Ordinary TOTP-with-issuer accounts therefore collapse together, which
+> is enough to stop identifying which service a row is, but size still yields a coarse class: one
+> versus two versus three buckets separates a short or issuer-less row from an ordinary one from
+> max-length labels. That is not a name. `unpad` does not require the tail to be zeros, but the
+> padded blob is inside AES-GCM, so those bytes are not attacker-writable without a tag failure.
+>
+> **On the vault-key wrapping: this part is sound.** Fresh 32-byte salt and fresh nonce on every
+> wrap including passphrase change; salt and iteration count bound as AAD and tested; the reader
+> refuses a count outside 100,000 to 10,000,000 before calling the KDF, so a hostile record buys
+> neither a free hang nor a weakened derivation; canonicalisation means one derivation per record,
+> which forecloses the multi-candidate shape that produced the archive format's key-commitment
+> collision. A Keychain dump of the item leaks magic, salt, the iteration count, a nonce and 48
+> sealed bytes, and nothing about the passphrase.
+>
+> **On failure paths.** Create order is correct: wrap first, then key, so a crash between them
+> leaves `.locked`, which is recoverable, rather than a working device that can never be
+> recovered. A damaged key file becomes `.locked` and unlock overwrites it, so it is not a brick.
+> One bad account leaves the rest listed. `suggestsAWrongKey` requires a non-empty unreadable set,
+> so a device merely ahead of iCloud is never told to discard its key. There is no two-item orphan
+> because a Keychain item is the unit of atomicity.
+>
+> **Also disagreeing with the page:** the service constant, the UUID case, the sorted JSON keys,
+> and "arrival during setup moves to unlock", which is true on the intro screen and false while a
+> passphrase is on screen.
+>
+> I did not review WatchConnectivity, parsers, or the lock UI; those are other scopes. I did not
+> run this build on a device.
+
+### Triage of the Grok 4.6 pass
+
+**Finding 1 confirmed**, independently reaching the same defect as the ChatGPT pass by a different
+route, and adding something neither other pass found.
+
+**The `refresh()` sub-finding is new and confirmed.** `VaultGateModel.refresh()` at line 82 begins
+`if case .showingPassphrase = stage { return }`. So a wrapped record arriving from iCloud while a
+generated passphrase is on screen does not move the device to unlock, and `docs/VAULT.md`'s claim
+that it does is true only on the intro screen. Combined with `create(with:)` accepting an existing
+wrap, that is the destructive race in its most reachable form. It is dormant today for the same
+reason Fable's twin finding is dormant: the wrap never arrives, because of Finding 1.
+
+**Finding 2 confirmed**, matching the ChatGPT pass. Grok adds the consequence the other stated as
+unknown: the default class is complete-until-first-unlock, which is readable after the first
+unlock of the boot, so the watch key is exposed exactly while the wrist is locked, which is the
+state the protection was chosen for.
+
+**The padding claim is the first finding in this gate to be partly rejected**, and the distinction
+is worth keeping. Grok states that "the page's sentence that they collapse into one bucket is
+already false". That sentence, at `docs/VAULT.md:256`, describes the **published test vector**,
+whose toy metadata genuinely does fit one bucket, and it is accurate as written.
+
+**The substantive observation behind it is correct and is accepted.** Real metadata is around 132
+to 139 bytes, so an ordinary account takes two buckets, and the residual leak is a coarse class of
+one, two, or three buckets rather than nothing. The page says padding exists because "without it
+the length of an issuer and account name leaks to any reader" and never states what remains after
+it. That is a documentation gap rather than a defect, and it earns a sentence.
+
+**The remaining mismatches confirmed**, including "arrival during setup moves to unlock", which is
+the documentation half of the `refresh()` finding.
+
+### What the three passes together found
+
+| | ChatGPT 5.6 Sol | Fable 5 | Grok 4.6 |
+| --- | --- | --- | --- |
+| Wrapped key never syncs (High) | Found | Missed | Found |
+| Watch protection class | Found | Missed | Found |
+| Backup-exclusion crash window | Found | Missed | Missed |
+| Error collapses to absent | Found | Found | Missed |
+| `replacePassphrase` shows after saving | Missed | Found | Missed |
+| `create(with:)` has no existence check | Missed | Found | Found, as part of Finding 1 |
+| Sync flag twins on save | Missed | Found | Missed |
+| Future-version record reads as wrong passphrase | Missed | Found | Missed |
+| `refresh()` ignores an arriving wrap | Missed | Missed | Found |
+| Document mismatches | Found, four | Found, four incl. UUID case | Found, four incl. setup arrival |
+| Padding's residual size class | Missed | Missed | Found |
+
+**No finding was reported by all three.** The most serious one was missed by one engine, and the
+two most dangerous write-ordering defects were each found by exactly one. Running a single engine,
+whichever it had been, would have left this scope with a defect that loses every synced account or
+a defect that invalidates a recovery passphrase nobody ever saw.
+
+**Fable's two misses have a known cause and it is the prompt.** Both concern files scope 1 did not
+attach: `SyncAwareKeychainStore.swift`, which shows the sync gap, and `SharedInbox.swift`, which
+holds the platform condition behind the watch defect. Fable said so at the time, in the section
+listing what it could not assess. The other two engines read those files because they had
+filesystem access and went looking.
+
+**That is the lesson for the remaining scopes.** The file list should name what a reviewer needs
+to follow a claim to its end, not what seems central to the subject, and an engine reading from
+disk should be told it may open anything the attached files reference.
+
 ### Not yet acted on
 
-**Nothing has been changed.** The remaining engine runs this same scope against the same
-commit, and fixing between passes would mean the later ones review different code and their
-findings could not be compared with these. Fixes begin when scope 1 is complete on all three.
+**Scope 1 is complete on all three engines and nothing has been changed yet.** Fixes begin now,
+in an order the findings themselves dictate rather than by severity alone:
+
+1. **The sync gap and `save()`'s twin behaviour together.** Making the wrapped key synchronizable
+   is what allows a differing sync flag to exist, which is the precondition for the twin record.
+   Fixing either alone is worse than fixing neither.
+2. **`create(with:)`'s existence check and `refresh()`'s blindness during setup.** Both guard the
+   same destructive tap, and that tap only becomes reachable once a wrap can actually arrive,
+   which is what step 1 enables.
+3. **`replacePassphrase` split into the two-step shape**, so no passphrase is written before it is
+   shown.
+4. **The error states:** a distinct unavailable state rather than `absent`, and the wrong-passphrase
+   mapping that currently swallows "written by a newer version".
+5. **The watch protection class**, and the install ordering that leaves a key briefly
+   backup-eligible.
+6. **The document mismatches together**, including the padding sentence and the setup-arrival
+   claim.
 
 One operational note recorded at the time: the high-severity defect affects the maintainer's own
 device and the build already on TestFlight, so an encrypted export was advised immediately as the

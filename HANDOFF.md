@@ -55,12 +55,36 @@ the file showing the sync gap. Scope 1's file list in `A4-prompts.md` also omitt
 and `BackupPassphrase.swift`, which the pass named as unverifiable assumptions. Later scopes'
 file lists should be built by asking what a reviewer would need, not what seems central.
 
-**Nothing is being fixed yet, deliberately.** Grok 4.6 runs the same scope against the same
-commit, and changing code between passes would mean it reviews something else and its findings
-could not be compared. Fixes begin when scope 1 is complete on all three, in the order: the sync
-gap and the `save()` twin fix together, then `replacePassphrase` and the creation guard, then the
-error states and the wrong-passphrase mapping, then the watch regression, then the install
-ordering, then the document mismatches together.
+**Grok 4.6 completed scope 1**, independently reaching the sync gap by a different route and
+adding one nobody else found: `VaultGateModel.refresh()` returns early while a passphrase is on
+screen, so an arriving wrapped record does not move the device to unlock, which is the
+documentation's own claim and is true only on the intro screen. That is the destructive race in
+its most reachable form, and like the twin case it is dormant only because the wrap never
+arrives.
+
+**One claim was partly rejected, the first in this gate.** Grok said the page's "collapse into one
+bucket" sentence is already false; that sentence describes the published test vector, whose toy
+metadata does fit one bucket, and it is accurate. The observation behind it stands and is
+accepted: real metadata is 132 to 139 bytes, so an ordinary account spans two buckets and the
+residual leak is a coarse size class the page never mentions. Recording the distinction matters,
+because "no false positives" had been said twice and should stay precise.
+
+**No finding was reported by all three engines.** The high-severity one was missed by Fable, the
+two worst write-ordering defects were each found by exactly one engine, and running any single
+engine would have left this scope carrying either a defect that loses every synced account or one
+that invalidates a recovery passphrase nobody ever saw. The full matrix is in the audit file.
+
+**Fable's two misses were caused by scope 1's file list**, which omitted `SyncAwareKeychainStore`
+and `SharedInbox`, the two files holding the mechanisms in question. It said so at the time. The
+other engines found them by reading from disk. Remaining scopes should list what a reviewer needs
+to follow a claim to its end, and should say that anything referenced may be opened.
+
+**Scope 1 is complete and fixes begin now**, in an order the findings dictate rather than by
+severity: the sync gap and `save()`'s twin behaviour together, since fixing either alone is worse
+than fixing neither; then the creation guard and `refresh()`, which protect the same tap; then
+`replacePassphrase` split so nothing is written before it is shown; then the error states and the
+wrong-passphrase mapping; then the watch protection class and install ordering; then the document
+mismatches together.
 
 **CI now refuses statements about the maintainer's circumstances in public documents.** Added
 after a sentence explaining why a security gate was met one way rather than another went into the
