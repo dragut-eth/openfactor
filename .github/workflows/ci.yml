@@ -177,6 +177,80 @@ jobs:
           fi
           echo "ok: one entitlement, and it is not the Keychain"
 
+      # A required reason API used without a matching manifest entry is invisible: it
+      # builds, it runs, it passes every test, and it surfaces as an automated notice from
+      # Apple at upload, which is the worst moment to discover it. It is also a rot that
+      # arrives by addition rather than by edit. The file timestamp entry was missing from
+      # the day SharedInbox gained its freshness window, and nothing anywhere noticed.
+      #
+      # Only one direction is checked, used but not declared. A declared category that is
+      # no longer used is untidy rather than a submission problem, and failing on it would
+      # make this check argue with anyone deleting code.
+      #
+      # The manifest is parsed, never grepped, for the reason the entitlement check above
+      # records: the comments in that file name the very categories it declares, so a grep
+      # would pass while lying.
+      - name: Required reason APIs are declared
+        run: |
+          set -e
+          python3 - <<'PY'
+          import json, re, subprocess, sys
+
+          # Apple's categories, and the APIs each covers, from the published list at
+          # developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
+          CATEGORIES = {
+              "NSPrivacyAccessedAPICategoryFileTimestamp": r"""
+                  attributesOfItem|attributesOfFileSystem|\.modificationDate|\.creationDate
+                  |contentModificationDateKey|creationDateKey|NSFileModificationDate
+                  |NSFileCreationDate|getattrlist|fgetattrlist|getattrlistbulk
+                  |[^a-zA-Z](f|l)?stat\(""",
+              "NSPrivacyAccessedAPICategorySystemBootTime":
+                  r"systemUptime|mach_absolute_time|mach_continuous_time",
+              "NSPrivacyAccessedAPICategoryDiskSpace": r"""
+                  volumeAvailableCapacity|systemFreeSize|NSFileSystemFreeSize
+                  |volumeTotalCapacity|systemSize""",
+              "NSPrivacyAccessedAPICategoryActiveKeyboards":
+                  r"activeInputModes|UITextInputMode",
+              "NSPrivacyAccessedAPICategoryUserDefaults":
+                  r"UserDefaults|@AppStorage",
+          }
+
+          manifest = json.loads(subprocess.check_output(
+              ["plutil", "-convert", "json", "-o", "-", "OpenFactor/PrivacyInfo.xcprivacy"]))
+          declared = {e["NSPrivacyAccessedAPIType"]
+                      for e in manifest.get("NSPrivacyAccessedAPITypes", [])}
+          print("declared:", " ".join(sorted(declared)) or "(none)")
+
+          # Split on newlines, never on whitespace: "OpenFactorWatch Watch App" is a real
+          # directory here, and the first version of this check tore it in half.
+          sources = [f for f in subprocess.check_output(
+              ["git", "ls-files", "*.swift"], text=True).splitlines()
+              if f and "Tests" not in f]
+
+          failed = False
+          for category, pattern in CATEGORIES.items():
+              expr = re.compile(re.sub(r"\s+", "", pattern))
+              hits = []
+              for path in sources:
+                  with open(path, encoding="utf-8") as handle:
+                      for number, line in enumerate(handle, 1):
+                          if expr.search(line):
+                              hits.append(f"{path}:{number}")
+              if hits and category not in declared:
+                  failed = True
+                  print(f"\nUNDECLARED: {category}")
+                  for hit in hits[:10]:
+                      print(f"  {hit}")
+                  print("  Add it to OpenFactor/PrivacyInfo.xcprivacy with an approved")
+                  print("  reason code, checked against Apple's current list rather than")
+                  print("  a summary of it. A wrong reason is worse than none: it reads")
+                  print("  as though somebody considered the question.")
+              elif hits:
+                  print(f"ok: {category}, {len(hits)} use(s), declared")
+
+          sys.exit(1 if failed else 0)
+          PY
+
   package:
     name: Package tests
     runs-on: macos-15

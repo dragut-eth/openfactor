@@ -12,10 +12,16 @@
     for app functionality". None, because nothing leaves the device except the iCloud
     Keychain sync the user turns on, which is Apple's transport and not this app's
     collection.
-  - One required reason API: UserDefaults, for this app's own preferences. Sort order,
-    appearance, chosen icon, whether sync is on, whether the lock is on and its grace
-    period. Never a secret, never an account name. See OpenFactor/Settings/Preferences.swift,
-    which says the same thing in code.
+  - Two required reason APIs, and no others. UserDefaults, for this app's own preferences:
+    sort order, appearance, chosen icon, whether sync is on, whether the lock is on and its
+    grace period. Never a secret, never an account name. See
+    OpenFactor/Settings/Preferences.swift, which says the same thing in code. And file
+    timestamps, for one line in the share extension's inbox, explained at its entry below.
+
+  The other categories were checked against Apple's list rather than assumed, and are
+  genuinely absent: no system boot time, no disk space, no active keyboard. The share
+  extension declares nothing of its own because it only writes to the inbox; reading a
+  timestamp happens in the app.
 -->
 <plist version="1.0">
 <dict>
@@ -36,6 +42,32 @@
 				     containers it is a member of. This app reads and writes only its own
 				     preferences. -->
 				<string>CA92.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- C617.1: timestamps of files inside the app container, an app group
+				     container, or the app's CloudKit container.
+
+				     One call site, SharedInbox.pending() in OpenFactorCore, which reads
+				     .modificationDate to sort what the share extension left newest first
+				     and to sweep anything older than the freshness window unread. The
+				     inbox is in the app group container, so this reason is the case
+				     verbatim rather than the nearest fit.
+
+				     This entry was missing from the day the freshness window landed. It
+				     is invisible to the build and surfaces as an automated notice at
+				     upload, so ci.yml now fails when a file timestamp API appears in
+				     source without this declaration. Verified against Apple's published
+				     list rather than a summary of it: modificationDate is named in the
+				     file timestamp category, and C617.1 is the app group container
+				     reason. The neighbouring codes are not close calls, they are
+				     different cases: DDA9.1 is showing a timestamp to the person, and
+				     3B52.1 is a file they picked themselves. -->
+				<string>C617.1</string>
 			</array>
 		</dict>
 	</array>

@@ -32,6 +32,23 @@ only happens when the system is dissolving its own snapshot. The documented leve
 looking like protection. The behavior is on record from iOS 7 onward with no Apple answer.
 The switcher card, the artifact anyone can browse to, stays blank.
 
+**The privacy manifest was incomplete, and is now declared and guarded.** Reported by the
+session doing PR 18 metadata work, verified here against Apple's published data rather than
+the report: `SharedInbox.pending()` reads a file modification date, file timestamps are a
+required reason category, and the manifest declared only `UserDefaults`. It now declares
+`NSPrivacyAccessedAPICategoryFileTimestamp` with `C617.1`, the app group container reason,
+which is the inbox verbatim. Worth knowing for the next one of these: a first reading of
+Apple's data paired every reason code with the wrong text, because the codes sit after the
+prose they belong to, and only checking the pairing in document order caught it. A wrong
+reason code is worse than none.
+
+**CI now fails when a required reason API appears in source without a manifest entry**, in
+the same shape as the share extension's entitlement check and for the same reason. The
+defect was invisible by construction: it built, it ran, it passed every test, it arrived by
+addition rather than by edit so no diff review would show it, and it would have surfaced as
+an automated notice from Apple at upload. Proved in both directions before commit. The whole codebase was swept
+while there: no boot time, no disk space, no active keyboard.
+
 **Two speculative fixes were spent on that flash before anyone looked at it**, and both
 were reverted. The lesson is the project's oldest one and it repeated exactly: a screen
 recording pulled apart frame by frame answered in one pass what two builds of reasoning

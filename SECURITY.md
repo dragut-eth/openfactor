@@ -336,11 +336,23 @@ notes gain another binary.
 ## The privacy manifest
 
 `OpenFactor/PrivacyInfo.xcprivacy` is the machine-readable form of the privacy claims above. It
-declares no tracking, no tracking domains, no collected data types, and one required-reason API:
-`UserDefaults`, used for the app's own preferences.
+declares no tracking, no tracking domains, no collected data types, and two required-reason
+APIs.
 
-Those preferences include sort order, appearance, chosen icon, sync preference, and App Lock
-settings. They never include a secret, account name, vault key, or passphrase.
+`UserDefaults`, with `CA92.1`, for the app's own preferences: sort order, appearance, chosen
+icon, sync preference, and App Lock settings. They never include a secret, account name, vault
+key, or passphrase.
+
+File timestamps, with `C617.1`, for one line: `SharedInbox.pending()` reads a modification date
+to sort what the share extension left newest first and to sweep anything past the freshness
+window unread. `C617.1` is the reason for files inside an app group container, which is where
+the inbox lives.
+
+That second entry was missing for as long as the freshness window existed, and nothing noticed,
+because a missing declaration builds and runs and passes every test. CI now fails when a
+required-reason API appears in source without a matching manifest entry, which is the same
+answer this project gives elsewhere: an invariant that cannot be seen in review is asserted by a
+machine rather than promised in a comment.
 
 ## Credentials and this repository
 

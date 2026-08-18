@@ -196,46 +196,50 @@ about data the app stores locally. Account secrets are stored, not collected. An
 because the app "handles sensitive data" would be wrong and would attach a data type to this
 listing that never leaves the phone.
 
-## A finding: the privacy manifest is now incomplete
+## The privacy manifest, and the check that now guards it
 
-`OpenFactor/PrivacyInfo.xcprivacy` declares one required reason API, `UserDefaults` with
-`CA92.1`. That was complete when it was written. It is not any more.
-
-`SharedInbox.pending()` reads a file's modification date to decide whether a shared image is
-still fresh:
+**Resolved.** `OpenFactor/PrivacyInfo.xcprivacy` declared one required reason API,
+`UserDefaults` with `CA92.1`, which was complete when written and stopped being complete when
+`SharedInbox` gained its freshness window. `SharedInbox.pending()` reads a file's modification
+date to sort what the share extension left newest first, and file timestamps are a required
+reason category in their own right:
 
 ```swift
 let arrived = (attributes?[.modificationDate] as? Date) ?? .distantPast
 ```
 
-File timestamp access is a **required reason API category** in its own right, and reading
-`modificationDate` is in it. The manifest declares no such category, so a submission is likely to
-draw Apple's automated notice about an incomplete privacy manifest.
+The manifest now declares `NSPrivacyAccessedAPICategoryFileTimestamp` with `C617.1`.
 
-**The fix is one entry**, and the reason code that fits exactly is `C617.1`, which covers
-timestamps of files inside the app container, an app group container, or a CloudKit container.
-The inbox is in an app group container, so that is the case verbatim rather than the nearest
-match.
+**Verified against Apple's published list rather than a summary of it**, because a manifest
+declaring the wrong reason is worse than one declaring none: it reads as though somebody
+considered the question. Two things were confirmed at the source. `modificationDate` and
+`NSFileModificationDate` are named in the file timestamp category, alongside the `getattrlist`
+and `stat` family. And `C617.1` is the reason for timestamps of files inside the app container,
+an app group container, or a CloudKit container, which is the inbox verbatim. The neighbouring
+codes are different cases rather than near misses: `DDA9.1` is displaying a timestamp to the
+person, and `3B52.1` is a file they picked themselves through a document picker.
 
-```xml
-<dict>
-    <key>NSPrivacyAccessedAPIType</key>
-    <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
-    <key>NSPrivacyAccessedAPITypeReasons</key>
-    <array>
-        <string>C617.1</string>
-    </array>
-</dict>
-```
+A first pass at reading Apple's data paired each reason code with the wrong text, because the
+codes sit **after** the prose they belong to. The pairing that shipped was checked in document
+order, which is the only reason the manifest does not now say `DDA9.1`.
 
-**Not applied here**, because this session is documentation only and that file is a shipped
-resource. It belongs to whoever picks up PR 18 or the next build, and it should be verified
-against Apple's current required reason list rather than trusted from this note: the categories
-change, and a manifest that declares the wrong reason is worse than one that declares none,
-because it reads as considered.
+**The whole codebase was swept, not just the reported line.** One file timestamp call site, in
+`SharedInbox`. No system boot time, no disk space, no active keyboard. `UserDefaults` appears in
+six files rather than the three first reported, which changes nothing because it was already
+declared. The share extension declares nothing of its own: it only writes to the inbox, and
+reading the timestamp happens in the app.
 
-Two other categories were checked and are genuinely absent: no disk space APIs, and no system
-boot time. `UserDefaults` is used in three files and is already declared.
+**CI now fails when a required reason API appears in source without a matching manifest entry.**
+This defect was invisible by construction. It built, it ran, it passed every test, and it would
+have surfaced as an automated notice from Apple at upload, which is the worst moment to find it.
+It also arrived by addition rather than by edit, so no review of a diff would have caught it
+either. The check parses the manifest rather than grepping it, for the reason the share
+extension's entitlement check records: the comments in that file name the very categories it
+declares, so a grep would pass while lying. It was proved in both directions, against the real
+tree and against a copy with the entry removed.
+
+Only one direction is checked. A declared category that is no longer used is untidy rather than
+a submission problem, and failing on it would make the check argue with anyone deleting code.
 
 ## Export compliance
 
