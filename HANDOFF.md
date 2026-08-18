@@ -49,6 +49,16 @@ addition rather than by edit so no diff review would show it, and it would have 
 an automated notice from Apple at upload. Proved in both directions before commit. The
 whole codebase was swept while there: no boot time, no disk space, no active keyboard.
 
+**The phone and the watch now share one answer vocabulary instead of two copies of it.**
+Found while preparing to test the failure paths, which is exactly where it would have bitten.
+The two targets agreed only through separate hand written string literals, and the watch fell
+through to "Not set up" for anything it did not recognise, so a rename on either side would
+have compiled, shipped, and told somebody their watch was not set up when the truth was that
+their phone had no vault. A wrong answer that reads as a plausible one. `WatchProvisioning.Answer`
+and `MessageKey` are the single declaration now, the watch switches exhaustively over the enum
+so the compiler catches a mismatch, and tests pin the wire values so a rename cannot quietly
+change what an older watch build receives. Same argument as `SharedInbox.appGroup`.
+
 **Account labels are now bounded, and the reason is the import path rather than typing.**
 Xavier asked whether the Service field had a character limit. It did not, at any layer, and
 a label grew a stored record byte for byte: a hundred thousand characters produced about a
@@ -148,8 +158,21 @@ because two halves of one implementation agree with each other whether or not th
 real.
 
 **The exchange has now run between a real phone and a real watch**, successfully, which closes
-the gap three documents were carrying. Only the successful path; declining and a phone with no
-vault of its own have not been tried on hardware.
+the gap three documents were carrying. **All three paths have now run on hardware:** the
+successful one, a declined request, which leaves the watch on "Not set up", and a phone with no
+vault of its own, which answers "Set up your iPhone first" without raising an alert at all,
+because there is no key to offer and therefore nothing to ask about.
+
+**Recovery was tested as part of the same run, and it matters more than either refusal.** The
+passphrase restored the dropped key on the phone and the accounts opened as before, and the watch,
+having been refused twice, was then provisioned successfully without being reset or reinstalled.
+That is the path that would otherwise strand somebody: a refusal that left a watch unable to ask
+again would need an uninstall to recover, and it does not.
+
+Neither failure path needed anything destroyed, which is worth remembering next time. The Debug
+row's "Lock this iPhone" drops the key and keeps the accounts, so it reaches the same state the
+phone would be in with no vault, and the passphrase brings it back. Declining needs no reset
+either: the watch only asks when it has no key, so it stays askable afterwards.
 
 **Testing it found a hole the design had no word for: a device can hold a key that opens
 nothing.** Replacing the vault on the phone leaves the watch with the old key, and every record

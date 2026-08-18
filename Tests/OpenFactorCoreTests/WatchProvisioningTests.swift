@@ -218,3 +218,58 @@ struct WatchProvisioningTests {
         #expect(transcript.dropFirst(85) == phoneKey)
     }
 }
+
+/// The words the two devices exchange, as opposed to the cryptography they wrap.
+///
+/// **These are wire values, and that is the whole point of pinning them.** The phone and the
+/// watch used to hold separate hand written copies of these strings in separate modules, with
+/// anything unrecognised falling through to "not set up". A rename on one side would have
+/// compiled, shipped, and told somebody their watch was not set up when the truth was that
+/// their phone had no vault. They are one declaration now, so the compiler catches a mismatch,
+/// and these tests catch the other half: a rename that compiles everywhere and silently changes
+/// what goes over the air to a watch running an older build.
+@Suite("Watch answer vocabulary")
+struct WatchAnswerVocabularyTests {
+
+    @Test("The answers on the wire are exactly these four strings")
+    func wireValuesArePinned() {
+        #expect(WatchProvisioning.Answer.asking.rawValue == "asking")
+        #expect(WatchProvisioning.Answer.needsApp.rawValue == "needsApp")
+        #expect(WatchProvisioning.Answer.noVault.rawValue == "noVault")
+        #expect(WatchProvisioning.Answer.declined.rawValue == "declined")
+    }
+
+    @Test("The message keys on the wire are exactly these three strings")
+    func messageKeysArePinned() {
+        #expect(WatchProvisioning.MessageKey.request == "request")
+        #expect(WatchProvisioning.MessageKey.response == "response")
+        #expect(WatchProvisioning.MessageKey.status == "status")
+    }
+
+    /// A new answer is not a free addition: the watch switches over every case, so adding one
+    /// without deciding what it shows would fail to build there rather than here. This asserts
+    /// the set anybody reasoning about that switch is looking at.
+    @Test("There are four answers, and no more")
+    func theSetIsClosed() {
+        #expect(WatchProvisioning.Answer.allCases.count == 4)
+        #expect(
+            Set(WatchProvisioning.Answer.allCases.map(\.rawValue))
+                == ["asking", "needsApp", "noVault", "declined"])
+    }
+
+    @Test("Every answer survives the round trip a message puts it through")
+    func roundTrips() {
+        for answer in WatchProvisioning.Answer.allCases {
+            #expect(WatchProvisioning.Answer(rawValue: answer.rawValue) == answer)
+        }
+    }
+
+    /// The safe default, asserted rather than assumed: anything this build does not recognise
+    /// is not an answer, and the watch treats a non-answer as "not set up, try again".
+    @Test("An unknown or absent status is not an answer")
+    func unknownIsNotAnAnswer() {
+        #expect(WatchProvisioning.Answer(rawValue: "somethingNewer") == nil)
+        #expect(WatchProvisioning.Answer(rawValue: "") == nil)
+        #expect(WatchProvisioning.Answer(rawValue: "Asking") == nil)
+    }
+}

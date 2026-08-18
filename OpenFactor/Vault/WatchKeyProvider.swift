@@ -25,19 +25,6 @@ import WatchConnectivity
 @Observable
 final class WatchKeyProvider: NSObject {
 
-    /// What the watch is being told while it waits.
-    enum Answer: String {
-        /// The phone is asking its owner now. The watch waits.
-        case asking
-        /// The app is not frontmost, so the key file is unreadable and nobody is looking at a
-        /// screen to agree. The watch tells the wearer to open the app.
-        case needsApp
-        /// This phone has no vault of its own. Both devices replaced together, most likely.
-        case noVault
-        /// The person said no.
-        case declined
-    }
-
     /// Set when a watch has asked and the person has not answered yet. The app puts an alert up
     /// on whatever is on screen.
     private(set) var isAsking = false
@@ -73,7 +60,8 @@ final class WatchKeyProvider: NSObject {
         guard let response = try? WatchProvisioning.respond(to: request, with: key) else { return }
 
         WCSession.default.sendMessage(
-            ["response": response], replyHandler: nil, errorHandler: nil)
+            [WatchProvisioning.MessageKey.response: response], replyHandler: nil,
+            errorHandler: nil)
     }
 
     func decline() {
@@ -83,7 +71,8 @@ final class WatchKeyProvider: NSObject {
         }
 
         WCSession.default.sendMessage(
-            ["status": Answer.declined.rawValue], replyHandler: nil, errorHandler: nil)
+            [WatchProvisioning.MessageKey.status: WatchProvisioning.Answer.declined.rawValue],
+            replyHandler: nil, errorHandler: nil)
     }
 
     /// Decides what to answer, and remembers the request if the answer is a question.
@@ -91,7 +80,7 @@ final class WatchKeyProvider: NSObject {
     /// The frontmost check is doing real work rather than being polite. The key file is
     /// `.complete` protected, so a phone woken in the background cannot read it; and nobody is
     /// looking at a screen, so nobody can agree to anything.
-    private func answer(to request: Data) -> Answer {
+    private func answer(to request: Data) -> WatchProvisioning.Answer {
         guard UIApplication.shared.applicationState == .active else { return .needsApp }
         guard ((try? keys.load()) ?? nil) != nil else { return .noVault }
 
@@ -118,13 +107,14 @@ extension WatchKeyProvider: WCSessionDelegate {
         _ session: WCSession, didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
-        guard let request = message["request"] as? Data else {
+        guard let request = message[WatchProvisioning.MessageKey.request] as? Data else {
             replyHandler([:])
             return
         }
 
         Task { @MainActor in
-            replyHandler(["status": self.answer(to: request).rawValue])
+            replyHandler(
+                    [WatchProvisioning.MessageKey.status: self.answer(to: request).rawValue])
         }
     }
 }

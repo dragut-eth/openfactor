@@ -67,6 +67,41 @@ public enum WatchProvisioning {
     public static let requestCount = 4 + nonceCount + publicKeyCount
     public static let responseCount = requestCount + sealedCount
 
+    /// What the phone tells a watch that asked, and the keys the two messages travel under.
+    ///
+    /// **Here rather than in either target, because both have to agree and only one of them
+    /// can be wrong at a time.** The phone wrote these strings and the watch matched them with
+    /// its own literals, in another module, with an unknown value falling through to "not set
+    /// up". So a typo or a rename on one side would not fail to build and would not look
+    /// broken: the watch would calmly tell somebody their watch was not set up when the real
+    /// answer was that their phone had no vault, or that they had declined. A wrong answer that
+    /// reads as a plausible one is the worst shape a bug can take on this screen.
+    ///
+    /// This is the same argument `SharedInbox.appGroup` makes about the app group identifier,
+    /// and it is settled the same way: one declaration, both targets, and a test that pins the
+    /// wire values so a rename cannot quietly change what goes over the air.
+    public enum Answer: String, Sendable, CaseIterable {
+        /// The phone is asking its owner now. The watch waits.
+        case asking
+        /// The app is not frontmost, so the key file is unreadable and nobody is looking at a
+        /// screen to agree. The watch tells the wearer to open the app.
+        case needsApp
+        /// This phone has no vault of its own. Both devices replaced together, most likely.
+        case noVault
+        /// The person said no.
+        case declined
+    }
+
+    /// The dictionary keys the two messages travel under, shared for the same reason.
+    public enum MessageKey {
+        /// The watch's opening message, carrying its half of the exchange.
+        public static let request = "request"
+        /// The phone's second message, carrying the sealed key.
+        public static let response = "response"
+        /// An `Answer`, in either message.
+        public static let status = "status"
+    }
+
     public enum ExchangeError: Error, Equatable, Sendable {
         /// The message is not the length this version defines.
         case malformed

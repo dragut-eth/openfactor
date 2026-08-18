@@ -128,7 +128,9 @@ final class WatchVaultModel: NSObject {
             self.stage = .needsPhoneApp
         }
 
-        WCSession.default.sendMessage(["request": attempt.request]) { reply in
+        WCSession.default.sendMessage(
+            [WatchProvisioning.MessageKey.request: attempt.request]
+        ) { reply in
             Task { @MainActor in self.phoneAnswered(reply) }
         } errorHandler: { _ in
             // Not reachable, not paired, or the counterpart is not running. All of them mean
@@ -137,12 +139,22 @@ final class WatchVaultModel: NSObject {
         }
     }
 
+    /// **The vocabulary is `WatchProvisioning.Answer`, not string literals**, so the phone and
+    /// this switch cannot drift apart without the compiler saying so. They used to be two sets
+    /// of hand written strings in different modules, where a rename would have degraded in
+    /// silence to the "not set up" branch, which reads as a plausible answer and is the wrong
+    /// one.
+    ///
+    /// Anything unrecognised still lands on "not set up", deliberately. A watch that cannot
+    /// understand the answer has, as far as its wearer is concerned, not been set up, and the
+    /// remedy that screen offers is to try again.
     private func phoneAnswered(_ reply: [String: Any]) {
-        switch reply["status"] as? String {
-        case "asking": stage = .waiting
-        case "needsApp": stage = .needsPhoneApp
-        case "noVault": stage = .phoneNotSetUp
-        default: stage = .notSetUp
+        let status = reply[WatchProvisioning.MessageKey.status] as? String
+        switch status.flatMap(WatchProvisioning.Answer.init(rawValue:)) {
+        case .asking: stage = .waiting
+        case .needsApp: stage = .needsPhoneApp
+        case .noVault: stage = .phoneNotSetUp
+        case .declined, .none: stage = .notSetUp
         }
     }
 
@@ -152,7 +164,9 @@ final class WatchVaultModel: NSObject {
     /// one this attempt just sent, so a watch cannot install a key from a message it has not
     /// fully verified.
     private func phoneSent(_ message: [String: Any]) {
-        if let response = message["response"] as? Data, let attempt {
+        if let response = message[WatchProvisioning.MessageKey.response] as? Data,
+            let attempt
+        {
             do {
                 try keys.install(try attempt.open(response))
                 self.attempt = nil
@@ -172,7 +186,9 @@ final class WatchVaultModel: NSObject {
             return
         }
 
-        if message["status"] as? String == "declined" {
+        if message[WatchProvisioning.MessageKey.status] as? String
+            == WatchProvisioning.Answer.declined.rawValue
+        {
             attempt = nil
             stage = .notSetUp
         }

@@ -641,8 +641,15 @@ so "no accounts yet" keeps its old meaning.
 
 **What remains in this pull request:**
 
-- **The failure paths of the exchange on hardware.** The successful path has now been run between
-  a real phone and a real watch. Declining, and a phone with no vault of its own, have not
+- **Done: the failure paths of the exchange on hardware.** The successful path, a declined
+  request, and a phone with no vault of its own have all now run between a real phone and a real
+  watch. Declining shows "Not set up", and a phone whose key has been dropped answers by itself
+  without raising an alert, which is what it should do: there is no key to offer and so nothing
+  to ask about. Both were reachable without destroying anything, because the Debug row that
+  drops the phone's key keeps the accounts and the passphrase brings it back. Recovery ran in the
+  same session and is the more important half: the passphrase restored the key, and a watch that
+  had just been refused twice was then provisioned successfully with no reset and no reinstall,
+  so a refusal is not a dead end. What has not
 - **A second model reviewing the exchange**, because one model wrote the design, found the flaw
   in it, and implemented its own fix. That is exactly where a shared blind spot survives
 - **The tripwire is deliberately not being built yet.** Its container anchor has an unsolved
