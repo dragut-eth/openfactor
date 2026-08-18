@@ -5,7 +5,26 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-16, on TestFlight as `dev.openfactor.app`, 1.0 (4). On `main`.
+**Last updated:** 2026-08-17, on TestFlight as `dev.openfactor.app`, 1.0 (4). The day's
+work and the PR 15b specification are committed on `pr-15b-app-lock`, not pushed.
+
+**The next action belongs to Xavier: read `docs/APP_LOCK.md`.** The lock's root swap
+destroys every screen beneath it, and the vault made that destructive in practice, four
+field losses in one day with one cause. A window-based fix was attempted without a design,
+shipped three defects in an afternoon, regressed the app switcher snapshot, the exact
+property the lock exists for, and was reverted. The specification exists so the second
+attempt is a reviewed design with the three defects as required regression tests and one
+manual checklist pass at the end, instead of live iteration on a phone. The current build
+is safe: the shipped lock mechanism, byte-identical to PR 15, plus per-screen survival for
+the vault gate, the arrival, and manual entry.
+
+**Also in the day, committed on the same branch:** the Photos and App Group claims narrowed
+to what is defensible, at Xavier's direction. The `otpauth` and `otpauth-migration` schemes
+declared, routed to the add screen, bounded at eight kilobytes, everything else refused.
+The complication's octagon diagnosed as a missing icon, not the drawn mark; icon added,
+verification waiting on the next TestFlight build by Xavier's decision. Two rounds went to
+the mark before the missing icon was seen, and the finding was in output already printed:
+the target had no `ASSETCATALOG_COMPILER_APPICON_NAME` and no asset catalog.
 
 **The storage is being redesigned, and the reason is measured rather than argued.** Gate E1
 proved on hardware that a second app signed by the same team reads another app's Keychain

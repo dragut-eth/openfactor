@@ -356,6 +356,22 @@ that was always on.
 - Codes blurred until authenticated
 - Configurable grace period
 
+### PR 15b: App Lock resumes where you left
+
+**Reopened after the vault made the lock destructive in practice.** The shipped lock swaps
+the root view, which destroys everything beneath it, and the vault added screens people
+type secrets and passphrases into. Four losses were found in the field in one day, all the
+same cause. A first attempt at the fix was built without a design, shipped three defects,
+regressed the app switcher snapshot, and was reverted the same day.
+
+The design is `docs/APP_LOCK.md`, written after that failure and normative: a lock window
+above an untouched view tree for locks on return, the root swap kept for cold launches
+where nothing exists to preserve, a pure tested decision core with the first attempt's
+three defects as required regression tests, and one rule for arrivals, they close what is
+open and present clean. Status: **specified, awaiting review.** Implementation only after
+the review, tests before interface work, and one manual checklist pass at the end instead
+of live iteration on a phone.
+
 ### PR 16: Encrypted export and import
 
 *Done and merged. The format document is `docs/BACKUP_FORMAT.md`, the audits are
