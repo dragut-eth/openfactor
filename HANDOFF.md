@@ -25,12 +25,34 @@ It needs no hostile input, since a service issuing a short secret is enough, and
 at the worst possible moment: on a new device that no longer has the originals. A hostile QR code
 triggers it deliberately, planting an account that silently drops out of every backup.
 
+**Scope 3 is complete, and ChatGPT found the only crash in this project.** A crafted
+`otpauth-migration://` payload carrying `batch_index = UInt64.max` is clamped to `Int.max` by
+`GoogleAuthenticatorImport`, and `Batch.position` then evaluates `index + 1` and traps.
+Reproduced rather than reasoned about: the payload was assembled, wrapped in the real URL, run
+through the real parser, and the test process died with signal 5 at exactly that line.
+
+**Any app on the device can trigger it with one URL**, since `otpauth-migration://` is a declared
+scheme. It is a denial of service rather than memory corruption, because a Swift overflow trap is
+a controlled abort, but it needs no user action beyond opening the link. The mechanism is a clamp
+that hides an inconsistency instead of refusing it, and both engines that had examined
+`ProtobufReader`'s bounds in detail declared them sound, correctly: the defect is not in the
+parser but in the value the parser was allowed to hand onward.
+
 **Three smaller ones, all confirmed.** The import front door caps files at 8 MiB before the
 archive sniff while a conforming archive can reach about 12.2 MB, so the routing layer narrows a
 bound the format froze; `BackupArchive`'s own comments describe that exact mistake being caught
 inside the reader, and it now sits in front of it. A UTF-8 BOM defeats the JSON sniff, so a mangled
 archive never reaches the passphrase prompt, even though the layer below strips that BOM
 deliberately. And `sortIndex` is read from every format and discarded by the store.
+
+**One finding in scope 3 was reported by all three engines, and the crash by exactly one.** Four
+of eleven items were single-engine. Also single-engine: that `BackupArchive.write` never enforces
+its own plaintext limit, so the app can export an archive its own importer refuses; that
+duplicates within one file bypass detection entirely, since `classify` compares only against what
+is stored; that the in-app PhotosPicker path has no size check at all while the share extension
+caps the same input at 8 MiB; and that after importing an **encrypted** archive the app tells its
+owner the file "contains your secret keys in the clear" and advises deleting it, which is false
+and destroys a recovery artifact the person has just verified they can open.
 
 **The pattern of this gate is becoming clear: the audited artifact holds and its neighbours do
 not.** The backup format is the most carefully specified thing in this project, with a frozen

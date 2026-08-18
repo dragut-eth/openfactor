@@ -16,8 +16,8 @@ rewritten as repository-relative. Nothing else is trimmed, softened, or reordere
 | Engine | Status |
 | --- | --- |
 | Fable 5 | Returned, below. Triaged |
-| ChatGPT 5.6 Sol | Not yet run |
-| Grok 4.6 | Not yet run |
+| ChatGPT 5.6 Sol | Returned, below. Triaged |
+| Grok 4.6 | Returned, below. Triaged |
 
 ---
 
@@ -174,6 +174,220 @@ external check of those vectors, and it verified `UnicodeScalar(Int)`'s failabil
 rather than assuming it, which is the difference between believing a parser is trap-free and
 knowing it.
 
+---
+
+## Grok 4.6
+
+*Read-only pass over commit `74fe841`. Reproduced as returned, abridged in the sections
+enumerating what held.*
+
+> I would rather file two defects that I can point at than a survey. Both are in the import entry
+> point, which is the only place the parsers actually meet the user.
+>
+> **Finding 1 — High. The 8 MiB cap is applied after the file is already in memory, and it is
+> tighter than the format's frozen ceiling.**
+>
+> **1a. The bound runs after the allocation it claims to prevent.** `read(_ url:)` does
+> `Data(contentsOf: url)` first. That copies the whole file. The `8 * 1024 * 1024` check is the
+> next line of a different method. Call order, from either the document picker or "Open in
+> OpenFactor": `InboxOpener.arrival(from:)` returns `.file(url)` with no size check;
+> `ImportView.init` calls `model.read(url)`; `Data(contentsOf:)` allocates whatever the URL names;
+> only then does `read(_ data:)` look at `data.count`.
+>
+> A 400 MB attachment opened into this app is a 400 MB allocation. The comment on `read(_ data:)`,
+> "Bounded before anything parses it", is true about parsing and false about the thing that
+> actually hurts: the copy. On a phone that allocation is a jetsam, not a "too large" message.
+>
+> I did not run this to jetsam. I did read both call sites. There is no `fileSize` resource-value
+> check, no `FileHandle` cap, and no `.alwaysMapped`. `BackupArchive.read` does check `data.count`
+> first, but it never sees a file the UI refused to finish loading.
+>
+> **1b. The same number silently retires the format's frozen ceiling.** [As recorded in the Fable
+> pass.] Gate A3 found exactly that mistake inside `BackupArchive.read` and it was fixed;
+> `ceilingSizedArchivesArePassedOn` proves the reader no longer refuses a ceiling-sized ciphertext.
+> That test never goes through `ImportViewModel`. Even a 6 MiB payload already encodes to 8,388,608
+> characters of base64, and the wrapper pushes the file over the UI cap. A person holding a valid
+> version 1 archive produced by any writer that followed only the document gets "That file is too
+> large to be an authenticator export." The passphrase screen is never shown. The file is
+> indistinguishable, to the owner, from garbage. That is the same class A3 called blocking, moved
+> one layer up.
+>
+> Smallest fix: refuse on `URLResourceValues.fileSize` before `Data(contentsOf:)`; and do not apply
+> 8 MiB to a file that is an OpenFactor archive, either by sniffing `format` first or by letting
+> `BackupArchive.read` enforce the format's own three checks in order. Keep 8 MiB for Aegis and
+> labelled text if you want a policy bound there; those formats never claimed the frozen ceiling.
+> The existing ceiling-sized test should drive `ImportViewModel.read(_:)`, not only
+> `BackupArchive.read`.
+>
+> **Finding 2 — Medium. Aegis and labelled-text import will accept a secret shorter than RFC
+> 4226's 10-byte floor, and the import preview does not show a code, so the failure is silent
+> until a login.** `Base32.decode("GEZDGNBV")` succeeds. That account is offered as "Will be
+> added"; `ImportView.review` draws issuer and name only, unlike the single-account confirmation
+> screen, which shows a live code. A damaged export that lost the tail of a secret takes the same
+> path, and that is the truncated-secret case the backup reader was written to refuse.
+>
+> `OTPAuthURI.account(from:)` and manual setup have the same missing floor, but both show a live
+> code before save. **I am not promoting those to this finding.** The file preview is the path
+> where the user cannot see the failure.
+>
+> **On the entry points.** URL schemes are bounded before the expensive work, at 8,192 bytes, and
+> that is the path any other app on the device can drive. The share extension checks 8 MiB after
+> `loadDataRepresentation` returns, the same shape as 1a with a smaller blast radius. **The in-app
+> PhotosPicker path has no size check at all**, straight into `CIImage(data:)`. A different entry
+> point, unbounded. I did not make this a third finding because it is the same mistake as 1a on a
+> path that only feeds a QR detector, not the vault.
+>
+> **On what an importer can do to existing data.** Importers return an `ImportResult` and write
+> nothing; `confirm` calls only `store.add`, which mints a new UUID and does `SecItemAdd`, never
+> update, never delete, never reusing an identifier. A hostile file cannot overwrite a secret,
+> rename an account, or empty the vault. Import is not atomic, but that is a partial add, not a
+> partial destroy.
+>
+> **One user-facing sentence is false.** After any file import, including an encrypted
+> `.openfactor` archive, `ImportView.finishedAdvice` for `.file` says "That file contains your
+> secret keys in the clear." An archive does not. It does not change what is stored, but **it can
+> talk someone into deleting the only copy they just proved they can open.**
+>
+> **What I measured rather than assumed.** `JSONSerialization` throws at nesting depth 512 rather
+> than overflowing the stack, so a hostile 8 MiB JSON file is a parse failure once loaded. And I
+> checked the Aegis HOTP counter path before declining to file it: Foundation keeps large integers
+> as `SInt64`, and `JSONDecoder` returned 9007199254740993 and even `UInt64.max` exactly, so there
+> is no silent counter corruption to report.
+
+### Triage of the Grok 4.6 pass
+
+**Finding 1a confirmed, and it is the more serious half of the finding.** `read(_ url:)` at line 94
+does `Data(contentsOf: url)` and calls `read(data)` at line 99; the cap is the first statement of
+that second method. The comment above the cap says the file is "bounded before anything parses
+it", which is true and beside the point: the allocation is the cost, and it is already paid. This
+was missed by the pass that found 1b, which read the bound but not the order of the two methods.
+
+**Finding 1b confirmed**, matching the other pass independently.
+
+**Finding 2 confirmed**, overlapping the other pass's F1 by root cause but scoped differently and
+arguably better. Where the other pass followed the short secret into the backup and out again,
+this one stops at the preview and observes that the file-import screen shows issuer and name
+without a code, so nothing on screen can reveal that the account will never work. **Both are
+right, and the two together describe the whole defect**: it enters silently, and it leaves
+silently.
+
+**The engines disagree on scope, and the disagreement is a judgment rather than a contradiction.**
+The other pass included `otpauth://` in the finding; this one deliberately excludes it, because
+that path shows a live code before saving. That reasoning is sound. It does not change the fix,
+since a shared floor is one helper either way, but it is worth recording that one engine drew the
+line at "can the user see it fail" and the other at "does the format forbid it".
+
+**The unbounded PhotosPicker path is confirmed and is worth more than the pass gave it.**
+`AddAccountViewModel.handleImage` goes straight to `QRDecoder.payloads(in:)` and `CIImage(data:)`
+with no size check, while `OpenFactorShare/ShareViewController.swift:66` caps the same kind of
+input at 8 MiB. Two paths to one decoder, one bounded and one not, and the unbounded one is the
+in-app path.
+
+**The false advice string is confirmed and is the item this triage rates highest of the three
+smaller ones.** After importing an encrypted archive, the app tells its owner the file contains
+their secret keys in the clear and advises deleting it. That is false for the one file format this
+project designed to be safe to keep, and acting on the advice destroys a recovery artifact whose
+correctness the person has just personally verified by opening it. The pass declined to give it a
+severity; on the evidence it deserves one.
+
+**Nothing was rejected**, and two of the pass's non-findings are worth keeping for the discipline
+they show: it measured `JSONSerialization`'s nesting behaviour rather than assuming a stack
+overflow, and it checked `JSONDecoder`'s large-integer handling before declining to report a
+counter bug it could not produce.
+
+---
+
+## ChatGPT 5.6 Sol
+
+*Read-only pass over commit `74fe841`. Reproduced as returned.*
+
+> **1. Medium — valid large backups cannot be restored, and exports can create them.**
+> `ImportViewModel.read(_:)` rejects every file over 8 MiB before recognizing its format, while
+> `BACKUP_FORMAT.md` permits up to 8 MiB of decoded ciphertext, about 11,184,812 Base64
+> characters, and `BackupArchive` allows containers around 12 MiB. **`BackupArchive.write` also
+> does not reject plaintext over its own 8 MiB limit, so the app can export a backup that its
+> importer refuses.** The same whole-file guard can reject otherwise-valid archives containing
+> large ignored fields. Use a format-specific bound and enforce the plaintext limit before sealing.
+>
+> **2. Medium — file size is checked only after the entire file is loaded.**
+> `ImportViewModel.read(_ url:)` calls `Data(contentsOf:)` before the 8 MiB check. A hostile file
+> provider or user-selected multi-gigabyte file can consume memory and I/O before the intended
+> bound runs. Read through a bounded stream, or preflight and then enforce a bounded read to handle
+> races.
+>
+> **3. Medium — a crafted Google migration payload crashes the app through integer overflow.**
+> Payload bytes `0a 00 20 ff ff ff ff ff ff ff ff ff 01`, URL-safe Base64 `CgAg____________AQ`,
+> contain an empty account record plus `batch_index = UInt64.max`.
+> `GoogleAuthenticatorImport.read` clamps this to `Int.max`; `Batch.position` then evaluates
+> `index + 1`, trapping. The normal URL entry point accepts this payload, and `ImportView` accesses
+> `batch.position`. Reject out-of-range indices, and inconsistent `index >= size`, before
+> constructing `Batch`, or use checked arithmetic.
+>
+> **4. Low — duplicate records within one hostile import bypass duplicate detection.**
+> `classify` compares each imported account only with records already stored, not with earlier
+> candidates from the same file. A file containing the same account twice marks both as `.new`;
+> `confirm` then calls `store.add` twice, creating two UUID-backed cards generating identical
+> codes. Deduplicate candidates using secret plus generator parameters, or recheck that fingerprint
+> while confirming.
+>
+> **5. Low — format sniffing rejects valid JSON and can route text to the wrong parser.**
+> `looksLikeJSON` examines only the first 512 bytes. A valid JSON, Aegis, or archive file with more
+> than 512 leading whitespace bytes is sent to the labelled-text parser and rejected, despite the
+> format document saying whitespace is insignificant. Conversely, RTF preceded by whitespace is
+> classified as JSON and fails as "not Aegis" without trying the RTF reader. Scan leading
+> whitespace and BOM across the bounded input, and preserve a fallback between JSON and text
+> parsing.
+>
+> **What held up.** The backup cryptographic sequence is sound: required fields and KDF bounds are
+> checked before PBKDF2; AES-GCM authenticates the format string; plaintext is parsed only after
+> authentication; and the passphrase hint is advisory. Protobuf length-delimited fields are checked
+> before slicing or copying, and malformed varints are bounded. Import parsing performs no writes
+> until explicit confirmation, and existing records are neither overwritten nor deleted.
+
+### Triage of the ChatGPT pass
+
+**Finding 3 is the standout of this entire scope, and it was reproduced rather than reasoned
+about.** The exact payload was assembled, wrapped in an `otpauth-migration://` URL, and run
+through the real parser:
+
+```
+PROBE uri: otpauth-migration://offline?data=CgAg%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FAQ%3D%3D
+PROBE parsed. size: 1 id: 0
+PROBE about to evaluate position = index + 1
+```
+
+The process then died with signal 5. `position` never printed.
+
+**This is a crash any app on the device can trigger with a single URL.** `otpauth-migration://`
+is a declared scheme, so no user action beyond opening the link is required. It is a denial of
+service rather than memory corruption, because a Swift overflow trap is a controlled abort, but it
+is trivially reachable and it is the first crash found anywhere in this project.
+
+The mechanism is a clamp that hides an inconsistency instead of refusing it.
+`Int(clamping: value)` turns `UInt64.max` into `Int.max`, which is a valid `Int` and a nonsensical
+batch index, and `position` then adds one to it. Neither engine that reviewed this file before
+found it, and both had examined `ProtobufReader`'s bounds carefully; the defect is not in the
+parser but in the value the parser was allowed to hand onward.
+
+**Findings 1 and 2 confirmed**, matching the other two passes on the bound and its ordering.
+**Finding 1 adds something neither other pass had:** `BackupArchive.write` does not enforce its own
+8 MiB plaintext limit before sealing, so the app can produce an archive that exceeds the format and
+that its own importer will refuse. That is the same defect as scope 3's first finding, in the
+other direction: the writer emitting something the reader must reject.
+
+**Finding 4 confirmed.** `classify` reads `store.records().readable` and compares each candidate
+against `existing` only. Two identical accounts in one file are both `.new`, and `confirm` adds
+both. A hostile file can therefore plant a pile of identical cards, and an honest but duplicated
+export produces silent duplicates.
+
+**Finding 5 confirmed, and it completes the picture the other pass started.** `looksLikeJSON`
+inspects `data.prefix(512)`. The other engine found that a BOM defeats the sniff; this one found
+that so does 512 bytes of leading whitespace, and that RTF behind whitespace is misrouted to the
+Aegis reader with no fallback. One sniff, three ways to defeat it, found by two engines from
+different directions.
+
+**Nothing was rejected.**
+
 ### What this scope says so far
 
 The three earlier scopes found defects in the code that reads hostile bytes. **This one found the
@@ -187,5 +401,29 @@ cannot back up, and only says so when it is too late to matter.
 
 ### Not yet acted on
 
-**Nothing has been changed.** ChatGPT and Grok run this scope against the same commit. Fixes begin
-when round one is complete.
+## Scope 3 complete
+
+| Finding | Fable 5 | Grok 4.6 | ChatGPT |
+| --- | --- | --- | --- |
+| Enrollment accepts what the format forbids | Found | Found, file paths only | Missed |
+| Migration payload crashes the app | Missed | Missed | **Found** |
+| 8 MiB cap narrows the frozen ceiling | Found | Found | Found |
+| The cap runs after the file is loaded | Missed | Found | Found |
+| The writer can emit an over-size archive | Missed | Missed | Found |
+| Duplicates within one file bypass detection | Missed | Missed | Found |
+| The JSON sniff is defeatable | Found, by BOM | Missed | Found, by whitespace and RTF |
+| Refusal reason lies for a short secret | Found | Missed | Missed |
+| PhotosPicker path is unbounded | Missed | Found | Missed |
+| "Secret keys in the clear" is false for an archive | Missed | Found | Missed |
+| `sortIndex` is read and discarded | Found | Found | Missed |
+
+**One finding was reported by all three.** The only crash in the project was found by exactly one
+engine, and so were four of the eleven items. Two engines examined `ProtobufReader`'s bounds in
+detail and declared them sound, correctly, while the defect sat one layer above in a value the
+parser was permitted to hand onward.
+
+### Not yet acted on
+
+**Nothing has been changed.** Fixes begin when round one is complete, and the crash joins the
+ordered list at the top: it is the only finding in this gate that an unrelated app can trigger
+without the owner doing anything.
