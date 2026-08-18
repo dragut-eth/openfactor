@@ -255,6 +255,52 @@ happens.
 - **Deliberate dismissal.** Cancel, swipe-down, and completion discard, exactly as today.
   Only the lock preserves, because only the lock is not the person's decision.
 
+## What the cover cannot reach, measured
+
+**iOS keeps more than one picture of the app, and the cover only reaches one of them.**
+Accepted as a known limitation on 2026-08-18, after it was measured rather than argued.
+
+The capture taken at backgrounding, which becomes the app switcher card, is covered and
+reliably blank; checklist item 4 is what proves it and it passed every repeat. A second
+cache exists, the one iOS uses for the zoom that plays when the app is opened from the home
+screen, and it is written at a moment the cover is not up. A screen recording read frame by
+frame showed the previous screen, an account's issuer and name legible, from 0.167s to
+0.333s of a 2.2 second return, before the lock appeared.
+
+**The evidence that it is not our window ordering** is the frame where the lock screen is
+already drawn while that content is still fading out underneath it. Unhiding a window is
+not animated, so a lock over our own live view would appear in one frame; a three frame
+crossfade is the system dissolving its own snapshot into a live app that was already
+locked. Our side was ready before the system finished its transition.
+
+**What was tried.** `ignoreSnapshotOnNextApplicationLaunch()`, which is the only lever
+Apple documents over that cache, called on backgrounding while the lock is enabled. It
+changed nothing, which matches the general report of it, and it was removed rather than
+left in place looking like protection.
+
+**What the record says.** The behavior is documented from iOS 7 onward and still current:
+snapshots live in `Library/SplashBoard/Snapshots/` and are known to serve stale content.
+Apple's forum thread asking exactly how to cover sensitive interface on inactive versus
+backgrounded has no replies, and a closely related thread about an intermittent privacy
+blur drew a DTS engineer whose answer was to add logging and bisect. The only community
+lever is deleting that directory from inside the container, which its own author frames as
+a development time flag for a different bug, is reported as partial, and cannot stop iOS
+from capturing a fresh one immediately.
+
+**The exposure, stated plainly rather than minimized.** Roughly a sixth of a second of the
+last screen, visible only to somebody already holding the phone in the moment before Face
+ID challenges them, and nothing durable: the artifact anyone can browse to at leisure, the
+switcher card, stays blank. Accepted on that basis.
+
+**One idea remains untried**, for anyone tempted to reopen this: SwiftUI's `scenePhase` can
+lag UIKit's own `willResignActive` notification, so raising the cover from the UIKit
+notification might beat whatever moment that cache captures. It is speculative, two
+speculative fixes were already spent here, and it touches code that has passed its
+checklist.
+
+**The recording stays out of this repository.** It shows real accounts. It is evidence, not
+an artifact to publish, and no screen capture of a real vault belongs in a public repo.
+
 ## The manual checklist
 
 One pass on hardware when the implementation is complete, instead of live iteration. Every

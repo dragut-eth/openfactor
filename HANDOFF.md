@@ -5,22 +5,37 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-17, on TestFlight as `dev.openfactor.app`, 1.0 (4). The day's
-work and the PR 15b specification are committed on `pr-15b-app-lock`, not pushed.
+**Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
+complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
-**PR 15b is implemented, and the next action is the checklist in `docs/APP_LOCK.md`.**
-Xavier reviewed the specification in the morning and said go. The build order was the
-spec's own: `AppLockPresentation`, a pure value type wrapping the untouched `AppLockEngine`,
-went in first with the required sequences as thirteen passing tests, the first attempt's
-black flash and snapshot leak among them by name. Then the glue: `PrivacyShield` now owns
-both windows and applies the core's three outputs in the one safe order, shows before
-hides, with the lock window built once at `.alert + 2` and the auto prompt driven on the
-transition to visible. Cold launches still lock as the root, exactly as PR 15 shipped.
-The arrival rule lives in `AccountListView`: an arrival closes every open sheet and
-withholds its own until the closing sheet's `onDisappear`, because presenting during
-another sheet's dismissal is a request SwiftUI silently drops, which is what broke
-share-mid-flow in the first attempt. Ten scenarios in the specification are the one
-manual pass that remains; nothing merges before they run on hardware.
+**PR 15b passed its checklist, ten of ten on hardware.** Xavier reviewed the specification
+and said go, and the build order was the spec's own: `AppLockPresentation`, a pure value
+type wrapping the untouched `AppLockEngine`, went in first with the required sequences as
+tests, the first attempt's black flash and snapshot leak among them by name. Then the
+glue: `PrivacyShield` owns both windows and applies the core's three outputs in the one
+safe order, shows before hides, with the lock window built once at `.alert + 2` and the
+auto prompt driven on the transition to visible. Cold launches still lock as the root,
+exactly as PR 15 shipped. The arrival rule lives in `AccountListView`: an arrival closes
+every open sheet and withholds its own until the closing sheet's `onDisappear`, because
+presenting during another sheet's dismissal is a request SwiftUI silently drops, which is
+what broke share-mid-flow in the first attempt. Typed text now survives a lock because
+nothing is torn down, which is what the whole PR was for.
+
+**One finding survived the checklist and is accepted rather than fixed**, written up in
+full in `docs/APP_LOCK.md` under what the cover cannot reach. iOS keeps a second snapshot
+cache, the one behind the zoom from the home screen, written at a moment the cover is not
+up; a screen recording read frame by frame showed the previous screen for about a sixth of
+a second before the lock appeared. It is not our window ordering, and the frame that proves
+it is the lock already drawn while that content is still crossfading out underneath, which
+only happens when the system is dissolving its own snapshot. The documented lever,
+`ignoreSnapshotOnNextApplicationLaunch`, did nothing and was removed rather than left
+looking like protection. The behavior is on record from iOS 7 onward with no Apple answer.
+The switcher card, the artifact anyone can browse to, stays blank.
+
+**Two speculative fixes were spent on that flash before anyone looked at it**, and both
+were reverted. The lesson is the project's oldest one and it repeated exactly: a screen
+recording pulled apart frame by frame answered in one pass what two builds of reasoning
+did not. Look, then reason.
 
 **The adversarial review paid for itself before the build reached a phone.** A second
 model, asked only whether any event sequence leaves the interface photographable while

@@ -368,11 +368,12 @@ The design is `docs/APP_LOCK.md`, written after that failure and normative: a lo
 above an untouched view tree for locks on return, the root swap kept for cold launches
 where nothing exists to preserve, a pure tested decision core with the first attempt's
 three defects as required regression tests, and one rule for arrivals, they close what is
-open and present clean. Status: **implemented on `pr-15b-app-lock`,
-awaiting the checklist pass.** Xavier reviewed the specification, the decision core went in
-first with the required sequences as thirteen passing tests, the glue followed, and the ten
-scenario checklist in the specification is now the one manual pass that stands between this
-and merging.
+open and present clean. Status: **complete on `pr-15b-app-lock`, ten of ten
+on hardware.** Xavier reviewed the specification, the decision core went in first with the
+required sequences as tests, the glue followed, and the checklist passed. One finding is
+accepted rather than fixed and documented in full: a second iOS snapshot cache, the one
+behind the home screen zoom, briefly shows the previous screen and is not reachable from
+the app. The switcher card stays blank.
 
 ### PR 16: Encrypted export and import
 
