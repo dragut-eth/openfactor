@@ -29,6 +29,35 @@
 	  is the reason no scheme of OpenFactor's own exists here: an earlier `openfactor` scheme
 	  was removed once nothing could produce it.
 	-->
+	<!--
+	  **One window, deliberately, and App Lock depends on it.**
+
+	  Xcode generates this manifest as `true` for a SwiftUI app, which is what shipped: the app
+	  declared multiple scenes on iPhone and iPad while `PrivacyShield` kept a single lock window
+	  and a single cover window, both attached to `connectedScenes.first`. On an iPad with two
+	  OpenFactor windows open, the second had no cover in the app switcher and no lock over it,
+	  which is exactly what `SECURITY.md` and `docs/APP_LOCK.md` promise cannot happen. Found in
+	  gate A4 by one engine of three; a second asked the same question and got the answer wrong
+	  from the project file rather than the built one.
+
+	  Two ways out. Make the lock and the cover per scene, keyed by scene identity, with
+	  lifecycle events routed per scene and teardown on disconnect. Or have one window. The
+	  second was chosen: an authenticator is opened to read a code and left, two windows of it
+	  serve nobody, and the alternative is permanently more surface in the layer that has
+	  produced the most defects in this project.
+
+	  **This costs nothing else on iPad.** Split View and Slide Over beside a *different* app do
+	  not require multiple scenes and still work; only a second window of OpenFactor is gone.
+
+	  `PrivacyShield` says out loud that it assumes one scene, and CI fails if this key ever
+	  becomes true again, because the assumption is invisible at the point where it would break.
+	-->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

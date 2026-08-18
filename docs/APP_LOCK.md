@@ -26,6 +26,9 @@ Stated by Xavier as the ideal, and adopted as requirements:
   present above those.
 - **R2, blank snapshot.** The app switcher photograph never contains a code, an account
   name, or any interface. This already holds today and must survive unchanged.
+  **R1 and R2 both assume one window scene.** The lock and the cover are single windows, so a
+  second scene would have neither; multiple scenes are declared off in `OpenFactor-Info.plist`
+  and CI enforces it. Supporting multiple windows means making both per scene first.
 - **R3, resume exactly.** Leave the app at any point, come back past the grace period,
   unlock, and continue mid-sentence: same screen, same sheets, same navigation, same
   half-typed text. Like a native Apple app.
@@ -130,13 +133,20 @@ coverVisible      = !isLocked && !settling && lastPhase != .active
 | `willResignActive` | `settling = false` |
 | `didEnterBackground` | records the earliest moment, `hasPrompted = false`, `settling = false` |
 | `willEnterForeground` | phase bookkeeping only |
-| `didBecomeActive` | locks if enabled and elapsed is negative or at least the grace period, and then `coldLock = false`; always `settling = false`; forgets `backgroundedAt` |
+| `didBecomeActive` | locks if enabled and elapsed is negative or at least the grace period; **`coldLock` is untouched, in both directions**; always `settling = false`; forgets `backgroundedAt` |
 | `promptRaised` | `hasPrompted = true` |
 | `unlockSucceeded` | ignored if already unlocked; `isLocked = false`, `coldLock = false`, `settling = (lastPhase == .inactive)` |
 | `unlockFailed` | nothing; locked is already correct |
 
 Becoming active only ever adds a lock, never removes one. A negative elapsed time is
 indistinguishable from clock tampering and locks, as the engine already does.
+
+**A correction to this table, found in gate A4.** It said `didBecomeActive` sets
+`coldLock = false`. The code deliberately does not, the reason is written above
+`didBecomeActive`, and `coldLockStaysColdWithoutAnUnlock` pins the behaviour. Since this page
+declares that where the code and the page disagree the page is correct and the code is a defect,
+anybody obeying it would have "fixed" working code, broken a tested guarantee, and reinstated the
+orientation latch this page exists to prevent. The rule stands; this row was wrong.
 
 ### Why `settling` exists, and why two events clear it
 

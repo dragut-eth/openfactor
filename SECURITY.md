@@ -121,6 +121,13 @@ optional.
 it leaves the foreground and shows that photograph in the switcher. OpenFactor covers itself as
 soon as it stops being active, so that card is blank. This protection does not depend on App Lock.
 
+**It holds because the app has exactly one window.** The lock and the cover are single windows
+attached to the app's scene, and gate A4 found that the app was shipping with multiple scenes
+enabled, so a second iPad window would have had neither. Multiple scenes are now declared off, the
+assumption is stated where it would break, and CI fails if it is ever re-enabled without the lock
+and cover being made per scene first. Split View and Slide Over beside another app are unaffected;
+only a second window of OpenFactor is gone.
+
 **It does not cover every picture iOS keeps of the app, and an earlier version of this sentence
 claimed it did.** iOS holds a second snapshot cache, used for the zoom that plays when the app is
 opened from the home screen, written at a moment the cover is not up. A screen recording read

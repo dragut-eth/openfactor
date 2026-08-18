@@ -116,6 +116,19 @@ enum PrivacyShield {
         cover?.isHidden = false
     }
 
+    /// **This assumes the app has exactly one window scene, and that assumption is enforced
+    /// elsewhere rather than hoped for.**
+    ///
+    /// Taking `.first` of a set is meaningless if there can be two. Gate A4 found the app
+    /// shipping with `UIApplicationSupportsMultipleScenes = true` while this enum kept one lock
+    /// and one cover: on an iPad with two OpenFactor windows, the second had no cover in the app
+    /// switcher and no lock over it, contradicting `SECURITY.md` and `docs/APP_LOCK.md` in their
+    /// own words.
+    ///
+    /// Multiple scenes are now declared `false` in `OpenFactor-Info.plist`, which says why, and
+    /// CI fails if that ever flips back. **If you are re-enabling multiple windows, this is the
+    /// code that breaks**, and the fix is a lock and a cover per scene keyed by scene identity,
+    /// with lifecycle events routed per scene and teardown on disconnect.
     private static var foregroundScene: UIWindowScene? {
         UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }

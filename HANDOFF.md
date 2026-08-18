@@ -8,6 +8,30 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**Multiple window scenes are switched off, which closes the gate's only confidentiality
+finding.** The app was shipping with `UIApplicationSupportsMultipleScenes = true` while
+`PrivacyShield` kept one lock window and one cover window on `connectedScenes.first`, so a second
+iPad window had neither. Xavier chose switching them off over making both per scene: an
+authenticator is opened to read a code and left, and the alternative is permanently more surface
+in the layer that has produced the most defects here. Split View and Slide Over beside another app
+are unaffected; only a second window of OpenFactor is gone.
+
+Done in `OpenFactor-Info.plist` with the reasoning beside it, with Xcode's manifest generation
+turned off so the file is authoritative, and **verified in the built artifact rather than the
+project file**, which is exactly the mistake one engine made when it looked at this and concluded
+scenes were not declared. `PrivacyShield.foregroundScene` now states the assumption where it would
+break, and CI fails if the key flips back or if generation is re-enabled. Proved both ways.
+
+**`docs/APP_LOCK.md`'s transition table was wrong and is corrected.** It said `didBecomeActive`
+sets `coldLock = false`; the code deliberately does not and a test pins it. Since the page declares
+itself normative over the code, anyone obeying it would have broken a tested guarantee and
+reinstated the orientation latch the page exists to prevent.
+
+**An open question for release, raised by this and bigger than it.** The app ships to iPad,
+`UIDeviceFamily` is `[1, 2]`, and nobody has ever run it on one. The multi-scene defect is one
+iPad problem three engines happened to be looking for. Either test on an iPad before release, or
+ship iPhone-only and add iPad once it has been exercised.
+
 **A4 fixes have started, on branch `a4-fixes`. The first pair is in: the wrapped key now
 syncs, and `save` can no longer twin.** They had to land together, and the tests demonstrate why
 rather than asserting it.

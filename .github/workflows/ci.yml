@@ -62,6 +62,34 @@ jobs:
           fi
           echo "No network code and no logging found."
 
+      # App Lock keeps one lock window and one cover window, attached to the first connected
+      # scene. That is correct for one scene and wrong for two: gate A4 found the app shipping
+      # with multiple scenes enabled, so a second iPad window had no cover in the app switcher
+      # and no lock over it, contradicting SECURITY.md and docs/APP_LOCK.md.
+      #
+      # The assumption lives in PrivacyShield and the guarantee lives in an Info.plist, which is
+      # exactly the distance at which somebody re-enables multiple windows for a good reason and
+      # never learns what it broke. Xcode also generates this key as true by default for a SwiftUI
+      # app, so the safe value is the one that needs defending.
+      - name: One window scene, which App Lock depends on
+        run: |
+          set -e
+          VALUE=$(plutil -extract UIApplicationSceneManifest.UIApplicationSupportsMultipleScenes \
+            raw OpenFactor-Info.plist 2>/dev/null || echo "missing")
+          echo "UIApplicationSupportsMultipleScenes: $VALUE"
+          if [ "$VALUE" != "false" ]; then
+            echo "App Lock and the snapshot cover are single-scene. See PrivacyShield's"
+            echo "foregroundScene and the comment in OpenFactor-Info.plist. To support multiple"
+            echo "windows, make the lock and cover per scene first, then change this."
+            exit 1
+          fi
+          if grep -q "INFOPLIST_KEY_UIApplicationSceneManifest_Generation\[sdk=iphoneos\*\]\" = YES" \
+            OpenFactor.xcodeproj/project.pbxproj; then
+            echo "Xcode is generating the scene manifest again, which would override the file."
+            exit 1
+          fi
+          echo "ok: one scene, and the file is authoritative"
+
       # This repository is public and its maintainer's circumstances are not part of it.
       # A statement about what the project can or cannot pay for is private information that
       # reaches everybody who ever clones this, and it is worth nothing to a reader: what a
