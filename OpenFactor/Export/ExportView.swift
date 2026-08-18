@@ -14,6 +14,7 @@ struct ExportView: View {
     @State private var hasCopied = false
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isScreenCaptured) private var isScreenCaptured
 
     init(store: any SecretStore) {
         _model = State(initialValue: ExportViewModel(store: store))
@@ -48,6 +49,9 @@ struct ExportView: View {
         }
         // Whichever way the screen goes away. The app keeps no history of exports.
         .onDisappear { model.discardFile() }
+        // Only the one stage that puts a passphrase on screen, and only when it is the
+        // generated one; somebody typing their own already has it wherever they keep it.
+        .warnsAboutScreenshots(showing: model.stage == .choosing && model.choice == .generated)
     }
 
     // MARK: - What the file is
@@ -197,7 +201,11 @@ struct ExportView: View {
 
     private var generatedPassphrase: some View {
         Section {
-            passphraseGrid
+            if isScreenCaptured {
+                CapturedPassphrasePlaceholder()
+            } else {
+                passphraseGrid
+            }
 
             // Same answer-the-tap treatment the account list uses. Copying produces no visible
             // change otherwise, so there is nothing to tell you it worked.

@@ -78,11 +78,40 @@ behavior through a restore and Quick Start has not been measured and is not clai
 
 ### Attacker with your unlocked device
 
-**Implemented in PR 15.** Two defenses exist, one always on and one optional.
+**Implemented in PR 15 and extended in PR 17.** Three defenses exist, two always on and one
+optional.
 
 **The app switcher never contains a code.** iOS photographs the app as it leaves the foreground
 and shows that photograph in the app switcher. OpenFactor covers itself as soon as it stops being
 active, so the captured surface is blank. This protection does not depend on App Lock.
+
+**Secrets are hidden while the screen is being captured.** iOS reports when the screen is being
+recorded, mirrored, or shared, and OpenFactor follows that: codes become bullets, and a vault or
+backup passphrase is withheld entirely and says why. Measured on hardware with a screen
+recording. This is a defense against **accidental broadcast**, which is the only kind it can be:
+somebody sharing their screen in a meeting who opens the app for a code has not decided to show
+it to anybody, and no document reaches them in that moment. It is not a defense against somebody
+who wants to capture the screen.
+
+The masking is deliberately partial. Cards, issuer names and rings stay visible so that
+legitimately mirroring the app still shows something coherent rather than reading as a fault.
+That means the list of services an owner holds accounts with is still visible while captured, and
+unlike a code that does not expire. Accepted knowingly rather than overlooked.
+
+**Screenshots cannot be prevented on iOS**, by any app, and OpenFactor does not pretend
+otherwise. There is no public API for it. The one known technique, hosting content inside a
+secure text field's internal layer, was considered and rejected: it depends on the undocumented
+internals of a system control, and when Apple changes those it fails silently, keeps claiming
+protection, and cannot be verified by any test this project can run. A security property that can
+quietly stop working is worse than one honestly absent.
+
+What is done instead is the only thing that helps: **on the two screens that display a
+passphrase, a screenshot raises a warning naming the consequence.** The image is in Photos, it
+may already be syncing to other devices and reachable from iCloud.com, and deleting it leaves it
+in Recently Deleted for thirty days. That warning exists because those screens tell somebody the
+passphrase is shown once and never again, which is the most reliable way ever devised to make a
+person reach for a screenshot. It fires nowhere else, deliberately: for a code it would say
+nothing actionable, and an alert that cries wolf is one people learn to dismiss.
 
 **App Lock, off by default,** requires Face ID, Touch ID, or the device passcode before anything
 is shown, on launch and on return from the background after a configurable grace period. A clock

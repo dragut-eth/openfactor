@@ -14,6 +14,8 @@ struct VaultSetupView: View {
     @State private var copies = 0
     @State private var hasCopied = false
 
+    @Environment(\.isScreenCaptured) private var isScreenCaptured
+
     var body: some View {
         NavigationStack {
             Group {
@@ -163,10 +165,19 @@ struct VaultSetupView: View {
 
     // MARK: - The passphrase
 
+    /// The screenshot warning lives on this function rather than on the whole view, because
+    /// only this stage shows a passphrase. The setup screens before it show nothing worth
+    /// warning about, and an alert there would be noise that teaches people to dismiss it.
     private func passphrase(_ generated: String) -> some View {
         Form {
             Section {
-                grid(generated)
+                // The characters go while the screen is shared; everything else stays. See
+                // `ScreenCaptureMonitor` for why this screen in particular must not go blank.
+                if isScreenCaptured {
+                    CapturedPassphrasePlaceholder()
+                } else {
+                    grid(generated)
+                }
 
                 // A tap that changes nothing on screen needs an answer. The account list
                 // already solved this, with a haptic and a "Copied" confirmation, and these
@@ -250,6 +261,7 @@ struct VaultSetupView: View {
                 Text("Nothing has been created yet. Your vault is set up when you continue.")
             }
         }
+        .warnsAboutScreenshots()
     }
 
     /// The same shape the export screen uses, for the same reason: six groups of four, read

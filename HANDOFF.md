@@ -8,6 +8,30 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**Secrets are now hidden while the screen is captured, and a screenshot of a passphrase warns
+you.** Three things on one mechanism, all measured on hardware: codes become bullets during a
+screen recording, a vault or backup passphrase is withheld with an explanation rather than
+blanked, and a screenshot on either passphrase screen raises an alert naming Photos, iCloud
+Photos and the thirty days in Recently Deleted. The negative control was checked too, since it is
+the half that decides whether the alert is worth having: screenshotting the account list raises
+nothing.
+
+**The reasoning changed twice while deciding this, both times because looking beat arguing.**
+The first framing was that codes are shown to be read and die in seconds, so capture hardly
+matters. That ignored the account list, which names the services somebody holds accounts with and
+never expires. And screenshot detection was dismissed as buying nothing actionable, which is true
+for a code and exactly wrong for a passphrase: the app itself tells people it is shown once and
+never again, which is the most reliable way ever devised to make somebody screenshot it, and the
+consequence, a photo syncing through iCloud and surviving thirty days in Recently Deleted, is the
+same argument that justified building the share extension.
+
+**One technique was considered and rejected, which is worth not re-litigating.** Hosting content
+inside a secure text field's internal layer does block screenshots and recordings outright, and
+it is better UX than blanking because the owner still sees the passphrase. It depends on the
+undocumented internals of a system control, so when Apple changes them it fails silently, keeps
+claiming protection, and cannot be verified by any test this project can run. Rejected on the
+silent failure, not on being a hack.
+
 **Codes now reach other devices through Universal Clipboard; passphrases still do not.** PR 17's
 pasteboard audit found the copy path already doing everything right, all three copies through one
 type, both narrowing options set, the app never reading the clipboard, and the watch unable to

@@ -90,6 +90,7 @@ struct AccountListView: View {
     @AppStorage(PreferenceKey.sortOrder) private var sortOrder = AccountSortOrder.manual.rawValue
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.isScreenCaptured) private var isScreenCaptured
 
     @State private var editing: AccountListViewModel.Row?
     @State private var recolouring: AccountListViewModel.Row?
@@ -340,7 +341,9 @@ struct AccountListView: View {
                 copy(row)
             }
         } label: {
-            AccountCard(model: row.card)
+            // Masked while the screen is shared. The card stays, so a legitimately mirrored
+            // app still reads as itself; only the digits go. See `ScreenCaptureMonitor`.
+            AccountCard(model: isScreenCaptured ? row.card.withoutCode : row.card)
         }
         .buttonStyle(.plain)
         // Follows the ring, which moves to the bottom of the card at accessibility sizes.

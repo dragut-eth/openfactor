@@ -684,10 +684,12 @@ so "no accounts yet" keeps its old meaning.
   Universal Clipboard while passphrases may not, with all three behaviours measured on hardware
   against a positive control. Screenshots cannot be prevented on iOS and are not detected here,
   deliberately: detection buys nothing actionable once the image exists. Snapshots were settled
-  in PR 15b, including the limitation `docs/APP_LOCK.md` records. **One decision deferred:**
-  `UIScreen.isCaptured` is not observed, so a code is visible during screen recording, AirPlay
-  or mirroring. Small to build, and left alone because codes are displayed to be read and expire
-  in seconds
+  in PR 15b, including the limitation `docs/APP_LOCK.md` records. That deferred decision is now closed, and the
+  reasoning changed while making it: the exposure is not only the code but the account list,
+  which does not expire. Capture blanking is built for codes and passphrases, screenshots on the
+  passphrase screens raise a warning naming Photos and Recently Deleted, and the secure-text-field
+  trick that would block screenshots outright was rejected for failing silently. All three
+  measured on hardware, including the negative control that the warning stays quiet on the list
 - Done: confirmation in writing that the binary makes no network calls, with the check
   automated in CI. The `binary` job builds Release unsigned, sweeps every Mach-O in the
   bundle, and fails on any networking framework or symbol; proved in both directions,
@@ -707,6 +709,14 @@ change the app before strangers depend on it.
   than no README
 - Findings published, including the ones that came to nothing
 - Tag the audited commit. This is the tag every later diff is measured against
+
+#### An open question this raised, not yet answered
+
+**People screenshot the vault passphrase because the app tells them it is shown once and never
+again.** The warning treats the symptom. Whether the constraint itself has to be that absolute is
+a question for `docs/VAULT.md` rather than for the interface: if a passphrase could be shown
+again under authentication while the vault is open, most of the pressure to photograph it would
+go away. Not investigated, and it should be read from the design rationale rather than guessed at.
 
 ### PR 18: Release preparation
 

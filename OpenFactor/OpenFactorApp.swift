@@ -55,6 +55,10 @@ struct OpenFactorApp: App {
     /// own window rather than in this view tree.
     @State private var lock = AppLockController()
 
+    /// Whether the screen is being recorded, mirrored, or shared. Owned here and injected, so
+    /// no view has to know how it is detected. See `ScreenCaptureMonitor`.
+    @State private var capture = ScreenCaptureMonitor()
+
     /// Answers a watch asking for the vault key. The only path by which that key leaves this
     /// device, and the only reason this app talks to the watch at all.
     @State private var watchKeys = WatchKeyProvider()
@@ -172,6 +176,12 @@ struct OpenFactorApp: App {
             .preferredColorScheme(
                 (AppearancePreference(rawValue: appearance) ?? .system).colorScheme
             )
+            .environment(\.isScreenCaptured, capture.isCaptured)
+            // Coming back is a moment the flag can have changed without a notification
+            // arriving, for instance a mirroring session started while the app was away.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { capture.refresh() }
+            }
         }
     }
 
