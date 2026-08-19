@@ -116,14 +116,17 @@ public struct Vault: Sendable {
     /// The passphrase is canonicalised on the way in, so the grouped form that was displayed and
     /// the bare form both derive the same key. It is never stored in either form.
     ///
-    /// **Refuses if anything is already there.** `save` replaces the record it finds, so without
-    /// this check a creation racing an arriving wrap silently overwrote the credential that
-    /// opened every account already stored. The window is this project's own measured half hour
-    /// of iCloud Keychain propagation, and the tap that triggers it is the ordinary one on a
-    /// second device set up the same day. Two reviews found it independently.
+    /// **Refuses if anything is already there, and the refusal is part of the write.** This
+    /// check exists, and it is not what makes creation safe: it runs before `wrap` spends 600,000
+    /// PBKDF2 iterations, so a record arriving during those milliseconds is not seen by it. What
+    /// prevents the overwrite is `addIfAbsent` below, which cannot replace anything. The
+    /// paragraph here used to describe this check as the mechanism, which is the state of affairs
+    /// round two of gate A4 found and rejected.
     ///
-    /// A store that cannot be read refuses too. The point of the check is not to find a record;
-    /// it is to decline to overwrite what it cannot see.
+    /// It is kept because refusing early is cheaper than deriving a key and refusing late, and
+    /// because a store that cannot be read at all should stop here rather than at the write: the
+    /// point is not to find a record, it is to decline to overwrite what it cannot see.
+    ///
     @discardableResult
     public func create(with passphrase: String) throws(VaultError) -> SymmetricKey {
         switch state() {

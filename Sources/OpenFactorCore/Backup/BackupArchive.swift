@@ -261,10 +261,16 @@ public enum BackupArchive {
             options: [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]
         )
 
-        // **The writer refuses what the reader must refuse.** Nothing checked this, so the app
-        // could produce an archive it would not read back, and the person holding it would find
-        // that out on the device they were restoring to. A review found it by reading the two
-        // halves against each other; the format states the ceiling as an obligation on both.
+        // **This bounds the container, and the reader bounds the plaintext.** Two different
+        // numbers, and the comment here used to claim they were the same one: "the writer refuses
+        // what the reader must refuse". They are not. `maximumFileBytes` is the whole JSON
+        // container; the reader's binding rule is `maximumPlaintextBytes`, and GCM ciphertext is
+        // the length of its plaintext, so a payload one byte over eight mebibytes still
+        // serialises to a container under this ceiling. It writes, and it does not read back.
+        //
+        // All three engines of round two rejected this as the fix for that finding, which asked
+        // for the plaintext to be checked before sealing. That is still open. This check is real
+        // and is simply a different, looser bound.
         guard archive.count <= maximumFileBytes else { throw BackupError.tooLarge }
         return archive
     }

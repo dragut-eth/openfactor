@@ -34,7 +34,11 @@ import Foundation
 /// Counted in Swift `Character`s, which are grapheme clusters, so a label is never cut
 /// through the middle of an emoji or a combining mark. That costs a little precision about
 /// the eventual byte size, which is the right trade: the point is to bound the thing, and
-/// sixty-four of even the most expensive graphemes is still trivially small.
+/// sixty-four of the most expensive graphemes somebody actually types is a couple of kilobytes.
+///
+/// **It is not a bound on storage, and this section used to imply it was.** A grapheme cluster can
+/// carry any number of combining marks, so one `Character` can be a hundred kilobytes. See
+/// `maximumBytes` below, which exists because counting characters does not bound bytes.
 public enum AccountLabel {
 
     /// The most characters an issuer or a name may carry into storage.

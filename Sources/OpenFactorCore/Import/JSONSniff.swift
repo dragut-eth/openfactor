@@ -24,9 +24,15 @@ public enum JSONSniff {
 
     /// The bytes with a leading byte order mark removed, or empty when this is not JSON.
     ///
-    /// The stripped bytes are returned rather than a yes or no, because `JSONSerialization`
-    /// refuses a leading mark too: recognising the file and then handing the untouched bytes to
-    /// the parser would trade one silent failure for another.
+    /// The stripped bytes are returned rather than a yes or no so that every reader is handed the
+    /// same thing this decided about, which is what `AegisImport` receives.
+    ///
+    /// **The reason first written here was measured and found false.** It said the stripping was
+    /// necessary because `JSONSerialization` refuses a leading mark. Two reviewers in round two of
+    /// gate A4 handed Foundation a mark-prefixed object and got the object back. The archive path
+    /// relies on that: `read(_ data:)` keeps the unstripped bytes and `BackupArchive.read` parses
+    /// them mark and all, which works precisely because the claim was wrong.
+
     public static func body(of data: Data) -> Data {
         var body = data
         if body.starts(with: [0xEF, 0xBB, 0xBF]) { body = body.dropFirst(3) }

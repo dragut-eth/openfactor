@@ -539,17 +539,25 @@ in the code, and it is why every finding now carries one.
 
 **The shared App Group container is not treated as a confidentiality boundary.** A sibling app
 explicitly authorized into that App Group could read the temporary inbox item. That is an
-accepted exposure: the image exists there only during an explicit share operation, uses complete
+accepted exposure: the image exists there from an explicit share until the app collects it or a
+sweep removes it, uses complete
 file protection, is never synced by OpenFactor, contains no OpenFactor key material, and is
 deleted immediately after the containing app consumes it, and excluded from device backups so a
-backup taken during those seconds does not carry it away.
+backup taken at any point in that window does not carry it away.
 
 **Leftovers are swept at launch, and until gate A4 that sentence was not true.** The only sweep sat
 inside the collection path, which does nothing until the scene is active, the app lock is open, the
 vault is open, and no other arrival is pending, so an image shared to a locked phone that was never
 unlocked again stayed in the container. All three reviewers found it. A launch sweep now runs under
-none of those conditions and removes anything older than five minutes, which is long enough that
-the ordinary share, where the person is carried straight into the app, is untouched.
+none of those conditions and removes anything older than `SharedInbox.staleAfter`, which is ten
+minutes and is the same constant that decides whether an item is still worth presenting. That is
+long enough that the ordinary share, where the person is carried straight into the app, is
+untouched.
+
+**The number in this paragraph was wrong for a round**, and so was its trigger: it said five
+minutes when the constant became ten, and said launch when the sweep runs on every foreground
+transition. This page has now been corrected once per round for three rounds on this one
+mechanism, which is a fact about how these edits are made rather than about the mechanism.
 
 Photos creates a different exposure. When iCloud Photos is enabled, the image can become part of
 the user's persistent synchronized photo library, accessible across their devices and through

@@ -82,7 +82,10 @@ final class VaultGateModel {
 
     /// Re-reads which state this device is in.
     ///
-    /// Deliberately does nothing while a passphrase is on screen. That stage exists only in
+    /// **Leaves a passphrase on screen unless a record or a key says otherwise.** This line used
+    /// to say it does nothing at all while a passphrase is displayed, which stopped being true
+    /// when the guard was inverted: `.locked` and `.open` move away, because both are evidence
+    /// that the displayed passphrase is not the one that opens this vault. That stage exists only in
     /// memory and the device is still genuinely `absent`, so refreshing would throw away a
     /// passphrase somebody may be halfway through writing down.
     func refresh() {

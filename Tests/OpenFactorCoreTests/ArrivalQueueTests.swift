@@ -36,8 +36,12 @@ struct ArrivalQueueTests {
         #expect(queue.current == nil)
     }
 
-    /// Two is the bound, and the refusal is reported rather than silent.
-    @Test("A third arrival is refused, and says so")
+    /// Two is the bound, and this type reports the refusal to its caller.
+    ///
+    /// **The caller does not currently use it**, which a review pointed out reads as a claim this
+    /// test does not support: the app discards the value, so a person opening a third link is
+    /// told nothing. What is pinned here is the queue's half of that, and nothing more.
+    @Test("A third arrival is refused, and the queue says so")
     func aThirdIsRefused() {
         var queue = ArrivalQueue<String>()
 

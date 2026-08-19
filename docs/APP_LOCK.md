@@ -42,6 +42,12 @@ Stated by Xavier as the ideal, and adopted as requirements:
   answered rather than replacing it. A review found the code silently discarding the second,
   which loses a link somebody deliberately opened.
 
+  **A third is refused, and the refusal is not shown to anybody.** The queue holds two because
+  whatever can send a third can send a thousand, and the app does not yet use the value that says
+  a refusal happened. So a third link opened while two are waiting is lost in silence, which is a
+  deliberate availability limit rather than an oversight, and is written here because a normative
+  page that describes an unbounded queue would be describing something else.
+
 **The honest limit, stated up front: R3 holds only while the process lives.** If iOS
 terminates the app while the person is away, every draft is gone, because the only cure is
 writing half-typed secrets and passphrases to disk and this design will not. iOS shows the

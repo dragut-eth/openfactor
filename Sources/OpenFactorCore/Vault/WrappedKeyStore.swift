@@ -169,10 +169,17 @@ public struct WrappedKeyStore: Sendable {
     /// succeeds and leaves a twin. So the add is followed by a count under `Any`, and a twin
     /// found there is undone by removing the record this call just wrote.
     ///
-    /// That is a narrowing rather than an elimination, and it is worth saying which. The window
-    /// it leaves is between the add and the count, measured in microseconds and needing an
-    /// arrival inside it. The window it closes is the one that spanned a 600,000-iteration key
-    /// derivation.
+    /// **That is a narrowing rather than an elimination, and the remainder is not small in time.**
+    /// This comment used to say the window left over was microseconds, between the add and the
+    /// count. Round three of gate A4 took that apart: a record carrying the other flag can arrive
+    /// from iCloud minutes or hours after the count has already returned one. Two records then
+    /// exist, `load()` matches under `Any` with `kSecMatchLimitOne`, and which one it reads is
+    /// unspecified, so a correct passphrase can be tested against the wrong wrap and reported as
+    /// wrong.
+    ///
+    /// What this does close is the window that spanned a 600,000-iteration key derivation, and a
+    /// twin that is already present when the add runs. Settling a record that arrives later needs
+    /// conflict detection after creation, which this does not have.
     public func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool {
         var attributes = query()
         attributes[kSecAttrSynchronizable as String] = synchronizable

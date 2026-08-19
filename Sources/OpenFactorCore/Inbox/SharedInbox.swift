@@ -28,11 +28,17 @@ import Foundation
 ///
 /// ## The lifecycle, which is the other half of the point
 ///
-/// Written by the extension, taken **once** by the app, and swept whenever the app comes
-/// forward. **The sweep removes what is older than `staleAfter` rather than everything**, so
-/// it cannot take the item somebody shared a moment ago.
-/// killed between the extension writing and the app reading. That is the same lifecycle the
-/// export file already has, and for the same reason.
+/// Written by the extension, taken **once** by the app, and swept whenever the app comes forward.
+/// The sweep removes what is older than `staleAfter` rather than everything, so it cannot take the
+/// item somebody shared a moment ago, and what it does take is what nobody came back for: the app
+/// never opened, or was killed between the extension writing and the app reading. That is the same
+/// lifecycle the export file already has, and for the same reason.
+///
+/// **The sweep is driven by the app coming forward, not by a clock.** An item is removed on the
+/// first sweep after `staleAfter`, which is not the same as being removed at `staleAfter`: a phone
+/// that never opens this app again never runs one. The previous version of this paragraph was
+/// mangled by an edit and left a fragment of a deleted sentence in the middle of it, which round
+/// three of gate A4 read as the front page of a file nobody could parse.
 public struct SharedInbox: Sendable {
 
     /// Both targets read this constant rather than each spelling the group out, because a
@@ -46,7 +52,7 @@ public struct SharedInbox: Sendable {
     /// Unlike the Keychain access group, this is cheap to rename. A Keychain item lives in the
     /// group it was written to, which is why renaming that one stranded every stored account.
     /// Nothing durable lives here: an item exists for as long as it takes somebody to confirm
-    /// an import, and at most `staleAfter` before a sweep removes it unread, so a rename costs a
+    /// an import, and until the first sweep after `staleAfter` removes it unread, so a rename costs a
     /// re-registration and nothing else.
     public static let appGroup = "group.dev.openfactor"
 
@@ -105,8 +111,11 @@ public struct SharedInbox: Sendable {
             attributes: Self.protectionAttributes)
 
         // **Excluded before anything is put in it, and the write is refused if it is not.** An
-        // item lives for seconds, but a backup taken during those seconds carries a QR image of
+        // item is usually collected within seconds and may sit until the first sweep after
+        // `staleAfter`, and a backup taken at any point in that window carries a QR image of
         // every secret in somebody's authenticator into iCloud, where nothing sweeps it. The
+        // "lives for seconds" wording here survived two rounds after the lifecycle it described
+        // stopped being true. The
         // directory carries the flag rather than each file, and it is marked before the write for
         // the same reason the vault key's staging directory is: a mark applied afterwards leaves
         // a window with nothing to close it.
@@ -240,7 +249,11 @@ public struct SharedInbox: Sendable {
         return data
     }
 
-    /// Removes everything, for launch.
+    /// Removes everything, whatever its age.
+    ///
+    /// **Not called at launch**, which this line claimed for three rounds. `sweepStale` is what
+    /// runs when the app comes forward. This one runs after a collection, where taking one item
+    /// means the rest were seen and not chosen.
     ///
     /// Covers what `take` cannot: the app never opened after the extension wrote, or was killed
     /// between the two. Deliberately silent, because there is nothing a person could do about a

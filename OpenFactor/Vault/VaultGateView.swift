@@ -1,7 +1,11 @@
 import OpenFactorCore
 import SwiftUI
 
-/// Stands between the app lock and the account list, and shows one of three things.
+/// Stands between the app lock and the account list, and shows one of four things.
+///
+/// Three until gate A4 added the screen for a vault that cannot be read at all. This line said
+/// three for two rounds after that, seven lines above a switch that has five cases, while the
+/// normative page had already been corrected.
 ///
 /// The account list is only built when the vault is open. It is not drawn behind a cover and it
 /// is not drawn with empty rows: a list that renders while the key is missing would show every

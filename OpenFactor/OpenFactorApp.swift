@@ -75,7 +75,16 @@ struct OpenFactorApp: App {
     /// Kept so the launch reconcile below can reach it. See `reconcileWrappedKeySync`.
     private let wrapped: WrappedKeyStore
 
-    /// Brings an already-written wrapped key into line with the sync preference.
+    /// Tries once per cold start to bring an already-written wrapped key into iCloud, when the
+    /// preference says it belongs there.
+    ///
+    /// **Two things this deliberately does not do, both of which the comment used to imply.** It
+    /// does nothing when the preference is off, because the withdrawal direction cannot drift:
+    /// the switch is only flipped after a successful conversion, so a failed withdrawal leaves it
+    /// honestly reading "on". And it abandons a failure in silence, which a review rated a medium
+    /// and is filed as such: a device that fails this at every launch stays in the loss shape with
+    /// nothing on screen saying so, unlike the access-group migration below, which refuses to hide
+    /// its failures.
     ///
     /// **A fix to a toggle governs the next toggle, not the state a device is already in.** A
     /// phone that enabled sync before the wrapped key followed the accounts is sitting in the

@@ -37,7 +37,13 @@ public protocol WrappedRecordStore: Sendable {
     /// Stores the record **only if the store is empty**, and says which happened.
     ///
     /// - Returns: `true` when this call is what put the record there. `false` when something was
-    ///   already present, in which case nothing was written.
+    ///   already present.
+    ///
+    /// **`false` does not promise that nothing was written**, and it used to say it did. The
+    /// Keychain implementation cannot see a record carrying the opposite sync flag until after it
+    /// has added its own, so it adds, counts, and removes what it wrote. If that removal fails,
+    /// both records remain and the caller is still told `false`. Round three of gate A4 found the
+    /// promise and the implementation disagreeing.
     ///
     /// **Why this exists, and why `save` cannot be used for creation.** `save` replaces whatever
     /// it finds, which is right for a passphrase change and catastrophic for a first write. Gate

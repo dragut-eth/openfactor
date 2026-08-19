@@ -23,7 +23,13 @@ import Foundation
 /// They were in `BackupPayload`, which is the reader, so every other path had to remember to
 /// import a rule from a file about archives. One of four did. Rules that describe what an account
 /// *is* belong beside the account, and `BackupPayload` now reads them from here so there remains
-/// exactly one definition.
+/// exactly one definition of each.
+///
+/// **One reader still holds its own copy**, which this sentence used to deny.
+/// `GoogleAuthenticatorImport` hardcodes the ten and reports a short secret as though it were not
+/// valid Base32, in a format whose secrets are raw bytes and have no characters at all. Round two
+/// of gate A4 found it in the commit that claimed to have swept the class. It is value-identical
+/// today and free to drift tomorrow.
 ///
 /// The same reasoning produced `AccountLabel`, and the two are deliberately shaped alike.
 public enum AccountLimits {
