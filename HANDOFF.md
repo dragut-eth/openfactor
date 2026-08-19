@@ -33,6 +33,33 @@ production can no longer create, and a refusal reason that was wrong. Each was u
 rule *and* given its inverse, so the range cannot quietly be narrowed again. Both guards were then
 proved by removing them and watching the suite go red.
 
+**Scope 1's round two found a high-severity defect in a fix that had a test, where the test
+could not see the defect it was written for.** Two engines walked it out independently. Creation
+checked whether a record existed, then derived a key at 600,000 PBKDF2 iterations, then called a
+save that replaces whatever it finds: a record arriving from iCloud inside those hundreds of
+milliseconds was overwritten by a wrap of a brand new vault key, and every account already sealed
+under the old one became unopenable by anybody. The fake store's record never changed between the
+check and the write, so the test passed and meant nothing.
+
+Creation uses `addIfAbsent` now, a write that refuses to replace anything, and the fake has a hook
+that does what iCloud does at the worst moment.
+
+**All three engines found the same medium**, which is rare in this gate: re-reading the state took
+the passphrase off the screen whenever the store could not be read. Fable also pointed out the
+first fix had no test at all while the account claimed otherwise. There are three now, in the app
+target, which does run.
+
+Each engine also found one alone. ChatGPT: the label limit counts graphemes, and one character can
+hold a hundred kilobytes, measured before fixing. Fable: a save writes a device-only protection
+class back onto a record sync had moved to iCloud. Grok: creation always wrote the wrap
+device-only, so erase-and-recreate with sync on reaches the original total-loss shape by a
+different tap.
+
+Round three's brief is at the end of `docs/audits/A4-round-two-scope1-results.md`, which also
+carries all three returns verbatim. **Not everything in this batch is satisfying, and the brief
+says which:** `addIfAbsent` narrows the twin race rather than eliminating it, because a Keychain
+add is atomic against a same-flag duplicate and not against an opposite-flag twin.
+
 **The extraction is done, and it was settled before scope 3 rather than after.** Three engines
 across three rounds of scope 2 said the defect surface was pooling where the tests cannot reach,
 and closing scope 1 hit the same wall from the other side when its suite turned out never to have
