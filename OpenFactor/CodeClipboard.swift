@@ -41,7 +41,32 @@ enum CodeClipboard {
     /// person is typing into that same Mac anyway. It would not be acceptable for a
     /// passphrase, which is why the function below is different.
     static func copy(_ code: String, expiring expiry: Date) {
-        write(code, expiring: expiry, localOnly: false)
+        write(code, expiring: expiry, localOnly: rules(for: .code).localOnly)
+    }
+
+    /// What each kind of copied text is allowed to do, as a value rather than as an argument
+    /// spelled out at two call sites.
+    ///
+    /// **Extracted because a review found the rule pinned by no test at all.** It is one boolean
+    /// and it decides whether a backup passphrase may leave the device, so a future edit that
+    /// makes the two calls consistent, which is the tidy-looking change, would hand somebody's
+    /// recovery credential to Universal Clipboard. The rule is now something a test can hold.
+    enum Kind: Equatable {
+        /// Six digits that stop working in seconds.
+        case code
+        /// A recovery credential that never expires by itself.
+        case passphrase
+    }
+
+    static func rules(for kind: Kind) -> (localOnly: Bool, lifetime: TimeInterval) {
+        switch kind {
+        // Allowed to reach a Mac, deliberately and after measuring it: the argument is in the
+        // comment above `copy(_:expiring:)`.
+        case .code: return (localOnly: false, lifetime: 30)
+        // **Never leaves the device.** The expiry below does not travel, as measured, so on any
+        // other device this would sit in the clipboard until something replaced it.
+        case .passphrase: return (localOnly: true, lifetime: 120)
+        }
     }
 
     /// Copies a backup passphrase, on its way to a password manager.
@@ -57,7 +82,10 @@ enum CodeClipboard {
     /// people to retype twenty four characters by hand into the one field where a typo is
     /// unrecoverable, or to screenshot it, which is worse than the clipboard in every way.
     static func copy(passphrase: String) {
-        write(passphrase, expiring: Date().addingTimeInterval(120), localOnly: true)
+        let rules = rules(for: .passphrase)
+        write(
+            passphrase, expiring: Date().addingTimeInterval(rules.lifetime),
+            localOnly: rules.localOnly)
     }
 
     /// The one place either kind is actually written, so the two rules sit side by side and

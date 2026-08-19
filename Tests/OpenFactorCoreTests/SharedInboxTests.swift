@@ -175,4 +175,86 @@ struct SharedInboxCollectionTests {
         let item = try #require(inbox.pending().first)
         #expect(abs(item.arrived.timeIntervalSinceNow) < 5)
     }
+
+    // MARK: - Gate A4, scope 4
+
+    /// **All three engines found the sweep unreachable in the case it exists for.** The only
+    /// sweep sat inside the collection path, which refuses to run until the scene is active, the
+    /// lock is open, the vault is open, and no arrival is pending. An image shared to a locked
+    /// phone that was never unlocked again stayed in a shared container.
+    @Test("A launch sweep removes what nobody came for")
+    func staleItemsAreSwept() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = try inbox.write(Data("a transfer QR nobody collected".utf8))
+        #expect(inbox.pending().count == 1)
+
+        inbox.sweepStale(now: Date().addingTimeInterval(SharedInbox.staleAfter + 1))
+        #expect(inbox.pending().isEmpty)
+        #expect(throws: (any Error).self) { try inbox.take(id) }
+    }
+
+    /// And the reason the launch sweep is not simply `sweep()`: it must not eat the item somebody
+    /// shared a second ago, which is the whole feature.
+    @Test("A launch sweep leaves what somebody just shared")
+    func freshItemsSurviveTheSweep() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        _ = try inbox.write(Data("shared a moment ago".utf8))
+
+        inbox.sweepStale()
+        #expect(inbox.pending().count == 1, "the ordinary path is untouched")
+    }
+
+    /// **The timestamp is not this app's.** A modification date in the future made an item sort
+    /// ahead of everything and look newer than anything that could have arrived.
+    @Test("An item cannot claim it arrived after now")
+    func futureTimestampsAreClamped() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = try inbox.write(Data("planted".utf8))
+        let url = directory.appendingPathComponent(SharedInbox.directoryName)
+            .appendingPathComponent(id.uuidString)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(86_400)], ofItemAtPath: url.path)
+
+        let now = Date()
+        let item = try #require(inbox.pending(now: now).first)
+        #expect(item.arrived <= now, "clamped to now rather than believed")
+    }
+
+    /// The inbox holds a QR image of every secret in somebody's authenticator for a few seconds.
+    /// A backup taken in those seconds used to carry it away, where nothing sweeps it.
+    @Test("The inbox directory is excluded from backups")
+    func inboxIsExcludedFromBackups() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        _ = try inbox.write(Data("anything".utf8))
+
+        let inboxDirectory = URL(
+            fileURLWithPath: directory.appendingPathComponent(SharedInbox.directoryName).path)
+        #expect(
+            try inboxDirectory.resourceValues(forKeys: [.isExcludedFromBackupKey])
+                .isExcludedFromBackup == true)
+    }
+
+    /// `take` copied whatever was in the container into memory, with the bound, where there was
+    /// one, applied afterwards.
+    @Test("Taking an oversized item refuses and removes it")
+    func takingAnOversizedItemRefuses() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = try inbox.write(Data("small enough".utf8))
+        let url = directory.appendingPathComponent(SharedInbox.directoryName)
+            .appendingPathComponent(id.uuidString)
+        try Data(repeating: 0, count: ImportLimits.largestAcceptableBytes + 1).write(to: url)
+
+        #expect(throws: SharedInbox.InboxError.tooLarge) { try inbox.take(id) }
+        #expect(inbox.pending().isEmpty, "and it is off the device rather than left for next time")
+    }
 }

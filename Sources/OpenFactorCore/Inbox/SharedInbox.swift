@@ -73,6 +73,8 @@ public struct SharedInbox: Sendable {
         /// The app group is not reachable. A missing entitlement, almost always.
         case noContainer
         case notFound
+        /// The item is larger than anything this app will read. Removed rather than left.
+        case tooLarge
     }
 
     private func directory() throws(InboxError) -> URL {
@@ -94,6 +96,17 @@ public struct SharedInbox: Sendable {
         try FileManager.default.createDirectory(
             at: directory, withIntermediateDirectories: true,
             attributes: Self.protectionAttributes)
+
+        // **Excluded before anything is put in it.** A review found inbox items eligible for
+        // device backup: an item lives for seconds, but a backup taken during those seconds
+        // carries a QR image of every secret in somebody's authenticator into iTunes or iCloud,
+        // where nothing sweeps it. The directory carries the flag rather than each file, and it
+        // is marked before the write for the same reason the vault key's staging directory is:
+        // a mark applied afterwards leaves a window with nothing to close it.
+        var marked = directory
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? marked.setResourceValues(values)
 
         let id = UUID()
         try data.write(
@@ -149,7 +162,7 @@ public struct SharedInbox: Sendable {
     ///
     /// **Reading does not remove**, unlike `take`, because the caller has to choose before it
     /// consumes. Everything it does not choose must then be swept, which is what the app does.
-    public func pending() -> [Pending] {
+    public func pending(now: Date = Date()) -> [Pending] {
         guard let directory = try? directory(),
             let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path)
         else { return [] }
@@ -158,8 +171,13 @@ public struct SharedInbox: Sendable {
             guard let id = UUID(uuidString: name) else { return nil }
             let attributes = try? FileManager.default.attributesOfItem(
                 atPath: directory.appendingPathComponent(name).path)
-            let arrived = (attributes?[.modificationDate] as? Date) ?? .distantPast
-            return Pending(id: id, arrived: arrived)
+            // **Clamped, because the timestamp is not this app's.** A review pointed out that
+            // freshness was read straight off the file, and a modification date in the future
+            // makes an item sort ahead of everything and look newer than anything that could
+            // actually have arrived. Nothing on the device should be able to claim it arrived
+            // after now.
+            let stamped = (attributes?[.modificationDate] as? Date) ?? .distantPast
+            return Pending(id: id, arrived: min(stamped, now))
         }
         .sorted { $0.arrived > $1.arrived }
     }
@@ -172,6 +190,13 @@ public struct SharedInbox: Sendable {
     public func take(_ id: UUID) throws -> Data {
         let url = try directory().appendingPathComponent(id.uuidString)
         defer { try? FileManager.default.removeItem(at: url) }
+
+        // **The size is asked of the file system before the read.** All three engines found this
+        // unbounded: whatever was in the container was copied into memory, and the bound, where
+        // there was one, came afterwards. The item is removed either way, so an oversized one is
+        // taken off the device rather than left for the next attempt.
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+        if let size, !ImportLimits.isWorthLoading(fileSize: size) { throw InboxError.tooLarge }
 
         guard let data = FileManager.default.contents(atPath: url.path) else {
             throw InboxError.notFound
@@ -193,6 +218,32 @@ public struct SharedInbox: Sendable {
 
         for name in names {
             try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
+        }
+    }
+
+    /// How long an item may sit in the inbox before a launch sweeps it regardless.
+    ///
+    /// Long enough that the ordinary path is untouched: the extension writes, the person is
+    /// carried into the app, and the collection happens in seconds. Short enough that an item
+    /// nobody collected does not sit in a shared container for the rest of the day.
+    public static let staleAfter: TimeInterval = 5 * 60
+
+    /// Removes what nobody is coming for, and leaves what somebody just shared.
+    ///
+    /// **All three engines found the sweep unreachable in the case it exists for.** `SharedInbox`
+    /// says the directory is swept at every launch and `SECURITY.md` says leftovers are swept when
+    /// OpenFactor launches, but the only sweep sat inside the collection path, which refuses to
+    /// run until the scene is active, the lock is open, the vault is open and no arrival is
+    /// pending. An image shared to a locked phone that was never unlocked again stayed there.
+    ///
+    /// This runs at launch with none of those conditions, and it cannot eat the item somebody
+    /// just shared, because that one is seconds old.
+    public func sweepStale(now: Date = Date()) {
+        for item in pending(now: now) where now.timeIntervalSince(item.arrived) > Self.staleAfter {
+            guard let url = try? directory().appendingPathComponent(item.id.uuidString) else {
+                continue
+            }
+            try? FileManager.default.removeItem(at: url)
         }
     }
 }

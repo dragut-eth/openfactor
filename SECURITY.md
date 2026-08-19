@@ -525,8 +525,15 @@ group container with complete file protection and passes a URL carrying only an 
 explicitly authorized into that App Group could read the temporary inbox item. That is an
 accepted exposure: the image exists there only during an explicit share operation, uses complete
 file protection, is never synced by OpenFactor, contains no OpenFactor key material, and is
-deleted immediately after the containing app consumes it. Any leftovers are swept when OpenFactor
-launches.
+deleted immediately after the containing app consumes it, and excluded from device backups so a
+backup taken during those seconds does not carry it away.
+
+**Leftovers are swept at launch, and until gate A4 that sentence was not true.** The only sweep sat
+inside the collection path, which does nothing until the scene is active, the app lock is open, the
+vault is open, and no other arrival is pending, so an image shared to a locked phone that was never
+unlocked again stayed in the container. All three reviewers found it. A launch sweep now runs under
+none of those conditions and removes anything older than five minutes, which is long enough that
+the ordinary share, where the person is carried straight into the app, is untouched.
 
 Photos creates a different exposure. When iCloud Photos is enabled, the image can become part of
 the user's persistent synchronized photo library, accessible across their devices and through

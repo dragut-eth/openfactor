@@ -168,6 +168,13 @@ struct OpenFactorApp: App {
             // For the plaintext vault that would be every secret in the clear, sitting in
             // the container with nothing ever revisiting it. Found by the security review.
             .task { Self.reconcileWrappedKeySync(wrapped) }
+            // **Unconditional, unlike the collection path.** All three engines found that the
+            // only sweep sat inside collection, which refuses to run until the scene is active,
+            // the lock is open, the vault is open and no arrival is pending. An image shared to a
+            // locked phone that was never unlocked again stayed in a shared container. This runs
+            // at launch with none of those conditions and removes only what is already stale, so
+            // it cannot eat the item somebody just shared.
+            .task { SharedInbox().sweepStale() }
             .task { ExportViewModel.discardOrphanedFiles() }
             .task { watchKeys.activate() }
             // Over whatever is on screen, because the watch may ask at any moment and the
@@ -202,6 +209,13 @@ struct OpenFactorApp: App {
             }
             .onChange(of: gate.stage) { collectWhatArrived() }
             .onOpenURL { url in
+                // **A second URL does not destroy the first arrival.** Two engines found this:
+                // the assignment replaced whatever was pending, so an `otpauth://` opened while a
+                // shared image was waiting to be confirmed threw that image away with no sign
+                // anything had happened. Whatever arrived first keeps the screen; the second is
+                // dropped rather than silently swapped in, which is the same rule the phone's
+                // provisioning desk follows for a question already being asked.
+                guard arrival == nil else { return }
                 guard let value = InboxOpener.arrival(from: url) else { return }
                 arrival = IdentifiedArrival(value: value)
             }
