@@ -252,10 +252,15 @@ final class WatchVaultModel: NSObject {
             // recovers. The real reason is smaller and still good enough. Honouring it ends the
             // wait now instead of in twenty five seconds, the cost of being wrong is one screen
             // that says to try again, and a decline releases nothing either way.
-            if let declined = message[WatchProvisioning.MessageKey.nonce] as? Data,
-                let attempt, !attempt.answers(declined)
-            {
-                return
+            // **Present but unreadable is not the same as absent.** `as? Data` alone conflated
+            // them: a decline whose nonce arrived as a string, or as anything this build does not
+            // expect, failed the cast and was honoured as though it carried no nonce at all,
+            // which is the behaviour reserved for a phone too old to send one. A review asked
+            // for the two cases to be told apart, and they are: a nonce that is there and cannot
+            // be read is a message this build does not understand, so it is ignored.
+            if let raw = message[WatchProvisioning.MessageKey.nonce] {
+                guard let declined = raw as? Data else { return }
+                if let attempt, !attempt.answers(declined) { return }
             }
 
             attempt = nil

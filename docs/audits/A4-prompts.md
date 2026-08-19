@@ -286,6 +286,51 @@ WHAT CHANGED:
 [per-finding: the finding, what was changed, and the commit]
 ```
 
+## Round three, and when to stop
+
+Round two of scope 2 changed eight things, so the fixes for those eight have not been reviewed by
+anybody. A round runs again whenever the previous round's fixes were substantial enough that
+shipping them unreviewed would be the same bet the gate exists to refuse.
+
+The prompt is round two's, with three differences: the account of what changed is cumulative, the
+engine is told what the previous round concluded so it can disagree with it, and it is asked
+explicitly whether the code is converging or merely churning.
+
+**An engine that missed the previous round is told so and given both accounts**, since for it this
+is a first look at everything since the original commit rather than a second look at a fix.
+
+```
+This code has now been reviewed twice and changed after each round. Below is what changed, and
+what the last round concluded.
+
+Your job is to answer four questions:
+
+1. Does each change actually address the finding it claims to? A fix that moves a check without
+   changing what is checked, or that handles the reported case while leaving the class open, is a
+   finding.
+
+2. Did any change introduce something new? These changes were made to a state machine and a
+   file-writing path that have now been modified on three separate occasions. Each previous round
+   found that the last round's fixes had introduced defects of their own.
+
+3. Is anything now claimed in a comment or document that the code does not do?
+
+4. Is this converging? Say plainly whether the changes are reducing the defect surface or moving
+   it around. If the same area has been rewritten three times and is still wrong, that is the
+   most useful thing you can tell us, and it will not be argued with.
+
+Where a previous reviewer's conclusion is recorded below, you are not bound by it. Two reviewers
+cleared a construction last round and it was removed anyway on the maintainer's own reasoning;
+that reasoning is written down and may be wrong. Saying so is in scope.
+
+Be as willing to say "this fix is incomplete" as you were to report the original. Accepting a fix
+because it is a plausible response to a finding is the specific failure this round exists to
+catch.
+
+WHAT CHANGED:
+[cumulative: each finding, what was changed, which round it came from, and the commit]
+```
+
 ## The closing opinion
 
 Asked once per engine, after round two, **in a fresh conversation**, pointing the engine at its

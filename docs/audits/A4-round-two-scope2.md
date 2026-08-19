@@ -70,46 +70,50 @@ Item 7 introduces a clock into an approval path. Clocks move backwards.
 
 # Round two: the returns
 
-**Two engines returned, not three.** ChatGPT 5.6 Sol was not run on this round. An earlier version
-of this page said "all three" against one finding and named ChatGPT against another; both were
-wrong and are corrected below. The engine column here is taken from the two returns reproduced at
-the end of this file, not from memory.
+**All three engines returned.** An intermediate version of this page said ChatGPT had not run,
+which was wrong: its return had not reached the file, and the absence was read as an absence of a
+review rather than of a paste. The engine column below is taken from the three returns reproduced
+at the end of this file.
 
 **Commit reviewed: `350375b`.** Round one read `74fe841`.
 
 | Engine | Status |
 | --- | --- |
+| ChatGPT 5.6 Sol | Returned, below. One medium, three low, and the only fix assessment given item by item |
 | Fable 5 | Returned, below. Nine of eleven complete, one gap, one new medium |
 | Grok 4.6 | Returned, below. Three of eleven incomplete, plus two doc mismatches |
-| ChatGPT 5.6 Sol | Not run this round |
 
-## What the two engines found
+## What the three engines found
 
 | Finding | Engine | What it took |
 | --- | --- | --- |
-| Consent expiry measured on a wall clock | **both** | `ContinuousClock`. `validatedAt` is internal now, so nothing outside the package can compare a `Date` to it again |
-| `replaceItemAt` without `.usingNewMetadataOnly` keeps the *old* file's protection class, so an existing weak key survives the fix | Grok | The option, plus the repair below |
-| A kill still leaves a raw unexcluded key at `.{uuid}`, because `defer` does not run after a kill | Grok | The key is written inside a directory excluded *before* any key material exists, and orphans are swept |
-| `phoneDeclined` never got the guard its sibling got | Grok | The same `guard outstanding != nil`, with a test from both sides |
-| `messageKeysArePinned` said "exactly these three" against four | Grok | The fourth pinned. Renaming `nonce` compiled everywhere, and every decline from a newer phone would have looked nonce-less |
-| `SECURITY.md` stated the nonce echo unconditionally; the code echoes it only when something is pending | both | The sentence now says what the code does |
-| `SECURITY.md` said "two minutes" of wall-clock minutes | Grok | Says elapsed, measured on a clock that cannot be moved |
-| `validate()` became a parser that reads a clock | Fable | `age(now:)` takes the instant, so a test chooses it and the parser's contract stays checkable |
-| The refusal message is a third message, unversioned, and absent from the protocol tables | Fable | `docs/VAULT.md` now documents the `status`/`nonce` dictionary and the asymmetric compatibility rule |
+| Consent expiry measured on a wall clock | **all three** | `ContinuousClock`. `validatedAt` is internal now, so nothing outside the package can compare a `Date` to it again |
+| A kill still leaves a raw unexcluded key at `.{uuid}`, because `defer` does not run after a kill | ChatGPT, Grok | The key is written inside a directory excluded *before* any key material exists, and orphans are swept. Both proposed exactly this |
+| `replaceItemAt` without `.usingNewMetadataOnly` keeps the *old* file's protection class | Grok | The option |
+| Nothing repairs an already weakly-protected `vault.key` | ChatGPT | Reading the key now repairs its protection class and exclusion in place |
+| The re-ask abandons a request the phone really retained | ChatGPT | The inference removed, and the phone answers `.busy`, which is the fix ChatGPT named |
+| `phoneDeclined` never got the guard its sibling got | ChatGPT, Grok | The same `guard outstanding != nil`, with a test from both sides |
+| `messageKeysArePinned` said "exactly these three" against four | ChatGPT, Grok | The fourth pinned. Renaming `nonce` compiled everywhere, and every decline from a newer phone would have looked nonce-less |
+| A nonce present but of the wrong type was treated as absent, so it was honoured | ChatGPT | Presence and readability are separated: a nonce that is there and cannot be read is ignored |
+| Expired consent returned silently, leaving the alert up and the owner unanswered | ChatGPT | Expiry declines, which clears the alert and tells the watch |
+| The comment claiming a watch would wait forever is false | ChatGPT, Fable | Corrected. The twenty five second timeout recovers |
+| `SECURITY.md` stated the nonce echo unconditionally | Fable | The sentence says what the code does |
+| `SECURITY.md` said "two minutes" of wall-clock minutes | Grok | Says elapsed, on a clock that cannot be moved |
+| `validate()` became a parser that reads a clock | Fable | `age(now:)` takes the instant, so a test chooses it |
+| The refusal message is a third message, unversioned, and absent from the protocol tables | Fable | `docs/VAULT.md` documents the dictionary and the compatibility rule |
 
-**Both engines cleared the re-ask, and it was removed anyway.** Round one had suggested fixing the
-dropped retry on the watch, by asking again the moment an obsolete response arrives. Round two was
-invited to disbelieve the claim that this cannot spin. Fable walked the call order and found two
-independent brakes; Grok did the same and said "one extra alert, not a spin". Neither asked for
-the removal.
+**Two engines cleared the re-ask; the third had already broken it.** Fable and Grok were both
+invited to disbelieve the claim that re-asking from inside a response handler cannot spin. Both
+walked the call order, both correctly found no spin, and both said so. ChatGPT was not looking for
+a spin: it wrote out the seven-step sequence in which a delayed response makes the watch abandon a
+request the phone has genuinely retained, and named the fix, which is that the phone must stop
+answering `.asking` for a request it does not keep.
 
-It was removed on this repository's own reading, which the returns should be weighed against: the
-re-ask infers that the phone's slot is free from the fact that a response was obsolete, and across
-an asynchronous channel that inference is not sound. A response merely delayed proves nothing
-about what the phone holds *now*, and if the phone has since retained a newer request, the re-ask
-abandons the very request its alert is showing. **Two reviewers looked for a spin, found none, and
-were right; the objection is to the inference rather than to recursion.** The phone answering
-`.busy` instead of lying with `.asking` is what removed the need to infer anything.
+That is the removal that shipped, and the reasoning behind it is ChatGPT's rather than this
+repository's. **An intermediate version of this page claimed the opposite** — that no review had
+asked for it and it was removed on the maintainer's own reading. That was written while ChatGPT's
+return was missing from the record, and it is exactly the kind of claim that should not have been
+made from an incomplete file.
 
 **Fable's uncovered path is narrowed rather than closed, and that is the honest description.** Its
 sequence still ends with a wearer waiting: a decline echoing attempt A's nonce is correctly
@@ -120,20 +124,115 @@ removed.
 
 ## What the reviews did not find
 
-Two of the eight fixes came from writing the tests. `.usingNewMetadataOnly` installs the *staged*
+Two fixes came from writing the tests rather than from any review. `.usingNewMetadataOnly` installs the *staged*
 file's metadata, so the fix for the write window stripped the backup exclusion off the key it
 wrote, and the suite went red the first time both changes ran together. And a `.busy` answer
 arriving after a timeout restored a spinner whose timer had already fired.
 
-**The item neither engine raised is the one that matters most on the maintainer's own wrist.**
-Every fix above governs the *next* write, and a Watch provisioned a month ago never writes again.
-Grok came closest, noting that a watch holding an old key "can be re-provisioned" to fix it, which
-is a repair that requires somebody to know they need it. Reading the key now repairs its protection
-class and backup exclusion in place: metadata only, so it cannot damage the key it is repairing.
+**The repair of an already-written key was ChatGPT's, filed as a caveat rather than a finding.**
+It is the last line of its item 1: the new options fix future writes, and no code repairs an
+existing weakly protected `vault.key`, so a Watch that already holds one keeps it forever. Grok
+came at the same fact from the other side, noting such a watch "can be re-provisioned", which is a
+repair that requires somebody to know they need it. Reading the key now repairs its protection
+class and backup exclusion in place: metadata only, so it cannot damage the key it repairs.
+**Another intermediate version of this page called this the item no review raised.** It was
+raised, in the return that was missing.
 
-Each of the eight fixes was reverted individually and the suite confirmed red for it. That check
+Each fix with a test was reverted individually and the suite confirmed red for it. That check
 found nothing wrong with the fixes and one thing wrong with a new test, which had been re-reading a
 cached `URL` snapshot instead of the file.
+
+---
+
+## ChatGPT 5.6 Sol
+
+*Read-only pass over commit `350375b`. Reproduced as returned, with absolute paths made
+repository-relative.*
+
+> Reviewed commit `350375b`; its source is unchanged from the fix commit `f4710b5`. Round one read `74fe841`.
+>
+> Findings
+>
+> 1. Medium — the backup-exclusion fix preserves the original kill window in the staging file
+>
+> `VaultKeyStore.install` (line 98) now writes the raw key to a randomly named staging file, then excludes that file from backup:
+>
+> 1. Line 116 writes the complete 32-byte key.
+> 2. Line 124 applies `isExcludedFromBackup`.
+> 3. Line 129 moves it to `vault.key`.
+>
+> A process kill between steps 1 and 2 does not execute the `defer` at line 114. It therefore leaves a complete, unexcluded raw vault key in Application Support indefinitely. Backups enumerate the container, not merely the filename `vault.key`, so changing the name to `.<UUID>` does not address the reported exposure. This is the same failure as round one: `write raw key -> process killed -> unexcluded key survives`. It has merely moved to a staging pathname.
+>
+> Smallest fix: create and mark a dedicated excluded staging directory before placing any key material inside it, then stage and atomically replace from there. Sweep orphaned staging entries on launch as defense in depth. A fault-injection test should terminate the install after the write and verify that every surviving file containing the key is already excluded.
+>
+> Related caveat: the new `.completeFileProtection` options fix future writes, but no code repairs an existing weakly protected `vault.key`. If a build containing the old write shipped, updating alone leaves that Watch's file unchanged.
+>
+> 2. Low — retrying on every obsolete response can abandon a request the phone really retained
+>
+> The new logic at `WatchVaultModel.phoneSent` (line 209) assumes an obsolete response proves the phone's pending slot "is free right now," then immediately calls `ask()`. That inference is invalid across an asynchronous channel:
+>
+> 1. Attempt A times out.
+> 2. The owner approves A; response A is sent and delayed, and the phone clears its slot.
+> 3. Before response A arrives, the wearer starts B. The phone retains B and displays its alert.
+> 4. Delayed response A reaches the Watch and is obsolete relative to B.
+> 5. The new fix abandons B and starts C.
+> 6. The phone still holds B, so it answers C with `.asking` and discards C.
+> 7. Approval of B now produces another obsolete response; the Watch starts D and needs another approval.
+>
+> Thus the fix for item 3 creates another retry race and can turn an otherwise successful retained request into repeated prompts. "Only a delivered response reaches this line" prevents a self-sustaining local loop, but does not prove the phone has not refilled its slot since sending that response.
+>
+> Smallest fix: make the phone's direct reply authoritative. It must not answer `.asking` for an unretained request — return a distinct busy/terminal status, or queue the latest request separately without replacing the request currently covered by the alert.
+>
+> Missing test: `A response delayed -> B retained by phone -> A response arrives -> B approval still completes without another request`.
+>
+> 3. Low — decline matching remains incomplete and can still demote a ready Watch
+>
+> At `WatchVaultModel.phoneSent` (line 244), a nonce-bearing decline is rejected only when an `attempt` exists and the nonce differs:
+>
+>     if let declined = ... as? Data,
+>         let attempt, !attempt.answers(declined) {
+>         return
+>     }
+>
+> If `attempt == nil`, the condition fails and execution proceeds to the unguarded `flow.phoneDeclined()`. A delayed decline received after successful provisioning therefore changes `.ready` to `.notSetUp`. This is the same missing-outstanding-guard class that item 6 fixed for `responseDidNotOpen`, left open on the decline transition.
+>
+> Mixed-version behavior also leaves the original stale-decline defect intact: a new Watch honors every nonce-less decline from an older phone. The comment's claim that ignoring one would leave the Watch "waiting forever" is false; the existing 25-second timer already provides recovery.
+>
+> Smallest fix:
+>
+> * Require a current attempt before processing any second-message decline.
+> * Add an `outstanding` guard inside `WatchProvisioningFlow.phoneDeclined()`.
+> * Ignore nonce-less declines and let the timeout recover, or honor them only when the model can prove no attempt has been superseded.
+> * Reject a present-but-wrongly-typed nonce rather than treating it as absent.
+>
+> Missing tests: `ready -> delayed decline -> remains ready`, and `B current -> nonce-less decline from A -> B remains current`. The wire-value suite should also pin the new `"nonce"` key; it still asserts only the original three keys despite the enum now having four.
+>
+> 4. Low — wall-clock rollback defeats the consent deadline
+>
+> `WatchKeyProvider.approve` (line 75) checks:
+>
+>     Date().timeIntervalSince(request.validatedAt) <= 120
+>
+> There is no lower bound and `Date` is wall time. If the clock moves backward after validation, the interval is negative and remains `<= 120`, potentially for hours or days. The stale request can therefore still release the vault key after the claimed two-minute consent window when the owner taps the lingering alert.
+>
+> Smallest fix: measure the deadline with a monotonic clock such as `ContinuousClock`, inject that clock for testing, and automatically clear the pending request and alert when the deadline expires.
+>
+> Missing test: validate at T, move the injected wall clock backward, advance monotonic time beyond two minutes, and require approval to send nothing.
+>
+> Fix assessment
+>
+> * Item 1: correct for newly written files; existing weak files are not migrated.
+> * Item 2: not fixed — the staging file retains the exact write-before-exclusion kill window.
+> * Item 3: addresses the reported sequence but introduces the new retained-request race above.
+> * Item 4: works for two current builds when an attempt exists, but remains incomplete for no-attempt and mixed-version cases.
+> * Items 5 and 6: the reported paths are correctly fixed.
+> * Item 7: incomplete because it uses a reversible wall clock.
+> * Items 8 and 9: the new negative tests correctly catch a static phone key and removal of the HKDF label.
+> * Items 10 and 11: the documentation corrections match the code.
+>
+> The cryptographic construction and byte parsers remain unchanged and sound for the reasons recorded in round one: exact lengths precede slicing, P-256 points are validated, the request nonce is checked before derivation, and the fixed-width transcript binds both public keys and the nonce in HKDF and GCM AAD. Approval still has only the affirmative alert button as a production call site.
+>
+> No build or test command was run because the requested review prohibited creating files.
 
 ---
 
@@ -198,6 +297,8 @@ repository-relative.*
 > * The `consentWindow` of 120 s is longer than the watch's 25 s timeout, so a live exchange cannot be cut off by it — the interaction I most expected to be wrong.
 >
 > Verdict: nine of eleven fixes are complete and correct. Item 3 fixes its reported sequence but leaves the decline-path dead end. Item 7 fixes its finding and introduces M1, a backward-clock hole that this repository already knows how to close — `AppLockEngine` closes the identical case three files away.
+
+---
 
 ---
 
@@ -284,3 +385,7 @@ repository-relative.*
 > ───
 >
 > Items 3, 5, 8, 9, 10, and 11 do what they claim. Item 4 does, for two new builds. The change that does not close the finding it cites is install: the staging file is marked, then replaceItemAt is asked to put it where a key already lives, without usingNewMetadataOnly.
+
+---
+
+---

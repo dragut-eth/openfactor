@@ -89,7 +89,16 @@ final class WatchKeyProvider: NSObject {
         //
         // `ContinuousClock` rather than `SuspendingClock`, because a phone that sleeps for an
         // hour with an alert up has still let an hour pass for the person looking at it.
-        guard request.age() <= Self.consentWindow else { return }
+        //
+        // **Expiry is a refusal, not silence.** The first version returned, which left the alert
+        // on screen and the request in memory: the owner taps Approve, nothing happens, and
+        // nothing tells them why. One review asked for the request and the alert to be cleared
+        // when the deadline passes. Declining does that and says so on the wire, so the watch
+        // stops waiting now instead of at its own timeout.
+        guard request.age() <= Self.consentWindow else {
+            decline()
+            return
+        }
         guard let response = try? WatchProvisioning.respond(to: request, with: key) else { return }
 
         WCSession.default.sendMessage(
