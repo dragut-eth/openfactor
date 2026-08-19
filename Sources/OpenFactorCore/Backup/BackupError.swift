@@ -44,6 +44,12 @@ public enum BackupError: Sendable, Equatable, Error {
     /// rules.** Gate A4 found three of four paths admitting secrets and counters the format
     /// forbids, so an account could work every day and be refused by the backup meant to save
     /// it, discovered on a device that no longer had the originals.
+    ///
+    /// **The message no longer says when the account was saved.** It said "it was saved before
+    /// OpenFactor checked for this", which was true of the paths fixed first and false of manual
+    /// entry, which went on accepting a short secret for two more rounds. Round two of gate A4
+    /// found the sentence blaming the past for something the app was still doing that morning,
+    /// and advising the person to re-add the account through the screen that had caused it.
     case cannotStoreAccount(label: String)
 
     /// The system key derivation failed, which for these inputs is a defect here rather than
@@ -84,8 +90,8 @@ public enum BackupError: Sendable, Equatable, Error {
         case let .cannotStoreAccount(label):
             """
             \(label) cannot be written to a backup: its secret is too short, or its counter is \
-            too large, for the backup format. It was saved before OpenFactor checked for this. \
-            Remove it, or add it again from the service, and export once more.
+            too large, for the backup format. Remove it, or add it again from the service, and \
+            export once more.
             """
         case .derivationFailed:
             "OpenFactor could not derive a key on this device."

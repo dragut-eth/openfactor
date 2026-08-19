@@ -217,7 +217,32 @@ public enum BackupArchive {
             throw BackupError.passphraseTooWeak
         }
 
-        let plaintext = try BackupPayload.write(accounts)
+        return try seal(
+            plaintext: try BackupPayload.write(accounts), passphrase: passphrase, mode: mode,
+            iterations: iterations)
+    }
+
+    /// Seals a payload that is already serialised, which is the half of `write` a test can reach.
+    ///
+    /// **Split out so the size rule has a seam.** The rule is one line, and checking it needed
+    /// eight mebibytes of accounts to reach through `write`, which is why the first attempt at
+    /// this finding checked the container instead: that was reachable. A bound nothing can
+    /// exercise is how the first attempt shipped and was rejected by all three engines.
+    static func seal(
+        plaintext: Data,
+        passphrase: String,
+        mode: BackupPassphrase.Mode,
+        iterations: Int
+    ) throws -> Data {
+        // **The bound the reader actually enforces, checked before anything is sealed.** This is
+        // what round one asked for in these words, and the first attempt checked the finished
+        // container against `maximumFileBytes` instead. All three engines rejected that in round
+        // two, because they are different quantities: GCM ciphertext is the length of its
+        // plaintext, so a payload one byte over this ceiling still serialises to a container well
+        // under the file ceiling. It wrote, and it did not read back, and the person holding it
+        // found that out on the device they were restoring to.
+        guard plaintext.count <= maximumPlaintextBytes else { throw BackupError.tooLarge }
+
 
         let salt = try randomBytes(saltBytes)
         let nonce = try AES.GCM.Nonce(data: try randomBytes(nonceBytes))
@@ -261,16 +286,10 @@ public enum BackupArchive {
             options: [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]
         )
 
-        // **This bounds the container, and the reader bounds the plaintext.** Two different
-        // numbers, and the comment here used to claim they were the same one: "the writer refuses
-        // what the reader must refuse". They are not. `maximumFileBytes` is the whole JSON
-        // container; the reader's binding rule is `maximumPlaintextBytes`, and GCM ciphertext is
-        // the length of its plaintext, so a payload one byte over eight mebibytes still
-        // serialises to a container under this ceiling. It writes, and it does not read back.
-        //
-        // All three engines of round two rejected this as the fix for that finding, which asked
-        // for the plaintext to be checked before sealing. That is still open. This check is real
-        // and is simply a different, looser bound.
+        // A second belt on the whole container, which is a looser bound than the plaintext check
+        // above and catches a wrapper that somehow grew past what the reader will read at all.
+        // The plaintext check is the one that matches the reader's rule; this one used to be the
+        // only check, which is why an archive could be written and refused on restore.
         guard archive.count <= maximumFileBytes else { throw BackupError.tooLarge }
         return archive
     }

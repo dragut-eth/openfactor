@@ -232,10 +232,17 @@ public enum GoogleAuthenticatorImport {
         guard let secret, !secret.isEmpty else {
             return .failure(Failure(label: label, reason: .missingSecret))
         }
-        // RFC 4226's minimum, the same floor the archive payload applies. A shorter secret
-        // generates codes under a key nobody enrolled with.
-        guard secret.count >= 10 else {
-            return .failure(Failure(label: label, reason: .secretNotBase32))
+        // RFC 4226's minimum, read from `AccountLimits` rather than spelled out again, because
+        // that type exists so the rule has one home and this was the reader still holding its own
+        // copy. Round two of gate A4 found it in the commit titled "the class sweep".
+        //
+        // **And the reason is the true one.** This said `secretNotBase32`, which claims the
+        // secret "contains characters that are not valid", in a format whose secrets are raw
+        // bytes and have no characters at all. Four readers were corrected and this one was
+        // missed, so somebody debugging a refused migration hunted for a bad character in a field
+        // that cannot have one.
+        guard AccountLimits.isSecretLongEnough(secret) else {
+            return .failure(Failure(label: label, reason: .secretTooShort))
         }
 
         // Their enumerations are not ours, and the gaps are refused by name rather than

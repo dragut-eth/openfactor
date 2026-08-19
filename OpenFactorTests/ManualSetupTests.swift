@@ -225,6 +225,64 @@ struct ManualSetupViewModelTests {
         #expect(model.save())
         #expect(try store.records().readable.first?.metadata.issuer == nil)
     }
+
+    // MARK: - Gate A4, scope 3: the enrollment path that never read the limits
+
+    /// **The front door.** The URI parser, both file importers and the archive writer all applied
+    /// `AccountLimits`; the screen somebody uses when a service prints a secret on paper did not.
+    /// So an account could be typed in, work every day, and then block every backup its owner
+    /// tried to take.
+    @MainActor
+    @Test("A secret shorter than the format allows is refused, and cannot be saved")
+    func shortSecretIsRefused() {
+        let model = ManualSetupViewModel(store: InMemorySecretStore())
+        model.name = "octocat"
+        model.secretText = "GEZDGNBV"
+
+        #expect(model.secretProblem != nil, "the form says why")
+        #expect(model.account == nil, "and describes no account")
+        #expect(!model.canSave)
+    }
+
+    /// The boundary, so the refusal is a floor rather than an off-by-one.
+    @MainActor
+    @Test("A secret at exactly the floor is accepted")
+    func secretAtTheFloorIsAccepted() {
+        let model = ManualSetupViewModel(store: InMemorySecretStore())
+        model.name = "octocat"
+        // Sixteen Base32 characters decode to exactly ten bytes.
+        model.secretText = "GEZDGNBVGY3TQOJQ"
+
+        #expect(model.secretProblem == nil)
+        #expect(model.account != nil)
+    }
+
+    /// The other half of the rule, which the archive format states just as plainly.
+    @MainActor
+    @Test("A counter beyond what a backup can hold is refused")
+    func oversizeCounterIsRefused() {
+        let model = ManualSetupViewModel(store: InMemorySecretStore())
+        model.name = "octocat"
+        model.secretText = "GEZDGNBVGY3TQOJQ"
+        model.isCounterBased = true
+        model.counterText = "\(UInt64.max)"
+
+        #expect(model.counterProblem != nil)
+        #expect(model.account == nil)
+    }
+
+    @MainActor
+    @Test("A counter at the ceiling is accepted")
+    func counterAtTheCeilingIsAccepted() {
+        let model = ManualSetupViewModel(store: InMemorySecretStore())
+        model.name = "octocat"
+        model.secretText = "GEZDGNBVGY3TQOJQ"
+        model.isCounterBased = true
+        model.counterText = "\(AccountLimits.maximumCounter)"
+
+        #expect(model.counterProblem == nil)
+        #expect(model.account != nil)
+    }
 }
 
 @MainActor

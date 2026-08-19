@@ -49,12 +49,26 @@ final class ManualSetupViewModel {
     ///
     /// Empty is not an error. A field the user has not filled in yet should not be shouting
     /// at them, so an untouched form is quiet and the save button is simply unavailable.
+    /// **The rules are `AccountLimits`', because this screen is an enrollment path.** It was the
+    /// one that never read them: the URI parser, both file importers and the archive writer all
+    /// did, while the screen somebody uses when a service prints a secret on paper accepted
+    /// anything that decoded. So an account could be typed in, generate codes every day, and then
+    /// block every backup its owner tried to take, with the failure explaining that it had been
+    /// "saved before OpenFactor checked for this". Round two of gate A4 found the door open and
+    /// the explanation false.
+    ///
+    /// Refused here rather than truncated, unlike an import: there is a person looking at the
+    /// field who can correct it, and no other account is lost by saying so.
     var secretProblem: String? {
         guard !secretText.trimmed.isEmpty else { return nil }
 
         do {
             let bytes = try Base32.decode(secretText)
-            return bytes.isEmpty ? "That secret is empty." : nil
+            if bytes.isEmpty { return "That secret is empty." }
+            guard AccountLimits.isSecretLongEnough(bytes) else {
+                return "That secret is too short. Check for a missing character at the end."
+            }
+            return nil
         } catch {
             return error.description
         }
@@ -62,7 +76,13 @@ final class ManualSetupViewModel {
 
     var counterProblem: String? {
         guard isCounterBased, !counterText.trimmed.isEmpty else { return nil }
-        return UInt64(counterText.trimmed) == nil ? "The counter must be a whole number." : nil
+        guard let counter = UInt64(counterText.trimmed) else {
+            return "The counter must be a whole number."
+        }
+        guard AccountLimits.isCounterStorable(counter) else {
+            return "That counter is too large to keep in a backup."
+        }
+        return nil
     }
 
     var periodProblem: String? {
@@ -76,11 +96,18 @@ final class ManualSetupViewModel {
     /// Everything else on this screen is derived from this, so there is one definition of
     /// "valid" rather than one per button.
     var account: OTPAccount? {
-        guard let secret = try? Base32.decode(secretText), !secret.isEmpty else { return nil }
+        // The same rules the problem messages report, so a form that shows no problem cannot
+        // still describe an account the backup format refuses. The two used to be able to
+        // disagree, because only one of them consulted the limits.
+        guard let secret = try? Base32.decode(secretText),
+            AccountLimits.isSecretLongEnough(secret)
+        else { return nil }
 
         let generator: OTPGenerator
         if isCounterBased {
-            guard let counter = UInt64(counterText.trimmed) else { return nil }
+            guard let counter = UInt64(counterText.trimmed),
+                AccountLimits.isCounterStorable(counter)
+            else { return nil }
             generator = .hotp(counter: counter, digits: digits, algorithm: algorithm)
         } else {
             guard let configuration = try? TOTPConfiguration(

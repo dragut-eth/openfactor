@@ -38,7 +38,15 @@ public enum JSONSniff {
         if body.starts(with: [0xEF, 0xBB, 0xBF]) { body = body.dropFirst(3) }
 
         // Order matters, and this is the order: drop the mark, drop the whitespace, then decide.
-        let head = body.prefix(512).drop(while: \.isASCIIWhitespaceByte)
+        //
+        // **Across the whole input, not the first 512 bytes.** The cap was the third of the three
+        // ways round one recorded for defeating this sniff, and the only one the first fix left:
+        // `JSONSerialization` accepts arbitrary leading whitespace and the backup format says
+        // whitespace is not significant, so a conforming archive with 513 spaces in front of it
+        // was routed to the labelled-text reader and its holder told no accounts were found. The
+        // input is already bounded by `ImportLimits` before it reaches here, so there is nothing
+        // for the cap to protect.
+        let head = body.drop(while: \.isASCIIWhitespaceByte)
 
         if head.starts(with: Array("{\\rtf".utf8)) { return Data() }
         guard head.first == UInt8(ascii: "{") else { return Data() }

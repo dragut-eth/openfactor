@@ -427,4 +427,35 @@ struct BackupArchiveTests {
                 try self.rebuild(object), passphrase: "YZTR-THFW-WT6E-OXIV-73XD-QCDM")
         }
     }
+
+    // MARK: - Gate A4 round two: the writer and the reader bound different things
+
+    /// **The fix all three engines rejected, and what it should have been.** The first attempt
+    /// checked the finished container against `maximumFileBytes`. GCM ciphertext is the length of
+    /// its plaintext, so a payload one byte over `maximumPlaintextBytes` still serialises to a
+    /// container comfortably under that ceiling: it wrote, and the reader refused it on restore.
+    @Test("The writer refuses a payload the reader would refuse")
+    func writerRefusesAnOversizePayload() throws {
+        // A payload one byte past the reader's rule, built directly rather than from accounts,
+        // because the point is the boundary and not how many accounts reach it.
+        let oversize = Data(repeating: 0x41, count: BackupArchive.maximumPlaintextBytes + 1)
+
+        #expect(throws: BackupError.tooLarge) {
+            try BackupArchive.seal(
+                plaintext: oversize, passphrase: "correct horse battery staple xylophone",
+                mode: .custom, iterations: 1_000)
+        }
+    }
+
+    /// And the boundary itself is a ceiling rather than an off-by-one refusal.
+    @Test("The writer accepts a payload at the reader's ceiling")
+    func writerAcceptsAtTheCeiling() throws {
+        let atCeiling = Data(repeating: 0x41, count: BackupArchive.maximumPlaintextBytes)
+
+        #expect(throws: Never.self) {
+            _ = try BackupArchive.seal(
+                plaintext: atCeiling, passphrase: "correct horse battery staple xylophone",
+                mode: .custom, iterations: 1_000)
+        }
+    }
 }

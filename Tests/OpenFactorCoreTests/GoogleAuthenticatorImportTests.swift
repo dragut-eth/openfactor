@@ -179,7 +179,10 @@ struct GoogleAuthenticatorImportTests {
         let batch = try read(payload([parameters(secret: Data("123456789".utf8))]))
 
         #expect(batch.result.accounts.isEmpty)
-        #expect(batch.result.refusals.first?.reason == .secretNotBase32)
+        // The honest reason: these secrets are raw bytes, so "not valid Base32" was never a
+        // description of anything this reader can see. Round two of gate A4 found this test
+        // pinning the wrong answer in place.
+        #expect(batch.result.refusals.first?.reason == .secretTooShort)
     }
 
     @Test("One bad account does not lose the rest of the code")

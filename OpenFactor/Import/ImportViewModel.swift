@@ -124,6 +124,16 @@ final class ImportViewModel {
     /// bound, the archive check, and the parser. A second entry point that skipped any of them
     /// would be a second, weaker importer.
     func read(_ data: Data) {
+        // **One cheap bound before anything expensive**, which is the largest ceiling any format
+        // has. Reordering this method so the format decides the bound put a full `Data` copy and
+        // a complete `JSONSerialization` parse in front of the memory check, which is the exact
+        // pattern the reorder existed to remove: a bound after the expensive operation. A review
+        // found it in the commit that was fixing it.
+        guard data.count <= ImportLimits.largestAcceptableBytes else {
+            stage = .failed("That file is too large to be an authenticator export.")
+            return
+        }
+
         // **The format decides the bound, so the format is recognised first.** This used to
         // refuse everything over eight mebibytes before looking, and `BACKUP_FORMAT.md` permits
         // eight mebibytes of *decoded ciphertext*, which is about 11.2 million base64 characters
