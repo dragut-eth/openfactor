@@ -343,7 +343,7 @@ struct AccountListView: View {
         } label: {
             // Masked while the screen is shared. The card stays, so a legitimately mirrored
             // app still reads as itself; only the digits go. See `ScreenCaptureMonitor`.
-            AccountCard(model: isScreenCaptured ? row.card.withoutCode : row.card)
+            AccountCard(model: row.card.maskedIfCaptured(isScreenCaptured))
         }
         .buttonStyle(.plain)
         // Follows the ring, which moves to the bottom of the card at accessibility sizes.

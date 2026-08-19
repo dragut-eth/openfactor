@@ -40,7 +40,11 @@ explains why a converter would be the least exercised code in the project.
 document denied. A second model reviewed App Lock's presentation core and found a real leak, an
 unlock landing after backgrounding that tore the lock window down over a live interface, before
 that build reached a device. A cold review of the Watch key exchange, run with no prior context,
-found no fault in the cryptography and four defects around it, all fixed and all now tested.
+found no fault in the cryptography and four defects around it, all fixed. **Two of the four were
+not covered by any test**, which a later reviewer found by reading this sentence against the code:
+the phone's request handling has no tests at all because it lives in the app target, and the
+CSPRNG failure path had none either. That is what a claim marked **tested** must never mean, and
+it is why the basis labels exist.
 
 **Neither is a professional audit.** Gate A4 in `docs/ROADMAP.md` is that, and it has not
 happened. A security design can be sound while the product implementing it is unfinished or
@@ -140,7 +144,10 @@ is a fraction of a second, visible only to somebody already holding the phone.
 
 **Secrets are hidden while the screen is being captured.** iOS reports when the screen is being
 recorded, mirrored, or shared, and OpenFactor follows that: codes become bullets, and a vault or
-backup passphrase is withheld entirely and says why. Measured on hardware with a screen
+backup passphrase is withheld entirely and says why. Every screen that draws a live code masks it,
+which gate A4 found was true of one screen out of three: the confirm-add and manual-entry previews
+drew live digits regardless, and a code reaches the first of those from any `otpauth://` URL any
+app can send. Measured on hardware with a screen
 recording. This is a defense against **accidental broadcast**, which is the only kind it can be:
 somebody sharing their screen in a meeting who opens the app for a code has not decided to show
 it to anybody, and no document reaches them in that moment. It is not a defense against somebody

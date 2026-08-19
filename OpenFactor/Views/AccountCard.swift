@@ -48,6 +48,13 @@ struct AccountCard: View {
             masked.code = String(repeating: "•", count: max(code.count, 6))
             return masked
         }
+
+        /// The same masking, applied only while the screen is being recorded, mirrored, or
+        /// shared. Every place that draws a live code calls this, so a screen added later has
+        /// one obvious thing to copy rather than a rule to remember.
+        func maskedIfCaptured(_ captured: Bool) -> Model {
+            captured ? withoutCode : self
+        }
     }
 
     let model: Model

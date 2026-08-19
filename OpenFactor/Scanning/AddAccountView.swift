@@ -251,6 +251,8 @@ private struct ConfirmAccountView: View {
     let account: OTPAccount
     @Bindable var model: AddAccountViewModel
 
+    @Environment(\.isScreenCaptured) private var isScreenCaptured
+
     @State private var now = Date()
 
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -263,6 +265,12 @@ private struct ConfirmAccountView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
+                // Masked while the screen is shared, the same as the account list. Gate A4
+                // found this screen and the manual preview drawing live digits regardless,
+                // so `SECURITY.md`'s "codes become bullets while captured" was true of one
+                // screen out of three. A code reaches here from a scanned QR or from an
+                // `otpauth://` URL any app can send, which is exactly the moment somebody
+                // sharing a meeting screen would not notice.
                 AccountCard(
                     model: AccountCard.Model(
                         issuer: account.issuer ?? account.name,
@@ -271,7 +279,7 @@ private struct ConfirmAccountView: View {
                         secondsRemaining: model.previewSecondsRemaining(at: now),
                         period: period,
                         color: model.color
-                    )
+                    ).maskedIfCaptured(isScreenCaptured)
                 )
 
                 // Directly under the card, so the choice lands on the thing being chosen

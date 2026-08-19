@@ -99,29 +99,59 @@ public struct VaultKeyStore: Sendable {
         let url = try fileURL()
         let data = key.withUnsafeBytes { Data($0) }
 
-        #if os(iOS) || os(watchOS) || os(tvOS)
-            // `.complete` rather than "the strongest available", which is a superlative a second
-            // implementation could satisfy two ways. The consequence is deliberate: the key is
-            // unreadable while the device is locked, so nothing reads the vault in the
-            // background. This app declares no background modes, so nothing is lost.
-            // Complete protection where it exists. macOS has no data protection and was
-            // measured refusing the option outright with EPERM, after days of silently
-            // accepting it; `SharedInbox.writingOptions` records the incident. On iOS this
-            // stays the strongest class, which E6 verified on hardware.
-            try data.write(to: url, options: SharedInbox.writingOptions)
-        #else
-            // macOS, which is only ever the test host. Data protection classes do not exist
-            // here, so the tests that matter for it are the ones that run on a device.
-            try data.write(to: url, options: [.atomic])
-        #endif
+        // **Written to a staging file, marked, then moved into place.** The order matters and
+        // the previous one was wrong: the key was written where it lives and only then excluded
+        // from backup, so a kill between those two steps left a usable key with no exclusion,
+        // and nothing ever retried it because `state()` sees a valid key and asks no further
+        // questions. A single backup taken in that window carries the raw vault key. Found in
+        // gate A4 by two engines.
+        //
+        // A rename within one directory is atomic, so the key that appears at `url` has always
+        // been through both steps. There is no moment when a complete key exists there
+        // unmarked.
+        let staging = url.deletingLastPathComponent()
+            .appendingPathComponent(".\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: staging) }
 
+        try data.write(to: staging, options: Self.writingOptions)
+
+        var marked = staging
+        var values = URLResourceValues()
         // Excluded so a restored device has ciphertext and no key, and asks for the passphrase.
         // Letting the key ride along would make restores seamless and would mean the passphrase
         // is never exercised, never noticed as important, and absent when it is finally needed.
-        var excluded = url
-        var values = URLResourceValues()
         values.isExcludedFromBackup = true
-        try excluded.setResourceValues(values)
+        try marked.setResourceValues(values)
+
+        // `replaceItem` rather than `moveItem`, because installing over an existing key is the
+        // ordinary path: a watch re-provisioned, or a passphrase unlocking a device that already
+        // held a key.
+        _ = try FileManager.default.replaceItemAt(url, withItemAt: marked)
+    }
+
+    /// Complete protection wherever the platform has it.
+    ///
+    /// **This used to borrow `SharedInbox.writingOptions`, and that was a real defect.** That
+    /// helper is `#if os(iOS)`, which is narrower than the platforms this file supports, so the
+    /// watch wrote the vault key with `.atomic` alone beneath a comment promising `.complete`.
+    /// The default class is complete-until-first-unlock, which stays readable after the first
+    /// unlock of the boot, including while the wrist is locked, which is the state the
+    /// protection was chosen for. Found in gate A4 by every engine that could see both files.
+    ///
+    /// `.complete` rather than "the strongest available", which is a superlative a second
+    /// implementation could satisfy two ways. The consequence is deliberate: the key is
+    /// unreadable while the device is locked, so nothing reads the vault in the background.
+    /// This app declares no background modes, so nothing is lost.
+    ///
+    /// macOS has no data protection and was measured refusing the option outright with `EPERM`
+    /// after days of silently accepting it, so it is only ever `.atomic` there. macOS is the
+    /// test host and never a device this key lives on.
+    static var writingOptions: Data.WritingOptions {
+        #if os(iOS) || os(watchOS) || os(tvOS)
+            [.completeFileProtection, .atomic]
+        #else
+            [.atomic]
+        #endif
     }
 
     /// Removes the key, which makes every account on this device unreadable until a key is

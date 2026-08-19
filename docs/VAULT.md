@@ -354,8 +354,11 @@ because two apps happened to be open.
 than failing silently. **If the phone has no key itself**, which happens when both are replaced
 together, it says that instead, and the watch retries after the phone is recovered.
 
-The watch's private key may live in the Secure Enclave rather than the container. It is
-ephemeral, generated per attempt and never persisted.
+The watch's private key is `P256.KeyAgreement.PrivateKey`, CryptoKit's software key, held in
+process memory. It is ephemeral, generated per attempt and never persisted. **An earlier version
+of this paragraph said it may live in the Secure Enclave; nothing here uses `SecureEnclave.P256`
+and nothing ever has.** Found in gate A4, and recorded rather than quietly deleted because a
+reader may have relied on it.
 
 **It is not discarded the instant the exchange ends**, and an earlier version of this paragraph
 said otherwise. An attempt is deliberately kept through a timeout, because a slow answer is

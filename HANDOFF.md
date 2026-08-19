@@ -8,6 +8,26 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**Four more fixed: the watch's protection class, the install ordering, the unmasked code
+previews, and two false document claims.**
+
+`VaultKeyStore` has its own `writingOptions` now instead of borrowing the share inbox's, whose
+`#if os(iOS)` was narrower than the platforms this file supports, so the watch wrote the vault key
+with `.atomic` alone under a comment promising `.complete`. And `install` writes to a staging
+file, marks it excluded from backup, then moves it into place, so there is no longer a window in
+which a complete key exists unmarked. A rename within a directory is atomic; the previous order
+left a usable unexcluded key behind any kill between the two steps, with nothing to retry it.
+
+Every screen that draws a live code now masks it while the screen is captured. It was true of the
+account list only; the confirm-add and manual-entry previews drew live digits regardless, and a
+code reaches the first of those from any `otpauth://` URL any app can send. All four card sites go
+through one `maskedIfCaptured` helper, so a screen added later has something obvious to copy
+rather than a rule to remember.
+
+`docs/VAULT.md` no longer says the watch's private key may live in the Secure Enclave; it never
+has. And `SECURITY.md` no longer claims the earlier watch review's four fixes were "all now
+tested", because two of them had no test at all.
+
 **The crash is fixed, and two small watch defects with it.** `GoogleAuthenticatorImport` read
 the three batch header fields with `Int(clamping:)`, which turns an impossible `UInt64.max` into a
 perfectly valid `Int.max`, and `Batch.position` then added one and trapped while a SwiftUI sheet

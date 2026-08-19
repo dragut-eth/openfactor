@@ -18,6 +18,7 @@ struct ManualSetupView: View {
     @State private var isChoosingColour = false
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isScreenCaptured) private var isScreenCaptured
 
     /// Whether the secret is shown in the clear. Off by default, and never remembered.
     @State private var isSecretRevealed = false
@@ -191,7 +192,7 @@ struct ManualSetupView: View {
                         secondsRemaining: model.previewSecondsRemaining(at: now),
                         period: model.period,
                         color: model.color
-                    )
+                    ).maskedIfCaptured(isScreenCaptured)
                 )
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
