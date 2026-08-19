@@ -266,6 +266,16 @@ public struct VaultKeyStore: Sendable {
     /// moment a passphrase is entered. Erasing accounts is `EraseAccountsView`'s job and deletes
     /// the items themselves.
     public func discard() throws {
+        // **The staging directory goes too.** A review noticed that an install killed between
+        // writing a pending key and replacing with it leaves that key behind, and erasing the
+        // vault did not remove it: the accounts it opened are gone, so the harm is near nil, but
+        // a raw key sitting in the container after somebody chose to erase everything is not a
+        // thing to leave lying about. The sweep on the next install would have collected it, and
+        // after an erase there may never be a next install.
+        let staging = try fileURL().deletingLastPathComponent()
+            .appendingPathComponent("PendingKeys", isDirectory: true)
+        try? FileManager.default.removeItem(at: staging)
+
         let url = try fileURL()
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         try FileManager.default.removeItem(at: url)

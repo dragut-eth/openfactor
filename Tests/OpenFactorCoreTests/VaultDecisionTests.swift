@@ -86,6 +86,25 @@ struct VaultDecisionTests {
         #expect(try keys.load() == nil, "and no key was installed to go with a wrap that is gone")
     }
 
+    /// **The ordering the whole recovery story rests on, which nothing could check until the
+    /// fake could fail a write.** The record is written before the key, deliberately: a key with
+    /// no record is a device that works until it is replaced and then cannot be recovered by
+    /// anybody, while a record with no key is merely a device that must be unlocked. The bad
+    /// order fails silently and the safe one fails visibly.
+    @Test("A record that cannot be written leaves no key behind")
+    func aFailedRecordWriteInstallsNoKey() throws {
+        let (vault, keys, wrapped) = makeVault()
+        wrapped.writeFailure = .keychain(status: errSecInteractionNotAllowed)
+
+        #expect(throws: (any Error).self) {
+            try vault.create(with: "the passphrase this device just generated")
+        }
+
+        #expect(try keys.load() == nil, "no key, because nothing could record how to recover it")
+        #expect(wrapped.storedRecord == nil)
+        #expect(vault.state() == .absent, "so the device offers setup again, which is recoverable")
+    }
+
     /// **A record refused before any derivation ran is not a passphrase problem.** Reporting it
     /// as one sends somebody to retype a passphrase they have written down correctly, against a
     /// record written by a newer version of this app.

@@ -256,6 +256,24 @@ struct VaultKeyStoreTests {
         #expect(VaultKeyStore.KeyStoreError.notExcludedFromBackup != .damaged)
     }
 
+    /// Erasing takes the staging directory with it, so a pending key left by a killed install
+    /// does not outlive the vault it belonged to.
+    @Test("Discarding removes a pending key a killed install left behind")
+    func discardSweepsPendingKeys() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        _ = try store.create()
+        let staging = dir.appendingPathComponent("PendingKeys", isDirectory: true)
+        let orphan = staging.appendingPathComponent(UUID().uuidString)
+        try Data(repeating: 3, count: 32).write(to: orphan)
+
+        try store.discard()
+
+        #expect(!FileManager.default.fileExists(atPath: orphan.path))
+        #expect(!FileManager.default.fileExists(atPath: staging.path))
+    }
+
     /// The repair must not be able to damage what it is repairing.
     @Test("Repairing does not disturb the key itself")
     func repairPreservesTheKey() throws {

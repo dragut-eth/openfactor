@@ -42,11 +42,22 @@ final class InMemoryWrappedStore: WrappedRecordStore, @unchecked Sendable {
     /// check made at the right moment.
     var duringWrite: (@Sendable () -> Void)?
 
+    /// When set, every write fails with it.
+    ///
+    /// **Added because a review named its absence as the most consequential unverified decision
+    /// left in this scope.** Without it, nothing could check what happens when the record cannot
+    /// be written, and the record-before-key ordering is the whole of the recovery story: a key
+    /// with no record is a device that works until it is replaced and then cannot be recovered by
+    /// anybody.
+    var writeFailure: SecretStoreError?
+
     func save(_ record: Data) throws(SecretStoreError) {
+        if let writeFailure { throw writeFailure }
         lock.withLock { self.record = record }
     }
 
     func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool {
+        if let writeFailure { throw writeFailure }
         duringWrite?()
         return lock.withLock {
             guard self.record == nil else { return false }
