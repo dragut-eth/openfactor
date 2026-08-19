@@ -62,6 +62,10 @@ enum CodeClipboard {
         switch kind {
         // Allowed to reach a Mac, deliberately and after measuring it: the argument is in the
         // comment above `copy(_:expiring:)`.
+        // The lifetime here is the fallback for a code with no natural expiry, which is what
+        // HOTP is. A TOTP code expires at its own rollover, so `copy(_:expiring:)` takes that
+        // moment from its caller and this number is not consulted. A review found the value
+        // pinned by a test and read by nothing, which is a claim with no consumer.
         case .code: return (localOnly: false, lifetime: 30)
         // **Never leaves the device.** The expiry below does not travel, as measured, so on any
         // other device this would sit in the clipboard until something replaced it.

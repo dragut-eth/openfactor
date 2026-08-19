@@ -97,8 +97,14 @@ final class ImportViewModel {
         // megabyte allocation, and on a phone that is a termination rather than a message. A
         // review put it plainly: the comment said bounded before anything parses it, which was
         // true about parsing and false about the thing that actually hurts.
-        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
-        if let size, !ImportLimits.isWorthLoading(fileSize: size) {
+        // **Fails closed.** This was written as "refuse it if a size happens to be available",
+        // and a review pointed out that a bound which only applies when the file system feels
+        // like answering is not a bound. A file whose size cannot be read is refused, which is
+        // recoverable for the person holding it and is not an unbounded allocation.
+        guard
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize,
+            ImportLimits.isWorthLoading(fileSize: size)
+        else {
             stage = .failed("That file is too large to be an authenticator export.")
             return
         }

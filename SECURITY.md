@@ -155,8 +155,15 @@ reasoning. The durable artifact, the card anybody can browse to at leisure, stay
 is a fraction of a second, visible only to somebody already holding the phone.
 
 **Secrets are hidden while the screen is being captured.** iOS reports when the screen is being
-recorded, mirrored, or shared, and OpenFactor follows that: codes become bullets, and a vault or
-backup passphrase is withheld entirely and says why. Every screen that draws a live code masks it,
+recorded, mirrored, or shared, and OpenFactor follows that: codes become bullets, a vault or
+backup passphrase is withheld entirely and says why, and a secret being typed in by hand cannot
+be revealed at all while capture is on, with the reveal control disabled rather than hidden so the
+reason is visible.
+
+**That last clause was added after round two of gate A4 found it missing**, on the screen the
+masking work had just touched: the manual-entry field rendered the secret in the clear whenever
+its eye was tapped, and nothing there consulted the capture flag. A code expires in seconds; that
+secret generates every code the account will ever have. Every screen that draws a live code masks it,
 which gate A4 found was true of one screen out of three: the confirm-add and manual-entry previews
 drew live digits regardless, and a code reaches the first of those from any `otpauth://` URL any
 app can send. Measured on hardware with a screen
@@ -519,7 +526,16 @@ accept arbitrary senders.
 Its security is what it cannot do. It declares one entitlement, the app group, and no Keychain
 access, so it can neither read an account nor write one. It does not parse the QR, decode the
 image, or read any import format; those stay in the app. It writes the bytes it was handed to a
-group container with complete file protection and passes a URL carrying only an identifier.
+group container with complete file protection, under a name that is a fresh UUID and carries
+nothing about the file, and then stops.
+
+**Nothing is passed from the extension to the app.** The sentence here used to say it passes a URL
+carrying only an identifier, which described a URL scheme that was removed: the identifier is
+returned to the extension and discarded, and the app finds the item by listing the directory when
+it next comes forward. Gate A4 confirmed this sentence was false in round one, and it survived
+into round two because triage recorded it as leftover without giving it a number, so it never
+reached the list of things being fixed. That is a defect in how findings were tracked rather than
+in the code, and it is why every finding now carries one.
 
 **The shared App Group container is not treated as a confidentiality boundary.** A sibling app
 explicitly authorized into that App Group could read the temporary inbox item. That is an

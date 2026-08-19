@@ -83,11 +83,29 @@ jobs:
             echo "windows, make the lock and cover per scene first, then change this."
             exit 1
           fi
+          # **Generation must be switched off explicitly, not merely not switched on.** Round
+          # two of the gate pointed out that this check only failed on the literal YES, so
+          # deleting the lines entirely would restore Xcode's SwiftUI default, generate a manifest
+          # that overrides the file above, and leave this green. Requiring the lines to be present
+          # and NO closes that: silence is now a failure.
+          for SDK in iphoneos iphonesimulator; do
+            COUNT=$(grep -c "\"INFOPLIST_KEY_UIApplicationSceneManifest_Generation\[sdk=$SDK\*\]\" = NO" \
+              OpenFactor.xcodeproj/project.pbxproj || true)
+            if [ "$COUNT" -lt 2 ]; then
+              echo "The scene manifest generation switch for $SDK is missing from a build"
+              echo "configuration, or is not NO. Found $COUNT of the expected 2."
+              echo "Xcode would generate a manifest that overrides OpenFactor-Info.plist, which is"
+              echo "how the multiple-scene defect shipped in the first place."
+              exit 1
+            fi
+          done
+
           if grep -q "INFOPLIST_KEY_UIApplicationSceneManifest_Generation\[sdk=iphoneos\*\]\" = YES" \
             OpenFactor.xcodeproj/project.pbxproj; then
             echo "Xcode is generating the scene manifest again, which would override the file."
             exit 1
           fi
+
           echo "ok: one scene, and the file is authoritative"
 
       # This repository is public and its maintainer's circumstances are not part of it.

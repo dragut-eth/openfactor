@@ -84,9 +84,15 @@ public enum GoogleAuthenticatorImport {
         /// Which part this is, counting from one, the way it would be said aloud.
         ///
         /// The addition is safe because `index` is refused above `maximumBatchField` when the
-        /// message is read. It is written as a saturating add anyway: this property is
-        /// evaluated while a SwiftUI sheet is being built, which is the worst place in the app
-        /// to discover that an invariant moved, and the belt costs one character.
+        /// message is read, so it cannot approach the top of `Int`.
+        ///
+        /// **`&+` is a wrapping add, not a saturating one**, and the comment here used to call it
+        /// saturating. Swift has no saturating operator; `Int.max &+ 1` is `Int.min`. So the
+        /// belt this described does not exist: if the invariant above ever moved, this would show
+        /// a hugely negative part number rather than stopping at a ceiling. Two reviewers found
+        /// the word in round two. It is kept as `&+` rather than `+` deliberately: the invariant
+        /// is proven and tested, and a trap while a sheet is being built is the worst place in
+        /// the app to discover otherwise.
         public var position: Int { index &+ 1 }
     }
 

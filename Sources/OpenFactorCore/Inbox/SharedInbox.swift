@@ -28,8 +28,9 @@ import Foundation
 ///
 /// ## The lifecycle, which is the other half of the point
 ///
-/// Written by the extension, taken **once** by the app, and the whole directory swept at every
-/// launch. The sweep is what covers the case the delete cannot: the app never opened, or was
+/// Written by the extension, taken **once** by the app, and swept whenever the app comes
+/// forward. **The sweep removes what is older than `staleAfter` rather than everything**, so
+/// it cannot take the item somebody shared a moment ago.
 /// killed between the extension writing and the app reading. That is the same lifecycle the
 /// export file already has, and for the same reason.
 public struct SharedInbox: Sendable {
@@ -44,8 +45,9 @@ public struct SharedInbox: Sendable {
     ///
     /// Unlike the Keychain access group, this is cheap to rename. A Keychain item lives in the
     /// group it was written to, which is why renaming that one stranded every stored account.
-    /// Nothing durable lives here: an item exists for seconds and every launch sweeps the
-    /// directory, so a rename costs a re-registration and nothing else.
+    /// Nothing durable lives here: an item exists for as long as it takes somebody to confirm
+    /// an import, and at most `staleAfter` before a sweep removes it unread, so a rename costs a
+    /// re-registration and nothing else.
     public static let appGroup = "group.dev.openfactor"
 
     /// A subdirectory rather than the container root, so a sweep can delete everything it finds
@@ -75,6 +77,9 @@ public struct SharedInbox: Sendable {
         case notFound
         /// The item is larger than anything this app will read. Removed rather than left.
         case tooLarge
+        /// The inbox directory could not be kept out of device backups, so nothing was written
+        /// into it. A QR of every secret is not worth writing on the hope that it is excluded.
+        case notExcludedFromBackup
     }
 
     private func directory() throws(InboxError) -> URL {
@@ -87,9 +92,11 @@ public struct SharedInbox: Sendable {
     /// Writes an item and returns the name to put in the URL.
     ///
     /// The name is a fresh UUID and carries no information: not the file's type, not its size,
-    /// not where it came from. The URL that follows it is the only thing that leaves this
-    /// process, and a URL can be logged, can appear in handoff, and can end up in a diagnostic
-    /// bundle.
+    /// not where it came from. **Nothing carries it out of this process**: the identifier is
+    /// returned and the extension discards it, because the app finds the item by listing the
+    /// directory rather than by being told. This comment used to describe a URL scheme that
+    /// carried the identifier to the app, which was removed; a review found the sentence still
+    /// here, describing a mechanism that no longer exists.
     @discardableResult
     public func write(_ data: Data) throws -> UUID {
         let directory = try directory()
@@ -97,16 +104,30 @@ public struct SharedInbox: Sendable {
             at: directory, withIntermediateDirectories: true,
             attributes: Self.protectionAttributes)
 
-        // **Excluded before anything is put in it.** A review found inbox items eligible for
-        // device backup: an item lives for seconds, but a backup taken during those seconds
-        // carries a QR image of every secret in somebody's authenticator into iTunes or iCloud,
-        // where nothing sweeps it. The directory carries the flag rather than each file, and it
-        // is marked before the write for the same reason the vault key's staging directory is:
-        // a mark applied afterwards leaves a window with nothing to close it.
+        // **Excluded before anything is put in it, and the write is refused if it is not.** An
+        // item lives for seconds, but a backup taken during those seconds carries a QR image of
+        // every secret in somebody's authenticator into iCloud, where nothing sweeps it. The
+        // directory carries the flag rather than each file, and it is marked before the write for
+        // the same reason the vault key's staging directory is: a mark applied afterwards leaves
+        // a window with nothing to close it.
+        //
+        // **This used to be `try?` and write anyway**, which a review called failing open: any
+        // metadata failure that did not also stop ordinary writes produced a backup-eligible
+        // image of every seed, silently. `VaultKeyStore` already refused to write a key it could
+        // not exclude, and there was no argument for holding this to a weaker rule.
         var marked = directory
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
-        try? marked.setResourceValues(values)
+        try marked.setResourceValues(values)
+
+        // Read back rather than trust the write, on a fresh URL because the one above has cached
+        // what it knew before the call.
+        let confirmation = URL(fileURLWithPath: directory.path)
+        guard try confirmation.resourceValues(forKeys: [.isExcludedFromBackupKey])
+            .isExcludedFromBackup == true
+        else {
+            throw InboxError.notExcludedFromBackup
+        }
 
         let id = UUID()
         try data.write(
@@ -171,13 +192,20 @@ public struct SharedInbox: Sendable {
             guard let id = UUID(uuidString: name) else { return nil }
             let attributes = try? FileManager.default.attributesOfItem(
                 atPath: directory.appendingPathComponent(name).path)
-            // **Clamped, because the timestamp is not this app's.** A review pointed out that
-            // freshness was read straight off the file, and a modification date in the future
-            // makes an item sort ahead of everything and look newer than anything that could
-            // actually have arrived. Nothing on the device should be able to claim it arrived
-            // after now.
+            // **A timestamp after now is refused, not clamped.** The first fix clamped it to
+            // `now`, and all three engines of round two walked out why that is inert: the value
+            // is recomputed on every read, so a file stamped in 2090 reports an age of zero
+            // forever. It still sorted ahead of a genuine share, still passed the freshness
+            // test, and could never satisfy the launch sweep, which asks whether the age exceeds
+            // a threshold. **The item the sweep exists to remove became the one item it could
+            // never remove.**
+            //
+            // Nothing legitimate writes a stamp in the future, so a stamp in the future is
+            // evidence about the writer rather than about the time. It is treated as arriving
+            // before everything, which sorts it last and makes it immediately sweepable.
             let stamped = (attributes?[.modificationDate] as? Date) ?? .distantPast
-            return Pending(id: id, arrived: min(stamped, now))
+            let arrived = stamped > now ? .distantPast : stamped
+            return Pending(id: id, arrived: arrived)
         }
         .sorted { $0.arrived > $1.arrived }
     }
@@ -191,16 +219,24 @@ public struct SharedInbox: Sendable {
         let url = try directory().appendingPathComponent(id.uuidString)
         defer { try? FileManager.default.removeItem(at: url) }
 
-        // **The size is asked of the file system before the read.** All three engines found this
-        // unbounded: whatever was in the container was copied into memory, and the bound, where
-        // there was one, came afterwards. The item is removed either way, so an oversized one is
-        // taken off the device rather than left for the next attempt.
-        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
-        if let size, !ImportLimits.isWorthLoading(fileSize: size) { throw InboxError.tooLarge }
-
-        guard let data = FileManager.default.contents(atPath: url.path) else {
+        // **One open, one bounded read, and no second lookup for anything to change between.**
+        // The first bound asked the file system for a size and then called a separate read, which
+        // a review took apart twice over: the check was skipped entirely when no size came back,
+        // and even when it did, a writer sharing this container could replace the file between
+        // the two calls. Reading through a handle removes both, because the bytes that arrive are
+        // the bytes of the file that was opened.
+        //
+        // One byte past the limit is enough to refuse: the item is removed either way, so an
+        // oversized one leaves the device rather than waiting for the next attempt.
+        guard let handle = try? FileHandle(forReadingFrom: url) else {
             throw InboxError.notFound
         }
+        defer { try? handle.close() }
+
+        let limit = ImportLimits.largestAcceptableBytes
+        guard let data = try handle.read(upToCount: limit + 1) else { throw InboxError.notFound }
+        guard data.count <= limit else { throw InboxError.tooLarge }
+
         return data
     }
 
@@ -221,29 +257,48 @@ public struct SharedInbox: Sendable {
         }
     }
 
-    /// How long an item may sit in the inbox before a launch sweeps it regardless.
+    /// How long an item may sit in the inbox before a sweep removes it regardless.
     ///
-    /// Long enough that the ordinary path is untouched: the extension writes, the person is
-    /// carried into the app, and the collection happens in seconds. Short enough that an item
-    /// nobody collected does not sit in a shared container for the rest of the day.
-    public static let staleAfter: TimeInterval = 5 * 60
+    /// **The same number as `freshness`, and that is the point.** These were five minutes and ten
+    /// minutes, so an item aged between them was worth presenting by one rule and deleted unread
+    /// by the other, and which happened depended on whether iOS had kept the process alive. Round
+    /// two found the split in all three reviews and the normative lock document sided with
+    /// neither. One idea, one constant: an item is removed exactly when it stops being worth
+    /// presenting.
+    public static let staleAfter = freshness
 
     /// Removes what nobody is coming for, and leaves what somebody just shared.
     ///
     /// **All three engines found the sweep unreachable in the case it exists for.** `SharedInbox`
-    /// says the directory is swept at every launch and `SECURITY.md` says leftovers are swept when
-    /// OpenFactor launches, but the only sweep sat inside the collection path, which refuses to
-    /// run until the scene is active, the lock is open, the vault is open and no arrival is
+    /// said the directory was swept at every launch and `SECURITY.md` said leftovers are swept
+    /// when OpenFactor launches, but the only sweep sat inside the collection path, which refuses
+    /// to run until the scene is active, the lock is open, the vault is open and no arrival is
     /// pending. An image shared to a locked phone that was never unlocked again stayed there.
     ///
-    /// This runs at launch with none of those conditions, and it cannot eat the item somebody
-    /// just shared, because that one is seconds old.
+    /// This runs whenever the app comes forward, with none of those conditions. Round two of the
+    /// gate found the first version running once per process, which made the threshold a
+    /// condition evaluated at launch rather than a deadline.
     public func sweepStale(now: Date = Date()) {
-        for item in pending(now: now) where now.timeIntervalSince(item.arrived) > Self.staleAfter {
-            guard let url = try? directory().appendingPathComponent(item.id.uuidString) else {
+        guard let directory = try? directory() else { return }
+        guard
+            let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path)
+        else { return }
+
+        let ages = Dictionary(
+            pending(now: now).map { ($0.id.uuidString, now.timeIntervalSince($0.arrived)) },
+            uniquingKeysWith: { first, _ in first })
+
+        for name in names {
+            // **A name this app did not write is removed on sight.** The sweep used to consider
+            // only names that parse as a UUID, which is every name this app writes and no
+            // guarantee about what else is in a shared container. A review pointed out that
+            // anything else was the original leftover under a name the sweep could not see.
+            guard let age = ages[name] else {
+                try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
                 continue
             }
-            try? FileManager.default.removeItem(at: url)
+            guard age > Self.staleAfter else { continue }
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
         }
     }
 }

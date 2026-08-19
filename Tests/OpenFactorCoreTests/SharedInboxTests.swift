@@ -208,22 +208,73 @@ struct SharedInboxCollectionTests {
         #expect(inbox.pending().count == 1, "the ordinary path is untouched")
     }
 
-    /// **The timestamp is not this app's.** A modification date in the future made an item sort
-    /// ahead of everything and look newer than anything that could have arrived.
-    @Test("An item cannot claim it arrived after now")
-    func futureTimestampsAreClamped() throws {
+    /// **A stamp in the future is evidence about the writer, not about the time.**
+    ///
+    /// The first fix clamped it to `now`, and round two rejected that in all three reviews: the
+    /// value is recomputed on every read, so the item reported an age of zero forever. It sorted
+    /// first, stayed fresh, and became the one item the launch sweep could never remove. This
+    /// test asserts the two properties that clamp version passed while failing.
+    @Test("A future timestamp sorts last and sweeps immediately")
+    func futureTimestampsAreRefused() throws {
         let (inbox, directory) = makeInbox()
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        let id = try inbox.write(Data("planted".utf8))
+        let genuine = try inbox.write(Data("what somebody actually shared".utf8))
+        let planted = try inbox.write(Data("planted".utf8))
+
         let url = directory.appendingPathComponent(SharedInbox.directoryName)
-            .appendingPathComponent(id.uuidString)
+            .appendingPathComponent(planted.uuidString)
         try FileManager.default.setAttributes(
             [.modificationDate: Date().addingTimeInterval(86_400)], ofItemAtPath: url.path)
 
-        let now = Date()
-        let item = try #require(inbox.pending(now: now).first)
-        #expect(item.arrived <= now, "clamped to now rather than believed")
+        // The genuine share is the one offered, not the one claiming to be from tomorrow.
+        let newest = try #require(inbox.pending().first)
+        #expect(newest.id == genuine)
+
+        // And the plant is stale on sight rather than immortal.
+        inbox.sweepStale()
+        #expect(inbox.pending().map(\.id) == [genuine], "the plant is gone, the share is not")
+    }
+
+    /// **One idea, one constant.** These were five and ten minutes, so an item aged between them
+    /// was worth presenting by one rule and deleted unread by the other.
+    @Test("An item stops being presentable exactly when it becomes sweepable")
+    func oneThresholdRatherThanTwo() {
+        #expect(SharedInbox.staleAfter == SharedInbox.freshness)
+    }
+
+    /// A name this app did not write is not something to leave in a shared container.
+    @Test("A file the app did not write is swept on sight")
+    func unknownNamesAreSwept() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let mine = try inbox.write(Data("mine".utf8))
+        let theirs = directory.appendingPathComponent(SharedInbox.directoryName)
+            .appendingPathComponent("not-a-uuid")
+        try Data("planted under a name the sweep could not see".utf8).write(to: theirs)
+
+        inbox.sweepStale()
+
+        #expect(!FileManager.default.fileExists(atPath: theirs.path))
+        #expect(inbox.pending().map(\.id) == [mine], "and what this app wrote is untouched")
+    }
+
+    /// **The bound cannot be skipped, and there is nothing to race.** The old shape asked for a
+    /// size and then called a separate read, so a missing size skipped the check entirely and a
+    /// writer sharing the container could swap the file between the two calls.
+    @Test("An item with no readable size is still bounded")
+    func theBoundCannotBeSkipped() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = try inbox.write(Data("small".utf8))
+        let url = directory.appendingPathComponent(SharedInbox.directoryName)
+            .appendingPathComponent(id.uuidString)
+        try Data(repeating: 0, count: ImportLimits.largestAcceptableBytes + 1).write(to: url)
+
+        #expect(throws: SharedInbox.InboxError.tooLarge) { try inbox.take(id) }
+        #expect(inbox.pending().isEmpty)
     }
 
     /// The inbox holds a QR image of every secret in somebody's authenticator for a few seconds.
@@ -244,7 +295,7 @@ struct SharedInboxCollectionTests {
 
     /// `take` copied whatever was in the container into memory, with the bound, where there was
     /// one, applied afterwards.
-    @Test("Taking an oversized item refuses and removes it")
+    @Test("Taking an item at the limit still works")
     func takingAnOversizedItemRefuses() throws {
         let (inbox, directory) = makeInbox()
         defer { try? FileManager.default.removeItem(at: directory) }

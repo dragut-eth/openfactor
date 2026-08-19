@@ -37,7 +37,10 @@ Stated by Xavier as the ideal, and adopted as requirements:
   interface exactly as it was.
 - **R5, arrivals win.** If a share, an opened file, or a scanned code arrived in the
   meantime, it takes precedence: whatever was open closes, and the import or add flow
-  presents clean from the root.
+  presents clean from the root. **Precedence is over what was already on screen, never over
+  another arrival**: the first one to land is shown, and a second is held until that one is
+  answered rather than replacing it. A review found the code silently discarding the second,
+  which loses a link somebody deliberately opened.
 
 **The honest limit, stated up front: R3 holds only while the process lives.** If iOS
 terminates the app while the person is away, every draft is gone, because the only cure is
@@ -239,7 +242,8 @@ precedence, back to root, clean" means, it matches the rule that only the lock p
 and every deliberate act discards, and the sequence requires deliberately sharing while
 mid-entry. Vetoable at review.
 
-**Bounds, unchanged from PR 16c:** inbox items older than ten minutes are swept unread,
+**Bounds:** inbox items older than `SharedInbox.staleAfter`, which is ten minutes and is the
+same constant that decides whether an item is still worth presenting, are swept unread,
 incoming code payloads are capped at eight kilobytes, and everything that is not the two
 standard schemes or a file URL is refused.
 

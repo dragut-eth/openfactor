@@ -403,4 +403,45 @@ struct MigrationBatchBoundsTests {
         } while v != 0
         return out
     }
+
+    /// **The only reproduced crash in this project, and its bound had no test.** Round two of
+    /// scope 4 found that: the reproducer above is pinned and the guard that refuses an oversized
+    /// batch field is not. A reviewer can only check a bound that something exercises.
+    @Test("Each batch field is refused one past the maximum")
+    func oversizedBatchFieldIsRefused() {
+        let over = UInt64(GoogleAuthenticatorImport.maximumBatchField) + 1
+
+        for field in [3, 4, 5] {
+            #expect(throws: GoogleAuthenticatorImport.FileError.malformed) {
+                _ = try GoogleAuthenticatorImport.read(payload(field: field, value: over))
+            }
+        }
+    }
+
+    /// And the bound is a ceiling rather than an off-by-one refusal.
+    @Test("Each batch field is accepted at the maximum")
+    func batchFieldAtTheMaximumIsAccepted() {
+        let at = UInt64(GoogleAuthenticatorImport.maximumBatchField)
+
+        for field in [3, 4, 5] {
+            #expect(throws: Never.self) {
+                _ = try GoogleAuthenticatorImport.read(payload(field: field, value: at))
+            }
+        }
+    }
+
+    /// An empty account record and one varint field, which is all these bounds need.
+    private func payload(field: Int, value: UInt64) -> String {
+        var bytes: [UInt8] = [0x0a, 0x00, UInt8(field << 3)]
+        var remaining = value
+        while remaining >= 0x80 {
+            bytes.append(UInt8(remaining & 0x7F) | 0x80)
+            remaining >>= 7
+        }
+        bytes.append(UInt8(remaining))
+
+        let encoded = Data(bytes).base64EncodedString()
+            .addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+        return "otpauth-migration://offline?data=" + encoded
+    }
 }

@@ -73,8 +73,14 @@ struct ManualSetupView: View {
                     // Secure entry, because this is the secret itself. A plain field is
                     // readable over a shoulder and can reach the keyboard's learning,
                     // which is a copy of the secret in a place nobody audits.
+                    // **Never in the clear while the screen is being captured.** The masking
+                    // work covered every live code and missed this, on the very screen it
+                    // touched: a code expires in seconds and this is the secret that generates
+                    // every code the account will ever have. Enter one by hand during a shared
+                    // meeting, tap the eye to check for a typo, and the room has the seed.
+                    // Two reviewers found it in round two.
                     Group {
-                        if isSecretRevealed {
+                        if isSecretRevealed && !isScreenCaptured {
                             TextField("Paste or type it", text: $model.secretText)
                         } else {
                             SecureField("Paste or type it", text: $model.secretText)
@@ -88,6 +94,10 @@ struct ManualSetupView: View {
 
                     // Deliberate, because a mistyped secret fails at a login rather than
                     // here, and checking it is the only defence against that.
+                    //
+                    // Disabled rather than hidden while the screen is captured, so the reason is
+                    // visible: a control that vanishes reads as a bug, and one that does nothing
+                    // reads as a bug twice.
                     Button {
                         isSecretRevealed.toggle()
                     } label: {
@@ -95,7 +105,11 @@ struct ManualSetupView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel(isSecretRevealed ? "Hide the secret" : "Show the secret")
+                    .disabled(isScreenCaptured)
+                    .accessibilityLabel(
+                        isScreenCaptured
+                            ? "Showing the secret is unavailable while the screen is shared"
+                            : (isSecretRevealed ? "Hide the secret" : "Show the secret"))
                 }
             }
 

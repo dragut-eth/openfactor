@@ -40,7 +40,17 @@ struct OpenFactorApp: App {
     /// that happens moments before App Lock swaps the root would take the image out of the
     /// container and then be thrown away with the view that asked for it. Sharing would appear to
     /// do nothing at all, which is what it did.
-    @State private var arrival: IdentifiedArrival?
+    /// What has arrived and is waiting to be dealt with. See `ArrivalQueue` for the rule and
+    /// for the two rounds of gate A4 that produced it.
+    @State private var arrivals = ArrivalQueue<IdentifiedArrival>()
+
+    /// What the account list binds to. Setting it to `nil` is the person having finished with
+    /// what was on screen, which is when anything held behind it comes forward.
+    private var arrival: Binding<IdentifiedArrival?> {
+        Binding(
+            get: { arrivals.current },
+            set: { if $0 == nil { arrivals.finished() } })
+    }
 
     init() {
         let keys = VaultKeyStore()
@@ -122,7 +132,7 @@ struct OpenFactorApp: App {
                     // never had a vault must be offered one: the list cannot render either
                     // state honestly, because to it both look like a shelf of unreadable rows.
                     VaultGateView(model: gate, store: store) {
-                        AccountListView(store: store, arrival: $arrival, addSession: addSession)
+                        AccountListView(store: store, arrival: arrival, addSession: addSession)
                         // Accounts saved before the shared access group was declared are
                         // still in the app's bundle group. The phone reads them either
                         // way, so nothing looks wrong here; the watch cannot see them at
@@ -168,12 +178,17 @@ struct OpenFactorApp: App {
             // For the plaintext vault that would be every secret in the clear, sitting in
             // the container with nothing ever revisiting it. Found by the security review.
             .task { Self.reconcileWrappedKeySync(wrapped) }
-            // **Unconditional, unlike the collection path.** All three engines found that the
-            // only sweep sat inside collection, which refuses to run until the scene is active,
-            // the lock is open, the vault is open and no arrival is pending. An image shared to a
-            // locked phone that was never unlocked again stayed in a shared container. This runs
-            // at launch with none of those conditions and removes only what is already stale, so
-            // it cannot eat the item somebody just shared.
+            // **Unconditional, unlike the collection path**, which does nothing until the
+            // scene is active, the lock is open, the vault is open and no arrival is pending. An
+            // image shared to a locked phone that was never unlocked again used to stay in a
+            // shared container.
+            //
+            // **On every activation, not only at launch.** The first version ran once per
+            // process, which a review took apart: launch ten seconds after a share, the item is
+            // fresh so it survives, cancel Face ID, and the process stays resident with the item
+            // held for as long as iOS keeps it alive. A threshold evaluated once is not a
+            // deadline. This is the same call, made every time the app comes forward, and it is
+            // cheap: a directory listing.
             .task { SharedInbox().sweepStale() }
             .task { ExportViewModel.discardOrphanedFiles() }
             .task { watchKeys.activate() }
@@ -193,6 +208,7 @@ struct OpenFactorApp: App {
             .onChange(of: scenePhase, initial: true) { _, phase in
                 lock.scenePhaseChanged(to: phase)
                 PrivacyShield.apply(lock)
+                SharedInbox().sweepStale()
                 collectWhatArrived()
             }
             .onChange(of: lock.isLocked) {
@@ -209,15 +225,10 @@ struct OpenFactorApp: App {
             }
             .onChange(of: gate.stage) { collectWhatArrived() }
             .onOpenURL { url in
-                // **A second URL does not destroy the first arrival.** Two engines found this:
-                // the assignment replaced whatever was pending, so an `otpauth://` opened while a
-                // shared image was waiting to be confirmed threw that image away with no sign
-                // anything had happened. Whatever arrived first keeps the screen; the second is
-                // dropped rather than silently swapped in, which is the same rule the phone's
-                // provisioning desk follows for a question already being asked.
-                guard arrival == nil else { return }
+                // The rule and its history are in `ArrivalQueue`: the first arrival keeps the
+                // screen, one more is held behind it, and a third is refused.
                 guard let value = InboxOpener.arrival(from: url) else { return }
-                arrival = IdentifiedArrival(value: value)
+                arrivals.arrived(IdentifiedArrival(value: value))
             }
             // The root swap and the shield hide land in the same transaction, so there is
             // no frame between them for the interface to show through.
@@ -258,11 +269,12 @@ struct OpenFactorApp: App {
     /// vault is open, because an import sheet over a setup screen is nonsense. And not if
     /// something is already waiting, or a second look would discard the first.
     private func collectWhatArrived() {
-        guard scenePhase == .active, !lock.isLocked, gate.stage == .open, arrival == nil else {
+        guard scenePhase == .active, !lock.isLocked, gate.stage == .open, arrivals.current == nil
+        else {
             return
         }
         guard let value = InboxOpener.collect() else { return }
-        arrival = IdentifiedArrival(value: value)
+        arrivals.arrived(IdentifiedArrival(value: value))
     }
 
 }

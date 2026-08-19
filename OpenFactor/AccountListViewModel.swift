@@ -348,10 +348,13 @@ final class AccountListViewModel {
 
         // The clipboard entry dies with the code it holds. A 2FA code that outlives its
         // own validity is pure liability sitting in a place other apps can read.
+        // The fallback reads its number from `CodeClipboard.rules`, so the table there is the
+        // one definition rather than a claim nothing consults. A review found that value pinned
+        // by a test and read by no code path.
         let expiry =
             row.isTimeBased && row.period > 0
             ? TOTP.expiry(at: date, period: row.period)
-            : date.addingTimeInterval(30)
+            : date.addingTimeInterval(CodeClipboard.rules(for: .code).lifetime)
 
         CodeClipboard.copy(code, expiring: expiry)
         return true
