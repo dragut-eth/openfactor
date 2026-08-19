@@ -289,6 +289,26 @@ public enum WatchProvisioning {
         /// close. Round two of gate A4 found it in all three reviews.
         let validatedAt: ContinuousClock.Instant
 
+        /// Whether this request may still be answered, given how long a window it was given.
+        ///
+        /// **Fails closed on a backward reading, and that is the whole reason this exists rather
+        /// than the app comparing `age()` itself.** A negative elapsed time is less than any
+        /// window, so a comparison written the obvious way lets an arbitrarily old request
+        /// through. `AppLockEngine` treats a backward clock as indistinguishable from tampering
+        /// and locks; this refuses for the same reason.
+        ///
+        /// Round three found the test for the clock fix asserting a negative reading while its
+        /// own message claimed such a reading could never be inside the window. It could. It is
+        /// unreachable in production, because `ContinuousClock` does not go backwards, and the
+        /// policy that made the sentence true was missing. It is here now, in the core, where a
+        /// test can reach it.
+        public func isAnswerable(within window: TimeInterval, now: ContinuousClock.Instant = .now)
+            -> Bool
+        {
+            let elapsed = age(now: now)
+            return elapsed >= 0 && elapsed <= window
+        }
+
         /// How long this request has been waiting for an answer, in seconds.
         ///
         /// Never negative under the default argument, which is the only way the app calls it: a

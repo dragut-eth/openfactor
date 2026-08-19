@@ -33,6 +33,40 @@ production can no longer create, and a refusal reason that was wrong. Each was u
 rule *and* given its inverse, so the range cannot quietly be narrowed again. Both guards were then
 proved by removing them and watching the suite go red.
 
+**Scope 2 has been through round three, and all three engines found the same defect.** Round one
+produced unanimity on 3 findings out of 44; this is the fourth. `.busy` was added to the core,
+tested in the core, and never taught to `WatchVaultModel`, which still ended the attempt for any
+answer that was not `.asking`. **Two tests written in that same batch assert the attempt survives,
+both passed, and both are false of the shipped watch**, because both test the flow and nothing can
+test that file.
+
+The fix all three suggested was one more condition. What was done removes the second opinion: the
+model no longer decides whether an attempt is over, it asks the flow. A sixth answer cannot split
+them apart again.
+
+Also from round three: the staging directory's exclusion reads back rather than merely being
+attempted, and a key that cannot be confirmed excluded is not written at all; a decline that names
+a request requires the request it names; the consent deadline arrives on its own instead of
+waiting for a tap; and `ValidatedRequest.isAnswerable(within:)` moved the window policy into the
+core, where it refuses a negative elapsed time the way `AppLockEngine` refuses a backward clock.
+**Grok found that the test pinning the clock fix asserted a negative reading while its message
+claimed such a reading could never be inside the window.** It could. The policy that made the
+sentence true did not exist until now.
+
+Three documentation claims went with it, all found by reading rather than by testing: `VAULT.md`
+called routing exclusivity defense in depth because of an authentication string removed months
+ago, while `SECURITY.md` two files away has called routing load bearing ever since.
+
+**All three answered the convergence question, and all three said yes with the same reservation.**
+Grok's formulation is the useful one: the last batch closed the holes the previous batch opened
+instead of opening a third generation, and that is the difference between churn and convergence.
+Fable's reservation is sharper, and it is the open question for this project rather than for this
+scope: **the defect surface is pooling where the tests cannot go.** Round one's two races, round
+two's re-ask and consent window, round three's `.busy` line are all in `WatchVaultModel` or
+`WatchKeyProvider`, all found by reading. The extraction that would drain it is the pattern this
+project has already run twice, as `WatchProvisioningFlow` and `AppLockPresentation`. It has been
+proposed in every round and not done. **That decision is Xavier's and is not taken.**
+
 **Scope 2 has been through round two, and round two changed eight things.** Two engines
 re-reviewed the eleven fixes with the diffs in hand: Fable and Grok. **ChatGPT was not run on this
 round**, and an earlier version of this file and of the audit page said "all three", which was

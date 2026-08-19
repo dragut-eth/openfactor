@@ -95,7 +95,7 @@ final class WatchKeyProvider: NSObject {
         // nothing tells them why. One review asked for the request and the alert to be cleared
         // when the deadline passes. Declining does that and says so on the wire, so the watch
         // stops waiting now instead of at its own timeout.
-        guard request.age() <= Self.consentWindow else {
+        guard request.isAnswerable(within: Self.consentWindow) else {
             decline()
             return
         }
@@ -152,7 +152,28 @@ final class WatchKeyProvider: NSObject {
 
         pendingRequest = validated
         isAsking = true
+        expireConsent(for: validated)
         return .asking
+    }
+
+    /// Takes the question down when nobody has answered it in time.
+    ///
+    /// **The window used to be checked only when the button was pressed.** Two reviews said the
+    /// same thing about that: the alert can sit on screen for hours, and the first the person
+    /// hears of the deadline is a tap that refuses. Now the deadline arrives on its own, the
+    /// alert goes, and the watch is told, which is the answer it would have got anyway if it
+    /// were still waiting.
+    ///
+    /// The request is compared by nonce rather than held, so a window that elapses after the
+    /// person already answered, or after a different request took the slot, does nothing.
+    private func expireConsent(for request: WatchProvisioning.ValidatedRequest) {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.consentWindow))
+            guard let self, self.pendingRequest?.requestNonce == request.requestNonce else {
+                return
+            }
+            self.decline()
+        }
     }
 }
 

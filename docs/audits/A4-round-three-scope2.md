@@ -138,11 +138,17 @@ that is the most useful sentence you can write here, and it will not be argued w
 | --- | --- |
 | ChatGPT 5.6 Sol | Returned, below. One medium, two low, and a fix assessment item by item |
 | Fable 5 | Returned, below. Eight of ten complete, one medium-low, one low |
-| Grok 4.6 | Sent, not yet returned |
+| Grok 4.6 | Returned, below. No new medium. Converging, said plainly |
 
-**Both engines that have returned found the same two defects independently**, F1 and F2 below,
-from different directions: Fable from reading the answer set against the model, ChatGPT from
-walking a five-step interleaving to the decline. ChatGPT found a third that Fable did not.
+**All three engines found F1 independently, by three different routes**: Fable by reading the
+answer set against the model, ChatGPT by walking a five-step interleaving to a decline, Grok by
+noticing that a flow test's sentence is false of the only code that calls `open`. Round one
+produced unanimity on 3 findings out of 44. This is the fourth.
+
+Grok also declined to file F2 as a hole, saying it had not seen the call fail and would not treat
+it as demonstrated. It was fixed anyway, which the other two asked for. **Two engines calling the
+same `try?` a medium and one refusing to call it anything is the disagreement worth keeping**, and
+it is the reason the fix now reads the flag back rather than only throwing.
 
 **Standing asymmetry, recorded because Fable records it itself:** its round three ran in the
 conversation that held rounds one and two rather than in a fresh session, so it was reviewing
@@ -191,6 +197,21 @@ punish a metadata call, and the file is left no worse than it was. The two calls
 documented against each other in the source. **This is a judgment, and a reviewer disagreed with
 it.**
 
+**Grok's three of its own, and one of them is about a test I wrote.** The test pinning the clock
+fix asserted a negative reading and its message claimed such a reading could never be inside the
+window. Grok checked: minus an hour is less than two minutes, so the obvious comparison lets an
+arbitrarily old request through, and the test proved nothing of the sort. The policy that makes
+the message true did not exist. It does now, as `ValidatedRequest.isAnswerable(within:)` in the
+core, which refuses a negative elapsed time the way `AppLockEngine` refuses a backward clock, and
+the app asks it rather than comparing anything itself. Both directions are tested, and the test
+was confirmed red against the obvious comparison.
+
+Grok also caught `docs/VAULT.md` still saying a nonce-less decline is honoured so as not to
+strand a watch. The code comment saying that was corrected in round two; this sentence was not.
+And it noted that the consent window was still only checked on a tap, so the alert could sit for
+hours: **the second review to ask for that**, and it is done, so the deadline arrives on its own,
+the alert goes, and the watch is told.
+
 **Not yet acted on: the residue on change 10.** The owner taps the affirmative button, the phone
 declines on their behalf because the window has passed, and the watch is told while the person who
 tapped is not. It is the only path where tapping yes produces no on the device that was tapped.
@@ -205,6 +226,13 @@ reducer disagreed with the app layer that owns the attempt. Its verdict is that 
 is smaller than round one and **not yet stable enough to support this repository's absolute backup
 and request-binding claims**, which is the sharpest sentence written about this gate so far, since
 both of those claims are made in `SECURITY.md` without qualification.
+
+Grok: yes, and it gave the clearest test for the distinction. Change 1 introduced change 8 in the
+same batch and change 5 introduced change 6 in the same batch, both caught by tests before any
+reviewer saw them. **The last batch closed the holes the previous batch opened, instead of opening
+a third generation, and that is the difference between churn and convergence.** What remains it
+calls residue rather than a new family: one line in the watch target, and two behaviours that the
+suite still cannot reach.
 
 Fable split it three ways: the storage path is converging and it would not expect a fourth
 rewrite; the core protocol and flow are converging throughout; **the app-target seam is not, and it
@@ -378,3 +406,82 @@ repository-relative.*
 > The core protocol and flow: yes, throughout. Every core-side change across three rounds landed with the test that would catch its regression, one of those tests caught a defect in its own batch before any reviewer saw it, and the negative-control suite now pins properties (ephemeral freshness, label participation, monotonic age) that round one proved the old suite could not see.
 >
 > The app-target seam: no, and it is the generator. The pattern is now three rounds long and exact: round one's races lived in the untestable watch model; round two's re-ask and consent window landed in app targets argued for by comments, and two of the three needed rework; round three's `.busy` landed tested in the core and wrong in the model — F1 is the same species of defect as the two races that started this scope, in the same file, for the same reason, found the same way (by reading, because nothing else can reach it). The defect surface is not moving around at random; it is pooling exactly where the tests cannot go, and the extraction that would drain it — the pending-request rule and the answer-handling into core value types, the pattern this project already executed twice under the names `WatchProvisioningFlow` and `AppLockPresentation` — has now been proposed in round one by two engines, acknowledged in round two, posed as "a fair question" in round three's own account, and not done. That is the most useful sentence I can write here: the next defect in this scope is already predictable to be in `WatchVaultModel` or `WatchKeyProvider`, because that is where the last five were, and it will keep being true until the decisions leave the targets the suite cannot reach.
+
+---
+
+## Grok 4.6
+
+*Read-only pass over commit `71e88c3`. Reproduced as returned.*
+
+> Reviewed 71e88c3 (this tree is that commit plus the round-three account paragraph). Round two was 350375b; round one was 74fe841. Four questions only.
+>
+> 1. Does each change address the finding it claims to?
+>
+> 1. Excluded directory before any key bytes — yes, with one leftover. stagingDirectory() creates PendingKeys, marks it excluded, then the key is written inside it. A kill after the write no longer leaves an unexcluded .{uuid} next to vault.key. replaceItemAt(..., options: [.usingNewMetadataOnly]) is the option round two asked for, so an overwrite can take the new protection class. Directory exclusion is try?. If that call fails they still write. The file is then marked with try (not try?), so a surviving install still excludes vault.key. The kill window between write and that mark is unexcluded only when the directory mark already failed. I did not see that fail in the source; I am not treating it as a demonstrated hole.
+>
+> 2. load repairs metadata — yes, for what it can see. Bytes are read first, size-checked, then setAttributes / setResourceValues run under try?. A failed repair leaves the old class and still returns the key. The test writes an unmarked 32-byte file, loads, and checks exclusion on a fresh URL (they already burned themselves on a cached URL). Protection class still cannot be observed on the macOS host. I did not run the tests.
+>
+> I do not know whether changing NSFileProtectionKey in place is atomic against a kill. The comment says the worst failure is the protection the file already had. If that API re-wraps the file and a kill lands in the middle, that comment would be wrong. I am not claiming it does.
+>
+> 3. ContinuousClock — yes in production. validatedAt is an internal Instant. approve uses request.age(). A wall-clock jump cannot make elapsed time negative on that clock. age(now:) is the only public read, so the app cannot compare a Date to it again.
+>
+> The comment on age says the result is "never negative." The function does not clamp. age(now: start.advanced(by: Duration.seconds(-3600))) is negative, and negative <= 120 is still inside the window approve uses. Production calls age() with default .now, which should be >= validatedAt. The new test asserts <= 0 and claims that is "never ... inside the window." That assertion does not check > consentWindow. The clock fix holds; the test does not prove what its message says.
+>
+> 4. Re-ask removed — yes. phoneSent no longer calls ask() on an obsolete response. ChatGPT's seven-step sequence (delayed A while the phone holds B) no longer starts C.
+>
+> 5. .busy — yes on the phone, half-done on the watch. answer returns .busy when pendingRequest != nil. The first-message reply is no longer a lie. In WatchProvisioningFlow, .busy is non-terminal.
+>
+> WatchVaultModel.phoneAnswered still does:
+>
+>         // Anything but "asking" ends this attempt, so the key it holds is of no further use.
+>         if answer != .asking {
+>             attempt = nil
+>             self.token = nil
+>         }
+>
+> .busy is not .asking, so the model throws away the ephemeral key while the flow keeps outstanding. The phone will not seal to a request it answered .busy for, so I could not turn this into a dropped installable key: the request that still has a human in front of it is the earlier one, and that attempt was already overwritten when the watch asked again. What it does do is make the flow test's sentence "a later answer to it can still open" true of WatchProvisioningFlow and false of the only code that calls open.
+>
+> 6. .busy after timeout — yes. guard stage == .waiting keeps needsPhoneApp. The test that found this is the right test.
+>
+> 7. phoneDeclined guard — yes. Same outstanding != nil as responseDidNotOpen, with tests from both sides. A decline after installedKey leaves .ready.
+>
+> 8. Exclusion on the staged file — yes. That is why usingNewMetadataOnly does not strip exclusion off vault.key. The existing exclusion test going red is the proof they needed.
+>
+> 9. Present-but-unreadable nonce — yes, by reading, not by a test. if let raw = message[nonce] then as? Data, else return. Absent still honours (old phone). Wrong type is ignored. Lives in the watch target. Same shape that hid the original races.
+>
+> 10. Expiry declines — yes for the security property. The tap no longer releases a stale key, and the watch is told. The alert can still sit on screen for hours until that tap; they did not add a timer that clears it at two minutes. After the tap the watch is declined, not silently ignored. Fail closed.
+>
+> Fable's leftover path (decline of A while the watch holds B) is narrowed the way the account says: B gets .busy, not .asking, and the 25-second timer ends on a screen with a button. That is enough. Because the model also nils attempt on .busy, a later decline of A is honoured (no attempt to compare) and B ends immediately. That is an accident, not a specified rule, and it is kinder than waiting out the timer.
+>
+> 2. Did any change introduce something new?
+>
+> Change 1 introduced change 8 in the same batch. Change 5 introduced change 6 in the same batch. Both were caught by tests before this review. That is the suite doing its job, and it is also what a third rewrite of the same write path looks like.
+>
+> The new interaction I actually see is change 5 against the pre-existing if answer != .asking line. It does not give a second request the vault key, and it does not approve without a tap. It means a .busy watch cannot open a sealed payload even if one arrived, and a decline for a different nonce can now end that attempt because attempt is already nil.
+>
+> I walked ChatGPT's delayed-response sequence against the current model. Without the re-ask, B is kept and the approval of B opens. That construction is sound. The thing two of us cleared last round (no spin) was never the defect; removing the re-ask was the right call.
+>
+> repairProtection on every load did not, from the code, rewrite key bytes. contents(atPath:) happens first. I am not filing a damage path I cannot show.
+>
+> 3. Claims the code does not do
+>
+> * WatchProvisioning.Answer.busy: "The watch keeps its attempt." True in WatchProvisioningFlow. False in WatchVaultModel.
+> * phoneAnswered in the model: "Anything but asking ends this attempt." That is what the if does, and it is the opposite of the .busy comment one file over.
+> * age(now:): "never negative." It returns Duration.components.seconds with no clamp.
+> * The new age test's message: a backward now "must never read as inside the window." -3600 <= 120 is inside the window approve uses.
+> * install: "from the moment any key material exists on disk it is already outside every backup." True only if the directory setResourceValues succeeded. That call is try?.
+> * docs/VAULT.md still says a nonce-less decline is honoured so as not to "strand" a watch. The timeout is 25 seconds and then there is a button. The watch comment was corrected; this sentence was not.
+>
+> messageKeysArePinned now includes nonce. SECURITY.md no longer states the echo unconditionally and no longer calls the window wall-clock minutes. Those two match.
+>
+> 4. Is this converging?
+>
+> Yes. The surface is shrinking, not rotating.
+>
+> The write path has been rewritten three times and, with change 8, is the first version that actually has the two properties people kept asking for: no unexcluded key during the write, and an overwrite that can take new metadata. I would not rewrite it a fourth time for the try? on the directory.
+>
+> The state machine has been touched three times and is smaller than it was: the re-ask is gone, the phone does not lie, a late decline cannot demote .ready, consent is on a clock that does not run backwards. What is left is one line in the watch target that was not updated when .busy was added, and two behaviours (9 and 10) that still cannot be tested from the suite that exists. That is residue, not a new family of defects.
+>
+> Twenty-one changes is a lot. The last batch closed the holes the previous batch opened, instead of opening a third generation. That is the difference between churn and convergence.
+>
+> No new medium. The cryptography and parsers were not touched and I am not re-litigating them. Approval is still only the affirmative button. I did not find a way to install a key from an unverified or abandoned attempt, or to seal to a request the owner is not being shown.

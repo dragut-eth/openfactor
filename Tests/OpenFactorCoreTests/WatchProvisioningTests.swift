@@ -434,11 +434,31 @@ struct WatchAnswerVocabularyTests {
         #expect(request.age(now: start) == 0)
         #expect(request.age(now: start.advanced(by: Duration.seconds(90))) == 90)
 
-        // The instant a wall clock would report as an hour ago. There is no way to hand a
-        // `ContinuousClock.Instant` a value before the one it issued and have it read as time
-        // passing, which is the whole point, so this asks for the arithmetic explicitly.
-        #expect(request.age(now: start.advanced(by: Duration.seconds(-3600))) <= 0,
-                "a jump backwards must never read as inside the window")
+        // A reading from before the instant the request was validated. `age` reports it as
+        // negative and does not clamp, which is what it should do: a measurement that quietly
+        // rewrites an impossible input is a measurement nobody can check.
+        #expect(request.age(now: start.advanced(by: Duration.seconds(-3600))) < 0)
+    }
+
+    /// **Round three caught the sentence above claiming something it did not test.** Its message
+    /// used to say a backward reading could never be inside the window, and a plain comparison
+    /// makes that false: minus an hour is less than two minutes, so the obvious check lets an
+    /// arbitrarily old request through. The policy that makes the sentence true belongs with the
+    /// request rather than in the app, and this is it.
+    @Test("A request whose clock reads backwards is refused rather than treated as fresh")
+    func backwardReadingsAreRefused() throws {
+        let attempt = try WatchProvisioning.Attempt()
+        let request = try WatchProvisioning.validate(attempt.request)
+        let start = request.validatedAt
+        let window: TimeInterval = 120
+
+        #expect(request.isAnswerable(within: window, now: start))
+        #expect(request.isAnswerable(within: window, now: start.advanced(by: .seconds(119))))
+        #expect(!request.isAnswerable(within: window, now: start.advanced(by: .seconds(121))))
+
+        // The case the old test's message claimed and did not check.
+        #expect(!request.isAnswerable(within: window, now: start.advanced(by: .seconds(-1))))
+        #expect(!request.isAnswerable(within: window, now: start.advanced(by: .seconds(-3600))))
     }
 
     @Test("The message keys on the wire are exactly these four strings")

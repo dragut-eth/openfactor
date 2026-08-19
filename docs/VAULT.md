@@ -334,8 +334,10 @@ nonce    Data    16 bytes, present on a decline, echoing the request being refus
 ```
 
 The compatibility rule is deliberate and asymmetric. **A decline carrying no nonce is honoured**,
-because it comes from a phone built before this field existed and refusing it would strand a watch
-whose owner has plainly said no. **A decline carrying a nonce that is not this attempt's is
+because it comes from a phone built before this field existed, and the cost of being wrong is one
+screen that says to try again. An earlier version of this sentence said refusing it would strand a
+watch, which is false and was corrected in the code before it was corrected here: the twenty five
+second timeout ends every wait at a screen with a button on it. **A decline carrying a nonce that is not this attempt's is
 ignored**, which is the whole point of the field. An older watch reads neither and ignores the key
 entirely, leaving it exactly the behaviour it already had for declines.
 
