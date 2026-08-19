@@ -307,8 +307,11 @@ described by its shape, a text or RTF export listing accounts under **Account Na
 the interface would claim a relationship this project does not have. The preview reports
 `Text export` or `Aegis vault` under *Found in*.
 
-The done screen says the file it just read holds secret keys in the clear and suggests
-deleting it.
+The done screen says what the file it just read actually was. A plaintext export holds every
+secret in the clear, so it says so and suggests deleting it. **An encrypted OpenFactor backup gets
+the opposite advice**, to keep it safe with the passphrase that opens it: it is the copy that
+gets somebody's accounts back, and the screen used to tell every importer to delete their file
+whatever it was.
 
 **A sheet you abandon has Cancel on the left, a sheet you close has Done on the right.**
 Add, edit and erase are abandoned, so they carry a leading Cancel. Settings is closed, so

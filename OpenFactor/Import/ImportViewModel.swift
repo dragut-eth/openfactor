@@ -155,8 +155,10 @@ final class ImportViewModel {
         // Aegis first, because a JSON vault is unambiguous: it either decodes or it does
         // not. The labelled reader accepts anything and finds nothing in most of it, so
         // trying it first would swallow a malformed vault.
-        if looksLikeJSON(data) {
-            let result = try AegisImport.read(data)
+        let body = JSONSniff.body(of: data)
+        if !body.isEmpty {
+            sourceWasEncrypted = false
+            let result = try AegisImport.read(body)
             return try classify(result, source: "Aegis vault")
         }
 
@@ -164,6 +166,7 @@ final class ImportViewModel {
             throw ImportFailure.unreadable
         }
 
+        sourceWasEncrypted = false
         let result = LabelledTextImport.read(text)
         guard !result.isEmpty else { throw ImportFailure.unreadable }
         return try classify(result, source: "Text export")
@@ -176,8 +179,8 @@ final class ImportViewModel {
     /// carefully than a sniff can and does it before deriving any key.
     private func looksLikeOpenFactorArchive(_ data: Data) -> Bool {
         guard
-            looksLikeJSON(data),
-            let root = try? JSONSerialization.jsonObject(with: data),
+            case let body = JSONSniff.body(of: data), !body.isEmpty,
+            let root = try? JSONSerialization.jsonObject(with: body),
             let object = root as? [String: Any]
         else {
             return false
@@ -202,6 +205,7 @@ final class ImportViewModel {
         switch outcome {
         case let .success(result):
             do {
+                sourceWasEncrypted = true
                 stage = .reviewing(try classify(result, source: "OpenFactor backup"))
             } catch {
                 stage = .failed("Your accounts could not be read from this device.")
@@ -215,13 +219,21 @@ final class ImportViewModel {
     /// Both formats can begin with `{`, which is how the first version of this got it
     /// wrong: RTF opens with `{\rtf` and every labelled text export was sniffed as a broken
     /// Aegis vault. The signature is checked before the brace.
+    /// Whether these bytes are meant to be JSON. The decision is `JSONSniff`'s, in the core,
+    /// where a test can reach it: it was private to this file and had two defects that a reviewer
+    /// had to find by reading.
     private func looksLikeJSON(_ data: Data) -> Bool {
-        let head = data.prefix(512)
-        if head.starts(with: Array("{\\rtf".utf8)) { return false }
-
-        guard let first = head.first(where: { !$0.isASCIIWhitespace }) else { return false }
-        return first == UInt8(ascii: "{")
+        !JSONSniff.body(of: data).isEmpty
     }
+
+    /// Whether the file these accounts came from was an encrypted OpenFactor archive.
+    ///
+    /// **Only so the last screen can stop telling people something false.** It advised deleting
+    /// the file because it "contains your secret keys in the clear", which is true of an Aegis
+    /// vault and a labelled text export and exactly wrong about an encrypted backup: that file is
+    /// the person's recovery copy, and this app was telling them to throw it away. A review found
+    /// it.
+    private(set) var sourceWasEncrypted = false
 
     /// Works out what would happen to each account, against what is already stored.
     private func classify(_ result: ImportResult, source: String) throws -> Preview {
@@ -236,35 +248,54 @@ final class ImportViewModel {
             bySecret[secret, default: []].append(record)
         }
 
-        let candidates = result.accounts.map { imported in
-            Candidate(
-                imported: imported,
-                disposition: disposition(for: imported, against: bySecret[imported.account.secret])
-            )
+        // **Accounts already seen in this same file count too.** A review found that each
+        // imported account was compared only against what was stored, so a file listing the same
+        // account twice added it twice, and the preview said "will be added" for both. Duplicate
+        // detection that only looks outward is not duplicate detection.
+        var seenInThisFile: [Data: [OTPGenerator]] = [:]
+        var candidates: [Candidate] = []
+
+        for imported in result.accounts {
+            let stored = (bySecret[imported.account.secret] ?? []).map(\.metadata.generator)
+            let earlier = seenInThisFile[imported.account.secret] ?? []
+
+            candidates.append(
+                Candidate(
+                    imported: imported,
+                    disposition: disposition(for: imported, against: stored + earlier)))
+
+            seenInThisFile[imported.account.secret, default: []]
+                .append(imported.account.generator)
         }
 
         return Preview(source: source, candidates: candidates, refusals: result.refusals)
     }
 
+    /// - Parameter matches: the generators of everything carrying this secret already, whether
+    ///   stored on the device or listed earlier in the same file.
     private func disposition(
         for imported: ImportedAccount,
-        against matches: [AccountRecord]?
+        against matches: [OTPGenerator]
     ) -> Candidate.Disposition {
-        guard let matches, !matches.isEmpty else { return .new }
+        guard !matches.isEmpty else { return .new }
 
         // Same secret and the same code generating parameters is the same authenticator.
         // Same secret with different parameters generates different codes, so it is a
         // conflict for the user to resolve rather than a duplicate to swallow.
-        return matches.contains { $0.metadata.generator == imported.account.generator }
-            ? .duplicate
-            : .conflict
+        return matches.contains(imported.account.generator) ? .duplicate : .conflict
     }
 
     /// Saves the accounts the user accepted. Nothing before this point has written anything.
     func confirm(_ preview: Preview, includingConflicts: Bool) {
         var added = 0
 
-        let toSave = preview.importable + (includingConflicts ? preview.conflicts : [])
+        // **In the order the file asked for.** Every reader carries a `sortIndex`, and `add`
+        // assigns its own append-at-end position, so the file's order was read and discarded.
+        // Order survived a round trip only because the writer happens to emit in order. Sorting
+        // here is the whole fix: the accounts are appended in the order somebody arranged them,
+        // which is what restoring a backup is supposed to give back.
+        let toSave = (preview.importable + (includingConflicts ? preview.conflicts : []))
+            .sorted { $0.imported.sortIndex < $1.imported.sortIndex }
 
         for candidate in toSave {
             do {

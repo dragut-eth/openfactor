@@ -332,9 +332,21 @@ struct ImportView: View {
     @ViewBuilder
     private var finishedAdvice: some View {
         switch origin {
+        case .file where model.sourceWasEncrypted:
+            // **Not the deletion advice.** An encrypted OpenFactor backup is the opposite of a
+            // file to throw away: it is the copy that gets somebody's accounts back, and telling
+            // them to delete it was the worst instruction this screen could give. A review found
+            // the advice being shown for every file, whatever it was.
+            Text(
+                """
+                That backup is encrypted. Keep it somewhere safe, with the passphrase \
+                that opens it.
+                """
+            )
+
         case .file:
-            // The file the user just imported from is a plaintext list of every secret it
-            // held. Saying so is the last useful thing this screen can do.
+            // A plaintext export is a list of every secret it held. Saying so is the last useful
+            // thing this screen can do.
             Text(
                 """
                 That file contains your secret keys in the clear. Delete it when you no \

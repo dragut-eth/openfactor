@@ -365,4 +365,56 @@ struct ImportViewModelTests {
         #expect(preview.refusals.first?.reason == .secretNotBase32)
         #expect(preview.importable.isEmpty)
     }
+
+    // MARK: - Gate A4, scope 3
+
+    /// **A file listing the same account twice used to add it twice.** Each imported account was
+    /// compared only against what was stored, so the second copy in the same file was reported as
+    /// "will be added" alongside the first.
+    @MainActor
+    @Test("The same account twice in one file is a duplicate the second time")
+    func duplicatesWithinOneFileAreCaught() throws {
+        let store = try makeStore()
+        let model = ImportViewModel(store: store)
+
+        let one = ImportedAccount(
+            account: try account("GitHub", secret: secret), color: .default, sortIndex: 0)
+        let again = ImportedAccount(
+            account: try account("GitHub", secret: secret), color: .default, sortIndex: 1)
+
+        model.present(ImportResult(accounts: [one, again], refusals: []), source: "Text export")
+
+        guard case let .reviewing(preview) = model.stage else {
+            Issue.record("expected a preview")
+            return
+        }
+        #expect(preview.importable.count == 1, "one of the two is new")
+        #expect(preview.duplicates.count == 1, "and the other is the same account again")
+    }
+
+    /// The same secret with different parameters is still a conflict rather than a duplicate,
+    /// within one file as it is against the store: they generate different codes.
+    @MainActor
+    @Test("The same secret with different parameters within one file is a conflict")
+    func sameSecretDifferentParametersWithinOneFile() throws {
+        let store = try makeStore()
+        let model = ImportViewModel(store: store)
+
+        let thirty = ImportedAccount(
+            account: try account("GitHub", secret: secret, period: 30), color: .default,
+            sortIndex: 0)
+        let sixty = ImportedAccount(
+            account: try account("GitHub", secret: secret, period: 60), color: .default,
+            sortIndex: 1)
+
+        model.present(ImportResult(accounts: [thirty, sixty], refusals: []), source: "Text export")
+
+        guard case let .reviewing(preview) = model.stage else {
+            Issue.record("expected a preview")
+            return
+        }
+        #expect(preview.importable.count == 1)
+        #expect(preview.conflicts.count == 1)
+        #expect(preview.duplicates.isEmpty)
+    }
 }
