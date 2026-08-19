@@ -213,3 +213,54 @@ repository-relative.*
 > **4. Is this converging?**
 >
 > The eleven, verdict by verdict: 1 toggle path yes, create path still writes `synchronizable: false`. 2 yes. 3 yes on the Keychain type. 4 yes, as far as a Mac test can see. 5 yes in `Vault.state()` and the new screen; header and docs still say three states. 6 only if the wrap is visible before `wrap()` runs. 7 stays when still absent, leaves when locked; arrival-while-showing is not tested and the comment overclaims. 8 yes. 9 yes, tested for garbage bytes but not for a bad iteration count. 10 service and UUID case corrected, encoder sorts, two leftover false comments. 11 documentation only, and accurate.
+
+---
+
+## Fable 5
+
+*Read-only pass over commit `46f65a3`. Reproduced as returned, with absolute paths made
+repository-relative.*
+
+> One deviation to record before anything else, since the method file says to record asymmetries rather than hide them: the round-two prompt calls for a fresh conversation, and this is the same conversation that produced round one. I am the engine grading its own suggested fixes with its own round-one reasoning in context. I have re-read every changed file from the bytes rather than from memory of what I asked for, but the reader should weigh that structural bias.
+>
+> Summary: nine of the eleven fixes do what they claim, and several go further than asked (the repair-on-read for the protection class, the read-back on backup exclusion). Two do not survive scrutiny: the twin fix in `WrappedKeyStore.save` preserves the sync flag but clobbers the accessibility that must travel with it, and the `refresh()` fix does not implement the rule its own documentation states. The round-two account also claims test coverage for one fix that I cannot find a test for.
+>
+> **R1 — Medium (latent today). `save`'s update path preserves the sync flag but forces a device-only protection class onto a synced record — verdict: PLAUSIBLE**
+>
+> The twin fix carefully reads the existing record's `kSecAttrSynchronizable` and matches on it so the record neither twins nor moves. But the change dictionary still contains `kSecAttrAccessible: accessibility.attribute`, which is the store's construction-time value — `whenUnlockedThisDeviceOnly` for `Vault`'s default `WrappedKeyStore()`. So a save into a record that `setSynchronizable(true)` previously moved to iCloud (and to `whenUnlocked`, because "a synchronizable item cannot be device-only by definition" — that code's own comment) updates a synced item to a ThisDeviceOnly accessibility class. Apple documents ThisDeviceOnly accessibility as unsupported on synchronizable items.
+>
+> Two outcomes are possible and both are defects: `errSecParam`, meaning passphrase change fails whenever sync is on; or the update is accepted and the record sits in a device-only protection class while flagged synced — a state whose practical meaning is that the only recovery record is silently withheld from iCloud, which is precisely the harm the fix's own comment forbids.
+>
+> Why PLAUSIBLE rather than CONFIRMED: I cannot execute against securityd in this review. The hosted test `savingDoesNotRelocateTheRecord` exercises exactly this shape, which rules out the `errSecParam` variant on the simulator — but the suite reads back only the sync flag and never `kSecAttrAccessible`, so the accepted-with-wrong-class variant passes it unseen. Reachability today is test-only, because nothing in the app calls `replacePassphrase` yet; it goes live with the passphrase-change screen the two-step fix exists to serve.
+>
+> Smallest fix: carry the found item's `kSecAttrAccessible` into the update exactly as the sync flag is carried (or omit accessibility from the changes entirely and leave both halves to `setSynchronizable`). Then add an accessibility read-back to `WrappedKeySyncTests`.
+>
+> **R2 — Low/Medium. The `refresh()` fix does not implement the rule its documentation states**
+>
+> The account says: "It now moves away when a record has actually arrived, and leaves the screen alone otherwise." The code guards only `.absent`. A `state()` of `.unavailable` — a transient Keychain error at exactly the moment a scene becomes active — falls through the switch and replaces `.showingPassphrase` with `.unavailable`, discarding the generated string. That is the screen-cleared-under-somebody's-pen case the account's own "where to look hardest" section names, triggered by the one state whose defining property is "we don't know" rather than "a record arrived."
+>
+> Smallest fix: invert the guard to match the stated rule — while showing a passphrase, move away only when `state == .locked`, and return otherwise.
+>
+> **R3 — Low. The fix in R2 has no test, which contradicts the account's coverage claim**
+>
+> The account states: "Every fix was then reverted a second time, and the new suite caught each one." For item 7 I cannot find the test that would go red. `VaultGateModelTests` asserts the screen survives a refresh while the device is absent — that passes with the old unconditional early return too. No test creates a record behind a showing passphrase and asserts the stage moves to `.locked`; no test covers `.showingPassphrase` + `.unavailable`; no gate-level test covers the `.unavailable` stage at all. Reverting `refresh()` to the round-one shape leaves every suite green as far as I can trace. The fix is real, but it is in the exact condition the whole round-two account warns about: argued for in a comment and verified by nobody — and this time the account affirmatively claims otherwise, which is a claim-versus-reality defect in its own right under round two's question 3.
+>
+> **R4 — Low. The sync fix governs the next toggle, not the state existing devices are already in**
+>
+> `SyncAwareKeychainStore.setSynchronizable` is called only from the settings toggle. A device that enabled sync before this commit is sitting in the exact loss-shaped split the fix describes — accounts synced, wrapped key local — and stays there until its owner happens to toggle sync again, which nothing prompts them to do. This commit itself demonstrates the pattern for already-written state: `VaultKeyStore.load()` now repairs the protection class and backup exclusion of keys written under the old rules, on the explicit reasoning that "the device that most needs the fix is the one that already worked." The wrapped record got no equivalent reconcile-on-read. Smallest fix: on launch, if the preference says synced and the record's flag says local, run `wrapped.setSynchronizable(true)`; it is already idempotent.
+>
+> **R5 — Low. A false comment the fix said it removed still stands, in the second place it was made**
+>
+> Item 10 removed the "converted" sentence from VAULT.md, but `KeychainSecretStore.swift` still says `kSecAttrGeneric` holds "nothing. Never written, and cleared on conversion." Nothing converts and nothing clears. Round one flagged both instances; the fix removed one.
+>
+> **The eleven, verified**
+>
+> Fixed, with the mechanism checked rather than the intention: 1 (modulo R4's existing-device gap), 2 (the fix goes further than the finding, with `repairProtection` on every `load()`), 3 (right for the flag, wrong for the accessibility that rides with it, which is R1; two residuals: existing twins are not repaired, and look-then-add is not atomic), 4 (fixed; two informational residuals, `destroy()` does not sweep `PendingKeys`, and the sweep would race a second concurrent `install`), 5 (fixed at the vault layer; the gate-layer mapping has no test), 6 (fixed), 8 (fixed at the API; nothing in the app calls either yet, which is the right order), 9 (fixed; one crumb, `derivationFailed` still reports as `.wrongPassphrase`, blaming the user for a CommonCrypto error), 10 (fixed except R5), 11 (accurate; the arithmetic checks out).
+>
+> 7, the blinded refresh — half fixed. The dangerous direction is closed twice. But the implemented condition is broader than the stated rule, which is R2, and the fix carries no test, which is R3.
+>
+> **The new test infrastructure, attacked as instructed**
+>
+> `InMemoryWrappedStore` is faithful to the protocol for what the decisions consume. The assertions in `VaultDecisionTests` are mostly sharp: they check the record's bytes and the key's bytes survived a refused creation, not merely that an error was thrown. Two soft spots: `creatingRefusesWhileUnreadable` expects `(any Error).self`, so it would pass if creation refused for the wrong reason; and the fake cannot fail on `save`, so every decision downstream of a write failure — including the record-before-key ordering that the whole recovery story rests on — remains covered only by the Keychain-gated suite that this commit proved never runs on the test machine. That ordering is now the most consequential unverified decision left in this scope. The claim that moving the gap into the storage adapter is an improvement is fair; the claim that the suite caught every reverted fix is not, per R3.
+>
+> For triage: R1 is the one to resolve before the passphrase-change screen ships, and it takes a device or simulator run to settle which of its two variants is real. R2's fix is one changed condition plus the two missing tests. R4 is one idempotent call at launch. R5 is a deleted half-sentence. Nothing found this round weakens the at-rest confidentiality claim; like round one, everything lives in availability and recovery, which for an authenticator is where the bodies are buried.
