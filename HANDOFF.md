@@ -33,6 +33,34 @@ production can no longer create, and a refusal reason that was wrong. Each was u
 rule *and* given its inverse, so the range cannot quietly be narrowed again. Both guards were then
 proved by removing them and watching the suite go red.
 
+**All four scopes are closed. Round one's 44 findings are fixed.** Scopes 3 and 4 were done
+last, after a deliberate change of order: the gate had run four review rounds on two scopes while
+sixteen findings sat untouched in the other two, which is depth on the finished half while the
+unfinished half waits.
+
+Scope 3's import bounds were fixed as one family rather than four findings, because they are one
+mistake made in four places: a bound applied after the allocation it claims to prevent. `ImportLimits`
+holds the rule with the three failure sequences written above it, and **its tests were written
+before the fix**, which is the working change this gate forced. The same number had also quietly
+retired the format's frozen ceiling, so conforming archives were refused before the passphrase
+screen in a way their owner could not tell apart from rubbish.
+
+Scope 4's headline is that two documents said leftovers were swept at launch and neither was true:
+the only sweep sat inside a collection path that does nothing until the scene is active, the lock
+is open, the vault is open and no arrival is pending. All three engines found it.
+
+**Two decisions moved into the core while fixing these**, for the reason every round of this gate
+has produced: `JSONSniff`, which was private to a view model and had two defects a reviewer had to
+find by reading, and the clipboard rule that decides whether a backup passphrase may leave the
+device, which was pinned by no test at all.
+
+**And the class sweep happened, which is the methodology change rather than a fix.** Every
+whole-file read in the project was checked for the same mistake instead of waiting for a reviewer
+to find the next instance. One was left, the vault key file, and it was closed anyway.
+
+Round two is ready to send for both: `docs/audits/A4-round-two-scope3.md` and
+`A4-round-two-scope4.md`.
+
 **Scope 1's round two found a high-severity defect in a fix that had a test, where the test
 could not see the defect it was written for.** Two engines walked it out independently. Creation
 checked whether a record existed, then derived a key at 600,000 PBKDF2 iterations, then called a
