@@ -29,15 +29,13 @@ final class WatchKeyProvider: NSObject {
     /// on whatever is on screen.
     private(set) var isAsking = false
 
-    /// The request the alert on screen is asking about, parsed before it was ever shown.
+    /// Which request is being asked about, and what may be done about it.
     ///
-    /// **Never overwritten while it is set.** A second request used to replace it silently, so a
-    /// tap that had been offered for one watch key sealed the vault to whichever key arrived
-    /// last. Under WatchConnectivity's routing exclusivity both come from the genuine watch, so
-    /// no exploit follows today, but `SECURITY.md` states that exclusivity is load bearing and
-    /// undocumented by Apple, and this is exactly the defect that would turn a weakening of it
-    /// into key exfiltration. Found by an independent review.
-    private var pendingRequest: WatchProvisioning.ValidatedRequest?
+    /// **Every rule that used to live in this file is in there now**, in the core, where the test
+    /// suite can reach it. Gate A4 found five defects in those rules across three rounds, each
+    /// one by a person reading this file, because nothing else could. What is left here is the
+    /// session, the alert, the key file and the sending.
+    private var desk = ProvisioningDesk()
 
     private let keys: VaultKeyStore
 
@@ -70,58 +68,49 @@ final class WatchKeyProvider: NSObject {
     ///
     /// Two minutes is comfortably longer than the watch's own retry cycle, so a live exchange is
     /// never cut off, and short enough that the question and the answer belong to each other.
-    static let consentWindow: TimeInterval = 120
+    ///
+    /// The value lives on `ProvisioningDesk`, which is what enforces it. This is here so nothing
+    /// that referred to it has to learn a new name.
+    static let consentWindow = ProvisioningDesk.consentWindow
 
     func approve() {
-        defer {
-            pendingRequest = nil
-            isAsking = false
-        }
+        defer { isAsking = desk.isAsking }
 
-        guard let request = pendingRequest, let key = (try? keys.load()) ?? nil else { return }
-
-        // **Measured on a clock that only goes forward.** The first version used `Date()`, and
-        // all three round-two reviews found the same hole: a backward jump makes the elapsed
-        // time negative, negative is less than the window, and the request stays answerable
-        // indefinitely, which is the defect the window was added to close. `AppLockEngine`
-        // already refuses to reason about a backward clock three files away, and this is the
-        // same input.
-        //
-        // `ContinuousClock` rather than `SuspendingClock`, because a phone that sleeps for an
-        // hour with an alert up has still let an hour pass for the person looking at it.
-        //
-        // **Expiry is a refusal, not silence.** The first version returned, which left the alert
-        // on screen and the request in memory: the owner taps Approve, nothing happens, and
-        // nothing tells them why. One review asked for the request and the alert to be cleared
-        // when the deadline passes. Declining does that and says so on the wire, so the watch
-        // stops waiting now instead of at its own timeout.
-        guard request.isAnswerable(within: Self.consentWindow) else {
-            decline()
+        // The key is read before the decision is asked for, because a phone that cannot read its
+        // own key has nothing to release whatever the desk says.
+        guard let key = (try? keys.load()) ?? nil else {
+            _ = desk.decline()
             return
         }
-        guard let response = try? WatchProvisioning.respond(to: request, with: key) else { return }
 
-        WCSession.default.sendMessage(
-            [WatchProvisioning.MessageKey.response: response], replyHandler: nil,
-            errorHandler: nil)
+        switch desk.approve() {
+        case let .release(request):
+            guard let response = try? WatchProvisioning.respond(to: request, with: key) else {
+                return
+            }
+            WCSession.default.sendMessage(
+                [WatchProvisioning.MessageKey.response: response], replyHandler: nil,
+                errorHandler: nil)
+
+        case let .refuse(nonce):
+            send(declineEchoing: nonce)
+
+        case .nothing:
+            break
+        }
     }
 
     func decline() {
-        defer {
-            pendingRequest = nil
-            isAsking = false
-        }
+        defer { isAsking = desk.isAsking }
+        send(declineEchoing: desk.decline())
+    }
 
-        // **The refusal names the request it refuses.** Without the nonce, a decline of an
-        // attempt the watch has already abandoned ended the one it was still waiting on, and the
-        // approval that followed had nothing left to open it with. Every other message here is
-        // bound to its attempt; this was the one that carried nothing.
+    /// Sends the refusal, naming the request it refuses when there is one to name.
+    private func send(declineEchoing nonce: Data?) {
         var message: [String: Any] = [
             WatchProvisioning.MessageKey.status: WatchProvisioning.Answer.declined.rawValue
         ]
-        if let pendingRequest {
-            message[WatchProvisioning.MessageKey.nonce] = pendingRequest.requestNonce
-        }
+        if let nonce { message[WatchProvisioning.MessageKey.nonce] = nonce }
 
         WCSession.default.sendMessage(message, replyHandler: nil, errorHandler: nil)
     }
@@ -140,41 +129,36 @@ final class WatchKeyProvider: NSObject {
     /// than being polite: the key file is `.complete` protected, so a phone woken in the
     /// background cannot read it, and nobody is looking at a screen to agree to anything.
     private func answer(to request: Data) -> WatchProvisioning.Answer {
-        guard let validated = try? WatchProvisioning.validate(request) else { return .declined }
-        guard UIApplication.shared.applicationState == .active else { return .needsApp }
-        guard ((try? keys.load()) ?? nil) != nil else { return .noVault }
+        let conditions = ProvisioningDesk.Conditions(
+            isFrontmost: UIApplication.shared.applicationState == .active,
+            hasVault: ((try? keys.load()) ?? nil) != nil)
 
-        // A question already on screen is not replaced by a later one, and the watch is told
-        // that rather than being told it is being asked about. Answering `.asking` for a request
-        // this phone is about to drop is the lie round one found: it left the watch waiting for
-        // a message that could never arrive.
-        guard pendingRequest == nil else { return .busy }
+        let answer = desk.received(request, when: conditions)
+        isAsking = desk.isAsking
 
-        pendingRequest = validated
-        isAsking = true
-        expireConsent(for: validated)
-        return .asking
+        if answer == .asking, let nonce = desk.pendingNonce { expireConsent(nonce) }
+        return answer
     }
 
     /// Takes the question down when nobody has answered it in time.
     ///
     /// **The window used to be checked only when the button was pressed.** Two reviews said the
     /// same thing about that: the alert can sit on screen for hours, and the first the person
-    /// hears of the deadline is a tap that refuses. Now the deadline arrives on its own, the
-    /// alert goes, and the watch is told, which is the answer it would have got anyway if it
-    /// were still waiting.
+    /// hears of the deadline is a tap that refuses.
     ///
-    /// The request is compared by nonce rather than held, so a window that elapses after the
-    /// person already answered, or after a different request took the slot, does nothing.
-    private func expireConsent(for request: WatchProvisioning.ValidatedRequest) {
+    /// Whether the deadline has actually passed for the request still on the desk is the desk's
+    /// decision, not this timer's. All this does is wake up and ask.
+    private func expireConsent(_ nonce: Data) {
         Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Self.consentWindow))
-            guard let self, self.pendingRequest?.requestNonce == request.requestNonce else {
-                return
-            }
-            self.decline()
+            try? await Task.sleep(for: .seconds(ProvisioningDesk.consentWindow))
+            guard let self else { return }
+            guard let expired = self.desk.expire(nonce) else { return }
+
+            self.isAsking = self.desk.isAsking
+            self.send(declineEchoing: expired)
         }
     }
+
 }
 
 extension WatchKeyProvider: WCSessionDelegate {

@@ -207,89 +207,72 @@ final class WatchVaultModel: NSObject {
     /// one this attempt just sent, so a watch cannot install a key from a message it has not
     /// fully verified.
     private func phoneSent(_ message: [String: Any]) {
-        if let response = message[WatchProvisioning.MessageKey.response] as? Data,
-            let attempt
-        {
-            do {
-                try keys.install(try attempt.open(response))
-                self.attempt = nil
-                token = nil
+        // **What arrived is decided in the core**, by `WatchInbox`, which is where the three
+        // states of a decline's nonce and the rule for believing one now live. Reading a
+        // dictionary and comparing a nonce are decisions, and every decision this file used to
+        // make itself turned out to be wrong at least once.
+        switch WatchInbox.classify(message) {
+        case let .sealedResponse(response):
+            open(response)
 
-                // The key arrived. Whether it was the right one is a different question, and the
-                // only honest way to answer it is to try reading with it.
-                let opens = !keyOpensNothing
-                if !opens { hasReplacedStaleKey = true }
-                flow.installedKey(opensAccounts: opens)
-            } catch let error as WatchProvisioning.ExchangeError {
-                // **A response answering an older attempt is obsolete, not wrong.** It used to
-                // land in one generic catch that cleared the attempt, so a late reply destroyed
-                // the attempt still waiting and the genuine answer that followed had nothing to
-                // open it with and was dropped in silence.
-                let obsolete = error == .notForThisRequest
-                if !obsolete {
-                    self.attempt = nil
-                    token = nil
-                }
-                flow.responseDidNotOpen(obsolete: obsolete)
-
-                // **The attempt is kept and nothing is inferred.** An earlier fix asked again
-                // here, reasoning that an obsolete response proved the phone's slot was free.
-                // Round two showed the inference is invalid across an asynchronous channel: if
-                // the response was merely delayed and the phone has since retained a newer
-                // request, re-asking abandons the very request its alert is showing, and the
-                // wearer approves into a loop of prompts.
-                //
-                // The phone answers `.busy` now instead of pretending to ask, so the watch has no
-                // reason to guess. Waiting is correct: the answer to this attempt may still be
-                // coming, and the timeout recovers if it is not.
-            } catch {
-                // Installing the key failed, which is this attempt's failure.
-                self.attempt = nil
-                token = nil
-                flow.responseDidNotOpen(obsolete: false)
+        case let .decline(nonce):
+            let matches = attempt.map { $0.answers(nonceBytes(nonce)) } ?? false
+            guard WatchInbox.shouldHonourDecline(nonce, matchesCurrentAttempt: matches) else {
+                return
             }
-            return
-        }
-
-        if message[WatchProvisioning.MessageKey.status] as? String
-            == WatchProvisioning.Answer.declined.rawValue
-        {
-            // **A refusal has to say which request it refuses.** Every other message in this
-            // protocol is bound to its attempt, by a token on the callbacks and by the nonce on
-            // the sealed response. The decline was the one that carried nothing, so a refusal of
-            // an abandoned attempt cleared the attempt that was still waiting, and the approval
-            // that followed had nothing left to open it with. Gate A4 found it.
-            //
-            // A decline with no nonce comes from a build that predates this, and is honoured.
-            // The reason written here first was that refusing it would leave a watch waiting
-            // forever, and round two pointed out that is false: the twenty five second timeout
-            // recovers. The real reason is smaller and still good enough. Honouring it ends the
-            // wait now instead of in twenty five seconds, the cost of being wrong is one screen
-            // that says to try again, and a decline releases nothing either way.
-            // **Present but unreadable is not the same as absent.** `as? Data` alone conflated
-            // them: a decline whose nonce arrived as a string, or as anything this build does not
-            // expect, failed the cast and was honoured as though it carried no nonce at all,
-            // which is the behaviour reserved for a phone too old to send one. A review asked
-            // for the two cases to be told apart, and they are: a nonce that is there and cannot
-            // be read is a message this build does not understand, so it is ignored.
-            // A decline that names a request requires the request it names. The middle case
-            // used to fall through when no attempt was held, which a review walked out: with
-            // the attempt gone, a decline meant for somebody else's request was honoured against
-            // whatever this watch was doing. There is nothing to decline without an attempt, so
-            // there is nothing to lose by ignoring it.
-            if let raw = message[WatchProvisioning.MessageKey.nonce] {
-                guard let declined = raw as? Data, let attempt, attempt.answers(declined) else {
-                    return
-                }
-            }
-
-            // The flow first, then release what it no longer needs. The old order cleared the
-            // attempt before asking, which is how the answer and the holding of the attempt came
-            // to be decided in two places.
             flow.phoneDeclined()
+            releaseAttemptIfFinished()
+
+        case .answer, .unrecognised:
+            // The direct reply arrives through `sendMessage`'s reply handler, not here.
+            break
+        }
+    }
+
+    /// The bytes to compare against the attempt, and an empty stand-in when there are none.
+    ///
+    /// `answers(_:)` is length-checked and constant-time, so an empty value fails it, which is
+    /// the answer wanted for a nonce that is absent or unreadable. Those two cases are decided by
+    /// `WatchInbox` rather than here; this exists only so the comparison has something to run on.
+    private func nonceBytes(_ nonce: WatchInbox.Nonce) -> Data {
+        if case let .present(data) = nonce { return data }
+        return Data()
+    }
+
+    private func open(_ response: Data) {
+        guard let attempt else { return }
+
+        do {
+            try keys.install(try attempt.open(response))
+            self.attempt = nil
+            token = nil
+
+            // The key arrived. Whether it was the right one is a different question, and the
+            // only honest way to answer it is to try reading with it.
+            let opens = !keyOpensNothing
+            if !opens { hasReplacedStaleKey = true }
+            flow.installedKey(opensAccounts: opens)
+        } catch let error as WatchProvisioning.ExchangeError {
+            // **A response answering an older attempt is obsolete, not wrong.** It used to land
+            // in one generic catch that cleared the attempt, so a late reply destroyed the
+            // attempt still waiting and the genuine answer that followed had nothing to open it
+            // with and was dropped in silence.
+            //
+            // **Nothing is inferred from it either.** An earlier fix asked again here, reasoning
+            // that an obsolete response proved the phone's slot was free. That inference is not
+            // sound across an asynchronous channel: a merely delayed response says nothing about
+            // what the phone holds now, and if it has since retained a newer request, re-asking
+            // abandons the very request its alert is showing. The phone answering `.busy` is what
+            // removed the need to guess.
+            let obsolete = error == .notForThisRequest
+            flow.responseDidNotOpen(obsolete: obsolete)
+            releaseAttemptIfFinished()
+        } catch {
+            flow.responseDidNotOpen(obsolete: false)
             releaseAttemptIfFinished()
         }
     }
+
 }
 
 extension WatchVaultModel: WCSessionDelegate {
