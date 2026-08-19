@@ -29,6 +29,15 @@ public struct Vault: Sendable {
         case open
         case absent
         case locked
+        /// The store could not be read, so which of the three above is true is unknown.
+        ///
+        /// **Not a fourth kind of vault: a refusal to guess.** This used to collapse into
+        /// `absent`, because `exists` was `(try? load()) != nil`, and absent is the one state
+        /// whose remedy is destructive: it offers to create a vault, and creating one overwrites
+        /// the wrapped record every stored account depends on. A Keychain read that fails while
+        /// the device is locked, or under any transient error, therefore led the interface to
+        /// offer total loss as its only suggestion. Gate A4 found it.
+        case unavailable
     }
 
     public enum VaultError: Error, Equatable, Sendable {
@@ -37,20 +46,42 @@ public struct Vault: Sendable {
         /// The passphrase did not open the record. Wrong passphrase, or an altered record, and
         /// this cannot tell which.
         case wrongPassphrase
+        /// The record is not one this build can read: not the right magic, or an iteration count
+        /// outside the range this version accepts.
+        ///
+        /// **Separated from `wrongPassphrase` because the remedy is opposite.** Both of these are
+        /// decided before any derivation runs, so no passphrase could have opened this record.
+        /// Reporting them as a wrong passphrase sends somebody to try their passphrase again,
+        /// and again, against a record written by a newer version of this app or by something
+        /// else entirely.
+        case recordNotUnderstood
+        /// A vault already exists on this device, or one is arriving, so creating would replace
+        /// the record that opens the accounts already stored.
+        case alreadyExists
         case storage(SecretStoreError)
     }
 
     private let keys: VaultKeyStore
-    private let wrapped: WrappedKeyStore
+    private let wrapped: any WrappedRecordStore
 
-    public init(keys: VaultKeyStore = VaultKeyStore(), wrapped: WrappedKeyStore = WrappedKeyStore()) {
+    public init(
+        keys: VaultKeyStore = VaultKeyStore(),
+        wrapped: any WrappedRecordStore = WrappedKeyStore()
+    ) {
         self.keys = keys
         self.wrapped = wrapped
     }
 
     public func state() -> State {
         if (try? keys.load()) ?? nil != nil { return .open }
-        return wrapped.exists ? .locked : .absent
+
+        // `load()` rather than `exists`, so a read that fails is told apart from a read that
+        // finds nothing. See `State.unavailable`.
+        do {
+            return try wrapped.load() != nil ? .locked : .absent
+        } catch {
+            return .unavailable
+        }
     }
 
     // MARK: - Creating
@@ -83,8 +114,23 @@ public struct Vault: Sendable {
     ///
     /// The passphrase is canonicalised on the way in, so the grouped form that was displayed and
     /// the bare form both derive the same key. It is never stored in either form.
+    ///
+    /// **Refuses if anything is already there.** `save` replaces the record it finds, so without
+    /// this check a creation racing an arriving wrap silently overwrote the credential that
+    /// opened every account already stored. The window is this project's own measured half hour
+    /// of iCloud Keychain propagation, and the tap that triggers it is the ordinary one on a
+    /// second device set up the same day. Two reviews found it independently.
+    ///
+    /// A store that cannot be read refuses too. The point of the check is not to find a record;
+    /// it is to decline to overwrite what it cannot see.
     @discardableResult
     public func create(with passphrase: String) throws(VaultError) -> SymmetricKey {
+        switch state() {
+        case .open, .locked: throw .alreadyExists
+        case .unavailable: throw .storage(.keychain(status: errSecNotAvailable))
+        case .absent: break
+        }
+
         do {
             let key = SymmetricKey(size: .bits256)
             try wrapped.save(try WrappedVaultKey.wrap(vaultKey: key, passphrase: passphrase))
@@ -113,8 +159,13 @@ public struct Vault: Sendable {
         do {
             let key = try WrappedVaultKey.unwrap(record, passphrase: passphrase)
             try keys.install(key)
-        } catch is WrappedVaultKey.WrapError {
-            throw .wrongPassphrase
+        } catch let error as WrappedVaultKey.WrapError {
+            // The two that are decided before any derivation runs are not a passphrase problem
+            // and must not be reported as one. See `VaultError.recordNotUnderstood`.
+            switch error {
+            case .notAWrappedKey, .iterationsOutOfRange: throw .recordNotUnderstood
+            case .wrongPassphrase, .derivationFailed: throw .wrongPassphrase
+            }
         } catch {
             throw .storage(.keychain(status: -1))
         }
@@ -128,10 +179,33 @@ public struct Vault: Sendable {
     /// `docs/VAULT.md` says so, and this comment exists so the next person to read this method
     /// does not conclude otherwise from its convenience.
     public func replacePassphrase() throws(VaultError) -> String {
-        guard let key = (try? keys.load()) ?? nil else { throw .nothingToUnlock }
-        guard let passphrase = BackupPassphrase.generate() else {
+        let passphrase = try prepareReplacementPassphrase()
+        try replacePassphrase(with: passphrase)
+        return passphrase
+    }
+
+    /// Generates a replacement passphrase and stores nothing.
+    ///
+    /// **The two-step shape, for the same reason creation has one.** `replacePassphrase` saved
+    /// the new wrap and returned the string afterwards, so a crash or a torn-down view between
+    /// the save and the screen left a vault whose only recovery credential nobody had ever seen,
+    /// on a device that kept working perfectly and so signalled nothing. This project had already
+    /// learned that lesson once and written the reasoning above `create(with:)`; nobody applied
+    /// it to replacement until a review did.
+    ///
+    /// The one-shot above is kept for tests and for callers with no screen, exactly as `create()`
+    /// is, and carries the same warning.
+    public func prepareReplacementPassphrase() throws(VaultError) -> String {
+        guard (try? keys.load()) ?? nil != nil else { throw .nothingToUnlock }
+        guard let generated = BackupPassphrase.generate() else {
             throw .storage(.keychain(status: -1))
         }
+        return BackupPassphrase.grouped(generated)
+    }
+
+    /// Rewraps the vault key under a passphrase that has already been shown and acknowledged.
+    public func replacePassphrase(with passphrase: String) throws(VaultError) {
+        guard let key = (try? keys.load()) ?? nil else { throw .nothingToUnlock }
 
         do {
             try wrapped.save(try WrappedVaultKey.wrap(vaultKey: key, passphrase: passphrase))
@@ -140,8 +214,6 @@ public struct Vault: Sendable {
         } catch {
             throw .storage(.keychain(status: -1))
         }
-
-        return BackupPassphrase.grouped(passphrase)
     }
 
     #if DEBUG

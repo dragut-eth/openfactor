@@ -607,7 +607,14 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
 
     private func encode(_ metadata: AccountMetadata, id: UUID) throws(SecretStoreError) -> Data {
         do {
-            return try JSONEncoder().encode(metadata)
+            // **`.sortedKeys` because `docs/VAULT.md` promises deterministic bytes**, and until
+            // gate A4 the encoder did not. The published test vector reached sorted keys by
+            // supplying raw bytes rather than by calling this, so the page and the code had never
+            // actually agreed. Key order does not affect decoding, so records written before this
+            // read exactly as they did.
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            return try encoder.encode(metadata)
         } catch {
             // Only reachable if a future field is not encodable, which is a programming
             // error rather than anything the user did.

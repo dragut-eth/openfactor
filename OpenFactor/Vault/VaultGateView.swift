@@ -57,6 +57,8 @@ struct VaultGateView<Content: View>: View {
                 VaultUnlockView(model: model, store: store)
             case .open:
                 content()
+            case .unavailable:
+                VaultUnavailableView(model: model)
             }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in

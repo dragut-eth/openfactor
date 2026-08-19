@@ -131,12 +131,19 @@ One Keychain item per account, as today.
 
 ```
 kSecClass               kSecClassGenericPassword
-kSecAttrService         "app.openfactor.vault"     a constant, identical for every item
-kSecAttrAccount         the account's UUID, lower case, hyphenated
+kSecAttrService         "app.openfactor.accounts"  a constant, identical for every item
+kSecAttrAccount         the account's UUID, upper case, hyphenated
 kSecAttrSynchronizable  follows the sync preference
 kSecAttrGeneric         absent
 kSecValueData           the layout below
 ```
+
+**Two of those lines were wrong until gate A4, and they were wrong in the direction that
+matters.** The page said the service was `"app.openfactor.vault"` and the UUID was rendered lower
+case; the code has always written `"app.openfactor.accounts"` and `UUID.uuidString`, which is
+upper case. This page declares itself normative, so a second implementation written from it would
+have queried a service nothing is stored under and matched no account it did look for. The items
+already exist on people's phones, so the page is what changes.
 
 ```
 offset  size  field
@@ -169,6 +176,15 @@ length prefix so the padding is unambiguous. Padding exists because GCM output i
 its input, so without it the length of an issuer and account name leaks to any reader.
 
 **The secret half** is the raw secret bytes, padded the same way.
+
+**What padding leaves behind, stated because the page used to stop short of it.** Bucketing hides
+the exact length and not the approximate one. Real metadata for an ordinary account runs around
+132 to 139 bytes, which is two buckets rather than one, so a reader who can see the sealed lengths
+learns a coarse class: one bucket, two, or three. That distinguishes an account with a short
+issuer and no colour from one with a long issuer, a long name and a high counter. It does not
+distinguish two accounts in the same class, and it never exposes a character of either field. A
+reviewer in gate A4 pointed out that the page said why padding exists and never said what remains
+after it.
 
 **Unknown JSON fields are ignored, not rejected**, so a later version can add one. An unknown
 **magic** is refused, and the item is reported unreadable rather than guessed at.
@@ -504,6 +520,15 @@ check again, and states plainly that a second vault would leave the first one's 
 unreadable. The state is re-read whenever the app comes forward, so a record arriving while the
 screen is open moves the device to the unlock question by itself.
 
+**That last sentence was true of one of the two setup screens and claimed both**, which gate A4
+found. Re-reading returned early whenever a generated passphrase was on display, so a record
+arriving at exactly the moment somebody was writing one down changed nothing, and the button
+that followed tried to create a second vault over the first one's record. Two things were done
+rather than one: the re-read now moves away from the passphrase screen when a record has actually
+arrived, leaving it alone in every other case so that a scene becoming active cannot clear a
+passphrase somebody is mid-way through copying; and creation refuses outright when a record is
+already there, so the destructive tap cannot land even if the screens are wrong again.
+
 **The setup screen says nothing about iCloud, deliberately.** Sync is off by default, so the
 first person to read that screen always has it off, and a paragraph about what iCloud carries
 would describe something that is not happening. Two claims were wrong for that reason and are
@@ -539,10 +564,15 @@ an environment value only the gate sets, and a Release binary is checked to cont
 string. It sits on the model rather than in the view because a private method on a `View` cannot
 be tested, and a destructive path nobody can check is not worth adding even to a Debug build.
 
-*The store is converted as of PR 16d. `KeychainSecretStore` seals on write, opens the metadata
-half to list, and opens the secret half only in `secret(for:)`. `update` re-seals metadata and
-copies the secret half verbatim, so a rename never decrypts a secret. `kSecAttrGeneric` is never
-written.*
+*`KeychainSecretStore` has written this format since PR 16d: it seals on write, opens the
+metadata half to list, and opens the secret half only in `secret(for:)`. `update` re-seals
+metadata and copies the secret half verbatim, so a rename never decrypts a secret.
+`kSecAttrGeneric` is never written.*
+
+*The word "converted" used to stand at the head of that sentence, directly above a section titled
+"Migration, and why there is no converter". Nothing converts anything: the format changed before
+anybody but the maintainer had items, and the next section is the argument for why no converter
+was written. A review read the two together and took them for a contradiction, correctly.*
 
 ## Migration, and why there is no converter
 

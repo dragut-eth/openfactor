@@ -38,6 +38,13 @@ final class VaultGateModel {
         /// Ciphertext is here and the key is not.
         case locked
         case open
+        /// The store could not be read, so nothing is offered until it can be.
+        ///
+        /// **The point of this screen is what it does not offer.** The state it replaces was
+        /// `introducing`, whose button creates a vault, and creating one over a record that is
+        /// merely unreadable at this moment destroys every stored account. Waiting is always
+        /// recoverable; creating is not.
+        case unavailable
     }
 
     private(set) var stage: Stage = .checking
@@ -79,13 +86,27 @@ final class VaultGateModel {
     /// memory and the device is still genuinely `absent`, so refreshing would throw away a
     /// passphrase somebody may be halfway through writing down.
     func refresh() {
-        if case .showingPassphrase = stage { return }
         if isWorking { return }
 
-        switch vault.state() {
+        let state = vault.state()
+
+        // **A passphrase on screen no longer blinds this.** The early return used to cover
+        // every state, so a wrapped record arriving from iCloud while a generated passphrase was
+        // displayed changed nothing, and the tap that followed tried to create a vault over it.
+        // Nothing is lost by moving away: at this stage the passphrase has been generated and
+        // not used, and no vault exists to abandon. A review found it, and the guard that would
+        // have made it harmless, `create(with:)` refusing an existing record, was missing too.
+        //
+        // Everything else still leaves the screen alone, which is what the early return was for:
+        // a scene becoming active must not clear a passphrase somebody is in the middle of
+        // writing down.
+        if case .showingPassphrase = stage, state == .absent { return }
+
+        switch state {
         case .open: stage = keyOpensNothing ? .locked : .open
         case .locked: stage = .locked
         case .absent: stage = .introducing
+        case .unavailable: stage = .unavailable
         }
     }
 
@@ -137,11 +158,23 @@ final class VaultGateModel {
 
         let passphrase = BackupPassphrase.grouped(generated)
 
-        guard await Self.create(vault, with: passphrase) == nil else {
-            // Deliberately vague about the cause and specific about the consequence. Every
-            // failure here means the same thing to the person holding the phone: nothing was
-            // set up, and pressing the button again is the whole of the remedy.
-            failure = "Your accounts could not be set up. Try again."
+        if let error = await Self.create(vault, with: passphrase) {
+            // Deliberately vague about the cause and specific about the consequence. Almost
+            // every failure here means the same thing to the person holding the phone: nothing
+            // was set up, and pressing the button again is the whole of the remedy.
+            //
+            // **One of them means the opposite.** A vault that already exists, or one that
+            // arrived from another device while this screen was up, is not something to try
+            // again: the passphrase on this screen is not the one that opens it, and the remedy
+            // is the unlock screen with the passphrase that device was given.
+            if error == .alreadyExists {
+                failure =
+                    "Your vault already exists on this Apple Account. Enter the passphrase you "
+                    + "were given when you set it up."
+                stage = .locked
+            } else {
+                failure = "Your accounts could not be set up. Try again."
+            }
             return
         }
 
@@ -180,6 +213,18 @@ final class VaultGateModel {
         case .nothingToUnlock:
             failure = "There is nothing on this iPhone to unlock."
             stage = .introducing
+        case .recordNotUnderstood:
+            // **Not "check for a mistyped character".** This record was refused before the
+            // passphrase was used for anything, so no passphrase would open it, and sending
+            // somebody back to retype one they have written down correctly is the wrong
+            // instruction at the worst possible moment. A review found the two collapsed.
+            failure =
+                "This iPhone cannot read your vault. It may have been set up by a newer "
+                + "version of OpenFactor. Updating the app is the thing to try."
+        case .alreadyExists:
+            // Reachable only if a record arrived between the check and the write.
+            failure = "Your vault is already set up on this iPhone."
+            stage = .locked
         case .storage:
             failure = "Your accounts could not be reached. Try again."
         }
