@@ -86,6 +86,15 @@ public enum AegisImport {
             return .failure(.secretNotBase32)
         }
 
+        // **The floor the backup format requires, applied where accounts arrive.** Gate A4 found
+        // three of the four enrollment paths admitting secrets the format refuses to restore, so
+        // an account could work every day and vanish from the backup that was supposed to save
+        // it. See `AccountLimits`.
+
+        guard AccountLimits.isSecretLongEnough(secret) else {
+            return .failure(.secretTooShort)
+        }
+
         // Defaulting is correct here and wrong in the labelled text reader, which is worth
         // stating because the two look inconsistent side by side. Aegis publishes a schema
         // with documented defaults, so an absent field means the default. The other format
@@ -105,6 +114,8 @@ public enum AegisImport {
 
         if entry.type.lowercased() == "hotp" {
             guard let counter = entry.info.counter else { return .failure(.malformed) }
+            // Same ceiling as every other path. See `AccountLimits`.
+            guard AccountLimits.isCounterStorable(counter) else { return .failure(.malformed) }
             generator = .hotp(counter: counter, digits: digits, algorithm: algorithm)
         } else {
             let period = entry.info.period ?? 30

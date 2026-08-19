@@ -37,12 +37,16 @@ enum BackupPayload {
     /// RFC 4226's minimum key length. A secret shorter than this is refused rather than
     /// imported: without the rule an empty secret passes every other test and generates
     /// codes under an empty key, which look correct and never work.
-    static let minimumSecretBytes = 10
+    /// Read from `AccountLimits` so there is one definition rather than five. These were the
+    /// original home of both rules, which is why three enrollment paths never applied them: a
+    /// rule about what an account *is*, kept in the file that reads archives, is a rule the rest
+    /// of the app has to remember to go and find.
+    static let minimumSecretBytes = AccountLimits.minimumSecretBytes
 
     /// The largest `counter` a JSON number can hold exactly. A reader whose parser uses
     /// doubles must refuse anything beyond it rather than importing a silently corrupted
     /// counter, which is the same permanent failure as a truncated secret.
-    static let maximumCounter: UInt64 = 1 << 53 - 1
+    static let maximumCounter = AccountLimits.maximumCounter
 
     // MARK: - Reading
 
@@ -104,8 +108,11 @@ enum BackupPayload {
         } catch {
             return .failure(.secretNotBase32)
         }
-        guard secret.count >= minimumSecretBytes else {
-            return .failure(.secretNotBase32)
+        // `secretTooShort`, not `secretNotBase32`. The old reason was false for exactly this
+        // case: the secret decodes perfectly and is merely short, so anybody debugging a refused
+        // restore went hunting for an invalid character that was not there.
+        guard AccountLimits.isSecretLongEnough(secret) else {
+            return .failure(.secretTooShort)
         }
 
         guard let algorithmText = fields[Key.algorithm] as? String else {
@@ -189,7 +196,22 @@ enum BackupPayload {
     /// and makes a diff of two archives meaningful to whoever is auditing one. Slashes are
     /// not escaped, because `\/` is legal JSON that no reader needs and every human reading
     /// a hex dump has to decode by eye.
+    /// - Throws: `BackupError.cannotStoreAccount` if any account violates the format's own
+    ///   rules. **The writer refuses rather than emitting something the reader must reject**,
+    ///   which is the whole point: an archive that cannot be restored is worse than no archive,
+    ///   because its owner does not learn the difference until the originals are gone.
+    ///
+    ///   The enrollment paths refuse these values now, so a store should not contain one. Should
+    ///   is not a guarantee: an account saved before those guards existed is still there, and
+    ///   this is where it must be caught. Failing the whole export is deliberate and matches
+    ///   `collectAccounts`, which already takes the position that a backup missing accounts is
+    ///   worse than none.
     static func write(_ accounts: [ImportedAccount]) throws -> Data {
+        for imported in accounts where !AccountLimits.isStorable(imported.account) {
+            throw BackupError.cannotStoreAccount(
+                label: imported.account.issuer ?? imported.account.name)
+        }
+
         let entries: [[String: Any]] = accounts.map { imported in
             var fields: [String: Any] = [
                 Key.secret: Base32.encode(imported.account.secret, padded: false),

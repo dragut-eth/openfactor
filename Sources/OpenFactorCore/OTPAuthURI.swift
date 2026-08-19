@@ -165,6 +165,18 @@ public enum OTPAuthURI {
             throw OTPAuthURIError.emptySecret
         }
 
+        // **The same reasoning, one step further, and the step that was missing.** A five byte
+        // secret is not empty and is equally useless: HMAC takes it, the codes look right, and
+        // the service rejects them forever. It is also below what `docs/BACKUP_FORMAT.md`
+        // requires, so an account enrolled this way could work every day and be refused by its
+        // own backup on restore. Gate A4 reproduced exactly that.
+        //
+        // Refusing here rather than truncating, unlike `AccountLabel`: a short label is a
+        // cosmetic loss, a short secret is an account that never worked.
+        guard AccountLimits.isSecretLongEnough(bytes) else {
+            throw OTPAuthURIError.secretTooShort
+        }
+
         return bytes
     }
 
@@ -246,6 +258,14 @@ public enum OTPAuthURI {
         }
 
         guard let value = UInt64(raw) else {
+            throw OTPAuthURIError.invalidCounter(raw)
+        }
+
+        // The ceiling the backup format sets, applied where the counter arrives. A counter above
+        // it cannot survive a JSON reader required only to represent integers exactly to 2^53,
+        // so accepting one here would enroll an account that cannot be restored. See
+        // `AccountLimits`.
+        guard AccountLimits.isCounterStorable(value) else {
             throw OTPAuthURIError.invalidCounter(raw)
         }
 

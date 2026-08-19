@@ -67,7 +67,17 @@ struct BackupPayloadTests {
 
         #expect(result.accounts.isEmpty)
         #expect(result.refusals.count == 1)
-        #expect(result.refusals.first?.reason == .secretNotBase32)
+
+        // **The reason has to be true, not merely a refusal.** `secretNotBase32` was reported
+        // for a secret that decodes perfectly and is only short, so gate A4 pointed out that
+        // anybody debugging a refused restore was sent looking for an invalid character that
+        // did not exist. Empty and short are the same kind of wrong and now say so.
+        let expected: ImportRefusal.Reason =
+            switch secret {
+            case "", "GEZDGNBV": .secretTooShort
+            default: .secretNotBase32
+            }
+        #expect(result.refusals.first?.reason == expected)
     }
 
     /// The rule the format spells out for the same reason the passphrase rule does: a

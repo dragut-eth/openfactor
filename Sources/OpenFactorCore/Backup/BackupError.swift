@@ -37,6 +37,15 @@ public enum BackupError: Sendable, Equatable, Error {
     /// and must not pretend it can.
     case couldNotOpen
 
+    /// An account in the store cannot be represented in this format, so the export refuses
+    /// rather than writing an archive its own reader would turn away.
+    ///
+    /// **Only reachable for an account enrolled before the enrollment paths enforced these
+    /// rules.** Gate A4 found three of four paths admitting secrets and counters the format
+    /// forbids, so an account could work every day and be refused by the backup meant to save
+    /// it, discovered on a device that no longer had the originals.
+    case cannotStoreAccount(label: String)
+
     /// The system key derivation failed, which for these inputs is a defect here rather than
     /// anything about the file.
     case derivationFailed
@@ -71,6 +80,12 @@ public enum BackupError: Sendable, Equatable, Error {
             """
             OpenFactor could not open this archive. Either the passphrase is wrong, or the \
             file has been altered since it was written. There is no way to tell which.
+            """
+        case let .cannotStoreAccount(label):
+            """
+            \(label) cannot be written to a backup: its secret is too short, or its counter is \
+            too large, for the backup format. It was saved before OpenFactor checked for this. \
+            Remove it, or add it again from the service, and export once more.
             """
         case .derivationFailed:
             "OpenFactor could not derive a key on this device."

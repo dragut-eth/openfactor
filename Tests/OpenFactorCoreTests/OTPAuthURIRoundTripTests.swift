@@ -102,7 +102,9 @@ struct OTPAuthURIRoundTripTests {
         arguments: [
             OTPGenerator.totp(.standard),
             .hotp(counter: 0, digits: .six, algorithm: .sha1),
-            .hotp(counter: UInt64.max, digits: .eight, algorithm: .sha512),
+            // The ceiling rather than UInt64.max: a counter beyond what the backup format can
+            // represent is refused at enrollment now, and `hugeCounterIsRefused` pins that.
+            .hotp(counter: AccountLimits.maximumCounter, digits: .eight, algorithm: .sha512),
         ]
     )
     func roundTripsGenerators(generator: OTPGenerator) throws {
@@ -131,15 +133,46 @@ struct OTPAuthURIRoundTripTests {
         }
     }
 
-    /// Secrets of every length, since the padding decision in the writer is the kind of
-    /// thing that works for one length and not the next.
-    @Test("Secrets of any length survive", arguments: 1...40)
+    /// Secrets of every storable length, since the padding decision in the writer is the kind
+    /// of thing that works for one length and not the next.
+    ///
+    /// **The range starts at the floor rather than at one, and that is a behaviour change
+    /// rather than a weakened test.** Gate A4 found that a secret shorter than RFC 4226's
+    /// minimum enrolled here, worked every day, and was refused by the backup format on
+    /// restore. The parser rejects those now, and `shortSecretsAreRefused` below pins the other
+    /// half so this range cannot quietly be narrowed again to make something pass.
+    @Test(
+        "Secrets of any storable length survive",
+        arguments: AccountLimits.minimumSecretBytes...40)
     func roundTripsSecrets(length: Int) throws {
         let secret = Data((0..<length).map { UInt8(truncatingIfNeeded: $0 &* 53 &+ 7) })
         let original = OTPAccount(issuer: "X", name: "y", secret: secret, generator: .totp(.standard))
         let parsed = try OTPAuthURI.account(from: OTPAuthURI.uri(for: original))
 
         #expect(parsed.secret == secret)
+    }
+
+    /// The half that makes the range above honest: everything below the floor is refused, and
+    /// refused for the right reason.
+    @Test("A secret below the floor is refused", arguments: 1..<AccountLimits.minimumSecretBytes)
+    func shortSecretsAreRefused(length: Int) throws {
+        let secret = Data((0..<length).map { UInt8(truncatingIfNeeded: $0 &* 53 &+ 7) })
+        let original = OTPAccount(issuer: "X", name: "y", secret: secret, generator: .totp(.standard))
+        let uri = OTPAuthURI.uri(for: original)
+
+        #expect(throws: OTPAuthURIError.secretTooShort) {
+            _ = try OTPAuthURI.account(from: uri)
+        }
+    }
+
+    /// A counter beyond what the backup format can represent is refused at enrollment, for the
+    /// same reason: an account that cannot be restored should not be created.
+    @Test("A counter beyond the format's ceiling is refused")
+    func hugeCounterIsRefused() {
+        let uri = "otpauth://hotp/x?secret=GEZDGNBVGY3TQOJQ&counter=9007199254740992"
+        #expect(throws: OTPAuthURIError.invalidCounter("9007199254740992")) {
+            _ = try OTPAuthURI.account(from: uri)
+        }
     }
 
     /// A single byte encodes to `AE` plus six padding characters. Padding in a query

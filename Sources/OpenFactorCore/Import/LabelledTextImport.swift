@@ -129,6 +129,15 @@ public enum LabelledTextImport {
             return .failure(.secretNotBase32)
         }
 
+        // **The floor the backup format requires, applied where accounts arrive.** Gate A4 found
+        // three of the four enrollment paths admitting secrets the format refuses to restore, so
+        // an account could work every day and vanish from the backup that was supposed to save
+        // it. See `AccountLimits`.
+
+        guard AccountLimits.isSecretLongEnough(secret) else {
+            return .failure(.secretTooShort)
+        }
+
         // **Nothing that changes a code is defaulted here.** An earlier version filled in
         // sha1, 6 and 30 when a label was absent, with a comment claiming it did the
         // opposite. That is defensible in the `otpauth://` parser, where the specification

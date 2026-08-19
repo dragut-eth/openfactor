@@ -26,6 +26,10 @@ public enum OTPAuthURIError: Error, Equatable, Sendable {
     /// The secret decoded to nothing, so it was empty or pure padding.
     case emptySecret
 
+    /// Valid Base32, decoding to fewer bytes than RFC 4226 requires and than the backup format
+    /// will store. See `AccountLimits`.
+    case secretTooShort
+
     /// An `algorithm` this app does not implement.
     case unsupportedAlgorithm(String)
 
@@ -62,6 +66,11 @@ extension OTPAuthURIError: CustomStringConvertible {
             return "The secret key in this setup code is not valid. \(reason)"
         case .emptySecret:
             return "The secret key in this setup code is empty."
+        case .secretTooShort:
+            return """
+                The secret key in this setup code is too short to work. It was probably cut \
+                off. Ask the service to show the code again.
+                """
         case let .unsupportedAlgorithm(algorithm):
             let supported = OTPAlgorithm.allCases.map(\.rawValue).joined(separator: ", ")
             return "This account uses \(algorithm), and OpenFactor supports \(supported)."

@@ -65,6 +65,13 @@ public struct ImportRefusal: Sendable, Equatable {
 
     public enum Reason: Sendable, Equatable, Error {
         case secretNotBase32
+        /// Valid Base32, and too short to be a secret.
+        ///
+        /// **Separate from `secretNotBase32` because that one lied.** A five byte secret
+        /// decodes without complaint, so somebody told their key contained invalid characters
+        /// went looking for a character that was not there. Gate A4 found the message and the
+        /// defect it was reporting in the same breath.
+        case secretTooShort
         case missingSecret
         case unsupportedAlgorithm(String)
         case unsupportedDigits(Int)
@@ -89,6 +96,8 @@ public struct ImportRefusal: Sendable, Equatable {
             switch self {
             case .secretNotBase32:
                 "the secret key contains characters that are not valid"
+            case .secretTooShort:
+                "the secret key is too short to be one, and was probably cut off"
             case .missingSecret:
                 "there is no secret key"
             case let .unsupportedAlgorithm(name):

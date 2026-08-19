@@ -8,6 +8,31 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**Scope 3's worst finding is fixed: an account can no longer be enrolled that its own backup
+will refuse.** `docs/BACKUP_FORMAT.md` requires a secret to decode to at least ten bytes and a
+counter to stay below 2^53. The archive reader enforced both; three of the four enrollment paths
+enforced neither, and the writer serialized whatever it was given. So a five-byte secret enrolled,
+worked daily, went into an encrypted backup, and came back as zero accounts on restore.
+
+`AccountLimits` now holds both rules, and every path reads them: the URI parser, both file
+importers, and `BackupPayload`, which used to be their only home. That was the cause rather than
+an incidental detail. **A rule about what an account is, kept in the file that reads archives, is
+a rule the rest of the app has to remember to go and find**, and one of four did.
+
+The writer refuses too, since an account saved before those guards existed is still in the store,
+and an export is the last honest moment to say so.
+
+The refusal reason is fixed with it: `secretNotBase32` was reported for a secret that decodes
+perfectly and is merely short, so anybody debugging a refused restore hunted for an invalid
+character that did not exist. There is a `secretTooShort` now.
+
+**Four existing tests failed and were changed, which deserves stating plainly since weakening a
+test to make a build pass is exactly the failure mode this project worries about.** They pinned
+the old behaviour: secrets of any length round-tripping, a fuzz generator building accounts
+production can no longer create, and a refusal reason that was wrong. Each was updated to the new
+rule *and* given its inverse, so the range cannot quietly be narrowed again. Both guards were then
+proved by removing them and watching the suite go red.
+
 **Scope 2 is closed: all eleven of its findings are fixed.** The last five landed together.
 
 **The dropped retry is fixed on the watch rather than the phone**, taking the reviewer's better

@@ -174,12 +174,18 @@ struct FuzzTests {
         }
 
         for _ in 0..<1_000 {
-            let secret = Data((0..<(1 + Int(random.next() % 64))).map { _ in UInt8(truncatingIfNeeded: random.next()) })
+            // At or above the floor, and within the counter ceiling below, because an account
+            // outside those cannot be enrolled at all now. Gate A4 found the app accepting
+            // accounts its own backup format refuses to restore; this generator used to build
+            // exactly those, so it was testing a round trip that production can no longer
+            // reach. `OTPAuthURIRoundTripTests` pins the refusals.
+            let secretLength = AccountLimits.minimumSecretBytes + Int(random.next() % 54)
+            let secret = Data((0..<secretLength).map { _ in UInt8(truncatingIfNeeded: random.next()) })
 
             let generator: OTPGenerator =
                 if random.next() % 4 == 0 {
                     .hotp(
-                        counter: random.next(),
+                        counter: random.next() % (AccountLimits.maximumCounter + 1),
                         digits: OTPDigits.allCases.randomElement(using: &random)!,
                         algorithm: OTPAlgorithm.allCases.randomElement(using: &random)!
                     )
