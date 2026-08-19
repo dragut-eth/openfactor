@@ -33,6 +33,32 @@ production can no longer create, and a refusal reason that was wrong. Each was u
 rule *and* given its inverse, so the range cannot quietly be narrowed again. Both guards were then
 proved by removing them and watching the suite go red.
 
+**Scope 1 is closed, and closing it found something worse than any of its findings.** The
+`Vault lifecycle` suite is skipped on the machine that runs the suite: the package's test binary
+is unsigned, so every Keychain write returns `errSecMissingEntitlement`. It was found the honest
+way, by reverting each fix in turn to watch the suite go red and watching it stay green every
+time. **The vault's decisions, including the two that destroy accounts when they are wrong, were
+argued for in comments and verified by nobody.**
+
+`WrappedRecordStore` is a protocol now, `Vault` takes one, and the decisions are checked against
+an in-memory store in `VaultDecisionTests`, which touches no Keychain and cannot be skipped. Each
+fix was then reverted again and the new suite caught every one. **This is the same disease scope
+2's round three named, in a different file:** the decisions were sitting where the tests could not
+reach.
+
+The seven findings themselves: creation refuses when a record is already there, and refuses while
+the store cannot be read; re-reading the state no longer goes blind while a passphrase is on
+screen, and still leaves that screen alone in every other case; a read failure is no longer an
+empty store, which was the collapse that offered creation as the remedy for a transient error;
+a record refused before any derivation ran no longer blames the passphrase; replacing a passphrase
+generates, shows, then saves. Plus the document mismatches, the sorted keys the normative page had
+always claimed and the encoder never did, and the padding section finally saying what padding
+leaves behind.
+
+Round two for scope 1 is ready to send. `docs/audits/A4-round-two-scope1.md` is the what-changed
+block, and it opens by telling the reviewers the suite never ran, because that is what they most
+need to know before they weigh anything else.
+
 **Scope 2 has been through round three, and all three engines found the same defect.** Round one
 produced unanimity on 3 findings out of 44; this is the fourth. `.busy` was added to the core,
 tested in the core, and never taught to `WatchVaultModel`, which still ended the attempt for any
