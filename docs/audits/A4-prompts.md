@@ -161,13 +161,17 @@ Attack:
 
 ## Scope 3: everything that parses bytes somebody else wrote
 
-*Files: `Sources/OpenFactorCore/Backup/` (all seven), `Sources/OpenFactorCore/Import/` (all six),
-`OTPAuthURI.swift`, `OTPAuthURISerialization.swift`, `OTPAuthURIError.swift`, `Base32.swift`,
-`Base32Error.swift`, `AccountLabel.swift`, `OTPAccount.swift`, `AccountMetadata.swift`,
-`OTPGenerator.swift`, `SecretStore.swift`; `OpenFactor/Import/ImportViewModel.swift` and
-`OpenFactor/Export/ExportViewModel.swift`, which hold the size bounds, the routing between
-parsers, and everything about what an import does to accounts that already exist; and
-`docs/BACKUP_FORMAT.md`.*
+*Files: `Sources/OpenFactorCore/Backup/` (all seven), `Sources/OpenFactorCore/Import/` (all
+eight, which now includes `ImportLimits.swift` and `JSONSniff.swift`, both moved into the core
+because round one's findings lived where no test could reach them), `OTPAuthURI.swift`,
+`OTPAuthURISerialization.swift`, `OTPAuthURIError.swift`, `Base32.swift`, `Base32Error.swift`,
+`AccountLabel.swift`, `OTPAccount.swift`, `AccountMetadata.swift`, `OTPGenerator.swift`,
+`SecretStore.swift`; `OpenFactor/Import/ImportViewModel.swift`, `OpenFactor/Import/ImportView.swift`
+and `OpenFactor/Export/ExportViewModel.swift`, which hold the routing between parsers, what an
+import does to accounts that already exist, and what the last screen tells somebody about the file
+they just used; `OpenFactor/Scanning/AddAccountViewModel.swift` and
+`OpenFactorShare/ShareViewController.swift`, which are two of the four entry points the size
+bounds now cover; and `docs/BACKUP_FORMAT.md`.*
 
 *Open anything these reference. Question 4 asks what an importer can do to existing data, which
 cannot be answered from a parser alone: it needs the store the import writes through.*
