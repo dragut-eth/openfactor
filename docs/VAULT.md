@@ -321,6 +321,25 @@ response detectable, and the watch checks it **before deriving anything**. The p
 a refusal too, so a decline of an abandoned attempt cannot end a live one; that is matching rather
 than authentication, since a refusal releases nothing.
 
+**The refusal is a third message, and it is not versioned the way the two above are.** The two
+payloads carry `OFW1` inside themselves. A refusal is a WatchConnectivity dictionary with a
+`status` key, and the echoed nonce rides beside it under a `nonce` key, outside any magic. A
+second implementer working from the byte tables above would not know to expect it, which is why
+it is written down here:
+
+```
+key      type    notes
+status   String  "asking", "busy", "needsApp", "noVault" or "declined"
+nonce    Data    16 bytes, present on a decline, echoing the request being refused
+```
+
+The compatibility rule is deliberate and asymmetric. **A decline carrying no nonce is honoured**,
+because it comes from a phone built before this field existed and refusing it would strand a watch
+whose owner has plainly said no. **A decline carrying a nonce that is not this attempt's is
+ignored**, which is the whole point of the field. An older watch reads neither and ignores the key
+entirely, leaving it exactly the behaviour it already had. A version 2 of the two payloads would
+change `OFW1`; this dictionary would need its own answer, and does not have one yet.
+
 ### There is no six digit comparison, and what that costs
 
 Earlier versions of this page specified one, and said it was what made routing exclusivity

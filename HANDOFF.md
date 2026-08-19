@@ -33,23 +33,32 @@ production can no longer create, and a refusal reason that was wrong. Each was u
 rule *and* given its inverse, so the range cannot quietly be narrowed again. Both guards were then
 proved by removing them and watching the suite go red.
 
-**Scope 2 has been through round two, and round two changed six things.** All three engines
-re-reviewed the eleven fixes with the diffs in hand. They found four of them incomplete and two
-new defects the fixes themselves had introduced. `docs/audits/A4-round-two-scope2.md` carries the
-table; the four that mattered:
+**Scope 2 has been through round two, and round two changed eight things.** Two engines
+re-reviewed the eleven fixes with the diffs in hand: Fable and Grok. **ChatGPT was not run on this
+round**, and an earlier version of this file and of the audit page said "all three", which was
+wrong and is corrected in both. Between them they found three fixes incomplete, one new defect the
+fixes introduced, and four claims in comments or documents that the code did not support.
+`docs/audits/A4-round-two-scope2.md` carries both returns verbatim; the four that mattered:
 
 - The staging file that was supposed to close the unexcluded-key window merely moved it one
   pathname along, since a backup enumerates a container rather than a filename. The key is now
   written inside a directory excluded *before* any key material exists.
 - The watch re-asked from inside its own response handler, on the reasoning that an obsolete
-  response proved the phone was free. It proves nothing across an asynchronous channel, and the
-  inference is gone. The phone answering `.busy` is what removed the need to guess.
+  response proved the phone was free. **Both engines were invited to disbelieve that and both
+  cleared it**, having looked for a spin and correctly found none. It was removed anyway, because
+  the objection is to the inference rather than to recursion: across an asynchronous channel a
+  delayed response proves nothing about what the phone holds now. The phone answering `.busy` is
+  what removed the need to guess.
 - The consent window was measured with `Date`. A backward jump makes the elapsed time negative,
   and negative is inside any window forever. `AppLockEngine` had refused to reason about a
   backward clock three files away for weeks.
 - `messageKeysArePinned` still said "exactly these three" while a fourth key was live on the wire.
 
-**Two of the six came from writing the tests, not from any review.** `.usingNewMetadataOnly`
+Fable also found the refusal message undocumented: it is a third message, it carries no version
+magic the way the two payloads do, and `docs/VAULT.md` described the protocol byte by byte without
+it. That section now carries the dictionary and the compatibility rule.
+
+**Two of the eight came from writing the tests, not from any review.** `.usingNewMetadataOnly`
 installs the staged file's metadata, so the fix for the write window quietly stripped the backup
 exclusion off the key it wrote, and the suite went red the first time both ran together. And a
 `.busy` answer arriving after a timeout restored a spinner whose timer had already fired.
