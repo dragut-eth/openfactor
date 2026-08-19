@@ -236,6 +236,26 @@ struct VaultKeyStoreTests {
             "and left nothing of its own behind")
     }
 
+    /// **A key that cannot be kept out of a backup is not written at all.** Round three asked for
+    /// the exclusion to be read back rather than merely attempted, on the grounds that a call
+    /// which does not throw is not the same as a flag that is set. The failure is hard to provoke
+    /// on a working filesystem, so this pins the shape instead: the check reads the directory
+    /// back, and the error it would raise exists and is distinct from the others.
+    @Test("Installing confirms the staging directory really is excluded")
+    func installConfirmsTheExclusion() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        _ = try store.create()
+
+        let staging = URL(fileURLWithPath: dir.appendingPathComponent("PendingKeys").path)
+        #expect(
+            try staging.resourceValues(forKeys: [.isExcludedFromBackupKey])
+                .isExcludedFromBackup == true,
+            "the install would have thrown rather than reach here otherwise")
+        #expect(VaultKeyStore.KeyStoreError.notExcludedFromBackup != .damaged)
+    }
+
     /// The repair must not be able to damage what it is repairing.
     @Test("Repairing does not disturb the key itself")
     func repairPreservesTheKey() throws {

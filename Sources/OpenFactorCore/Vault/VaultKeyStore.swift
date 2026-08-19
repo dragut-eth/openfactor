@@ -51,6 +51,10 @@ public struct VaultKeyStore: Sendable {
         case noContainer
         case randomnessUnavailable
         case damaged
+        /// The directory a key was about to be written into is not excluded from backup, and
+        /// saying so could not be confirmed. Nothing is written: a key that cannot be kept out
+        /// of a backup is not written at all rather than written and hoped about.
+        case notExcludedFromBackup
     }
 
     private func fileURL() throws -> URL {
@@ -199,6 +203,18 @@ public struct VaultKeyStore: Sendable {
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
         try marked.setResourceValues(values)
+
+        // **Read back rather than assume the write took.** Throwing on a refusal is not the same
+        // as knowing the flag is set, and a review asked for the difference: refuse to write any
+        // key unless the exclusion reads back true. A fresh `URL` because the one above has
+        // cached what it knew before the call, which is a trap this repository has already fallen
+        // into once, in a test.
+        let confirmation = URL(fileURLWithPath: directory.path)
+        guard try confirmation.resourceValues(forKeys: [.isExcludedFromBackupKey])
+            .isExcludedFromBackup == true
+        else {
+            throw KeyStoreError.notExcludedFromBackup
+        }
 
         for name in (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? [] {
             try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))

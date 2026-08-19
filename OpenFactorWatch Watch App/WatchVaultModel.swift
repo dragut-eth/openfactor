@@ -272,9 +272,15 @@ final class WatchVaultModel: NSObject {
             // which is the behaviour reserved for a phone too old to send one. A review asked
             // for the two cases to be told apart, and they are: a nonce that is there and cannot
             // be read is a message this build does not understand, so it is ignored.
+            // A decline that names a request requires the request it names. The middle case
+            // used to fall through when no attempt was held, which a review walked out: with
+            // the attempt gone, a decline meant for somebody else's request was honoured against
+            // whatever this watch was doing. There is nothing to decline without an attempt, so
+            // there is nothing to lose by ignoring it.
             if let raw = message[WatchProvisioning.MessageKey.nonce] {
-                guard let declined = raw as? Data else { return }
-                if let attempt, !attempt.answers(declined) { return }
+                guard let declined = raw as? Data, let attempt, attempt.answers(declined) else {
+                    return
+                }
             }
 
             // The flow first, then release what it no longer needs. The old order cleared the

@@ -600,15 +600,20 @@ from one of two people with disposable data.
 2. **WatchConnectivity routing is exclusive to the paired counterpart app.** Half measured in
    `docs/audits/E5-watchconnectivity-routing.md`: a sibling app with no watch of its own
    activates a session and finds it inert, so a session is not a device wide channel. What is
-   still unmeasured is a rogue watch app *claiming to be* OpenFactor's counterpart. Defense in
-   depth rather than load bearing because of the authentication string, and if that string is
-   ever removed this becomes blocking again.
+   still unmeasured is a rogue watch app *claiming to be* OpenFactor's counterpart. **This is
+   blocking, and it is load bearing.** The sentence here used to call it defense in depth on the
+   grounds that the six digit authentication string was the real protection, and to add that
+   removing the string would make this blocking again. The string was removed, in the section
+   above, and this line was not updated to match: `SECURITY.md` has said routing is load bearing
+   since that day. Round three of gate A4 found the two documents disagreeing.
 3. **Backup exclusion behaves as documented on a real restore**, and separately under Quick
    Start, which is a different mechanism.
 4. ~~A watch can hold a P-256 private key and complete the exchange inside the message size
    limits.~~ **Measured**, `docs/audits/E7-exchange-and-queryability.md`: 85 bytes out and 145
-   back against a 65,536 byte limit, both sides agreeing, and the negative controls showing a
-   substituted key fails and the authentication string moves with the transcript.
+   back against a 65,536 byte limit, both sides agreeing, and the negative control showing that a
+   substituted key fails to open. That measurement was taken while the six digit string still
+   existed, so it also recorded the string moving with the transcript; that half describes a
+   construction this app no longer has, and is left here as history rather than as a property.
 5. ~~An opaque service constant with UUID accounts leaves no queryability the store depends
    on.~~ **Settled by reading the store**, same record: it selects only by the service constant,
    the UUID, and the sync flag, and sorts in Swift. `kSecAttrGeneric` was never a selector.

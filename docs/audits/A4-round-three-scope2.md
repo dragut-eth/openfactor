@@ -136,9 +136,13 @@ that is the most useful sentence you can write here, and it will not be argued w
 
 | Engine | Status |
 | --- | --- |
+| ChatGPT 5.6 Sol | Returned, below. One medium, two low, and a fix assessment item by item |
 | Fable 5 | Returned, below. Eight of ten complete, one medium-low, one low |
-| ChatGPT 5.6 Sol | Sent, not yet returned |
 | Grok 4.6 | Sent, not yet returned |
+
+**Both engines that have returned found the same two defects independently**, F1 and F2 below,
+from different directions: Fable from reading the answer set against the model, ChatGPT from
+walking a five-step interleaving to the decline. ChatGPT found a third that Fable did not.
 
 **Standing asymmetry, recorded because Fable records it itself:** its round three ran in the
 conversation that held rounds one and two rather than in a fresh session, so it was reviewing
@@ -170,11 +174,37 @@ removed. `age`'s docstring no longer says "never negative" while its own test as
 of the nonce key and not of `.busy`. `SECURITY.md` says which half of the repair the device
 verification covers, which is neither half, since it predates it.
 
+**ChatGPT's third finding: two documents disagreeing about what the app rests on.**
+`docs/VAULT.md`'s "what must be proven" list still called WatchConnectivity routing defense in
+depth "because of the authentication string", and credited a negative control involving that
+string. The six digit string was removed a while ago, in a section of that same document, and
+`SECURITY.md` has said routing is load bearing ever since. The list now says blocking and load
+bearing, and the E7 measurement is marked as history rather than as a property.
+
+**Where ChatGPT asked for more than was done, and it is recorded rather than quietly declined.**
+It wanted the exclusion read back rather than merely attempted, which is done: `install` refuses
+to write a key at all unless the directory reads back excluded, with `notExcludedFromBackup` as
+its own error. It also wanted `repairProtection` to fail closed or report that a key remains
+weak. It still swallows its errors, deliberately: that path repairs a key which already exists
+and is already readable, so failing closed would stop somebody reading their own accounts to
+punish a metadata call, and the file is left no worse than it was. The two calls are now
+documented against each other in the source. **This is a judgment, and a reviewer disagreed with
+it.**
+
 **Not yet acted on: the residue on change 10.** The owner taps the affirmative button, the phone
 declines on their behalf because the window has passed, and the watch is told while the person who
 tapped is not. It is the only path where tapping yes produces no on the device that was tapped.
 
 ## The answer to question four
+
+Both engines answered it, and they agree on the shape while disagreeing on how far it has got.
+
+ChatGPT: the cryptography and the parser have converged; the two repeatedly rewritten areas have
+not, because the file-writing path still failed open at its critical operation and the tested
+reducer disagreed with the app layer that owns the attempt. Its verdict is that the defect surface
+is smaller than round one and **not yet stable enough to support this repository's absolute backup
+and request-binding claims**, which is the sharpest sentence written about this gate so far, since
+both of those claims are made in `SECURITY.md` without qualification.
 
 Fable split it three ways: the storage path is converging and it would not expect a fourth
 rewrite; the core protocol and flow are converging throughout; **the app-target seam is not, and it
@@ -189,6 +219,94 @@ is not moving around at random; it is pooling where the tests cannot go.**
 The extraction that would drain it is the pattern this project has already run twice, under the
 names `WatchProvisioningFlow` and `AppLockPresentation`. It was proposed in round one by two
 engines, acknowledged in round two, put as "a fair question" by this very file, and not done.
+
+---
+
+## ChatGPT 5.6 Sol
+
+*Read-only pass over commit `71e88c3`. Reproduced as returned, with absolute paths made
+repository-relative.*
+
+> Reviewed commit `71e88c3`; the checked-out source matches it, with only the stated audit-document paragraph differing. I found one medium and two low issues.
+>
+> Findings
+>
+> 1. Medium — staging-directory exclusion failure is ignored, preserving the raw-key backup window
+>
+> `VaultKeyStore.stagingDirectory()` (line 176) suppresses failure from the operation that establishes its security precondition:
+>
+>     values.isExcludedFromBackup = true
+>     try? marked.setResourceValues(values)
+>
+> Concrete failure order:
+>
+> 1. Creating or re-marking `PendingKeys` succeeds, but setting its backup exclusion fails.
+> 2. The error is discarded and the directory is returned.
+> 3. `install` writes the complete raw key at line 144.
+> 4. The process is killed before the staged file itself is marked at line 157.
+> 5. `defer` does not run, leaving an unexcluded raw key for the next backup.
+>
+> This is the same exposure reported in the previous two rounds, now conditional on a metadata-operation failure rather than every install. It contradicts both the source comment at lines 129-139 and SECURITY.md (line 116), which claim exclusion is established before any key material exists.
+>
+> The related migration in `repairProtection` also suppresses both metadata failures at lines 96 and 105, so reading an older weak key does not reliably repair it and gives the caller no indication that remediation failed.
+>
+> Smallest fix: make staging-directory exclusion throwing, read it back as `true`, and refuse to write any key otherwise. Add fault injection for directory-exclusion failure and assert that no file containing key bytes is created. Existing-key repair should either fail closed or explicitly report that the key remains weak.
+>
+> 2. Low — `.busy` is nonterminal in the flow but terminal in the actual watch model
+>
+> `WatchVaultModel.phoneAnswered` (line 176) passes `.busy` to the flow, which deliberately keeps the attempt outstanding, but then clears the cryptographic attempt because `.busy != .asking`:
+>
+>     flow.phoneAnswered(answer, token: token)
+>
+>     if answer != .asking {
+>         attempt = nil
+>         self.token = nil
+>     }
+>
+> A concrete consequence:
+>
+> 1. Phone retains request A.
+> 2. Watch times out A and starts B.
+> 3. Phone replies `.busy` to B while retaining A.
+> 4. The flow says B remains outstanding, but the model discards B's nonce and private key.
+> 5. Owner declines A; the phone sends `{status: "declined", nonce: A_nonce}`.
+> 6. At `phoneSent` (line 261), the nonce comparison is skipped because `attempt == nil`.
+> 7. `flow.phoneDeclined()` terminates B despite the mismatched nonce.
+>
+> No key is released, so this is an availability/state-integrity issue rather than key compromise. It nevertheless disproves the round-three account's claim that `.busy` keeps the attempt and that A's decline is ignored while B waits.
+>
+> Smallest fix: retain the attempt for both nonterminal answers:
+>
+>     if answer != .asking && answer != .busy { ... }
+>
+> Also ignore any nonce-bearing decline unless a current attempt exists and matches it. The missing regression test must exercise `WatchVaultModel`'s integration behavior; the existing core-flow test passes precisely because it cannot see the model clearing `attempt`.
+>
+> 3. Low — the vault document still claims an authentication string exists
+>
+> docs/VAULT.md (line 593) says WatchConnectivity routing is merely defense in depth "because of the authentication string," and line 604 still credits a negative control involving that string. The string was removed, and the same document correctly says at lines 343-361 that routing exclusivity is now load bearing and undocumented by Apple.
+>
+> Smallest fix: update this old "must be proven" entry to record the current load-bearing assumption and remove the obsolete authentication-string test claim.
+>
+> Fix assessment
+>
+> 1. Excluded staging directory: incomplete because the exclusion error is swallowed.
+> 2. Repair existing key metadata: works on the successful path, but silently fails to remediate.
+> 3. `ContinuousClock`: correct; wall-clock rollback no longer affects production expiry.
+> 4. Remove response-handler re-ask: correct; the unsound inference is gone.
+> 5. Add `.busy`: correct on the phone and in the extracted flow, incorrect end to end because the model discards the attempt.
+> 6. Preserve the timeout screen on late `.busy`: correct in the flow, but its claim that the late key remains openable is defeated by the model.
+> 7. Guard `phoneDeclined`: correct for preventing a decline from demoting `.ready`.
+> 8. Mark the staged file itself: correct when staging-directory setup succeeds.
+> 9. Distinguish malformed from absent nonce: the type distinction is fixed, but mismatched nonce handling is defeated when item 5 clears `attempt`.
+> 10. Expired approval declines and clears state: correct.
+>
+> The cryptographic construction and byte parsing remain sound: exact lengths precede slicing, P-256 points are validated, the request nonce is checked before public-key parsing or derivation, and the fixed-width transcript binds the version, nonce, and both public keys in both HKDF and GCM AAD. Approval still has only the affirmative alert action as its production call site.
+>
+> Convergence
+>
+> The cryptography and parser have converged. The two repeatedly rewritten areas have not: the file-writing path still fails open at its critical exclusion operation, and the state machine's tested reducer now disagrees with the app layer that owns the cryptographic attempt. The defect surface is smaller than in round one, but these are not yet stable enough to support the repository's absolute backup and request-binding claims.
+>
+> No build or tests were run because doing so would create repository files, contrary to the read-only requirement.
 
 ---
 
