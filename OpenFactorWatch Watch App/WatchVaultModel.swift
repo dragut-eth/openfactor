@@ -176,8 +176,20 @@ final class WatchVaultModel: NSObject {
     private func phoneAnswered(_ reply: [String: Any], token: WatchProvisioningFlow.Token) {
         guard flow.isCurrent(token) else { return }
 
-        let status = reply[WatchProvisioning.MessageKey.status] as? String
-        let answer = status.flatMap(WatchProvisioning.Answer.init(rawValue:))
+        // **Read by `WatchInbox`, like every other message.** This kept its own copy of the
+        // vocabulary, `status as? String` and then `Answer(rawValue:)`, so one wire protocol had
+        // two readers and a sixth answer would have had to be taught to both. A review found the
+        // second door in the round that reviewed the extraction meant to close doors like it.
+        //
+        // A reply carries no sealed key, so the only case that can arrive here is `.answer`.
+        // Anything else is a phone saying something this build has no name for, which is a
+        // refusal by the same rule that governs an unreadable answer.
+        guard case let .answer(answer) = WatchInbox.classify(reply) else {
+            flow.phoneAnswered(nil, token: token)
+            releaseAttemptIfFinished()
+            return
+        }
+
         flow.phoneAnswered(answer, token: token)
 
         releaseAttemptIfFinished()

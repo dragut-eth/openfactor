@@ -89,4 +89,35 @@ struct WatchInboxTests {
         let nonce = Data(repeating: 7, count: 16)
         #expect(!WatchInbox.shouldHonourDecline(.present(nonce), matchesCurrentAttempt: false))
     }
+
+    /// **The preference order the comment claims, which nothing pinned.** A sealed response is the
+    /// generous case and is read first; the phone never sends both, and if it somehow did, the key
+    /// is the message that matters.
+    @Test("A sealed response wins over a status in the same message")
+    func responseWinsOverStatus() {
+        let payload = Data(repeating: 9, count: 145)
+        let both: [String: Any] = [
+            WatchProvisioning.MessageKey.response: payload,
+            WatchProvisioning.MessageKey.status: "declined",
+            WatchProvisioning.MessageKey.nonce: Data(repeating: 1, count: 16),
+        ]
+
+        #expect(WatchInbox.classify(both) == .sealedResponse(payload))
+    }
+
+    /// The reply to a request carries a status and no key, and this is the reader the watch model
+    /// now uses for it rather than keeping its own copy of the vocabulary.
+    @Test("A direct reply is read as its answer")
+    func directReplyIsAnAnswer() {
+        for (raw, expected) in [
+            ("asking", WatchProvisioning.Answer.asking),
+            ("busy", .busy),
+            ("needsApp", .needsApp),
+            ("noVault", .noVault),
+        ] {
+            #expect(
+                WatchInbox.classify([WatchProvisioning.MessageKey.status: raw])
+                    == .answer(expected))
+        }
+    }
 }

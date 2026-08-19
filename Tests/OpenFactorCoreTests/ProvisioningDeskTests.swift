@@ -17,7 +17,18 @@ struct ProvisioningDeskTests {
         return (attempt.request, validated.requestNonce)
     }
 
-    private let ready = ProvisioningDesk.Conditions(isFrontmost: true, hasVault: true)
+    /// Records whether the vault question was ever asked. A class because the closure is
+    /// `@Sendable`, which is the whole point: the question is a value the desk may or may not
+    /// call, rather than an answer computed before it is wanted.
+    private final class Asked: @unchecked Sendable {
+        private let lock = NSLock()
+        private var asked = false
+
+        func record() { lock.withLock { asked = true } }
+        var wasAsked: Bool { lock.withLock { asked } }
+    }
+
+    private let ready = ProvisioningDesk.Conditions(isFrontmost: true, hasVault: { true })
 
     // MARK: - Answering
 
@@ -68,7 +79,7 @@ struct ProvisioningDeskTests {
         var desk = ProvisioningDesk()
         let (request, _) = try request()
 
-        let conditions = ProvisioningDesk.Conditions(isFrontmost: false, hasVault: true)
+        let conditions = ProvisioningDesk.Conditions(isFrontmost: false, hasVault: { true })
         #expect(desk.received(request, when: conditions) == .needsApp)
         #expect(!desk.isAsking, "and nothing is left on the desk")
     }
@@ -78,7 +89,7 @@ struct ProvisioningDeskTests {
         var desk = ProvisioningDesk()
         let (request, _) = try request()
 
-        let conditions = ProvisioningDesk.Conditions(isFrontmost: true, hasVault: false)
+        let conditions = ProvisioningDesk.Conditions(isFrontmost: true, hasVault: { false })
         #expect(desk.received(request, when: conditions) == .noVault)
         #expect(!desk.isAsking)
     }
@@ -187,5 +198,95 @@ struct ProvisioningDeskTests {
         _ = answered.received(second, when: ready)
         _ = answered.approve()
         #expect(answered.expire(secondNonce, now: .now.advanced(by: .seconds(121))) == nil)
+    }
+
+    // MARK: - Gate A4 round four
+
+    /// **The timer expired nothing, and two engines found the arithmetic.** It sleeps for exactly
+    /// the window; `age` reported whole seconds; the comparison was inclusive. So it woke at the
+    /// window plus a fraction, the fraction was rounded away, the request was still answerable,
+    /// and the alert stayed up. The desk test that proved the deadline works asked at 121 seconds,
+    /// which is a moment the timer never asks at.
+    @Test("The deadline has passed at the instant the timer actually wakes")
+    func theDeadlineHasPassedWhenTheTimerWakes() throws {
+        var desk = ProvisioningDesk()
+        let (request, nonce) = try request()
+        _ = desk.received(request, when: ready)
+
+        // What `Task.sleep(for: .seconds(120))` produces: the window, plus however long it took
+        // to wake up.
+        let wake = ContinuousClock.Instant.now.advanced(by: .milliseconds(120_001))
+        #expect(desk.expire(nonce, now: wake) == nonce, "the question comes down")
+        #expect(!desk.isAsking)
+    }
+
+    /// And a fraction inside the window is still inside it, so the fix did not simply move the
+    /// boundary a second the other way.
+    @Test("A fraction inside the window still releases")
+    func aFractionInsideStillReleases() throws {
+        var desk = ProvisioningDesk()
+        let (request, nonce) = try request()
+        _ = desk.received(request, when: ready)
+
+        let justInside = ContinuousClock.Instant.now.advanced(by: .milliseconds(119_999))
+        guard case let .release(released) = desk.approve(now: justInside) else {
+            Issue.record("a request a millisecond inside the window still releases")
+            return
+        }
+        #expect(released.requestNonce == nonce)
+    }
+
+    /// And a fraction outside refuses, which the truncating comparison could not tell apart.
+    @Test("A fraction outside the window refuses")
+    func aFractionOutsideRefuses() throws {
+        var desk = ProvisioningDesk()
+        let (request, nonce) = try request()
+        _ = desk.received(request, when: ready)
+
+        let justOutside = ContinuousClock.Instant.now.advanced(by: .milliseconds(120_500))
+        #expect(desk.approve(now: justOutside) == .refuse(nonce: nonce))
+    }
+
+    /// **The key is not read until the desk has a reason to want one.** Building `Conditions` out
+    /// of a `Bool` evaluated the vault question eagerly, so rubbish and background requests both
+    /// caused a key read before anything had validated them.
+    @Test("A malformed request never asks whether there is a vault")
+    func rubbishDoesNotReachTheVaultQuestion() {
+        var desk = ProvisioningDesk()
+        let asked = Asked()
+
+        let conditions = ProvisioningDesk.Conditions(
+            isFrontmost: true, hasVault: { asked.record(); return true })
+        _ = desk.received(Data(repeating: 0, count: 40), when: conditions)
+
+        #expect(!asked.wasAsked, "refused on its length, before anything looked for a key")
+    }
+
+    @Test("A request arriving in the background never asks either")
+    func backgroundDoesNotReachTheVaultQuestion() throws {
+        var desk = ProvisioningDesk()
+        let (request, _) = try request()
+        let asked = Asked()
+
+        let conditions = ProvisioningDesk.Conditions(
+            isFrontmost: false, hasVault: { asked.record(); return true })
+        #expect(desk.received(request, when: conditions) == .needsApp)
+        #expect(!asked.wasAsked)
+    }
+
+    /// The full cycle, which every other test implies and none asserted: a desk that has answered
+    /// one question takes the next.
+    @Test("A desk that answered one request accepts the next")
+    func theDeskTakesAnotherAfterAnswering() throws {
+        var desk = ProvisioningDesk()
+        let (first, firstNonce) = try request()
+        let (second, secondNonce) = try request()
+
+        #expect(desk.received(first, when: ready) == .asking)
+        _ = desk.approve()
+
+        #expect(desk.received(second, when: ready) == .asking, "not busy: the desk is clear")
+        #expect(desk.pendingNonce == secondNonce)
+        #expect(desk.pendingNonce != firstNonce)
     }
 }

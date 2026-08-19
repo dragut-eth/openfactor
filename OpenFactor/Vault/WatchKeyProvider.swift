@@ -76,24 +76,27 @@ final class WatchKeyProvider: NSObject {
     func approve() {
         defer { isAsking = desk.isAsking }
 
-        // The key is read before the decision is asked for, because a phone that cannot read its
-        // own key has nothing to release whatever the desk says.
-        guard let key = (try? keys.load()) ?? nil else {
-            _ = desk.decline()
-            return
-        }
-
+        // **The desk is asked first, and a key is read only when there is something to release.**
+        // This used to load the key before asking, so an expired request, an empty desk, or a
+        // second tap on a lingering alert all read it for nothing.
         switch desk.approve() {
         case let .release(request):
-            guard let response = try? WatchProvisioning.respond(to: request, with: key) else {
-                return
+            // **A phone that cannot read its own key refuses, rather than going quiet.** The
+            // silence was faithful to the version before the extraction and a review found it
+            // sitting three lines from the expired path, which answers the identical situation by
+            // telling the watch. Two answers to one question, in the file no test can reach.
+            guard let key = (try? keys.load()) ?? nil,
+                let response = try? WatchProvisioning.respond(to: request, with: key)
+            else {
+                return refuse(naming: request.requestNonce)
             }
+
             WCSession.default.sendMessage(
                 [WatchProvisioning.MessageKey.response: response], replyHandler: nil,
                 errorHandler: nil)
 
         case let .refuse(nonce):
-            send(declineEchoing: nonce)
+            refuse(naming: nonce)
 
         case .nothing:
             break
@@ -102,17 +105,30 @@ final class WatchKeyProvider: NSObject {
 
     func decline() {
         defer { isAsking = desk.isAsking }
-        send(declineEchoing: desk.decline())
+
+        // **A refusal this phone cannot name is not sent at all.** `decline()` used to send
+        // whatever the desk gave it, including nothing, so a build that binds every refusal could
+        // emit an unbound one: the expiry timer and a tap on Not now race, the timer wins and
+        // clears the desk, and the queued tap then sends a decline naming no request. The watch
+        // honours a nonce-less decline **because it can only have come from a phone built before
+        // the field existed**, so that stray ends whatever attempt the watch is holding. That is
+        // the exact class the nonce was added to close. Found in round four.
+        guard let nonce = desk.decline() else { return }
+        refuse(naming: nonce)
     }
 
-    /// Sends the refusal, naming the request it refuses when there is one to name.
-    private func send(declineEchoing nonce: Data?) {
-        var message: [String: Any] = [
-            WatchProvisioning.MessageKey.status: WatchProvisioning.Answer.declined.rawValue
-        ]
-        if let nonce { message[WatchProvisioning.MessageKey.nonce] = nonce }
-
-        WCSession.default.sendMessage(message, replyHandler: nil, errorHandler: nil)
+    /// The one place a refusal is sent, so the three callers cannot answer differently.
+    ///
+    /// **The refusal names the request it refuses.** Every other message in this protocol is bound
+    /// to its attempt; this was the one that carried nothing, so a refusal of an abandoned attempt
+    /// ended the one the watch was still waiting on.
+    private func refuse(naming nonce: Data) {
+        WCSession.default.sendMessage(
+            [
+                WatchProvisioning.MessageKey.status: WatchProvisioning.Answer.declined.rawValue,
+                WatchProvisioning.MessageKey.nonce: nonce,
+            ],
+            replyHandler: nil, errorHandler: nil)
     }
 
     /// Decides what to answer, and remembers the request if the answer is a question.
@@ -129,9 +145,13 @@ final class WatchKeyProvider: NSObject {
     /// than being polite: the key file is `.complete` protected, so a phone woken in the
     /// background cannot read it, and nobody is looking at a screen to agree to anything.
     private func answer(to request: Data) -> WatchProvisioning.Answer {
+        // **The vault question is a closure, so the key is read only if the desk gets that far.**
+        // Building this out of a `Bool` read the key before the request had been parsed and before
+        // the frontmost check, which a review found restored an ordering this project had already
+        // fixed once.
         let conditions = ProvisioningDesk.Conditions(
             isFrontmost: UIApplication.shared.applicationState == .active,
-            hasVault: ((try? keys.load()) ?? nil) != nil)
+            hasVault: { [keys] in ((try? keys.load()) ?? nil) != nil })
 
         let answer = desk.received(request, when: conditions)
         isAsking = desk.isAsking
@@ -155,7 +175,7 @@ final class WatchKeyProvider: NSObject {
             guard let expired = self.desk.expire(nonce) else { return }
 
             self.isAsking = self.desk.isAsking
-            self.send(declineEchoing: expired)
+            self.refuse(naming: expired)
         }
     }
 

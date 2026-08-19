@@ -12,8 +12,22 @@ import Foundation
 /// that can move backwards, and that expiry returned in silence leaving the alert up. Five
 /// defects in one small object, none reachable by the suite.
 ///
-/// **What stayed behind in the app is everything that is not a decision**: the session, the alert,
-/// reading the key file, and sending bytes. This type never sees a key.
+/// **What stayed behind is the session, the alert, reading the key file, and sending bytes.** This
+/// type never sees a key.
+///
+/// The sentence here used to say that what stayed behind is "everything that is not a decision",
+/// and all three engines of round four rejected it in their own words. What is still resident in
+/// the app targets, and still unreachable by any test here:
+///
+/// - the condition that arms the expiry timer, whose removal would leave every test below passing
+///   and auto-clearing dead
+/// - on the watch, the whole asking cadence: when to ask, `keyOpensNothing`, and the
+///   `hasReplacedStaleKey` latch, which its own comment records as having been wrong once
+///
+/// Those are decisions. They predate this extraction and none of them produced a finding in this
+/// gate, which is the reason they were not moved and not a claim that they could not be. The
+/// honest description is that the extraction moved the message-handling rules and left the cadence
+/// rules.
 public struct ProvisioningDesk: Sendable {
 
     /// How long a request may wait for an answer, in seconds.
@@ -28,11 +42,22 @@ public struct ProvisioningDesk: Sendable {
     /// **`isFrontmost` is doing real work rather than being polite.** The key file is `.complete`
     /// protected, so a phone woken in the background cannot read it, and nobody is looking at a
     /// screen to agree to anything.
-    public struct Conditions: Equatable, Sendable {
+    ///
+    /// **`hasVault` is a question rather than an answer, and that is the fix for a defect the
+    /// extraction introduced.** Swift evaluates arguments eagerly, so building this out of a
+    /// `Bool` meant the app read its vault key *before* the desk had checked the request's length
+    /// or whether anybody was looking at the screen. A forty byte piece of rubbish caused a key
+    /// read; so did a request arriving in the background. No key was ever sent, but it restored an
+    /// ordering this project had already fixed once and contradicted three documents that say the
+    /// phone validates and foregrounds first. Asking only when the answer matters restores it.
+    public struct Conditions: Sendable {
         public let isFrontmost: Bool
-        public let hasVault: Bool
 
-        public init(isFrontmost: Bool, hasVault: Bool) {
+        /// Asked, not told. Called at most once, and only after the request has parsed and the
+        /// app is known to be frontmost.
+        public let hasVault: @Sendable () -> Bool
+
+        public init(isFrontmost: Bool, hasVault: @escaping @Sendable () -> Bool) {
             self.isFrontmost = isFrontmost
             self.hasVault = hasVault
         }
@@ -76,7 +101,7 @@ public struct ProvisioningDesk: Sendable {
     ) -> WatchProvisioning.Answer {
         guard let validated = try? WatchProvisioning.validate(request) else { return .declined }
         guard conditions.isFrontmost else { return .needsApp }
-        guard conditions.hasVault else { return .noVault }
+        guard conditions.hasVault() else { return .noVault }
         guard pending == nil else { return .busy }
 
         pending = validated
@@ -87,6 +112,10 @@ public struct ProvisioningDesk: Sendable {
     ///
     /// Clears the desk whatever the outcome: the question has been answered, and a second tap on
     /// a lingering alert must not release anything.
+    ///
+    /// **Ask before reading the key.** The app used to load the key first and ask afterwards, so
+    /// an expired request, a cleared desk, or a second tap all read it for nothing. The caller
+    /// now reads a key only for `.release`.
     public mutating func approve(now: ContinuousClock.Instant = .now) -> Approval {
         guard let request = pending else { return .nothing }
         pending = nil

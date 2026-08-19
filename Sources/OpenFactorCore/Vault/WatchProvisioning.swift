@@ -305,8 +305,17 @@ public enum WatchProvisioning {
         public func isAnswerable(within window: TimeInterval, now: ContinuousClock.Instant = .now)
             -> Bool
         {
-            let elapsed = age(now: now)
-            return elapsed >= 0 && elapsed <= window
+            // **Compared without truncating, which is what made the timer inert.** `age` reports
+            // whole seconds, and the app arms a timer that sleeps for exactly the window. It woke
+            // at the window plus a fraction, `age` rounded that fraction away, the request was
+            // still inside an inclusive comparison, and nothing expired: the alert stayed up for
+            // as long as it took somebody to notice. Two engines of round four walked out the
+            // same arithmetic.
+            //
+            // The duration comparison is exact, so the moment the timer actually wakes is past
+            // the window rather than level with it.
+            let elapsed = now - validatedAt
+            return elapsed >= .zero && elapsed <= .seconds(window)
         }
 
         /// How long this request has been waiting for an answer, in seconds.
@@ -319,6 +328,11 @@ public enum WatchProvisioning {
         /// `validatedAt` stays internal so the app cannot compare it against a `Date` of its
         /// own, which is the mistake this replaced. The only thing outside the package can ask
         /// for is an elapsed time that has already been measured correctly.
+        /// **Whole seconds, and nothing decides anything with them.** Truncation here was
+        /// harmless until `isAnswerable` was built on top of it, at which point the fraction it
+        /// discards was the difference between a deadline that fires and one that does not. The
+        /// window comparison reads the duration directly now; this stays for anything that wants
+        /// a number to show or to log.
         public func age(now: ContinuousClock.Instant = .now) -> TimeInterval {
             let elapsed = now - validatedAt
             return TimeInterval(elapsed.components.seconds)
