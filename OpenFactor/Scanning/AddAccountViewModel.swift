@@ -97,6 +97,20 @@ final class AddAccountViewModel {
     func handleImage(_ data: Data) {
         guard case .scanning = stage else { return }
 
+        // **The one entry point that had no bound at all.** A review found the picker path going
+        // straight into `CIImage(data:)`, while the document picker, the URL scheme and the share
+        // extension were all bounded. It is a QR detector rather than the vault, which is why it
+        // was rated below the others and still filed: an unbounded path is an unbounded path.
+        //
+        // The honest limit of this fix: the system's transfer has already produced the bytes by
+        // the time they arrive here, so this bounds what OpenFactor decodes rather than what
+        // Photos hands over. `CIImage` on a hostile image is the expensive part, and that is on
+        // this side of the line.
+        guard ImportLimits.isWithinBound(data.count, isOpenFactorArchive: false) else {
+            problem = "That image is too large to read."
+            return
+        }
+
         let payloads = QRDecoder.payloads(in: data)
 
         guard !payloads.isEmpty else {

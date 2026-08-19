@@ -256,10 +256,17 @@ public enum BackupArchive {
             "ciphertext": BackupBase64.encode(sealed.ciphertext),
         ]
 
-        return try JSONSerialization.data(
+        let archive = try JSONSerialization.data(
             withJSONObject: container,
             options: [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]
         )
+
+        // **The writer refuses what the reader must refuse.** Nothing checked this, so the app
+        // could produce an archive it would not read back, and the person holding it would find
+        // that out on the device they were restoring to. A review found it by reading the two
+        // halves against each other; the format states the ceiling as an obligation on both.
+        guard archive.count <= maximumFileBytes else { throw BackupError.tooLarge }
+        return archive
     }
 
     /// Bytes from the system CSPRNG, and no fallback.

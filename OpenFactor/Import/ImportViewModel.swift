@@ -91,6 +91,18 @@ final class ImportViewModel {
         let needsRelease = url.startAccessingSecurityScopedResource()
         defer { if needsRelease { url.stopAccessingSecurityScopedResource() } }
 
+        // **Asked of the file system before the copy.** The bound used to be the first line of
+        // the next method, which is after `Data(contentsOf:)` has already allocated whatever the
+        // URL names. A four hundred megabyte attachment opened into this app was a four hundred
+        // megabyte allocation, and on a phone that is a termination rather than a message. A
+        // review put it plainly: the comment said bounded before anything parses it, which was
+        // true about parsing and false about the thing that actually hurts.
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+        if let size, !ImportLimits.isWorthLoading(fileSize: size) {
+            stage = .failed("That file is too large to be an authenticator export.")
+            return
+        }
+
         guard let data = try? Data(contentsOf: url) else {
             stage = .failed("That file could not be opened.")
             return
@@ -106,16 +118,26 @@ final class ImportViewModel {
     /// bound, the archive check, and the parser. A second entry point that skipped any of them
     /// would be a second, weaker importer.
     func read(_ data: Data) {
-        // Bounded before anything parses it. A file the user picked is untrusted input, and
-        // an importer should not be the thing that decides how much memory to spend.
-        guard data.count <= 8 * 1024 * 1024 else {
+        // **The format decides the bound, so the format is recognised first.** This used to
+        // refuse everything over eight mebibytes before looking, and `BACKUP_FORMAT.md` permits
+        // eight mebibytes of *decoded ciphertext*, which is about 11.2 million base64 characters
+        // plus a wrapper. So a conforming version 1 archive was refused, before the passphrase
+        // screen, in a way its owner could not tell apart from the file being rubbish. Gate A3
+        // found that same mistake inside `BackupArchive.read`; this was it one layer up, where no
+        // test was looking.
+        //
+        // An archive is now held to the frozen ceiling and nothing else. `BackupArchive.read`
+        // enforces the format's own three checks in order from there.
+        let isArchive = looksLikeOpenFactorArchive(data)
+
+        guard ImportLimits.isWithinBound(data.count, isOpenFactorArchive: isArchive) else {
             stage = .failed("That file is too large to be an authenticator export.")
             return
         }
 
         // An OpenFactor archive is recognised here rather than in `preview`, because it is
         // the one format that cannot be read without asking the person for something first.
-        if looksLikeOpenFactorArchive(data) {
+        if isArchive {
             stage = .locked(data, failure: nil)
             return
         }

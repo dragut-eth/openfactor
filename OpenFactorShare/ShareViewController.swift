@@ -62,8 +62,9 @@ final class ShareViewController: UIViewController {
         }
 
         // Bounded here as well as in the app. This process is handed whatever somebody shares,
-        // and an extension is a poor place to decide how much memory to spend.
-        guard data.count <= 8 * 1024 * 1024 else {
+        // and an extension is a poor place to decide how much memory to spend. The size is also
+        // checked on disk before this, in `firstImage`, so this is the second of two.
+        guard ImportLimits.isWithinBound(data.count, isOpenFactorArchive: false) else {
             return show(title: "That image is too large", detail: "Share a smaller one.")
         }
 
@@ -106,14 +107,32 @@ final class ShareViewController: UIViewController {
                     continue
                 }
 
-                let data: Data? = await withCheckedContinuation { continuation in
-                    provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) {
-                        data, _ in
-                        continuation.resume(returning: data)
+                // **A file rather than bytes, so the size is known before the copy.**
+                // `loadDataRepresentation` materialises the whole attachment and only then does
+                // the check below run, which is the same defect a review found in the app's own
+                // import path: a bound applied after the allocation it claims to prevent. Asking
+                // for a file representation puts the payload on disk, where its size can be read
+                // without holding it in memory.
+                let url: URL? = await withCheckedContinuation { continuation in
+                    provider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) {
+                        url, _ in
+                        // Copied inside the callback: the system deletes this file as soon as the
+                        // callback returns, so a URL handed outward would already be dead.
+                        guard let url else { return continuation.resume(returning: nil) }
+                        let copy = FileManager.default.temporaryDirectory
+                            .appendingPathComponent(UUID().uuidString)
+                        try? FileManager.default.copyItem(at: url, to: copy)
+                        continuation.resume(returning: copy)
                     }
                 }
 
-                if let data { return data }
+                guard let url else { continue }
+                defer { try? FileManager.default.removeItem(at: url) }
+
+                let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+                if let size, !ImportLimits.isWorthLoading(fileSize: size) { continue }
+
+                if let data = try? Data(contentsOf: url) { return data }
             }
         }
 
