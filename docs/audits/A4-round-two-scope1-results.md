@@ -84,8 +84,15 @@ data since the metadata moved into it, so the `kSecReturnData` sentence was fals
 nothing is cleared on a conversion that does not exist; and the vault has four states, which the
 page, the header and two comments still called three.
 
-**Round three reads the tip of `a4-fixes`**, which is `bb69702` plus this file's own later
-commits. Everything above was fixed; what to attack is below.
+**Round three reads the tip of `a4-fixes`.** Everything above was fixed; what to attack is below.
+
+**One scope 1 file has changed since these fixes, and it did not come from this scope.** While
+closing scopes 3 and 4, a sweep went through every whole-file read in the project looking for the
+same mistake those scopes kept producing, a bound applied after the allocation it claims to
+prevent. `VaultKeyStore.load` was the last one and it was closed anyway, although it reads a file
+this app writes into its own container: it now asks the file system for the size and reports
+`damaged` above the key size before reading. Eight lines, and the only in-scope difference between
+the commit the fixes landed on and the tip.
 
 ## For round three
 
