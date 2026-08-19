@@ -153,3 +153,63 @@ repository-relative.*
 > 1. Wrapped-key synchronization: addressed. 2. Watch `.complete` protection: addressed for new writes. 3. Sync twins: steady-state handled, arrival race remains open. 4. Backup-exclusion window: addressed. 5. Read errors versus absence: addressed. 6. Creation refusal: incomplete because check and replacement are separate operations. 7. Refreshing while showing a passphrase: incomplete for `.unavailable`. 8. Replacement passphrase ordering: the production-safe API exists, but the unsafe public one-shot remains. 9. Future-version wrapped records: addressed. 10. Documentation mismatches: partially addressed. 11. Padding disclosure: the ordinary bucket leakage is now described, but the new character bound is not a byte bound.
 >
 > The metadata/secret AEAD separation and PBKDF2 construction remain sound for the reasons from round one. I did not run tests because that would create build artifacts, contrary to the read-only requirement.
+
+---
+
+## Grok 4.6
+
+*Read-only pass over commit `46f65a3`. Reproduced as returned.*
+
+> Commit reviewed: 46f65a3 (vault code is that of a7f9121; the two later commits are documentation only). Round one read 74fe841.
+>
+> **1. Does each change address the finding it claims to?**
+>
+> Most of them do. Two do not finish the class they name.
+>
+> Item 6 is incomplete. `create(with:)` now refuses when `state()` is already `.open` or `.locked`. That stops the case the tests write: a wrap that is sitting there before the call. It does not stop a wrap that appears during the call.
+>
+> `WrappedVaultKey.wrap` is 600,000 iterations of PBKDF2. That is hundreds of milliseconds between the check and save. `VaultGateModel.createVault` sets `isWorking = true` first, and `refresh()` returns immediately while that flag is set, so an arrival in that window is not seen by the gate either.
+>
+> `save` is specified to replace whatever it finds. On the Keychain implementation it looks, then `SecItemUpdate`s the value in place. Call order if iCloud delivers the real wrap during the KDF: `state()` → `.absent`; `wrap(...)` runs; the arrived OFK1 item is now in the Keychain; `save` finds it and overwrites `kSecValueData` with a wrap of a new vault key; `create` returns success. `alreadyExists` is never thrown.
+>
+> `WrappedRecordStore.save`'s contract is "replacing any earlier one." `InMemoryWrappedStore.save` does exactly that and has no way to refuse. `VaultDecisionTests` never inserts a record between `state()` and `save`. The reported case is green; the class is open.
+>
+> Smallest fix that actually closes it: create must not go through a replacing save. Add-only (`SecItemAdd`, no update), or a second load immediately before save that refuses if anything is there. The check has to be on the write, not hundreds of milliseconds earlier.
+>
+> Item 1 is incomplete on the write that creates the item. The toggle path is fixed. The create path is not. `OpenFactorApp` still builds `Vault(keys: keys)` with a default `WrappedKeyStore()`, whose `synchronizable` is false. A first save therefore always `SecItemAdd`s a device-only wrap.
+>
+> First-run is saved by the UI: Settings sit behind an open vault, so the user creates first (local wrap) and later flips the switch (conversion). The leftover is erase-from-locked then recreate. `VaultUnlockView` deletes the accounts, then `destroyVault()`. `syncEnabled` is not cleared. The next `create(with:)` writes a local wrap again. New accounts are added through `SyncAwareKeychainStore` with the preference still on. Ciphertext leaves; the wrap does not, until someone toggles a switch that already reads "on." That is the original failure, reached by a different tap.
+>
+> Smallest fix: the wrap `Vault` writes has to take the current preference, the same way new accounts do.
+>
+> **2. Did any change introduce something new?**
+>
+> The create/save race above is not new machinery so much as the item-6 fix making the old overwrite reachable in a shorter window. Enabling wrap sync is what makes an arriving wrap possible at all; they knew that, which is why 1 and 3 were meant to land together. 3 stops twinning on a later save. It does not stop replacing the arrived wrap on create.
+>
+> Item 5's fourth state is real and the unavailable screen does not offer create. I did not find a path that treats `.unavailable` as `.absent`.
+>
+> Item 7's new condition does what it claims for the two states that matter. If `state()` is `.unavailable` while a passphrase is on screen, `refresh()` now leaves that screen and drops the string. That contradicts both the new comment and `docs/VAULT.md`. The test that exists only covers still-absent.
+>
+> Item 4's staging directory plus `replaceItemAt(..., .usingNewMetadataOnly)` plus a load-time repair is more moving parts than the old write-then-mark. The properties it claims are the ones the new tests can see on macOS. Protection class is still unmeasurable on the test host; that is stated.
+>
+> **3. Does any comment or document now claim something the code does not do?**
+>
+> Yes. `docs/VAULT.md` still says creation "refuses outright when a record is already there, so the destructive tap cannot land." The tap can still land. The same page still says `records()` "sets `kSecReturnData` to false on every listing path"; it sets it to true. `KeychainSecretStore`'s header table still says `kSecAttrGeneric` is "cleared on conversion." `Vault.swift`, `VaultGateView`, `VaultGateModel.refresh`, and `VAULT.md` still talk about "three states" / "one of three things." There are four. `WrappedKeyStore.exists` is still `(try? load()) != nil`.
+>
+> **VaultDecisionTests**
+>
+> The change account is right that this is the first place to attack, and right that until this commit the vault's decisions had no test that runs.
+>
+> What it cannot see, because `InMemoryWrappedStore` is one optional `Data` with a replacing save and no sync flag: twinning; create overwriting a wrap that arrives after `state()`; the wrap's `kSecAttrSynchronizable`; and `refresh()`, which lives in the app target.
+>
+> `WrappedKeySyncTests` covers 1 and 3 against the real Keychain, and is skipped on the same unsigned host that skipped `VaultTests`. So the decisions that run here are the ones that do not need the Keychain. The two that still destroy a wrap if they are wrong are only half-covered.
+>
+> That is not a reason to throw the suite out. It is a reason not to treat a green `VaultDecisionTests` as proof that items 1 and 6 are closed.
+>
+> **Item 6 on upgrade**
+>
+> The worry in the change account does not fire. An existing install is `.open` or `.locked`. Neither is offered create, and both now throw `alreadyExists` if something called it anyway. I do not see a phone that cannot set itself up because of this check.
+>
+> **4. Is this converging?**
+>
+> The eleven, verdict by verdict: 1 toggle path yes, create path still writes `synchronizable: false`. 2 yes. 3 yes on the Keychain type. 4 yes, as far as a Mac test can see. 5 yes in `Vault.state()` and the new screen; header and docs still say three states. 6 only if the wrap is visible before `wrap()` runs. 7 stays when still absent, leaves when locked; arrival-while-showing is not tested and the comment overclaims. 8 yes. 9 yes, tested for garbage bytes but not for a bad iteration count. 10 service and UUID case corrected, encoder sorts, two leftover false comments. 11 documentation only, and accurate.
