@@ -90,6 +90,19 @@ public enum WatchProvisioning {
         case noVault
         /// The person said no.
         case declined
+        /// The phone is already asking about a different request and did not keep this one.
+        ///
+        /// **Added in round two of gate A4, after the watch-side fix alone proved insufficient.**
+        /// The phone will not replace the request its alert is asking about, which is right. It
+        /// used to answer a later one with `asking` anyway and then discard it, so the watch
+        /// waited for a message that could never arrive. The first fix had the watch re-ask when
+        /// an obsolete response arrived, which two reviewers independently showed was not enough:
+        /// it does nothing when the phone declines instead of approving, and when a response is
+        /// merely delayed it makes the watch abandon the very request the phone is asking about.
+        ///
+        /// Saying "busy" is what removes the guessing. The watch keeps its attempt and waits for
+        /// the alert to be answered, rather than inferring anything about the phone's state.
+        case busy
     }
 
     /// The dictionary keys the two messages travel under, shared for the same reason.
@@ -269,9 +282,21 @@ public enum WatchProvisioning {
         /// of one it has already abandoned.
         public var requestNonce: Data { nonce }
 
-        /// When this request was parsed, so consent cannot be asked about a question that
-        /// expired hours ago. See `WatchKeyProvider.approve`.
-        public let validatedAt: Date
+        /// When this request was parsed, on a clock that cannot be moved.
+        ///
+        /// **Not a `Date`.** Wall time can go backwards, and a negative elapsed value passes any
+        /// "less than the window" test forever, which is precisely the hole the window exists to
+        /// close. Round two of gate A4 found it in all three reviews.
+        let validatedAt: ContinuousClock.Instant
+
+        /// How long this request has been waiting for an answer, in seconds, and never negative.
+        /// `validatedAt` stays internal so the app cannot compare it against a `Date` of its
+        /// own, which is the mistake this replaced. The only thing outside the package can ask
+        /// for is an elapsed time that has already been measured correctly.
+        public func age(now: ContinuousClock.Instant = .now) -> TimeInterval {
+            let elapsed = now - validatedAt
+            return TimeInterval(elapsed.components.seconds)
+        }
     }
 
     /// Parses a request, or refuses it. Cheap, and touches no secret.
@@ -298,7 +323,7 @@ public enum WatchProvisioning {
 
         return ValidatedRequest(
             nonce: nonce, watchPublicKeyBytes: watchPublicKeyBytes,
-            watchPublicKey: watchPublicKey, validatedAt: Date())
+            watchPublicKey: watchPublicKey, validatedAt: ContinuousClock.now)
     }
 
     /// The deterministic seam, for test vectors only.

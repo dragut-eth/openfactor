@@ -172,4 +172,56 @@ struct VaultKeyStoreTests {
         let values = try url.resourceValues(forKeys: [.isExcludedFromBackupKey])
         #expect(values.isExcludedFromBackup == true)
     }
+
+    /// **A device that already works never writes again.** Every correction to how the key is
+    /// written governs the next write, and for a Watch that was provisioned a month ago there is
+    /// no next write. Round two of gate A4 pointed out that the device most in need of the fix
+    /// was the one guaranteed not to receive it, so reading the key now repairs how it is stored.
+    ///
+    /// The protection class is the more important half and cannot be observed on macOS, which has
+    /// no data protection. The exclusion can, so that is what this measures.
+    @Test("Reading a key stored under the old rules repairs it")
+    func loadRepairsAnUnexcludedKey() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        // Exactly what an older build left behind: the right bytes, none of the metadata.
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent(VaultKeyStore.fileName)
+        try Data(repeating: 7, count: 32).write(to: url)
+        // Not `== false`: a file nobody has marked reports the value as absent rather than as
+        // false, and asserting the wrong one of those makes the premise fail instead of the
+        // claim.
+        #expect(
+            try url.resourceValues(forKeys: [.isExcludedFromBackupKey])
+                .isExcludedFromBackup != true,
+            "the premise: this key is in every backup")
+
+        _ = try #require(try store.load())
+
+        // A fresh `URL`, because the one above has cached the answer it got the first time and
+        // will keep returning it however the file changes underneath. Reusing it here made this
+        // test fail against a repair that had in fact worked.
+        let reread = dir.appendingPathComponent(VaultKeyStore.fileName)
+        #expect(
+            try reread.resourceValues(forKeys: [.isExcludedFromBackupKey])
+                .isExcludedFromBackup == true,
+            "and reading it took it out of them")
+    }
+
+    /// The repair must not be able to damage what it is repairing.
+    @Test("Repairing does not disturb the key itself")
+    func repairPreservesTheKey() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let bytes = Data(repeating: 7, count: 32)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try bytes.write(to: dir.appendingPathComponent(VaultKeyStore.fileName))
+
+        for _ in 0..<3 {
+            let loaded = try #require(try store.load())
+            #expect(loaded.withUnsafeBytes { Data($0) } == bytes)
+        }
+    }
 }

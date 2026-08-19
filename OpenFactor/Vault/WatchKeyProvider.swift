@@ -80,9 +80,16 @@ final class WatchKeyProvider: NSObject {
 
         guard let request = pendingRequest, let key = (try? keys.load()) ?? nil else { return }
 
-        // Expired rather than answered. Nothing is sent, and the watch recovers by asking again,
-        // which is what it does anyway when an answer does not arrive.
-        guard Date().timeIntervalSince(request.validatedAt) <= Self.consentWindow else { return }
+        // **Measured on a clock that only goes forward.** The first version used `Date()`, and
+        // all three round-two reviews found the same hole: a backward jump makes the elapsed
+        // time negative, negative is less than the window, and the request stays answerable
+        // indefinitely, which is the defect the window was added to close. `AppLockEngine`
+        // already refuses to reason about a backward clock three files away, and this is the
+        // same input.
+        //
+        // `ContinuousClock` rather than `SuspendingClock`, because a phone that sleeps for an
+        // hour with an alert up has still let an hour pass for the person looking at it.
+        guard request.age() <= Self.consentWindow else { return }
         guard let response = try? WatchProvisioning.respond(to: request, with: key) else { return }
 
         WCSession.default.sendMessage(
@@ -128,9 +135,11 @@ final class WatchKeyProvider: NSObject {
         guard UIApplication.shared.applicationState == .active else { return .needsApp }
         guard ((try? keys.load()) ?? nil) != nil else { return .noVault }
 
-        // A question already on screen is not replaced by a later one. The watch's own retry
-        // supersedes it from the other side, once this one is answered or goes away.
-        guard pendingRequest == nil else { return .asking }
+        // A question already on screen is not replaced by a later one, and the watch is told
+        // that rather than being told it is being asked about. Answering `.asking` for a request
+        // this phone is about to drop is the lie round one found: it left the watch waiting for
+        // a message that could never arrive.
+        guard pendingRequest == nil else { return .busy }
 
         pendingRequest = validated
         isAsking = true

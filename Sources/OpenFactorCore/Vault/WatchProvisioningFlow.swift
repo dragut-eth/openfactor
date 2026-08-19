@@ -134,6 +134,20 @@ public struct WatchProvisioningFlow: Equatable, Sendable {
         case .noVault:
             outstanding = nil
             stage = .phoneNotSetUp
+        case .busy:
+            // The attempt stays outstanding. The phone is asking its owner about somebody
+            // else's request, and when that is answered its slot frees and this watch's own
+            // timeout or its wearer will ask again. Guessing at the phone's state from here is
+            // what produced the race round two found.
+            //
+            // **Only while still waiting.** A timed-out attempt is deliberately still claimable,
+            // so a busy answer arriving after the timeout passed this method's guard and put the
+            // spinner back up. Its timer has already fired and will not fire again, so that is a
+            // spinner with nothing behind it. The dead-end screen is the honest one: it has a
+            // button. Found by the test written for the answer this same review added.
+            guard stage == .waiting else { return }
+            stage = .waiting
+
         case .declined, .none:
             outstanding = nil
             stage = .notSetUp
@@ -169,6 +183,11 @@ public struct WatchProvisioningFlow: Equatable, Sendable {
 
     /// The phone said no, in the second message.
     public mutating func phoneDeclined() {
+        // **The same guard as its sibling, which round two found missing here.** Item 6 of round
+        // one added it to `responseDidNotOpen` and not to this method three lines away, so a
+        // decline arriving after a successful install demoted a watch that was already reading
+        // its accounts to "Not set up". All three engines found it.
+        guard outstanding != nil else { return }
         outstanding = nil
         stage = .notSetUp
     }

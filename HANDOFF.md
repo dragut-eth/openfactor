@@ -33,7 +33,36 @@ production can no longer create, and a refusal reason that was wrong. Each was u
 rule *and* given its inverse, so the range cannot quietly be narrowed again. Both guards were then
 proved by removing them and watching the suite go red.
 
-**Scope 2 is closed: all eleven of its findings are fixed.** The last five landed together.
+**Scope 2 has been through round two, and round two changed six things.** All three engines
+re-reviewed the eleven fixes with the diffs in hand. They found four of them incomplete and two
+new defects the fixes themselves had introduced. `docs/audits/A4-round-two-scope2.md` carries the
+table; the four that mattered:
+
+- The staging file that was supposed to close the unexcluded-key window merely moved it one
+  pathname along, since a backup enumerates a container rather than a filename. The key is now
+  written inside a directory excluded *before* any key material exists.
+- The watch re-asked from inside its own response handler, on the reasoning that an obsolete
+  response proved the phone was free. It proves nothing across an asynchronous channel, and the
+  inference is gone. The phone answering `.busy` is what removed the need to guess.
+- The consent window was measured with `Date`. A backward jump makes the elapsed time negative,
+  and negative is inside any window forever. `AppLockEngine` had refused to reason about a
+  backward clock three files away for weeks.
+- `messageKeysArePinned` still said "exactly these three" while a fourth key was live on the wire.
+
+**Two of the six came from writing the tests, not from any review.** `.usingNewMetadataOnly`
+installs the staged file's metadata, so the fix for the write window quietly stripped the backup
+exclusion off the key it wrote, and the suite went red the first time both ran together. And a
+`.busy` answer arriving after a timeout restored a spinner whose timer had already fired.
+
+**The item nobody raised is the one on Xavier's own wrist.** Every fix above governs the next
+write, and a Watch provisioned a month ago never writes again. Reading the key now repairs its
+protection class and backup exclusion in place, which is metadata only and cannot damage the key.
+
+Each of the six was reverted individually to confirm the suite goes red for it. That found nothing
+wrong with the fixes and one thing wrong with a new test, which had been re-reading a cached `URL`
+snapshot instead of the file.
+
+Scope 2's original eleven findings were fixed before this.
 
 **The dropped retry is fixed on the watch rather than the phone**, taking the reviewer's better
 suggestion. The phone will not replace the request its alert is asking about, which is correct and

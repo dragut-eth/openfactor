@@ -75,7 +75,34 @@ public struct VaultKeyStore: Sendable {
         let url = try fileURL()
         guard let data = FileManager.default.contents(atPath: url.path) else { return nil }
         guard data.count == Self.keySize else { throw KeyStoreError.damaged }
+
+        repairProtection(of: url)
         return SymmetricKey(data: data)
+    }
+
+    /// Brings an already-written key up to the rules the current build writes under.
+    ///
+    /// **Shipping a stricter rule does not apply it to anything already on disk.** Round two of
+    /// gate A4 made this concrete: the Watch in the maintainer's own pocket holds a `vault.key`
+    /// written before the protection class was corrected, and every fix above governs the *next*
+    /// write, which for a working device never comes. The device that most needs the fix is the
+    /// one that already worked.
+    ///
+    /// Metadata only, deliberately. Protection class and backup exclusion are both settable on a
+    /// file in place, so this never opens, rewrites, or replaces the key: there is no window here
+    /// in which the key is absent or half written, and the worst outcome of a failure is the
+    /// protection the device already had.
+    private func repairProtection(of url: URL) {
+        try? FileManager.default.setAttributes(Self.protectionAttributes, ofItemAtPath: url.path)
+
+        let excluded = (try? url.resourceValues(forKeys: [.isExcludedFromBackupKey]))?
+            .isExcludedFromBackup
+        guard excluded != true else { return }
+
+        var marked = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? marked.setResourceValues(values)
     }
 
     // MARK: - Writing
@@ -99,34 +126,83 @@ public struct VaultKeyStore: Sendable {
         let url = try fileURL()
         let data = key.withUnsafeBytes { Data($0) }
 
-        // **Written to a staging file, marked, then moved into place.** The order matters and
-        // the previous one was wrong: the key was written where it lives and only then excluded
-        // from backup, so a kill between those two steps left a usable key with no exclusion,
-        // and nothing ever retried it because `state()` sees a valid key and asks no further
-        // questions. A single backup taken in that window carries the raw vault key. Found in
-        // gate A4 by two engines.
+        // **The key is only ever written inside a directory that is already excluded from
+        // backup.** Round one found the key written and then excluded, so a kill between the two
+        // left a usable unexcluded key with nothing to retry it. The first fix staged the write
+        // under a temporary name and marked that, which round two pointed out fixes nothing: a
+        // backup enumerates the container, not the filename, so a kill between writing the
+        // staging file and marking it leaves exactly the same complete unexcluded key one path
+        // along.
         //
-        // A rename within one directory is atomic, so the key that appears at `url` has always
-        // been through both steps. There is no moment when a complete key exists there
-        // unmarked.
-        let staging = url.deletingLastPathComponent()
-            .appendingPathComponent(".\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: staging) }
+        // Excluding the directory first is what actually closes it. Exclusion applies to a
+        // directory's contents, so from the moment any key material exists on disk it is already
+        // outside every backup, whatever happens next.
+        let staging = try stagingDirectory()
+        let pending = staging.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: pending) }
 
-        try data.write(to: staging, options: Self.writingOptions)
+        try data.write(to: pending, options: Self.writingOptions)
 
-        var marked = staging
+        // **The pending file carries the flag, not just the directory it sits in.** Directory
+        // exclusion is what protects the write window, and it is not enough on its own here,
+        // because `.usingNewMetadataOnly` below installs *this* file's metadata at the resting
+        // path, where there is no excluded directory to sit inside. Marking it here is what makes
+        // the key that ends up at `vault.key` an excluded one.
+        //
+        // The suite caught this: the fix for the write window broke the property the write window
+        // was about, and "excluded from backups" went red the first time both ran together.
+        var marked = pending
         var values = URLResourceValues()
-        // Excluded so a restored device has ciphertext and no key, and asks for the passphrase.
-        // Letting the key ride along would make restores seamless and would mean the passphrase
-        // is never exercised, never noticed as important, and absent when it is finally needed.
         values.isExcludedFromBackup = true
         try marked.setResourceValues(values)
 
-        // `replaceItem` rather than `moveItem`, because installing over an existing key is the
-        // ordinary path: a watch re-provisioned, or a passphrase unlocking a device that already
-        // held a key.
-        _ = try FileManager.default.replaceItemAt(url, withItemAt: marked)
+        // `.usingNewMetadataOnly`, because the ordinary path is an overwrite and the default is
+        // documented as preserving the original item's metadata where it can. Measured on macOS,
+        // the backup exclusion of the new file did win under the default; the protection class
+        // cannot be measured there at all, since macOS has no data protection, so this is the
+        // difference between believing and specifying. A watch that already holds a key written
+        // under the earlier, weaker rule is exactly the device this has to overwrite correctly.
+        _ = try FileManager.default.replaceItemAt(
+            url, withItemAt: pending, options: [.usingNewMetadataOnly])
+    }
+
+    /// A directory that is excluded from backup before anything is put in it, and swept of
+    /// anything a previous run left behind.
+    ///
+    /// The sweep covers the case exclusion cannot: a kill between writing a pending key and
+    /// replacing with it leaves that file behind. It is already excluded, so it is not a backup
+    /// exposure, but a raw key sitting in the container until the app is deleted is not something
+    /// to leave lying about either.
+    private func stagingDirectory() throws -> URL {
+        let directory = try fileURL().deletingLastPathComponent()
+            .appendingPathComponent("PendingKeys", isDirectory: true)
+
+        if !FileManager.default.fileExists(atPath: directory.path) {
+            try FileManager.default.createDirectory(
+                at: directory, withIntermediateDirectories: true,
+                attributes: Self.protectionAttributes)
+        }
+
+        var marked = directory
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? marked.setResourceValues(values)
+
+        for name in (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? [] {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
+        }
+
+        return directory
+    }
+
+    /// Complete protection on the directory too, so a file created inside it starts protected
+    /// rather than becoming so.
+    static var protectionAttributes: [FileAttributeKey: Any] {
+        #if os(iOS) || os(watchOS) || os(tvOS)
+            [.protectionKey: FileProtectionType.complete]
+        #else
+            [:]
+        #endif
     }
 
     /// Complete protection wherever the platform has it.

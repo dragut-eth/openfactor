@@ -65,3 +65,32 @@ newer one is worth thinking through, and the claim that a nonce-less decline mus
 honoured is a judgment that could be wrong.
 
 Item 7 introduces a clock into an approval path. Clocks move backwards.
+
+## What round two changed
+
+Round two reviewed the eleven scope 2 fixes. It found **four of them incomplete and two new
+defects introduced by the fixes themselves**, which is the result the round exists to produce: the
+first pass at a fix is a hypothesis, and this is the first time this project has tested one.
+
+| Round-two finding | Engines | What it took |
+| --- | --- | --- |
+| Staging file merely moved the unexcluded key | ChatGPT | An excluded *directory*, created and marked before any key material exists, plus an orphan sweep |
+| The watch re-asked from inside a response handler | Fable, Grok | The inference deleted. It was invalid: a delayed response does not prove the phone's slot is free |
+| Consent expiry measured on a wall clock | all three | `ContinuousClock`, and `validatedAt` made internal so nothing outside can compare a `Date` again |
+| `phoneDeclined` missed the guard its sibling got | Fable | The same `guard outstanding != nil` |
+| `messageKeysArePinned` said "these three" against four | Grok | The fourth pinned. Renaming `nonce` compiled everywhere and every decline would have looked nonce-less |
+| A comment claimed a watch would wait forever | Fable | Corrected. The twenty five second timeout recovers, so the real reason is smaller |
+
+Two more came out of writing the tests rather than from any review. `.usingNewMetadataOnly` takes
+the staged file's metadata, so the fix for the write window silently removed the backup exclusion
+from the key it installed, and the suite went red the first time both ran together. And `.busy`,
+arriving after a timeout, put a spinner back up whose timer had already fired.
+
+**The item no review raised, and the one that matters most on the maintainer's own wrist:** every
+fix above governs the next write, and a Watch provisioned a month ago never writes again. Reading
+the key now repairs its protection class and backup exclusion in place. The device least likely to
+be fixed was the one already working.
+
+Each of the six fixes was reverted individually and the suite confirmed red for each before being
+restored. That check found nothing wrong with the fixes and one thing wrong with a test, which had
+been re-reading a cached `URL` snapshot rather than the file.

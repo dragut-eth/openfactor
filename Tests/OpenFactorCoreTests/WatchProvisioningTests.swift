@@ -412,24 +412,56 @@ struct WatchAnswerVocabularyTests {
         #expect(WatchProvisioning.Answer.needsApp.rawValue == "needsApp")
         #expect(WatchProvisioning.Answer.noVault.rawValue == "noVault")
         #expect(WatchProvisioning.Answer.declined.rawValue == "declined")
+        #expect(WatchProvisioning.Answer.busy.rawValue == "busy")
     }
 
-    @Test("The message keys on the wire are exactly these three strings")
+    // MARK: - The consent window
+
+    /// **The window is measured on a clock that cannot be moved.** All three round-two reviews
+    /// found the same hole in the first version, which used `Date`: a backward jump makes the
+    /// elapsed time negative, negative passes any "within the window" test, and the request stays
+    /// answerable indefinitely. That is the failure the window exists to prevent, reached by
+    /// changing the time zone.
+    ///
+    /// The window itself is enforced in `WatchKeyProvider`, which lives in the app target and
+    /// cannot be reached from here. What is pinned here is the measurement it asks for.
+    @Test("A request's age is never negative and only grows")
+    func ageIsMonotonic() throws {
+        let attempt = try WatchProvisioning.Attempt()
+        let request = try WatchProvisioning.validate(attempt.request)
+
+        let start = request.validatedAt
+        #expect(request.age(now: start) == 0)
+        #expect(request.age(now: start.advanced(by: Duration.seconds(90))) == 90)
+
+        // The instant a wall clock would report as an hour ago. There is no way to hand a
+        // `ContinuousClock.Instant` a value before the one it issued and have it read as time
+        // passing, which is the whole point, so this asks for the arithmetic explicitly.
+        #expect(request.age(now: start.advanced(by: Duration.seconds(-3600))) <= 0,
+                "a jump backwards must never read as inside the window")
+    }
+
+    @Test("The message keys on the wire are exactly these four strings")
     func messageKeysArePinned() {
         #expect(WatchProvisioning.MessageKey.request == "request")
         #expect(WatchProvisioning.MessageKey.response == "response")
         #expect(WatchProvisioning.MessageKey.status == "status")
+        // Added when the refusal gained a nonce, and missed at the time: round two found the
+        // test still saying "exactly these three" while a fourth key was live. Renaming this one
+        // would compile everywhere, and every decline from a newer phone would look nonce-less
+        // to a watch, which is the defect the nonce was added to close.
+        #expect(WatchProvisioning.MessageKey.nonce == "nonce")
     }
 
     /// A new answer is not a free addition: the watch switches over every case, so adding one
     /// without deciding what it shows would fail to build there rather than here. This asserts
     /// the set anybody reasoning about that switch is looking at.
-    @Test("There are four answers, and no more")
+    @Test("There are five answers, and no more")
     func theSetIsClosed() {
-        #expect(WatchProvisioning.Answer.allCases.count == 4)
+        #expect(WatchProvisioning.Answer.allCases.count == 5)
         #expect(
             Set(WatchProvisioning.Answer.allCases.map(\.rawValue))
-                == ["asking", "needsApp", "noVault", "declined"])
+                == ["asking", "needsApp", "noVault", "declined", "busy"])
     }
 
     @Test("Every answer survives the round trip a message puts it through")

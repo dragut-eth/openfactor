@@ -218,20 +218,16 @@ final class WatchVaultModel: NSObject {
                 }
                 flow.responseDidNotOpen(obsolete: obsolete)
 
-                // **An obsolete response is evidence, not just noise: ask again at once.**
+                // **The attempt is kept and nothing is inferred.** An earlier fix asked again
+                // here, reasoning that an obsolete response proved the phone's slot was free.
+                // Round two showed the inference is invalid across an asynchronous channel: if
+                // the response was merely delayed and the phone has since retained a newer
+                // request, re-asking abandons the very request its alert is showing, and the
+                // wearer approves into a loop of prompts.
                 //
-                // Gate A4 found the sequence. The phone will not replace the request its alert
-                // is asking about, which is correct and stops a substitution defect. But it
-                // answers a later request with "asking" and then discards it, so after a
-                // timeout the wearer's retry is acknowledged and forgotten, their approval
-                // seals to the abandoned attempt, and this watch waits out another full timeout
-                // for an answer that can never come.
-                //
-                // Receiving a response for an older attempt proves the phone has just finished
-                // answering one, so its slot is free right now. Asking immediately turns a
-                // second wasted timeout into an alert the wearer can answer, and it cannot
-                // spin: only a delivered response reaches this line.
-                if obsolete { ask() }
+                // The phone answers `.busy` now instead of pretending to ask, so the watch has no
+                // reason to guess. Waiting is correct: the answer to this attempt may still be
+                // coming, and the timeout recovers if it is not.
             } catch {
                 // Installing the key failed, which is this attempt's failure.
                 self.attempt = nil
@@ -250,9 +246,12 @@ final class WatchVaultModel: NSObject {
             // an abandoned attempt cleared the attempt that was still waiting, and the approval
             // that followed had nothing left to open it with. Gate A4 found it.
             //
-            // A decline with no nonce is one from a build that predates this, and is honoured:
-            // refusing it would leave a watch waiting forever on a phone that has already said
-            // no. A decline carrying somebody else's nonce is obsolete and changes nothing.
+            // A decline with no nonce comes from a build that predates this, and is honoured.
+            // The reason written here first was that refusing it would leave a watch waiting
+            // forever, and round two pointed out that is false: the twenty five second timeout
+            // recovers. The real reason is smaller and still good enough. Honouring it ends the
+            // wait now instead of in twenty five seconds, the cost of being wrong is one screen
+            // that says to try again, and a decline releases nothing either way.
             if let declined = message[WatchProvisioning.MessageKey.nonce] as? Data,
                 let attempt, !attempt.answers(declined)
             {

@@ -78,9 +78,13 @@ struct WatchProvisioningFlowTests {
 
     // MARK: - Terminal answers end the attempt
 
+    /// `.asking` and `.busy` are the two non-terminal answers, and they are excluded by name
+    /// rather than by a property so that a fifth answer added later lands in this loop and has to
+    /// be thought about.
     @Test("Every terminal answer stops the attempt being current")
     func terminalAnswersEndTheAttempt() {
-        for answer in WatchProvisioning.Answer.allCases where answer != .asking {
+        for answer in WatchProvisioning.Answer.allCases
+        where answer != .asking && answer != .busy {
             var flow = WatchProvisioningFlow()
             let token = flow.beganAsking()
             flow.phoneAnswered(answer, token: token)
@@ -100,6 +104,54 @@ struct WatchProvisioningFlowTests {
         #expect(flow.stage == .waiting)
         #expect(flow.isAsking)
         #expect(flow.isCurrent(token))
+    }
+
+    /// **The answer added in round two.** The phone used to reply `.asking` to a request it had
+    /// already thrown away, so the watch waited twenty five seconds for a question nobody was
+    /// being shown. `.busy` says the true thing, and the watch keeps waiting on purpose: the
+    /// person is answering somebody else's request, and this one can be re-asked when the timeout
+    /// arrives.
+    @Test("Busy keeps the attempt alive rather than ending it")
+    func busyKeepsTheAttempt() {
+        var flow = WatchProvisioningFlow()
+        let token = flow.beganAsking()
+
+        flow.phoneAnswered(.busy, token: token)
+        #expect(flow.stage == .waiting)
+        #expect(flow.isAsking, "the attempt is held, so a later answer to it can still open")
+        #expect(flow.isCurrent(token))
+    }
+
+    /// The other direction, and this test found a defect in the fix above rather than confirming
+    /// it. A timed-out attempt stays claimable on purpose, so that a key arriving late still
+    /// installs instead of being thrown away. That means a busy answer reaches this method after
+    /// the timeout, and it used to put the spinner back up. The timer for that attempt has
+    /// already fired, so nobody was coming to take it down again.
+    @Test("Busy after a timeout leaves the dead-end screen up")
+    func busyAfterTimeoutDoesNotRestoreTheSpinner() {
+        var flow = WatchProvisioningFlow()
+        let first = flow.beganAsking()
+        flow.timedOut(first)
+        #expect(flow.stage == .needsPhoneApp)
+
+        flow.phoneAnswered(.busy, token: first)
+        #expect(flow.stage == .needsPhoneApp, "the screen with a button on it stays")
+        #expect(flow.isAsking, "and the attempt is still claimable, so a late key still installs")
+
+        flow.installedKey(opensAccounts: true)
+        #expect(flow.stage == .ready)
+    }
+
+    /// Gate A4 round two: `phoneDeclined` was the sibling of `responseDidNotOpen` and did not
+    /// get the same guard, so a decline arriving after the watch was ready demoted it.
+    @Test("A decline with nothing outstanding cannot demote a ready watch")
+    func declineWithNothingOutstandingIsInert() {
+        var flow = WatchProvisioningFlow()
+        _ = flow.beganAsking()
+        flow.installedKey(opensAccounts: true)
+
+        flow.phoneDeclined()
+        #expect(flow.stage == .ready, "a late decline must not unset a working watch")
     }
 
     @Test("An answer this build cannot read is treated as a refusal, not guessed at")

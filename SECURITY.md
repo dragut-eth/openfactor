@@ -113,6 +113,12 @@ Account records are also protected by the Keychain. With sync off they use
 Under the vault design this change affects the ciphertext and its availability elsewhere; it
 does not place the vault key in Keychain or cause that key to sync.
 
+The key is written into a directory that is excluded from backup before any key material
+exists, then moved into place, so there is no instant at which a complete key sits on disk outside
+the exclusion. Reading the key also repairs its protection class and exclusion in place, because a
+device provisioned before these rules were corrected would otherwise never write again and never
+receive them.
+
 The backup exclusion and protection attributes have been verified on a real device. Their
 behavior through a restore and Quick Start has not been measured and is not claimed.
 
@@ -285,15 +291,17 @@ before deriving anything.
 
 **A refusal names the request it refuses**, for the same reason. The decline message used to
 carry only a status, so a refusal of an attempt the Watch had already abandoned ended the one it
-was still waiting on. It echoes the nonce now, and the Watch ignores a decline meant for anything
-else. This is matching rather than authentication, and is not claimed as more: a refusal releases
+was still waiting on. It echoes the nonce of the request being refused, and the Watch ignores a decline
+meant for anything else. A decline carrying no nonce comes from an older build and is honoured,
+which is a deliberate mixed-version choice rather than an oversight. This is matching rather than authentication, and is not claimed as more: a refusal releases
 nothing, and the worst a forged one can do is end an exchange that can be started again.
 
 **Consent expires.** A request that arrives while App Lock is up is accepted and its alert
 suppressed until the phone is unlocked, with nothing previously bounding how much later that was.
 Somebody could be asked to release the key on behalf of a Watch that stopped asking hours
-earlier. A request is now answerable for two minutes, comfortably longer than the Watch's own
-retry cycle and short enough that the question and the answer belong to each other.
+earlier. A request is now answerable for two minutes of elapsed time, measured on a clock
+that cannot be moved backwards, comfortably longer than the Watch's own retry cycle and short
+enough that the question and the answer belong to each other.
 
 The protocol and byte layouts are specified in `docs/VAULT.md`. The negative controls that make
 the binding meaningful are kept as tests rather than only as a one-off experiment: a substituted
