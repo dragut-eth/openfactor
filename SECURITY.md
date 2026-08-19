@@ -283,6 +283,18 @@ and bind the protocol version, request nonce, and both public keys into the HKDF
 AES-GCM additional data. The Watch rejects a response that does not echo the nonce it just sent,
 before deriving anything.
 
+**A refusal names the request it refuses**, for the same reason. The decline message used to
+carry only a status, so a refusal of an attempt the Watch had already abandoned ended the one it
+was still waiting on. It echoes the nonce now, and the Watch ignores a decline meant for anything
+else. This is matching rather than authentication, and is not claimed as more: a refusal releases
+nothing, and the worst a forged one can do is end an exchange that can be started again.
+
+**Consent expires.** A request that arrives while App Lock is up is accepted and its alert
+suppressed until the phone is unlocked, with nothing previously bounding how much later that was.
+Somebody could be asked to release the key on behalf of a Watch that stopped asking hours
+earlier. A request is now answerable for two minutes, comfortably longer than the Watch's own
+retry cycle and short enough that the question and the answer belong to each other.
+
 The protocol and byte layouts are specified in `docs/VAULT.md`. The negative controls that make
 the binding meaningful are kept as tests rather than only as a one-off experiment: a substituted
 phone public key does not open the payload, a substituted Watch public key does not open with the

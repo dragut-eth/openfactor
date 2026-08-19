@@ -8,6 +8,35 @@ first when picking the work back up.
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 
+**Scope 2 is closed: all eleven of its findings are fixed.** The last five landed together.
+
+**The dropped retry is fixed on the watch rather than the phone**, taking the reviewer's better
+suggestion. The phone will not replace the request its alert is asking about, which is correct and
+stops a substitution defect, but it answered a later request with "asking" and then discarded it,
+so a retry after a timeout was acknowledged and forgotten. Receiving a response for an older
+attempt is proof the phone has just finished answering one, so the watch now asks again
+immediately, turning a second wasted timeout into an alert the wearer can answer. It cannot spin:
+only a delivered response reaches that line.
+
+**A refusal now names the request it refuses.** The decline carried only a status, so it was the
+one message in the protocol bound to nothing, and a refusal of an abandoned attempt ended the one
+still waiting. It echoes the nonce, and a decline without one is still honoured, since refusing it
+would strand a watch on a phone that has already said no. Documented as matching rather than
+authentication: a refusal releases nothing.
+
+**Consent expires after two minutes.** A request accepted while App Lock was up could raise its
+alert arbitrarily later, so somebody could be asked to release the key for a watch that stopped
+asking hours before. Two minutes is longer than the watch's retry cycle and short enough that the
+question and the answer belong to each other.
+
+**Both test holes are closed, and both were proved by re-breaking the code.** A static phone
+keypair now fails a test that checks the ephemeral public key itself changes between two responses
+to one request, not merely that the responses differ. And the HKDF domain-separation label is
+pinned by deriving the same secret and transcript without it and requiring a different key. Those
+were the two demonstrations that a serious regression could pass the entire suite, and the reason
+they could is worth keeping in mind for every other suite here: **a round trip tests two sides
+against each other, so anything weakened symmetrically passes.**
+
 **Four more fixed: the watch's protection class, the install ordering, the unmasked code
 previews, and two false document claims.**
 

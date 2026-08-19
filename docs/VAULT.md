@@ -317,7 +317,9 @@ sides; what it described was ECIES with half missing.
 **The whole transcript is bound**, version, nonce and both public keys, into the HKDF info and
 the AAD. **The HKDF salt is empty**, deliberately: the transcript is already in `info`, and a
 salt would be a second place to get the same job wrong. The nonce is what makes a replayed
-response detectable, and the watch checks it **before deriving anything**.
+response detectable, and the watch checks it **before deriving anything**. The phone echoes it in
+a refusal too, so a decline of an abandoned attempt cannot end a live one; that is matching rather
+than authentication, since a refusal releases nothing.
 
 ### There is no six digit comparison, and what that costs
 

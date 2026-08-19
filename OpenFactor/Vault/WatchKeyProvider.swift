@@ -58,6 +58,20 @@ final class WatchKeyProvider: NSObject {
     ///
     /// **Only ever called from the person tapping the affirmative button.** Nothing else may call
     /// it, which is why it is not a general purpose method taking a request.
+    /// How long a request stays answerable.
+    ///
+    /// **A consent prompt whose premise has expired is a weaker gate than the design claims.**
+    /// A request arriving while App Lock is up is accepted and the alert suppressed until
+    /// unlock, with nothing bounding how much later that is. Gate A4 found that somebody could
+    /// be shown "Your Apple Watch is asking for the key to your accounts" hours after it stopped
+    /// asking, and a tap would release the sealed key. The human tap is the one defence this
+    /// design kept when the comparison string was removed, so it should be asked about something
+    /// that is still true.
+    ///
+    /// Two minutes is comfortably longer than the watch's own retry cycle, so a live exchange is
+    /// never cut off, and short enough that the question and the answer belong to each other.
+    static let consentWindow: TimeInterval = 120
+
     func approve() {
         defer {
             pendingRequest = nil
@@ -65,6 +79,10 @@ final class WatchKeyProvider: NSObject {
         }
 
         guard let request = pendingRequest, let key = (try? keys.load()) ?? nil else { return }
+
+        // Expired rather than answered. Nothing is sent, and the watch recovers by asking again,
+        // which is what it does anyway when an answer does not arrive.
+        guard Date().timeIntervalSince(request.validatedAt) <= Self.consentWindow else { return }
         guard let response = try? WatchProvisioning.respond(to: request, with: key) else { return }
 
         WCSession.default.sendMessage(
@@ -78,9 +96,18 @@ final class WatchKeyProvider: NSObject {
             isAsking = false
         }
 
-        WCSession.default.sendMessage(
-            [WatchProvisioning.MessageKey.status: WatchProvisioning.Answer.declined.rawValue],
-            replyHandler: nil, errorHandler: nil)
+        // **The refusal names the request it refuses.** Without the nonce, a decline of an
+        // attempt the watch has already abandoned ended the one it was still waiting on, and the
+        // approval that followed had nothing left to open it with. Every other message here is
+        // bound to its attempt; this was the one that carried nothing.
+        var message: [String: Any] = [
+            WatchProvisioning.MessageKey.status: WatchProvisioning.Answer.declined.rawValue
+        ]
+        if let pendingRequest {
+            message[WatchProvisioning.MessageKey.nonce] = pendingRequest.requestNonce
+        }
+
+        WCSession.default.sendMessage(message, replyHandler: nil, errorHandler: nil)
     }
 
     /// Decides what to answer, and remembers the request if the answer is a question.

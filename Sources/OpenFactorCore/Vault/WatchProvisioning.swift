@@ -100,6 +100,9 @@ public enum WatchProvisioning {
         public static let response = "response"
         /// An `Answer`, in either message.
         public static let status = "status"
+        /// The nonce a refusal refuses, so a stale decline cannot end a live attempt. Absent
+        /// from a build older than this, which the watch honours rather than ignoring.
+        public static let nonce = "nonce"
     }
 
     public enum ExchangeError: Error, Equatable, Sendable {
@@ -163,6 +166,25 @@ public enum WatchProvisioning {
             request.append(privateKey.publicKey.x963Representation)
             self.request = request
         }
+
+        /// Whether a bare nonce is this attempt's own.
+        ///
+        /// For the refusal message, which carries no sealed payload to authenticate and so can
+        /// only be matched this way. **This is not authentication and does not pretend to be:**
+        /// a decline releases nothing, and the worst a forged one can do is end an exchange the
+        /// wearer can start again. The sealed response is bound by the transcript instead.
+        public func answers(_ candidate: Data) -> Bool {
+            guard candidate.count == nonce.count else { return false }
+
+            // Constant time out of habit rather than need, since neither side is secret. Habit
+            // is the point: the next thing compared here might be.
+            var difference: UInt8 = 0
+            for (a, b) in zip(candidate, nonce) { difference |= a ^ b }
+            return difference == 0
+        }
+
+        /// The nonce this attempt sent, for the phone to echo in a refusal.
+        public var sentNonce: Data { nonce }
 
         /// Opens the phone's reply and returns the vault key it carries.
         ///
@@ -242,6 +264,14 @@ public enum WatchProvisioning {
         let nonce: Data
         let watchPublicKeyBytes: Data
         let watchPublicKey: P256.KeyAgreement.PublicKey
+
+        /// Echoed in a refusal so the watch can tell a decline of this request from a decline
+        /// of one it has already abandoned.
+        public var requestNonce: Data { nonce }
+
+        /// When this request was parsed, so consent cannot be asked about a question that
+        /// expired hours ago. See `WatchKeyProvider.approve`.
+        public let validatedAt: Date
     }
 
     /// Parses a request, or refuses it. Cheap, and touches no secret.
@@ -267,7 +297,8 @@ public enum WatchProvisioning {
         }
 
         return ValidatedRequest(
-            nonce: nonce, watchPublicKeyBytes: watchPublicKeyBytes, watchPublicKey: watchPublicKey)
+            nonce: nonce, watchPublicKeyBytes: watchPublicKeyBytes,
+            watchPublicKey: watchPublicKey, validatedAt: Date())
     }
 
     /// The deterministic seam, for test vectors only.

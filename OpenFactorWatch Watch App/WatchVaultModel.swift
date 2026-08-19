@@ -217,6 +217,21 @@ final class WatchVaultModel: NSObject {
                     token = nil
                 }
                 flow.responseDidNotOpen(obsolete: obsolete)
+
+                // **An obsolete response is evidence, not just noise: ask again at once.**
+                //
+                // Gate A4 found the sequence. The phone will not replace the request its alert
+                // is asking about, which is correct and stops a substitution defect. But it
+                // answers a later request with "asking" and then discards it, so after a
+                // timeout the wearer's retry is acknowledged and forgotten, their approval
+                // seals to the abandoned attempt, and this watch waits out another full timeout
+                // for an answer that can never come.
+                //
+                // Receiving a response for an older attempt proves the phone has just finished
+                // answering one, so its slot is free right now. Asking immediately turns a
+                // second wasted timeout into an alert the wearer can answer, and it cannot
+                // spin: only a delivered response reaches this line.
+                if obsolete { ask() }
             } catch {
                 // Installing the key failed, which is this attempt's failure.
                 self.attempt = nil
@@ -229,6 +244,21 @@ final class WatchVaultModel: NSObject {
         if message[WatchProvisioning.MessageKey.status] as? String
             == WatchProvisioning.Answer.declined.rawValue
         {
+            // **A refusal has to say which request it refuses.** Every other message in this
+            // protocol is bound to its attempt, by a token on the callbacks and by the nonce on
+            // the sealed response. The decline was the one that carried nothing, so a refusal of
+            // an abandoned attempt cleared the attempt that was still waiting, and the approval
+            // that followed had nothing left to open it with. Gate A4 found it.
+            //
+            // A decline with no nonce is one from a build that predates this, and is honoured:
+            // refusing it would leave a watch waiting forever on a phone that has already said
+            // no. A decline carrying somebody else's nonce is obsolete and changes nothing.
+            if let declined = message[WatchProvisioning.MessageKey.nonce] as? Data,
+                let attempt, !attempt.answers(declined)
+            {
+                return
+            }
+
             attempt = nil
             token = nil
             flow.phoneDeclined()

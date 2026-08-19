@@ -264,6 +264,72 @@ struct WatchProvisioningTests {
         #expect(throws: Never.self) { _ = try WatchProvisioning.validate(attempt.request) }
     }
 
+    // MARK: - What a round trip cannot see
+
+    /// **A round trip tests two sides against each other, so anything weakened on both sides
+    /// passes.** Gate A4 demonstrated that twice against this suite, by breaking the code
+    /// deliberately and watching every test stay green. These two are the tests that would have
+    /// gone red.
+    ///
+    /// The lesson generalises past this file: a construction is not pinned by a test that only
+    /// asks whether the writer and the reader agree. It has to be asked whether the construction
+    /// is the one that was specified.
+
+    /// **The phone's keypair must be fresh for every reply.** A static one passes every other
+    /// test here, including `exchangesAreFresh`, which varies the request and so sees different
+    /// responses regardless. The consequence of a static key is that a captured response plus a
+    /// later compromise of the phone recovers the vault key, which is the whole reason the
+    /// exchange is ephemeral.
+    @Test("Two responses to the same request differ, and both open")
+    func responsesToOneRequestAreFresh() throws {
+        let attempt = try WatchProvisioning.Attempt()
+        let key = vaultKey()
+
+        let first = try WatchProvisioning.respond(to: attempt.request, with: key)
+        let second = try WatchProvisioning.respond(to: attempt.request, with: key)
+
+        #expect(first != second, "a static phone keypair would make these identical")
+
+        // Both must still open: freshness that broke the exchange would be no use.
+        #expect(try attempt.open(first) == key)
+        #expect(try attempt.open(second) == key)
+
+        // And the difference must be in the phone's public key, not only in the GCM nonce,
+        // since a fresh nonce under a reused key is the case this is guarding against.
+        let publicKeyRange = 4 + WatchProvisioning.nonceCount..<(4 + WatchProvisioning.nonceCount
+            + WatchProvisioning.publicKeyCount)
+        #expect(
+            first[publicKeyRange] != second[publicKeyRange],
+            "the ephemeral key itself must change, not just the nonce")
+    }
+
+    /// **The HKDF label is domain separation and nothing else pins it.** Deleting `label +` from
+    /// the info passes the entire suite, because both sides build the info from one function and
+    /// the change is symmetric. This asks the question a round trip cannot: does the label
+    /// actually take part in the derivation.
+    @Test("The domain separation label changes the derived key")
+    func theLabelParticipatesInDerivation() throws {
+        let watch = P256.KeyAgreement.PrivateKey()
+        let phone = P256.KeyAgreement.PrivateKey()
+        let transcript = WatchProvisioning.transcript(
+            nonce: Data(repeating: 0xab, count: WatchProvisioning.nonceCount),
+            watchPublicKey: watch.publicKey.x963Representation,
+            phonePublicKey: phone.publicKey.x963Representation)
+
+        let withLabel = try WatchProvisioning.wrappingKey(
+            privateKey: watch, peer: phone.publicKey, transcript: transcript)
+
+        // The same shared secret and the same transcript, derived without the label. If the
+        // label were absent from the real derivation, these would match.
+        let shared = try watch.sharedSecretFromKeyAgreement(with: phone.publicKey)
+        let withoutLabel = shared.hkdfDerivedSymmetricKey(
+            using: SHA256.self, salt: Data(), sharedInfo: transcript, outputByteCount: 32)
+
+        #expect(
+            withLabel != withoutLabel,
+            "the label must take part, or this exchange shares a key with any other use of it")
+    }
+
     // MARK: - The derivation itself
 
     /// Both sides must reach the same key from opposite halves of the same exchange. This is the
