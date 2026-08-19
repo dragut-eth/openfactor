@@ -33,8 +33,26 @@ final class InMemoryWrappedStore: WrappedRecordStore, @unchecked Sendable {
         return lock.withLock { record }
     }
 
+    /// Runs immediately before a creation write commits, so a test can do what iCloud does:
+    /// deliver a record while the key derivation is still running.
+    ///
+    /// **The suite could not express that until this existed**, which is why round two's finding
+    /// was green against the test written for it: the fake's record never changed between the
+    /// check and the write, so a check made hundreds of milliseconds early looked the same as a
+    /// check made at the right moment.
+    var duringWrite: (@Sendable () -> Void)?
+
     func save(_ record: Data) throws(SecretStoreError) {
         lock.withLock { self.record = record }
+    }
+
+    func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool {
+        duringWrite?()
+        return lock.withLock {
+            guard self.record == nil else { return false }
+            self.record = record
+            return true
+        }
     }
 
     func delete() throws(SecretStoreError) {

@@ -79,6 +79,13 @@ public struct WrappedKeyStore: Sendable {
         return data
     }
 
+    /// Whether a record is there, treating a store that cannot be read as empty.
+    ///
+    /// **Which is the collapse gate A4 filed, so nothing that matters may use this.** `Vault`
+    /// used to, and a transient read failure therefore looked like a fresh device, whose offered
+    /// remedy is to create a vault over whatever is really there. `Vault.state()` calls `load()`
+    /// and reports `unavailable` now. This is kept for callers with nothing to lose by guessing,
+    /// and a caller that has something to lose should call `load()` and handle the throw.
     public var exists: Bool {
         (try? load()) != nil
     }
@@ -125,10 +132,18 @@ public struct WrappedKeyStore: Sendable {
             target[kSecAttrSynchronizable as String] =
                 (attributes?[kSecAttrSynchronizable as String] as? Bool) ?? kSecAttrSynchronizableAny
 
-            let changes: [String: Any] = [
-                kSecValueData as String: record,
-                kSecAttrAccessible as String: accessibility.attribute,
-            ]
+            // **Only the value changes.** The accessibility used to be written here too, from
+            // this store's construction-time default, which is `whenUnlockedThisDeviceOnly`. A
+            // record that `setSynchronizable(true)` had moved to iCloud, and to `whenUnlocked`
+            // because a synchronizable item cannot be device-only, would be updated back to a
+            // device-only class while still flagged as syncing. That is either an error from
+            // securityd or a record silently withheld from iCloud, and the second is the exact
+            // loss this store exists to prevent. Found in round two of gate A4, filed as
+            // plausible rather than confirmed because it needs a device to settle.
+            //
+            // Where the record lives is `setSynchronizable`'s decision, and the protection class
+            // is half of that decision: it writes both together, so nothing else writes either.
+            let changes: [String: Any] = [kSecValueData as String: record]
             let updated = SecItemUpdate(target as CFDictionary, changes as CFDictionary)
             guard updated == errSecSuccess else { throw error(for: updated) }
             return
@@ -144,6 +159,54 @@ public struct WrappedKeyStore: Sendable {
 
         let status = SecItemAdd(attributes as CFDictionary, nil)
         guard status == errSecSuccess else { throw error(for: status) }
+    }
+
+    /// Stores the record only if the store is empty. See `WrappedRecordStore.addIfAbsent`.
+    ///
+    /// **Two things can be there, and only one of them is a duplicate.** `SecItemAdd` refuses an
+    /// item whose primary key already exists, and `kSecAttrSynchronizable` is part of that key,
+    /// so a record carrying the opposite flag is not a duplicate to the Keychain: the add
+    /// succeeds and leaves a twin. So the add is followed by a count under `Any`, and a twin
+    /// found there is undone by removing the record this call just wrote.
+    ///
+    /// That is a narrowing rather than an elimination, and it is worth saying which. The window
+    /// it leaves is between the add and the count, measured in microseconds and needing an
+    /// arrival inside it. The window it closes is the one that spanned a 600,000-iteration key
+    /// derivation.
+    public func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool {
+        var attributes = query()
+        attributes[kSecAttrSynchronizable as String] = synchronizable
+        attributes[kSecAttrAccessible as String] = accessibility.attribute
+        attributes[kSecAttrLabel as String] = "OpenFactor"
+        attributes[kSecValueData as String] = record
+
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        if status == errSecDuplicateItem { return false }
+        guard status == errSecSuccess else { throw error(for: status) }
+
+        guard try countingBothFlags() > 1 else { return true }
+
+        // Something with the other flag was already there, so this call was not a creation after
+        // all. Remove what it wrote, pinned to this store's own flag so the record that was
+        // already present is never the one deleted.
+        var mine = query()
+        mine[kSecAttrSynchronizable as String] = synchronizable
+        SecItemDelete(mine as CFDictionary)
+        return false
+    }
+
+    /// How many records exist under this service, counting both sync flags.
+    private func countingBothFlags() throws(SecretStoreError) -> Int {
+        var find = query()
+        find[kSecMatchLimit as String] = kSecMatchLimitAll
+        find[kSecReturnAttributes as String] = true
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(find as CFDictionary, &result)
+
+        if status == errSecItemNotFound { return 0 }
+        guard status == errSecSuccess else { throw error(for: status) }
+        return (result as? [[String: Any]])?.count ?? 0
     }
 
     /// Moves the record between iCloud and this device, following the account items.

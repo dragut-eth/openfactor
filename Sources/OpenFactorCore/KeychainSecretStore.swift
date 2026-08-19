@@ -11,7 +11,7 @@ import Security
 /// | Keychain field | Holds |
 /// | --- | --- |
 /// | `kSecValueData` | a `VaultRecord`: the metadata and the secret, each sealed |
-/// | `kSecAttrGeneric` | **nothing. Never written, and cleared on conversion** |
+/// | `kSecAttrGeneric` | **nothing. Never written, and never read** |
 /// | `kSecAttrAccount` | the account identifier, a UUID |
 /// | `kSecAttrService` | a constant, so the app's items can be found |
 ///

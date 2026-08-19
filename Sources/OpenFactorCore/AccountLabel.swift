@@ -46,8 +46,55 @@ public enum AccountLabel {
     /// restore that refused the whole file because one account had a long name would cost
     /// somebody every account in it, to protect against what is at worst an untidy label.
     /// A truncated label still names a working account.
+    /// The most bytes a label may occupy once encoded, whatever it looks like on screen.
+    ///
+    /// **A character bound is not a storage bound**, which gate A4 found by writing one down: a
+    /// Swift `Character` is an extended grapheme cluster, and a cluster may carry any number of
+    /// combining marks. `"a"` followed by fifty thousand combining acute accents is **one**
+    /// character and a hundred kilobytes, so the sixty four above passed it through untouched.
+    /// A hostile import could plant an account whose metadata is megabytes, sealed, padded, and
+    /// offered to iCloud in a single Keychain item, and recognisable ever after by its length.
+    ///
+    /// Four kilobytes, chosen by measuring rather than guessing. The most expensive graphemes a
+    /// person actually types are joined emoji: a four person family is 25 bytes and a Scotland
+    /// flag with its tag sequence is 28, so sixty four of the worst of them is 1,792 bytes. Four
+    /// kilobytes clears that by more than double and still refuses the hundred kilobyte label
+    /// above by a factor of twenty five.
+    ///
+    /// The first value written here was 1,024, which is below what sixty four family emoji
+    /// occupy. The existing test for grapheme counting failed immediately, which is what that
+    /// test is for.
+    public static let maximumBytes = 4096
+
     public static func clamped(_ text: String) -> String {
-        text.count <= maximumCharacters ? text : String(text.prefix(maximumCharacters))
+        let byCharacters =
+            text.count <= maximumCharacters ? text : String(text.prefix(maximumCharacters))
+        guard byCharacters.utf8.count > maximumBytes else { return byCharacters }
+
+        // Whole characters first, so an ordinary label is never cut through the middle of one.
+        var kept = ""
+        var bytes = 0
+        for character in byCharacters {
+            let size = String(character).utf8.count
+            if bytes + size > maximumBytes { break }
+            kept.append(character)
+            bytes += size
+        }
+
+        // One grapheme larger than the entire budget, which is the hostile case rather than any
+        // real one. Scalars are kept instead, so the result is still well formed text and still
+        // bounded. What it renders as is not this type's problem: it is a label somebody built
+        // to be a storage attack.
+        if kept.isEmpty {
+            for scalar in byCharacters.unicodeScalars {
+                let size = String(scalar).utf8.count
+                if bytes + size > maximumBytes { break }
+                kept.unicodeScalars.append(scalar)
+                bytes += size
+            }
+        }
+
+        return kept
     }
 
     /// The optional form, for an issuer, which a URI may legitimately omit.

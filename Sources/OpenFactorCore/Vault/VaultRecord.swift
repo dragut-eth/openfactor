@@ -21,9 +21,13 @@ import Foundation
 ///
 /// ## Why two halves rather than one blob
 ///
-/// Today `KeychainSecretStore` sets `kSecReturnData` to false on every listing path, and says so
-/// in its own header: listing accounts never decrypts a single secret, and only `secret(for:)`
-/// asks for data, for one account, at the moment a code is generated.
+/// Listing accounts never decrypts a single secret. `KeychainSecretStore.records()` returns each
+/// item's data, because the sealed metadata is carried in that data, and opens the metadata half
+/// alone; the secret half is opened in `secret(for:)` and nowhere else.
+///
+/// This comment used to say the listing paths set `kSecReturnData` to false. That was true of the
+/// design this one replaced and has been false since: the data is what holds the metadata now.
+/// Round two of gate A4 found the same claim here and in `docs/VAULT.md`.
 ///
 /// Sealing an account as one blob would have ended that quietly. Drawing the list would decrypt
 /// every secret into memory to render a screen that needs none of them. A reviewer caught the

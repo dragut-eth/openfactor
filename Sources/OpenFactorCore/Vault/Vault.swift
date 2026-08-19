@@ -1,18 +1,19 @@
 import CryptoKit
 import Foundation
 
-/// What state this device's vault is in, and the three things that can be done about it.
+/// What state this device's vault is in, and what can be done about it.
 ///
 /// The whole of the vault's lifecycle is here rather than in a view, because the decisions are
 /// about storage and the same ones apply on a watch, where the interface is entirely different.
 ///
-/// ## The three states, and why telling them apart matters
+/// ## The states, and why telling them apart matters
 ///
 /// | Key on this device | Wrapped record present | State |
 /// | --- | --- | --- |
 /// | yes | either | `open` |
 /// | no | no | `absent`, no vault has ever existed |
 /// | no | yes | `locked`, this device needs the passphrase it was already given |
+/// | unknown | unknown | `unavailable`, the store could not be read and nothing is guessed |
 ///
 /// **`absent` and `locked` are different questions and must not be confused.** Absent means
 /// create a vault and show a new passphrase. Locked means ask for one that already exists.
@@ -131,16 +132,37 @@ public struct Vault: Sendable {
         case .absent: break
         }
 
+        let key = SymmetricKey(size: .bits256)
+        let created: Bool
+
         do {
-            let key = SymmetricKey(size: .bits256)
-            try wrapped.save(try WrappedVaultKey.wrap(vaultKey: key, passphrase: passphrase))
-            try keys.install(key)
-            return key
+            // **`addIfAbsent` rather than `save`, and that is the whole of the fix.** The check
+            // above is hundreds of milliseconds before this line: `wrap` runs 600,000 rounds of
+            // PBKDF2 in between, and iCloud can deliver the real record inside that window. `save`
+            // replaces what it finds, so creation used to overwrite the wrapped key that opens
+            // every account already stored. Two engines walked that out independently in round
+            // two, and the test written for the check could not see it, because its record never
+            // changed while the derivation ran.
+            created = try wrapped.addIfAbsent(
+                try WrappedVaultKey.wrap(vaultKey: key, passphrase: passphrase))
         } catch let error as SecretStoreError {
             throw .storage(error)
         } catch {
             throw .storage(.keychain(status: -1))
         }
+
+        // Outside the catch on purpose: a refusal is this method's own answer, and the block
+        // above turns anything it does not recognise into `.storage`, which would bury it.
+        guard created else { throw .alreadyExists }
+
+        do {
+            try keys.install(key)
+        } catch let error as SecretStoreError {
+            throw .storage(error)
+        } catch {
+            throw .storage(.keychain(status: -1))
+        }
+        return key
     }
 
     // MARK: - Unlocking
@@ -164,7 +186,11 @@ public struct Vault: Sendable {
             // and must not be reported as one. See `VaultError.recordNotUnderstood`.
             switch error {
             case .notAWrappedKey, .iterationsOutOfRange: throw .recordNotUnderstood
-            case .wrongPassphrase, .derivationFailed: throw .wrongPassphrase
+            case .wrongPassphrase: throw .wrongPassphrase
+            // A CommonCrypto failure is this device's problem, not a mistyped character, and
+            // telling somebody to check their typing for it is the same category error in
+            // miniature. A review noticed it in the fix for the larger one.
+            case .derivationFailed: throw .storage(.keychain(status: -1))
             }
         } catch {
             throw .storage(.keychain(status: -1))
@@ -178,7 +204,11 @@ public struct Vault: Sendable {
     /// forever. Responding to a compromise needs key rotation, which version 1 does not have.
     /// `docs/VAULT.md` says so, and this comment exists so the next person to read this method
     /// does not conclude otherwise from its convenience.
-    public func replacePassphrase() throws(VaultError) -> String {
+    /// **Not public.** A review asked for it to go entirely; it is kept because the tests for
+    /// the two-step path still need a one-call way to reach a replaced state, and made internal
+    /// so no caller outside this package can pick the footgun by accident. The app uses
+    /// `prepareReplacementPassphrase()` and `replacePassphrase(with:)`.
+    func replacePassphrase() throws(VaultError) -> String {
         let passphrase = try prepareReplacementPassphrase()
         try replacePassphrase(with: passphrase)
         return passphrase

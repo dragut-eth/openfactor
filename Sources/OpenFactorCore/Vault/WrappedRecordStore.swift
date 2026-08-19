@@ -10,7 +10,7 @@ import Foundation
 /// the suite runs on. That was discovered while writing tests for gate A4's scope 1 findings, by
 /// deliberately breaking each fix and watching the suite stay green.
 ///
-/// So the vault's most consequential decisions, which of the three states a device is in, whether
+/// So the vault's most consequential decisions, which state a device is in, whether
 /// creating would destroy an existing record, whether a refused record is a wrong passphrase or
 /// an unreadable one, were argued for in comments and verified by nobody. That is the same
 /// condition gate A4 found in the watch's view model, and it produced defects there in three
@@ -33,6 +33,25 @@ public protocol WrappedRecordStore: Sendable {
     func save(_ record: Data) throws(SecretStoreError)
 
     func delete() throws(SecretStoreError)
+
+    /// Stores the record **only if the store is empty**, and says which happened.
+    ///
+    /// - Returns: `true` when this call is what put the record there. `false` when something was
+    ///   already present, in which case nothing was written.
+    ///
+    /// **Why this exists, and why `save` cannot be used for creation.** `save` replaces whatever
+    /// it finds, which is right for a passphrase change and catastrophic for a first write. Gate
+    /// A4's round two of this scope found the hole, and two engines walked it out independently:
+    /// `create(with:)` asked `state()` whether a record existed, then spent hundreds of
+    /// milliseconds deriving a key at 600,000 PBKDF2 iterations, and only then called `save`. A
+    /// wrapped record arriving from iCloud inside that window was replaced by a wrap of a brand
+    /// new vault key, and every account already sealed under the old one became unopenable by
+    /// anybody, including the person holding the correct passphrase.
+    ///
+    /// **The check has to be part of the write.** A check hundreds of milliseconds earlier is not
+    /// a check, and the test that covered it could not see the difference because its fake record
+    /// never changed between the two.
+    func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool
 }
 
 extension WrappedKeyStore: WrappedRecordStore {}

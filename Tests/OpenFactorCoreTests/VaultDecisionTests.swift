@@ -64,6 +64,28 @@ struct VaultDecisionTests {
         }
     }
 
+    /// **The race two engines walked out independently, and the reason this fake gained a hook.**
+    /// The existence check runs, then 600,000 rounds of PBKDF2, and only then the write. A record
+    /// arriving from iCloud inside that window was replaced by a wrap of a brand new vault key,
+    /// and every account sealed under the old one became unopenable by anybody.
+    @Test("A record arriving during the key derivation is not overwritten")
+    func recordArrivingDuringCreationIsNotOverwritten() throws {
+        let (vault, keys, wrapped) = makeVault()
+
+        // What iCloud does, at the one moment it does the most damage.
+        let arrived = Data("a wrapped key from the phone this replaced".utf8)
+        wrapped.duringWrite = { [wrapped] in
+            if wrapped.storedRecord == nil { try? wrapped.save(arrived) }
+        }
+
+        #expect(throws: Vault.VaultError.alreadyExists) {
+            try vault.create(with: "the passphrase this device just generated")
+        }
+
+        #expect(wrapped.storedRecord == arrived, "the arrived record is untouched")
+        #expect(try keys.load() == nil, "and no key was installed to go with a wrap that is gone")
+    }
+
     /// **A record refused before any derivation ran is not a passphrase problem.** Reporting it
     /// as one sends somebody to retype a passphrase they have written down correctly, against a
     /// record written by a newer version of this app.
@@ -75,6 +97,27 @@ struct VaultDecisionTests {
         try keys.discard()
 
         try wrapped.save(Data("not a wrapped key at all, by any version".utf8))
+
+        #expect(throws: Vault.VaultError.recordNotUnderstood) {
+            try vault.unlock(with: "whatever was written down")
+        }
+    }
+
+    /// The same refusal for the other reason it is decided before derivation: an iteration count
+    /// this build will not accept. Tested separately because the two arrive by different routes
+    /// through the same switch, and a review noticed only one of them had a test.
+    @Test("An iteration count out of range is also not a passphrase problem")
+    func iterationCountOutOfRangeIsNotAWrongPassphrase() throws {
+        let (vault, keys, wrapped) = makeVault()
+
+        _ = try vault.create()
+        try keys.discard()
+
+        // A well formed record whose iteration count is rewritten to something absurd. The count
+        // is four big-endian bytes at offset 36, after the magic, the salt and nothing else.
+        var record = try #require(wrapped.storedRecord)
+        record.replaceSubrange(36..<40, with: [0xFF, 0xFF, 0xFF, 0xFF])
+        try wrapped.save(record)
 
         #expect(throws: Vault.VaultError.recordNotUnderstood) {
             try vault.unlock(with: "whatever was written down")
@@ -138,7 +181,9 @@ struct VaultDecisionTests {
         let (vault, _, wrapped) = makeVault()
         wrapped.readFailure = .keychain(status: errSecInteractionNotAllowed)
 
-        #expect(throws: (any Error).self) {
+        // Not `(any Error).self`: a review pointed out that would pass if creation refused for
+        // any reason at all, including the wrong one.
+        #expect(throws: Vault.VaultError.storage(.keychain(status: errSecNotAvailable))) {
             try vault.create(with: "a passphrase somebody just generated")
         }
         #expect(wrapped.storedRecord == nil, "and wrote nothing while it could not see")

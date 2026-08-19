@@ -46,9 +46,42 @@ struct OpenFactorApp: App {
         let keys = VaultKeyStore()
         let store = SyncAwareKeychainStore(vaultKeys: keys)
         self.store = store
+
+        // **The wrapped key is created under the sync preference that is already set**, rather
+        // than always locally with a conversion expected later. Round two of gate A4's scope 1
+        // found the leftover: erase from the locked screen with sync on, create again, and the
+        // wrap is written device-only while every new account syncs, which is the original
+        // total-loss shape reached by a different tap. Nothing prompts anybody to toggle a switch
+        // that already reads "on".
+        let wrapped = WrappedKeyStore(
+            synchronizable: UserDefaults.standard.bool(forKey: PreferenceKey.syncEnabled))
+        self.wrapped = wrapped
         _gate = State(
-            initialValue: VaultGateModel(vault: Vault(keys: keys), store: store))
+            initialValue: VaultGateModel(
+                vault: Vault(keys: keys, wrapped: wrapped), store: store))
         _addSession = State(initialValue: AddAccountSession(store: store))
+    }
+
+    /// Kept so the launch reconcile below can reach it. See `reconcileWrappedKeySync`.
+    private let wrapped: WrappedKeyStore
+
+    /// Brings an already-written wrapped key into line with the sync preference.
+    ///
+    /// **A fix to a toggle governs the next toggle, not the state a device is already in.** A
+    /// phone that enabled sync before the wrapped key followed the accounts is sitting in the
+    /// exact loss shape: accounts in iCloud, the key that opens them on one device, and nothing
+    /// prompting anybody to flip a switch that already reads "on". Round two of gate A4 named it
+    /// and pointed at this commit's own precedent, `VaultKeyStore.load` repairing a key written
+    /// under the old rules, on the reasoning that the device most needing the fix is the one
+    /// already working.
+    ///
+    /// Idempotent, and quiet: `setSynchronizable` updates in place and returns whether there was
+    /// anything to move, so a device already in the right state does nothing and a device with no
+    /// vault does nothing.
+    private static func reconcileWrappedKeySync(_ wrapped: WrappedKeyStore) {
+        let shouldSync = UserDefaults.standard.bool(forKey: PreferenceKey.syncEnabled)
+        guard shouldSync else { return }
+        _ = try? wrapped.setSynchronizable(true)
     }
 
     /// The lock and the snapshot cover. See `PrivacyShield` for why they live in their
@@ -134,6 +167,7 @@ struct OpenFactorApp: App {
             // from the app switcher, or an out of memory kill, while the file is on screen.
             // For the plaintext vault that would be every secret in the clear, sitting in
             // the container with nothing ever revisiting it. Found by the security review.
+            .task { Self.reconcileWrappedKeySync(wrapped) }
             .task { ExportViewModel.discardOrphanedFiles() }
             .task { watchKeys.activate() }
             // Over whatever is on screen, because the watch may ask at any moment and the

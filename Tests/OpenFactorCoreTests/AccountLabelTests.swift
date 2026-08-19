@@ -134,4 +134,37 @@ struct AccountLabelTests {
 
         #expect(decoded.issuer?.count == 500)
     }
+
+    // MARK: - Gate A4 round two: a character bound is not a storage bound
+
+    /// **One character, a hundred kilobytes.** A grapheme cluster may carry any number of
+    /// combining marks, so the sixty four character limit let a hostile label through untouched.
+    @Test("A single grapheme built from thousands of marks is cut to the byte ceiling")
+    func oneEnormousGraphemeIsBounded() {
+        let hostile = "a" + String(repeating: "\u{0301}", count: 50_000)
+        #expect(hostile.count == 1, "the premise: Swift counts this as one character")
+        #expect(hostile.utf8.count > 100_000)
+
+        let clamped = AccountLabel.clamped(hostile)
+        #expect(clamped.utf8.count <= AccountLabel.maximumBytes)
+        #expect(!clamped.isEmpty, "and something is kept rather than the label vanishing")
+    }
+
+    /// Many characters, each individually small, adding up past the ceiling.
+    @Test("Sixty four expensive characters are cut to the byte ceiling")
+    func manyExpensiveCharactersAreBounded() {
+        let heavy = String(repeating: "e" + String(repeating: "\u{0301}", count: 40), count: 64)
+        #expect(heavy.count == 64, "within the character bound")
+        #expect(heavy.utf8.count > AccountLabel.maximumBytes)
+
+        #expect(AccountLabel.clamped(heavy).utf8.count <= AccountLabel.maximumBytes)
+    }
+
+    /// And the bound that matters most: an ordinary label is not touched by any of this.
+    @Test("Ordinary labels pass through the byte ceiling unchanged")
+    func ordinaryLabelsAreUntouched() {
+        for label in ["GitHub", "work email", "Компания", "会社のアカウント", "café ☕️"] {
+            #expect(AccountLabel.clamped(label) == label)
+        }
+    }
 }

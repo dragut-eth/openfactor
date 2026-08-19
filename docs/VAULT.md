@@ -156,9 +156,14 @@ offset  size  field
 36+n    m     secret sealed bytes
 ```
 
-**Two halves under one key, and this is not decoration.** Today `records()` sets
-`kSecReturnData` to false on every listing path, and the file states the property: listing
-accounts never decrypts a single secret. Sealing everything as one blob would end that, because
+**Two halves under one key, and this is not decoration.** Listing accounts never decrypts a
+single secret: `records()` reads each item's value, because the sealed metadata is *in* that
+value, and opens the metadata half alone.
+
+The sentence here used to say `records()` sets `kSecReturnData` to false, which was written for
+the design that preceded this one and has been false since the two halves arrived: the data is
+what carries the metadata now, so of course it is returned. Two reviewers found it in the same
+round, in this page and in the source comment that repeated it. Sealing everything as one blob would end that, because
 drawing a list would decrypt every secret into memory to render a screen that needs none of
 them. Splitting the seal preserves it: **listing decrypts the metadata half only**, and the
 secret's plaintext appears when a code is generated and at no other time.
@@ -491,7 +496,8 @@ the key that unlocks these accounts, and entering the passphrase reads the curre
 and installs over whatever is there.
 
 *The phone's two screens exist as of PR 16d.* `VaultGateView` stands between the app lock and the
-account list and renders one of three things. The list is never drawn while the key is missing:
+account list and renders one of four things, the fourth being the screen for a store that cannot
+be read at all, added when gate A4 found a read failure being reported as an empty device. The list is never drawn while the key is missing:
 to it a locked device is a shelf of unreadable rows, which is a true statement about the storage
 and a frightening and wrong one about somebody's accounts.
 
@@ -518,7 +524,10 @@ locked are indistinguishable for as long as iCloud Keychain takes to deliver the
 measured here at close to half an hour. The setup screen says what waiting looks like, offers to
 check again, and states plainly that a second vault would leave the first one's accounts
 unreadable. The state is re-read whenever the app comes forward, so a record arriving while the
-screen is open moves the device to the unlock question by itself.
+screen is open moves the device to the unlock question by itself. **Only a record does that.** A
+store that cannot be read at that moment leaves the passphrase where it is, because not knowing is
+not evidence that the displayed passphrase should be abandoned, and abandoning it silently leaves
+somebody holding a string that opens nothing.
 
 **That last sentence was true of one of the two setup screens and claimed both**, which gate A4
 found. Re-reading returned early whenever a generated passphrase was on display, so a record
@@ -526,8 +535,16 @@ arriving at exactly the moment somebody was writing one down changed nothing, an
 that followed tried to create a second vault over the first one's record. Two things were done
 rather than one: the re-read now moves away from the passphrase screen when a record has actually
 arrived, leaving it alone in every other case so that a scene becoming active cannot clear a
-passphrase somebody is mid-way through copying; and creation refuses outright when a record is
-already there, so the destructive tap cannot land even if the screens are wrong again.
+passphrase somebody is mid-way through copying; and creation refuses when a record is already
+there.
+
+**Both halves were then found insufficient in the next round, and this paragraph is what they were
+corrected to.** The re-read's first condition moved away on anything that was not `absent`, which
+included a transient read failure, so the screen could still be cleared under somebody's pen; it
+now moves only on evidence, meaning a record or a key. And creation's refusal was a check hundreds
+of milliseconds before the write, with 600,000 rounds of PBKDF2 in between: a record arriving
+inside that window was overwritten by the very save the check was supposed to prevent. Creation
+uses a write that refuses to replace anything, rather than a check that hopes nothing changes.
 
 **The setup screen says nothing about iCloud, deliberately.** Sync is off by default, so the
 first person to read that screen always has it off, and a paragraph about what iCloud carries

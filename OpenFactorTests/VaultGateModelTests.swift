@@ -93,6 +93,99 @@ struct VaultGateModelTests {
         #expect(vault.state() == .absent)
     }
 
+    // MARK: - What may take a passphrase off the screen
+
+    /// A wrapped store that can be told to fail, so the gate can be driven into the one state
+    /// whose defining property is not knowing.
+    private final class FailingStore: WrappedRecordStore, @unchecked Sendable {
+        var record: Data?
+        var readFailure: SecretStoreError?
+
+        func load() throws(SecretStoreError) -> Data? {
+            if let readFailure { throw readFailure }
+            return record
+        }
+        func save(_ record: Data) throws(SecretStoreError) { self.record = record }
+        func delete() throws(SecretStoreError) { record = nil }
+        func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool {
+            guard self.record == nil else { return false }
+            self.record = record
+            return true
+        }
+    }
+
+    private func makeGate(on store: FailingStore) -> (VaultGateModel, VaultKeyStore) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("gate-\(UUID().uuidString)")
+        let keys = VaultKeyStore(directory: { directory })
+        return (VaultGateModel(vault: Vault(keys: keys, wrapped: store)), keys)
+    }
+
+    /// **All three engines of round two found this**, and it had no test, which the same round
+    /// pointed out. A transient read failure returns `.unavailable`, and the first version of the
+    /// guard covered only `.absent`, so coming back to the app at the wrong moment replaced the
+    /// screen and discarded the only copy of the passphrase.
+    @Test("A store that cannot be read does not take the passphrase off the screen")
+    func unreadableStoreLeavesThePassphraseUp() {
+        let store = FailingStore()
+        let (gate, _) = makeGate(on: store)
+
+        gate.refresh()
+        gate.offerPassphrase()
+        guard case let .showingPassphrase(shown) = gate.stage else {
+            Issue.record("expected a passphrase to be on screen")
+            return
+        }
+
+        store.readFailure = .keychain(status: errSecInteractionNotAllowed)
+        gate.refresh()
+
+        guard case let .showingPassphrase(afterwards) = gate.stage else {
+            Issue.record("the passphrase must stay on screen when nothing is known")
+            return
+        }
+        #expect(afterwards == shown, "and it must be the same one")
+    }
+
+    /// The direction that must still work: a record has arrived, so the displayed passphrase is
+    /// not the one that opens this vault and the screen has to change.
+    @Test("A record arriving does take the passphrase off the screen")
+    func arrivingRecordMovesToUnlock() {
+        let store = FailingStore()
+        let (gate, _) = makeGate(on: store)
+
+        gate.refresh()
+        gate.offerPassphrase()
+
+        store.record = Data("a wrapped key from another device".utf8)
+        gate.refresh()
+
+        #expect(gate.stage == .locked, "the passphrase on screen opens nothing, and this says so")
+    }
+
+    /// And the ordinary case, which is somebody switching apps to write the passphrase down.
+    @Test("Coming back to a still-empty device leaves the passphrase alone")
+    func stillAbsentLeavesThePassphrase() {
+        let store = FailingStore()
+        let (gate, _) = makeGate(on: store)
+
+        gate.refresh()
+        gate.offerPassphrase()
+        guard case let .showingPassphrase(shown) = gate.stage else {
+            Issue.record("expected a passphrase to be on screen")
+            return
+        }
+
+        gate.refresh()
+        gate.refresh()
+
+        guard case let .showingPassphrase(afterwards) = gate.stage else {
+            Issue.record("the passphrase must survive an ordinary return to the app")
+            return
+        }
+        #expect(afterwards == shown)
+    }
+
     @Test("Continuing without the acknowledgement creates nothing")
     func acknowledgementIsRequired() async throws {
         let (gate, vault, _, wrapped) = makeGate()

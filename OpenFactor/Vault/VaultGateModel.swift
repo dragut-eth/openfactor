@@ -64,7 +64,7 @@ final class VaultGateModel {
     private let vault: Vault
 
     /// Read to tell a key that works from one that merely exists. Optional so tests that are
-    /// about the three states do not have to build a store to talk about them.
+    /// about the vault's states do not have to build a store to talk about them.
     private let store: (any SecretStore)?
 
     /// Set once a key has been installed and the records still will not open, which means the
@@ -80,7 +80,7 @@ final class VaultGateModel {
 
     // MARK: - Reading the state
 
-    /// Re-reads which of the three states this device is in.
+    /// Re-reads which state this device is in.
     ///
     /// Deliberately does nothing while a passphrase is on screen. That stage exists only in
     /// memory and the device is still genuinely `absent`, so refreshing would throw away a
@@ -90,17 +90,21 @@ final class VaultGateModel {
 
         let state = vault.state()
 
-        // **A passphrase on screen no longer blinds this.** The early return used to cover
-        // every state, so a wrapped record arriving from iCloud while a generated passphrase was
-        // displayed changed nothing, and the tap that followed tried to create a vault over it.
-        // Nothing is lost by moving away: at this stage the passphrase has been generated and
-        // not used, and no vault exists to abandon. A review found it, and the guard that would
-        // have made it harmless, `create(with:)` refusing an existing record, was missing too.
+        // **A passphrase on screen is left alone unless a record has actually arrived.** The
+        // early return used to cover every state, so a wrapped record arriving from iCloud while
+        // a generated passphrase was displayed changed nothing, and the tap that followed tried
+        // to create a vault over it.
         //
-        // Everything else still leaves the screen alone, which is what the early return was for:
-        // a scene becoming active must not clear a passphrase somebody is in the middle of
-        // writing down.
-        if case .showingPassphrase = stage, state == .absent { return }
+        // The first correction was `state == .absent`, and all three engines of round two found
+        // the same hole in it: a transient read failure returns `.unavailable`, which fell
+        // through and replaced the screen, discarding the only copy of a passphrase somebody was
+        // in the middle of writing down. Nothing is lost from the vault, because nothing has been
+        // written yet, but the person is left holding a string that will never open anything.
+        //
+        // So the rule is stated the other way round, which is also how the documentation states
+        // it: leave the screen only on evidence that the displayed passphrase must be abandoned.
+        // A record is here, or a key is. Not knowing is not evidence.
+        if case .showingPassphrase = stage, state != .locked, state != .open { return }
 
         switch state {
         case .open: stage = keyOpensNothing ? .locked : .open
