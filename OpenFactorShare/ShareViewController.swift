@@ -107,42 +107,29 @@ final class ShareViewController: UIViewController {
                     continue
                 }
 
-                // **Measured before it is copied, not after.** Asking for a file
-                // representation was the right move and the check still sat on the wrong side of
-                // the copy, which three reviewers said in three ways: a multi-gigabyte share was
-                // still duplicated in full into this extension's temporary directory before
-                // anything looked at its size. The system's own file is right there and its size
-                // is readable.
+                // **Read through the bound, and never copied at all.** The previous version
+                // measured the system's file, copied it to a temporary name, and then read the
+                // copy, which is a size lookup and a separate read with a copy in between. One
+                // open and one bounded read removes both the gap and the copy: this is the
+                // primitive `SharedInbox.take` uses, and the reason it is in the core.
                 //
-                // The copy happens inside the callback because the system deletes its file as
-                // soon as the callback returns, so a URL handed outward would already be dead.
-                let url: URL? = await withCheckedContinuation { continuation in
+                // Bounded at the image policy rather than the archive ceiling, because what
+                // arrives here is an image and cannot be an archive. Two reviews found the looser
+                // number letting a ten megabyte share be materialised before the check that
+                // refuses it.
+                let data: Data? = await withCheckedContinuation { continuation in
                     provider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) {
                         url, _ in
+                        // Inside the callback deliberately: the system deletes its file as soon
+                        // as this returns, so a URL handed outward would already be dead.
                         guard let url else { return continuation.resume(returning: nil) }
-
-                        // Fails closed: a size that cannot be read is a file this extension does
-                        // not copy. A review found every one of these preflights written as
-                        // "check it if a size happens to be available", which is the shape that
-                        // makes a bound optional.
-                        guard
-                            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize,
-                            ImportLimits.isWorthLoading(fileSize: size)
-                        else {
-                            return continuation.resume(returning: nil)
-                        }
-
-                        let copy = FileManager.default.temporaryDirectory
-                            .appendingPathComponent(UUID().uuidString)
-                        try? FileManager.default.copyItem(at: url, to: copy)
-                        continuation.resume(returning: copy)
+                        continuation.resume(
+                            returning: try? BoundedFile.read(
+                                url, limit: ImportLimits.policyBytes))
                     }
                 }
 
-                guard let url else { continue }
-                defer { try? FileManager.default.removeItem(at: url) }
-
-                if let data = try? Data(contentsOf: url) { return data }
+                if let data { return data }
             }
         }
 

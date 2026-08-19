@@ -91,25 +91,23 @@ final class ImportViewModel {
         let needsRelease = url.startAccessingSecurityScopedResource()
         defer { if needsRelease { url.stopAccessingSecurityScopedResource() } }
 
-        // **Asked of the file system before the copy.** The bound used to be the first line of
-        // the next method, which is after `Data(contentsOf:)` has already allocated whatever the
-        // URL names. A four hundred megabyte attachment opened into this app was a four hundred
-        // megabyte allocation, and on a phone that is a termination rather than a message. A
-        // review put it plainly: the comment said bounded before anything parses it, which was
-        // true about parsing and false about the thing that actually hurts.
-        // **Fails closed.** This was written as "refuse it if a size happens to be available",
-        // and a review pointed out that a bound which only applies when the file system feels
-        // like answering is not a bound. A file whose size cannot be read is refused, which is
-        // recoverable for the person holding it and is not an unbounded allocation.
-        guard
-            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize,
-            ImportLimits.isWorthLoading(fileSize: size)
-        else {
+        // **One open and one bounded read**, rather than a size lookup followed by a separate
+        // load. The lookup version was already an improvement on measuring after the allocation,
+        // and a review took it apart again: whoever supplied the file can change it between the
+        // two calls, so the bound describes a file that no longer exists. Two other engines read
+        // the same lines and passed them, on the reasoning that only the shared container faces a
+        // hostile writer, and that disagreement is recorded rather than settled. `BoundedFile`
+        // removes the need to settle it.
+        let data: Data
+        do {
+            data = try BoundedFile.read(url, limit: ImportLimits.largestAcceptableBytes)
+        } catch .tooLarge {
             stage = .failed("That file is too large to be an authenticator export.")
             return
-        }
-
-        guard let data = try? Data(contentsOf: url) else {
+        } catch {
+            // **Not "too large".** The refusal used to reuse that sentence for a file it could not
+            // measure, which claims something it did not know. A review pointed out that this
+            // project's own rule about untrustworthy messages argues against it.
             stage = .failed("That file could not be opened.")
             return
         }

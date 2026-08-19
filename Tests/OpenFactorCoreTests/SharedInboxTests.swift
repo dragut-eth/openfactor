@@ -271,7 +271,7 @@ struct SharedInboxCollectionTests {
         let id = try inbox.write(Data("small".utf8))
         let url = directory.appendingPathComponent(SharedInbox.directoryName)
             .appendingPathComponent(id.uuidString)
-        try Data(repeating: 0, count: ImportLimits.largestAcceptableBytes + 1).write(to: url)
+        try Data(repeating: 0, count: ImportLimits.policyBytes + 1).write(to: url)
 
         #expect(throws: SharedInbox.InboxError.tooLarge) { try inbox.take(id) }
         #expect(inbox.pending().isEmpty)
@@ -303,9 +303,42 @@ struct SharedInboxCollectionTests {
         let id = try inbox.write(Data("small enough".utf8))
         let url = directory.appendingPathComponent(SharedInbox.directoryName)
             .appendingPathComponent(id.uuidString)
-        try Data(repeating: 0, count: ImportLimits.largestAcceptableBytes + 1).write(to: url)
+        try Data(repeating: 0, count: ImportLimits.policyBytes + 1).write(to: url)
 
         #expect(throws: SharedInbox.InboxError.tooLarge) { try inbox.take(id) }
         #expect(inbox.pending().isEmpty, "and it is off the device rather than left for next time")
+    }
+
+    /// **The hang, at the call site that faces a container another process can write.** A sibling
+    /// can plant a named pipe under a plausible name; opening one blocks until a writer appears,
+    /// and this is called on the main actor with the removal in a `defer` that is never reached.
+    @Test("A named pipe in the inbox is refused rather than waited on", .timeLimit(.minutes(1)))
+    func aPipeIsNotWaitedOn() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        _ = try inbox.write(Data("so the directory exists".utf8))
+
+        let planted = UUID()
+        let url = directory.appendingPathComponent(SharedInbox.directoryName)
+            .appendingPathComponent(planted.uuidString)
+        #expect(url.withUnsafeFileSystemRepresentation { mkfifo($0, 0o600) } == 0, "the premise")
+
+        #expect(throws: (any Error).self) { try inbox.take(planted) }
+    }
+
+    /// The inbox carries images, so it is bounded by the image policy rather than by the archive
+    /// ceiling, which was four megabytes of slack nothing in this path can use.
+    @Test("The inbox is bounded by the image policy")
+    func boundedByTheImagePolicy() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = try inbox.write(Data("small".utf8))
+        let url = directory.appendingPathComponent(SharedInbox.directoryName)
+            .appendingPathComponent(id.uuidString)
+        try Data(repeating: 0, count: ImportLimits.policyBytes + 1).write(to: url)
+
+        #expect(throws: SharedInbox.InboxError.tooLarge) { try inbox.take(id) }
     }
 }

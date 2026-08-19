@@ -228,25 +228,23 @@ public struct SharedInbox: Sendable {
         let url = try directory().appendingPathComponent(id.uuidString)
         defer { try? FileManager.default.removeItem(at: url) }
 
-        // **One open, one bounded read, and no second lookup for anything to change between.**
-        // The first bound asked the file system for a size and then called a separate read, which
-        // a review took apart twice over: the check was skipped entirely when no size came back,
-        // and even when it did, a writer sharing this container could replace the file between
-        // the two calls. Reading through a handle removes both, because the bytes that arrive are
-        // the bytes of the file that was opened.
+        // **One open, one bounded read, through the shared primitive.** This file had the right
+        // shape first and it still had a hole: it assumed the name identified a regular file. A
+        // sibling with access to this container can create a named pipe, and opening one blocks
+        // until a writer appears, on the main actor, with the removal below never reached.
+        // `BoundedFile` refuses anything that is not a regular file before it reads a byte.
         //
-        // One byte past the limit is enough to refuse: the item is removed either way, so an
-        // oversized one leaves the device rather than waiting for the next attempt.
-        guard let handle = try? FileHandle(forReadingFrom: url) else {
+        // Bounded at the image policy, since what the extension writes here is an image. The
+        // archive ceiling was four megabytes of slack nothing in this path can use.
+        do {
+            return try BoundedFile.read(url, limit: ImportLimits.policyBytes)
+        } catch .missing {
+            throw InboxError.notFound
+        } catch .tooLarge {
+            throw InboxError.tooLarge
+        } catch {
             throw InboxError.notFound
         }
-        defer { try? handle.close() }
-
-        let limit = ImportLimits.largestAcceptableBytes
-        guard let data = try handle.read(upToCount: limit + 1) else { throw InboxError.notFound }
-        guard data.count <= limit else { throw InboxError.tooLarge }
-
-        return data
     }
 
     /// Removes everything, whatever its age.

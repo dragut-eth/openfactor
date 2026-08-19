@@ -77,15 +77,26 @@ public struct VaultKeyStore: Sendable {
     /// report a fault. Only a file that exists and is the wrong size is a fault.
     public func load() throws -> SymmetricKey? {
         let url = try fileURL()
-        // Measured before it is read, which matters less here than anywhere else and is done for
-        // consistency: this file is written by this app and lives in its private container, so
-        // nothing hostile is expected to put a gigabyte at that path. The class sweep that
-        // followed gate A4's import findings covered every whole-file read in the project, and
-        // leaving one of them to be the exception is how the class comes back.
-        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
-        if let size, size > Self.keySize { throw KeyStoreError.damaged }
+        // **The same primitive as every other read in this project**, which matters less here
+        // than anywhere else and is done for consistency: this file is written by this app into
+        // its own container, so nothing hostile is expected at that path. A review pointed out
+        // that the previous version asked for a size and then read separately, which is skippable
+        // when the file system says nothing and racy when it does. Leaving one call site as the
+        // exception is how the class comes back.
+        let data: Data
+        do {
+            data = try BoundedFile.read(url, limit: Self.keySize)
+        } catch .missing {
+            // **Absent is not damaged.** A device with ciphertext and no key is the ordinary state
+            // of a fresh install, and the interface must offer the passphrase rather than report a
+            // fault.
+            return nil
+        } catch .tooLarge, .notARegularFile {
+            throw KeyStoreError.damaged
+        } catch {
+            return nil
+        }
 
-        guard let data = FileManager.default.contents(atPath: url.path) else { return nil }
         guard data.count == Self.keySize else { throw KeyStoreError.damaged }
 
         repairProtection(of: url)
