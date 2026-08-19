@@ -33,6 +33,28 @@ production can no longer create, and a refusal reason that was wrong. Each was u
 rule *and* given its inverse, so the range cannot quietly be narrowed again. Both guards were then
 proved by removing them and watching the suite go red.
 
+**The extraction is done, and it was settled before scope 3 rather than after.** Three engines
+across three rounds of scope 2 said the defect surface was pooling where the tests cannot reach,
+and closing scope 1 hit the same wall from the other side when its suite turned out never to have
+run. Two new core types answer it.
+
+`ProvisioningDesk` holds the phone's rules: which request is being asked about, that the one on
+screen is never replaced, what a second one is told, whether a tap still releases, what a refusal
+names, and whether a deadline that fires belongs to the request still on the desk. **Five defects
+were found in those rules by people reading `WatchKeyProvider`, and all five now have a test.**
+
+`WatchInbox` holds the watch's reading of a message and the rule for believing a refusal, where
+absent, unreadable and foreign are three cases with three answers and merging any two has been a
+defect once already.
+
+The app targets keep the session, the alert, the key file, the sending and the drawing, and are
+about two hundred lines smaller between them. Nineteen tests came with the two types, and each
+rule was reverted in turn to watch its own test fail.
+
+**Round four of scope 2 is ready to send**, and it asks a fifth question the earlier rounds did
+not: whether the behaviour survived the move, and whether the seam is in the right place. A
+refactor can be faithful and still be the wrong shape.
+
 **Scope 1 is closed, and closing it found something worse than any of its findings.** The
 `Vault lifecycle` suite is skipped on the machine that runs the suite: the package's test binary
 is unsigned, so every Keychain write returns `errSecMissingEntitlement`. It was found the honest
