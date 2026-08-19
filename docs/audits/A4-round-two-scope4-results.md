@@ -129,3 +129,70 @@ Both were blind in precisely the way the fix was blind.
 item claiming the future, that a back-dated item sweeping sooner "is the safe direction", and asked
 for that to be confirmed rather than assumed. The safe direction was never the question: the
 dangerous direction was forward, and the clamp turned it into a permanent present.
+
+---
+
+# What was done
+
+**Review commit for round three: `83e5cdd`.** All twelve open items are fixed.
+
+**S4-8, the rejected fix.** A stamp after now is refused rather than clamped: it is treated as
+`.distantPast`, which sorts it last and makes it immediately sweepable. The test that replaced the
+old one asserts the two properties the clamp version passed while failing, that a genuine share is
+the one offered and that the plant is gone after a sweep. Reverting to the clamp makes it red.
+
+**S4-13.** The sweep runs on every activation, not once per process.
+
+**S4-14.** `staleAfter` is `freshness`. One idea, one constant, and a test that fails if they
+drift apart.
+
+**S4-15.** `ArrivalQueue` is a value type in the core with five tests. The first arrival keeps the
+screen, one more is held behind it, and a third is refused. Both of this item's previous versions
+were wrong and neither had a test, because the rule lived in a closure in the scene body.
+
+**S4-17 and S4-18, the fail-open pair.** The backup exclusion is read back and the write refused if
+it did not take. `take` opens once and reads a bounded amount through the handle, so there is no
+size lookup to skip and no second call for a writer to race.
+
+**S4-12.** The reveal control is disabled while the screen is captured and the field stays secure.
+Disabled rather than hidden, so the reason is visible.
+
+**S4-19.** The extension measures the system's file inside the callback and fails closed, before
+copying anything.
+
+**S4-20.** A name this app did not write is swept on sight.
+
+**S4-21.** The CI check fails on silence: both build configurations must carry the generation
+switch set to NO, so deleting the lines is a failure rather than a pass. The pattern was also
+wrong, missing the quotes the project file uses, and would have failed for the wrong reason.
+
+**S4-22.** The migration crash has tests for its bound in both directions. Removing the guard makes
+them **trap** rather than fail, which is the original crash reproducing inside the suite.
+
+**S4-16, the six claims.** The extension passes nothing to the app; an item exists until it is
+confirmed or swept rather than for seconds; the sweep is not the whole directory at every launch;
+the size is known before the copy, which is now true rather than corrected; `&+` is described as
+the wrapping add it is; and the clipboard's code lifetime is read by the path that needs it instead
+of being pinned by a test and used by nothing.
+
+## For round three
+
+The three questions, and the fourth about convergence. Where to look:
+
+**`take` was rewritten rather than patched**, and it is the path that reads whatever a shared
+container holds. It now opens a handle, reads one byte past the limit, and refuses. Check the
+refusal, the empty file, and the file that disappears between opening and reading.
+
+**The sweep now runs on every activation and removes unknown names.** It is the only code in this
+project that deletes files it did not write, in a directory another process can write to.
+
+**`ArrivalQueue` holds a bound of two with a deliberate refusal beyond it.** Ask whether dropping
+the third is better than the alternative, and whether the binding that promotes the next one can
+lose an arrival on a redraw.
+
+**The exclusion now throws**, so a share can fail where it previously succeeded quietly. That is
+the intended trade and it is worth saying whether the failure is the right one.
+
+**S4-8 was rejected once already.** The question is not whether the new rule is different but
+whether it is right: is there a legitimate writer that stamps a file in the future, and does
+refusing it lose anything real?
