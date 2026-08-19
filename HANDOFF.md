@@ -5,6 +5,77 @@ first when picking the work back up.
 
 ## Where things stand
 
+**Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). Work is on
+`a4-fixes`, pushed. The phone and watch carry a build from `83e5cdd`.
+
+## Gate A4: where it stands, and what tomorrow is for
+
+**The goal, decided 2026-08-18: no highs and no mediums left open, and every cheap low fixed.**
+Anything left standing gets written down with the reason. `docs/ROADMAP.md` carries the same
+condition as the gate's exit criterion, along with the rule that rounds continue until one comes
+back with nothing above low and no fix called incomplete.
+
+**All 44 of round one's findings are fixed and accepted.** So is every high in the gate, and every
+medium that round one produced. What remains is what the later rounds found while reading the
+fixes.
+
+**Twenty five items are open, six of them medium**, and they are numbered so they can be discussed
+one at a time. Each scope's results page carries the full text of every engine's return.
+
+| Scope | Rounds | Open | Mediums | Page |
+| --- | --- | --- | --- | --- |
+| 1, the vault | 3 | 4 | S1-12, S1-13 | `A4-round-three-scope1-results.md` |
+| 2, the Watch | 4 | 6 | none | `A4-round-four-scope2-results.md` |
+| 3, the parsers | 2 | 6 | S3-5, S3-12, S3-14 | `A4-round-two-scope3-results.md` |
+| 4, the boundaries | 3 | 9 | S4-23 | `A4-round-three-scope4-results.md` |
+
+The six mediums, shortest description each:
+
+- **S1-12** two wraps can coexist after creation, and unlock picks one unspecified. Another count
+  will not settle it; conflict detection after creation would.
+- **S1-13** the launch reconcile abandons a failure in silence. Contested: one engine rates it
+  medium, one accepts it, one calls it weaker than the key file's repair-on-read.
+- **S3-5** the writer bounds the container while the reader bounds the plaintext, so this app can
+  still write an archive it will not read back. Rejected by all three engines as a fix.
+- **S3-12** manual entry accepts what the format forbids, and the export failure that results
+  blames the past and advises re-adding through the same screen.
+- **S3-14** the import size preflight fails open when the file system gives no size.
+- **S4-23** `take` can block the main actor on a named pipe a sibling planted, and the deferred
+  removal never runs.
+
+**The four documentation items are done.** Every comment and sentence the reviews found claiming
+something the code does not do has been corrected, including a broken splice left in
+`SharedInbox`'s front page by an earlier edit of mine. Two sentences were deliberately left wrong,
+because they only become true when the code behind them is fixed: `BackupError`'s message about an
+account "saved before OpenFactor checked for this", which waits on S3-12, and `SECURITY.md`'s claim
+that the phone validates before reading the key, which waits on S2-13.
+
+## What the gate has cost and returned
+
+Round one found 44 items. Reviewing those fixes produced roughly 40 more; reviewing those produced
+fewer again. **Four rounds rejected a fix outright, three of them unanimously, and every one of
+those fixes had a passing test written by whoever wrote the fix.** The mtime clamp passed a test
+that could not see the attack. The creation check passed a test whose fake never changed. The
+consent timer passes a test that asks at 121 seconds when the timer asks at 120.
+
+That is the finding about the method, and it drove the working changes that stuck: tests written
+before fixes, each fix reverted to watch its own test go red, decisions extracted out of app
+targets no test can reach, and a class sweep rather than an instance fix.
+
+**Three structural extractions came out of it**, all following the pattern `WatchProvisioningFlow`
+and `AppLockPresentation` set: `ProvisioningDesk` and `WatchInbox` for the watch exchange,
+`WrappedRecordStore` for the vault, and `ImportLimits`, `JSONSniff` and `ArrivalQueue` for the
+boundaries. `VaultTests` was found to have never run on the machine that runs the suite, which is
+what `VaultDecisionTests` exists to answer.
+
+## Still open beyond the gate
+
+- The app ships to iPad and has never been run on one.
+- The Watch exchange has been rewritten four times and last met a wrist before any of it.
+- One engine proposes a CI check tying the number in `SECURITY.md` to the constant in the code,
+  because the inbox prose has trailed the inbox code by exactly one fix for three rounds running.
+
+
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is
 complete on `pr-15b-app-lock`, not pushed, and ready to merge on Xavier's word.
 

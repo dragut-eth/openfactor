@@ -40,7 +40,7 @@ They are gates, not suggestions. Each one is marked inline in the plan below, an
 | **A1** | PR 4 | The whole of `OpenFactorCore`: Base32, HOTP, TOTP, URI parsing, Keychain storage | Independent model review, plus a public call for eyes |
 | **A2** | PR 13 | iCloud Keychain sync, and the sync section of the threat model | Independent model review. **Done**, see `docs/audits/A2.md` |
 | **A3** | PR 16 | The export format and its cryptography, before any user has a backup in it | Independent model review. **Done**, four passes: three on the document before the code, in `docs/audits/A3.md` and `A3-grok.md`, then one on the implementation, in `A3-implementation.md`. Not professionally reviewed |
-| **A4** | PR 17 | The complete threat model against the finished app | Cold review by three vendors' models, two rounds, published in full. Not professionally reviewed |
+| **A4** | PR 17 | The complete threat model against the finished app | Cold review by three vendors' models, run until a round returns nothing above low, published in full. Not professionally reviewed |
 | **A5** | Before each release | Diff since the last audited tag | Independent model review, escalating to professional if the diff touches secrets |
 
 ### Why these five points
@@ -747,6 +747,24 @@ The same three engines, the same scopes, now told exactly what changed and why. 
 round that catches the two things a single pass cannot: a fix that does not actually address the
 finding, and a fix that introduced something new. A model that accepts its own finding as
 resolved without checking is itself a finding about the method.
+
+##### When the gate is met
+
+**Rounds run until one comes back with nothing above low and no fix called incomplete.** That is
+the exit condition, and it was written down after four rounds had already run without one, which
+is why it is stated rather than assumed: reviewers always find something, so "iterate until
+everyone is happy" has no end.
+
+Every high and every medium is fixed and accepted by the engines that filed it. Lows are fixed
+where they are cheap, and any left standing are listed with the reason, because a low nobody
+wrote down is a low nobody decided about.
+
+**What the rounds actually cost, recorded because the number is the argument.** Round one found
+44 items across four scopes. Reviewing the fixes for those 44 produced roughly 40 more, and
+reviewing *those* produced fewer again, each round smaller and less severe than the one before.
+Four of the rounds rejected a fix outright, three of them unanimously, and in every one of those
+cases the fix had a passing test written by whoever wrote the fix. **That is the finding about
+the method, and it is worth more than any individual defect the gate produced.**
 
 ##### Publication
 
