@@ -84,7 +84,41 @@ data since the metadata moved into it, so the `kSecReturnData` sentence was fals
 nothing is cleared on a conversion that does not exist; and the vault has four states, which the
 page, the header and two comments still called three.
 
-**Review commit for round three: `71d3ee6`.**
+**Round three reads the tip of `a4-fixes`**, which is `bb69702` plus this file's own later
+commits. Everything above was fixed; what to attack is below.
+
+## For round three
+
+Four questions, the fourth being round three's own.
+
+1. **Does each change address the finding it claims to?** Round two answered no twice for round
+   one's fixes, both times because a check sat too far from the thing it was checking. Look for
+   the same shape again.
+
+2. **Did any change introduce something new?** Creation now takes a different write path from
+   every other caller, the label clamp has two stages, and the app reconciles a Keychain item at
+   launch.
+
+3. **Does any comment or document now claim something the code does not do?** Round two found five
+   surviving false claims after a pass that said it had removed them all. Assume there are more.
+
+4. **Is this converging?** Say plainly whether the defect surface is shrinking. Round two of this
+   scope found a high-severity defect in a fix that had a test, where the test could not see the
+   defect it was written for. That is the failure mode to weigh.
+
+**Where to look hardest.** `addIfAbsent` narrows a race rather than eliminating it, and says so:
+the Keychain add is atomic against a same-flag duplicate and not against an opposite-flag twin,
+which is why it counts afterwards and undoes its own write. That is the least satisfying thing in
+this batch.
+
+`AccountLabel.clamped` has a second stage that keeps unicode scalars when a single grapheme
+exceeds the whole budget. What it renders as is deliberately not considered.
+
+The launch reconcile writes to the Keychain on every cold start when sync is on. It is claimed to
+be idempotent and quiet.
+
+And `VaultGateModel.refresh` has now been changed twice in two rounds, both times for the same
+screen, which is the pattern that preceded every other repeat finding in this gate.
 
 ---
 
