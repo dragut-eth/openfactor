@@ -134,8 +134,9 @@ took outside reviewers to apply it here.
 
 # What was done
 
-**Review commit for round three: `658051f`.** All six open items are fixed, and one needed
-nothing.
+**The code under review is `fc844aa`.** All six open items are fixed, and one needed nothing. The
+tip of `a4-fixes` differs from it only in this file, which is where the account you are reading
+lives.
 
 **S3-5, the fix all three rejected.** The plaintext is bounded before sealing. The rule had no seam
 a test could reach without building eight mebibytes of accounts, **which is why the first attempt
