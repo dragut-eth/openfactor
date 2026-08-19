@@ -9,7 +9,8 @@ were.
 **This round reviews the answer to that.** It is the only change since `71e88c3` other than round
 three's own fixes.
 
-**Review commit `875d1be`.**  Round three read `71e88c3`, round two `350375b`, round one `74fe841`.
+**The code under review is the tip of `a4-fixes`.** Round three read `71e88c3`, round two
+`350375b`, round one `74fe841`.
 
 ## What moved
 
@@ -79,3 +80,21 @@ take it.
 **Nothing in the two app files was covered by a test before this change, and nothing is now
 either.** What changed is how little is left in them. If something important is still there, this
 round is where it gets caught.
+
+## Two files in this scope moved after the extraction, and neither came from this scope
+
+Both are named here rather than left to be discovered, because a reviewer finding an unexplained
+change has to work out whether it belongs to the round.
+
+**`VaultKeyStore.load` gained a size check before it reads.** That came from a class sweep run
+while closing scopes 3 and 4, which went through every whole-file read in the project looking for
+the mistake those scopes kept producing: a bound applied after the allocation it claims to prevent.
+This file was the last one and the least dangerous, since it reads a file this app writes into its
+own container. Scope 1's round three filed a residual against it, that the check is skipped when
+the file system gives no size and is separate from the read.
+
+**`OpenFactorApp` gained an inbox sweep on activation, an arrival queue, and a wrapped-key
+reconcile at launch.** All three are scope 4 and scope 1 work landing in a file this scope also
+reads, because it is where the watch provider is wired. The provisioning alert, the routing, and
+`PrivacyShield.apply` are untouched. If any of that has disturbed the ordering this scope depends
+on, that is a finding worth more than anything else in this round.
