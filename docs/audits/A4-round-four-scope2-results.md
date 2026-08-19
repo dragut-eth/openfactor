@@ -121,3 +121,54 @@ which is the first half. It also called a fix inert, which fails the second. Sco
 pass, and the residue all three describe is small enough to enumerate: unify the three refusal call
 sites, make the timer actually expire, run the first reply through `WatchInbox`, decide whether the
 asking cadence follows the messages into the core, and add the two one-line tests.
+
+---
+
+# What was done
+
+**The code under review is `9304d6c`.** All seven are fixed.
+
+**S2-12, the timer that expired nothing.** The window is compared as a duration rather than through
+`age`'s whole seconds. The new test asks at the instant `Task.sleep(for: .seconds(120))` actually
+wakes, which is the moment the old test avoided by asking a second later. Both sides of the
+boundary are pinned to the millisecond.
+
+**S2-13.** `Conditions.hasVault` is a closure. The desk asks it only after the request has parsed
+and the app is known to be frontmost, and two tests record whether it was asked at all rather than
+what it returned.
+
+**S2-14 and S2-15, which were one rule missing from three call sites.** There is one `refuse`
+method now. A refusal this phone cannot name is not sent, so the timer-versus-tap race can no
+longer emit the unbound decline the watch honours as coming from an older build. And a phone that
+cannot read its key refuses rather than going silent, which is what the expired path three lines
+away already did.
+
+**S2-16.** The direct reply goes through `WatchInbox.classify`, so the wire vocabulary has one
+reader. Anything that is not an answer is treated as a refusal, by the same rule that governs an
+answer this build cannot name.
+
+**S2-17.** The claim is gone and the comment lists what actually stayed in the app targets: the
+condition that arms the timer, and the watch's asking cadence. **Moving those was considered and
+not done**, and the reason is stated rather than implied: neither produced a finding in this gate.
+
+**S2-18.** Both rules pinned.
+
+Each fix was reverted individually and its test confirmed red.
+
+## For round five
+
+This is the round where the scope can meet the gate's exit condition: nothing above low, and no fix
+called incomplete. Four questions.
+
+**The timer is the third attempt at the same deadline.** No window at all, then a window checked
+only on a tap, then a timer that woke too early to fire. Ask whether the arithmetic is right at
+every boundary rather than at the two this batch tested.
+
+**`hasVault` is now a closure held in a value type.** It is called at most once and only after two
+guards. Check that it cannot be called twice, and that nothing captured in it outlives the request.
+
+**One `refuse` method serves three callers.** That is the consolidation two rounds asked for, and
+consolidation is how four entry points become wrong together.
+
+**The watch's reply path changed reader.** A reply that is not an answer is now treated as a
+refusal. Check that no phone this build can talk to sends something that lands there wrongly.
