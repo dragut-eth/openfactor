@@ -289,7 +289,13 @@ public enum WatchProvisioning {
         /// close. Round two of gate A4 found it in all three reviews.
         let validatedAt: ContinuousClock.Instant
 
-        /// How long this request has been waiting for an answer, in seconds, and never negative.
+        /// How long this request has been waiting for an answer, in seconds.
+        ///
+        /// Never negative under the default argument, which is the only way the app calls it: a
+        /// clock that cannot go backwards cannot produce one. A test that hands it an earlier
+        /// instant does get a negative, on purpose, because that is how the wall-clock failure is
+        /// pinned. The first version of this sentence said "never negative" flatly and its own
+        /// test contradicted it.
         /// `validatedAt` stays internal so the app cannot compare it against a `Date` of its
         /// own, which is the mistake this replaced. The only thing outside the package can ask
         /// for is an elapsed time that has already been measured correctly.

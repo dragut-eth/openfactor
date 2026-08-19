@@ -180,11 +180,25 @@ final class WatchVaultModel: NSObject {
         let answer = status.flatMap(WatchProvisioning.Answer.init(rawValue:))
         flow.phoneAnswered(answer, token: token)
 
-        // Anything but "asking" ends this attempt, so the key it holds is of no further use.
-        if answer != .asking {
-            attempt = nil
-            self.token = nil
-        }
+        releaseAttemptIfFinished()
+    }
+
+    /// Drops the attempt's private key exactly when the flow says the attempt is over.
+    ///
+    /// **This used to be a second opinion, and it was wrong within a day of being written.** The
+    /// rule here read `if answer != .asking`, which was true of the four answers that existed
+    /// when it was written. `.busy` made a fifth, non-terminal one, `WatchProvisioningFlow` was
+    /// taught to keep the attempt for it, and this line was not: the flow held an attempt the
+    /// model had already destroyed. Two tests asserted the surviving attempt, both passed,
+    /// because both test the flow and nothing can test this file.
+    ///
+    /// So it is no longer a rule. The flow owns whether an attempt is outstanding, and this asks
+    /// it rather than re-deriving it from the answer. A sixth answer cannot split the two apart
+    /// again, because there is only one definition left.
+    private func releaseAttemptIfFinished() {
+        guard !flow.isAsking else { return }
+        attempt = nil
+        token = nil
     }
 
     /// The second message, carrying the sealed key or a refusal.
@@ -263,9 +277,11 @@ final class WatchVaultModel: NSObject {
                 if let attempt, !attempt.answers(declined) { return }
             }
 
-            attempt = nil
-            token = nil
+            // The flow first, then release what it no longer needs. The old order cleared the
+            // attempt before asking, which is how the answer and the holding of the attempt came
+            // to be decided in two places.
             flow.phoneDeclined()
+            releaseAttemptIfFinished()
         }
     }
 }

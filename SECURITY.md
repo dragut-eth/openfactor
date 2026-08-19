@@ -122,6 +122,12 @@ receive them.
 The backup exclusion and protection attributes have been verified on a real device. Their
 behavior through a restore and Quick Start has not been measured and is not claimed.
 
+**That verification predates the repair described above and did not cover it.** The exclusion half
+of the repair is verified by test; the protection-class half cannot be observed on the machine the
+tests run on, because macOS has no data protection, so on that half the claim rests on reasoning
+rather than measurement. The check that would settle it is reading the class and the bytes back on
+a Watch that entered this build holding a key written under the old rules.
+
 ### Attacker with your unlocked device
 
 **Implemented in PR 15 and extended in PR 17.** Three defenses exist, two always on and one

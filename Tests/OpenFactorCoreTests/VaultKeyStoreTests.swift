@@ -209,6 +209,33 @@ struct VaultKeyStoreTests {
             "and reading it took it out of them")
     }
 
+    /// **The half of the write-window fix that exists because `defer` does not run after a kill.**
+    /// A process killed between staging a key and replacing with it leaves that file behind. It is
+    /// already excluded, because the directory it is in was excluded before it existed, so it is
+    /// not a backup exposure. It is still a raw vault key sitting in the container, and nothing
+    /// exercised the sweep that removes it until round three asked for this.
+    @Test("Installing sweeps a pending key a previous run left behind")
+    func installSweepsOrphanedStagingFiles() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        _ = try store.create()
+
+        let staging = dir.appendingPathComponent("PendingKeys", isDirectory: true)
+        let orphan = staging.appendingPathComponent(UUID().uuidString)
+        try Data(repeating: 9, count: 32).write(to: orphan)
+        #expect(FileManager.default.fileExists(atPath: orphan.path), "the premise: a key was left")
+
+        _ = try store.create()
+
+        #expect(
+            !FileManager.default.fileExists(atPath: orphan.path),
+            "the next install carried it away")
+        #expect(
+            try FileManager.default.contentsOfDirectory(atPath: staging.path).isEmpty,
+            "and left nothing of its own behind")
+    }
+
     /// The repair must not be able to damage what it is repairing.
     @Test("Repairing does not disturb the key itself")
     func repairPreservesTheKey() throws {

@@ -99,6 +99,11 @@ public struct VaultKeyStore: Sendable {
             .isExcludedFromBackup
         guard excluded != true else { return }
 
+        // `try?` here, unlike the staging directory, and the difference is deliberate: this is a
+        // repair of a key that already exists and is already readable. A repair that cannot run
+        // must not stop the owner reading their own accounts, and the file is no worse than it
+        // was a moment ago. The staging mark protects a key that does not exist yet, so failing
+        // it silently would create the exposure rather than leave one in place.
         var marked = url
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
@@ -183,10 +188,17 @@ public struct VaultKeyStore: Sendable {
                 attributes: Self.protectionAttributes)
         }
 
+        // **Not `try?`.** This one call is what `SECURITY.md` states unconditionally: that there
+        // is no instant at which a complete key sits on disk outside the exclusion. Swallowing
+        // its error would write key material into an unexcluded directory with nothing raised,
+        // nothing logged, and no test able to see it, and the self-healing re-mark on the next
+        // call is exactly the "it will be fixed by the following write" reasoning this finding's
+        // own history says not to trust. Round three asked for it to throw; every other line in
+        // `install` already can, and its caller is prepared.
         var marked = directory
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
-        try? marked.setResourceValues(values)
+        try marked.setResourceValues(values)
 
         for name in (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? [] {
             try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))

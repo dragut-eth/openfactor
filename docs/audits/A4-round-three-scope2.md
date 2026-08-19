@@ -129,3 +129,134 @@ Round three asks something the earlier rounds did not: **is this converging?** S
 twenty one changes across three sittings. Say plainly whether the defect surface is shrinking or
 moving around. If the answer is that an area has been rewritten three times and is still wrong,
 that is the most useful sentence you can write here, and it will not be argued with.
+
+---
+
+# Round three: the returns
+
+| Engine | Status |
+| --- | --- |
+| Fable 5 | Returned, below. Eight of ten complete, one medium-low, one low |
+| ChatGPT 5.6 Sol | Sent, not yet returned |
+| Grok 4.6 | Sent, not yet returned |
+
+**Standing asymmetry, recorded because Fable records it itself:** its round three ran in the
+conversation that held rounds one and two rather than in a fresh session, so it was reviewing
+responses to its own findings. It says where that applies and attacks the change anyway.
+
+## What round three found, and what was done
+
+**F1, and it is the one that matters.** `.busy` was added to the core, tested in the core, and
+never taught to the watch model, which still ended the attempt for any answer that was not
+`.asking`. So `WatchProvisioningFlow` held an attempt the model had already destroyed. **Two tests
+written in the same batch assert the surviving attempt and both passed**, because both test the
+flow and nothing can test that file.
+
+The suggested fix was one more condition. What was done instead removes the second opinion: the
+model no longer decides whether an attempt is over, it asks the flow, which is the only place that
+question has an answer. A sixth answer cannot split them apart again, because there is one
+definition rather than two that must be kept in step. The decline path was reordered for the same
+reason: it used to clear the attempt before telling the flow.
+
+**F2.** The staging directory's exclusion was applied with `try?`. That call is what `SECURITY.md`
+states unconditionally, so swallowing its error would have written key material into an unexcluded
+directory with nothing raised and no test able to see it. It throws now. The repair on read keeps
+its `try?` deliberately, and the two are documented against each other: a repair that fails leaves
+a key no worse than it was, while a staging mark that fails creates the exposure.
+
+Also done: the orphan sweep has the test Fable named, and it was confirmed red with the sweep
+removed. `age`'s docstring no longer says "never negative" while its own test asserts a negative.
+`docs/VAULT.md` no longer claims an older watch keeps exactly the behaviour it had, which is true
+of the nonce key and not of `.busy`. `SECURITY.md` says which half of the repair the device
+verification covers, which is neither half, since it predates it.
+
+**Not yet acted on: the residue on change 10.** The owner taps the affirmative button, the phone
+declines on their behalf because the window has passed, and the watch is told while the person who
+tapped is not. It is the only path where tapping yes produces no on the device that was tapped.
+
+## The answer to question four
+
+Fable split it three ways: the storage path is converging and it would not expect a fourth
+rewrite; the core protocol and flow are converging throughout; **the app-target seam is not, and it
+is the generator.**
+
+Its argument is that the pattern is now three rounds long and exact. Round one's two races lived in
+the untestable watch model. Round two's re-ask and consent window landed in app targets argued for
+by comments, and two of three needed rework. Round three's F1 is the same species, in the same
+file, found the same way, because reading is the only thing that can reach it. **The defect surface
+is not moving around at random; it is pooling where the tests cannot go.**
+
+The extraction that would drain it is the pattern this project has already run twice, under the
+names `WatchProvisioningFlow` and `AppLockPresentation`. It was proposed in round one by two
+engines, acknowledged in round two, put as "a fair question" by this very file, and not done.
+
+---
+
+## Fable 5
+
+*Read-only pass over commit `71e88c3`. Reproduced as returned, with absolute paths made
+repository-relative.*
+
+> Round three of Scope 2. Same asymmetry on record as last time: this conversation holds rounds one and two, not the fresh session the method prefers.
+>
+> Code reviewed: 71e88c3, via the tip of `a4-fixes` (7e79d1c), which I confirmed differs from it only in the round-three account itself. Round two read 350375b; round one read 74fe841. Standing asymmetry, recorded again: this conversation held rounds one and two, so I am reviewing responses to findings I helped produce, which is the acceptance bias this round tells me to resist. Where a change adopted my own round-two suggestion, I have said so and attacked it anyway.
+>
+> Verdict in one paragraph: eight of the ten changes are complete, several with the test that would catch their own regression. Change 5 is the one that isn't — the `.busy` answer was implemented in the core and never in the watch model, which still treats it as terminal and destroys the attempt the flow is deliberately holding, so two shipped tests and this round's own account now assert claimability the app does not have. Change 1 is complete except that its load-bearing call is a swallowed error. And to question four: the storage path is converging; the core protocol is converging; the app-target seam is not — this is the third consecutive round in which a fix's core half landed tested and its app-target half landed wrong or absent.
+>
+> Question 1, change by change
+>
+> 1. The PendingKeys directory — yes, with one soft spot (finding F2). The construction is right, and righter than either previous attempt: exclusion now precedes content by construction, the directory also carries the protection class so files start protected, the sweep covers the kill-orphan (which is itself already excluded when it happens), and `.usingNewMetadataOnly` resolves the metadata question round two could not — with the honest note that macOS measurement covered only the exclusion half. The fresh-install and overwrite paths still pass the existing suite through `replaceItemAt`. The soft spot: in `stagingDirectory()`, the directory's `setResourceValues(isExcludedFromBackup)` is `try?` — see F2.
+>
+> 2. Repair on read — yes. This reaches the device the account correctly says needs it most: the watch reads its key on every activation, so an old-rules file gets repaired at first launch of the new build. Metadata-only is verifiably true of the exclusion half (`loadRepairsAnUnexcludedKey`, whose fresh-URL comment records a real trap found while writing it) and unverifiable on the test host for the protection-class half, since `protectionAttributes` is `[:]` on macOS — `repairPreservesTheKey` proves content stability there while the class change is a no-op. The claim "incapable of damaging the key" therefore rests on Apple's `setAttributes` being atomic for class changes, which is reasoned, not measured; the one check that settles it is reading class and bytes back on a real watch that entered the build with an old-rules file. SECURITY.md's "verified on a real device" sentence predates this change, and whether that verification included the repair path is not stated.
+>
+> 3. `ContinuousClock` — yes, fully. Instant internal, `age(now:)` the only reading, the test pins the backward case explicitly, and the `SuspendingClock` rejection is reasoned correctly in the comment (a sleeping phone with an alert up has still let time pass for the person). Two residues, both small: `age`'s docstring says "never negative" while its own test asserts a negative return when handed a past instant — the contract and the comment disagree, and one clause ("under the default argument") fixes it; and truncation to whole seconds makes the window lenient by under a second, which is nothing.
+>
+> 4. The re-ask removed — yes, and the removal is correct. For the record, since the prompt says disagreement with recorded conclusions is in scope: I was one of the two reviewers who cleared the re-ask, and ChatGPT's seven-step sequence is right where my trace was incomplete. I verified the loop couldn't spin, which was true and was not the question; the inference "obsolete response implies slot free" is indeed unsound when the response was delayed rather than just-answered, and in that interleaving the re-ask abandons a request the phone is actively showing. The maintainer's summary — "the spin was never the problem" — is accurate, including about my review.
+>
+> 5. `.busy` — the core half yes, the watch half no. This is the round's finding (F1).
+>
+> 6. The busy-after-timeout guard — yes at the flow level, with the right test, and the account's own observation that needing it inside the same batch is unflattering is fair. The dead code after the guard (`stage = .waiting` when stage is already `.waiting`) is a harmless oddity. But note this guard's test asserts "a late key still installs" after busy-after-timeout — true of the flow, false of the app, for the reason in F1.
+>
+> 7. The `phoneDeclined` guard — yes, exactly the sibling guard with tests from both sides. Closes my round-two N3.
+>
+> 8. Exclusion on the staged file — yes, and the account's reading of it is the correct one: change 1 alone would have shipped the resting key unexcluded, the suite caught it, and that is simultaneously the suite doing its job and evidence change 1 wasn't fully understood when written. Both readings are indeed available; the second is the one that generalizes.
+>
+> 9. Present-but-unreadable nonce — yes. The three cases are now distinct: absent -> honoured (old build), unreadable -> ignored, readable-but-foreign -> ignored. A readable nonce of the wrong length lands in `answers(_:)`'s length guard and is ignored, consistently.
+>
+> 10. Expiry declines — yes, with one residue. The watch now learns immediately and the alert clears. The residue: the owner tapped "Set up Apple Watch" and the phone silently declined on their behalf — the watch gets told, the person who tapped still gets nothing, and their watch now reads "Not set up. Try again." Better than the silent no-op it replaces; still the only path where tapping the affirmative button produces the negative outcome with no explanation on the device that was tapped.
+>
+> Question 2: what the changes introduced
+>
+> F1 — Medium-low. The watch model treats `.busy` as terminal, so the flow and the app disagree about whether the attempt survives
+>
+> `WatchVaultModel.swift:184`: `if answer != .asking { attempt = nil; self.token = nil }` was not updated when the fifth answer was added. `.busy` fails that test, so the model destroys the attempt and its token in the same breath as `flow.phoneAnswered(.busy)` deliberately keeps the attempt outstanding. The result is the exact split the tokens were invented to prevent: the flow says waiting-and-claimable, the model holds nothing.
+>
+> What it breaks, concretely: `busyKeepsTheAttempt` asserts "the attempt is held, so a later answer to it can still open" — false in the app; `busyAfterTimeoutDoesNotRestoreTheSpinner` asserts "the attempt is still claimable, so a late key still installs" — false in the app, because `phoneSent`'s install path guards on the stored attempt the model just discarded; and the decline-nonce matching from round two degrades silently, since with `attempt` nil a readable foreign nonce falls through and is honoured, reopening the stale-decline corner change 4 of round two closed. The account's own description of change 5 — "the watch keeps the attempt and keeps waiting" — is true of `WatchProvisioningFlow` and untrue of the watch.
+>
+> Practical harm today is bounded, which is why this is not higher: a `.busy` answer refers to a request the phone dropped, so no sealed response to that attempt is ever coming, and the 25-second timeout recovers either way. But the properties two tests and one document now pin are not the properties the shipped watch has.
+>
+> Smallest fix: `if answer != .asking && answer != .busy` — one condition, mirroring the flow's own definition of non-terminal — plus the comment above it, which currently reads "Anything but 'asking' ends this attempt" and is the false claim making the bug look deliberate. The durable fix is the extraction; see question four.
+>
+> F2 — Low. The guarantee's load-bearing call swallows its error
+>
+> `VaultKeyStore.swift:190`-ish, in `stagingDirectory()`: the directory exclusion — the thing SECURITY.md now states unconditionally ("there is no instant at which a complete key sits on disk outside the exclusion") — is applied with `try?`, while the file-level mark three lines later in `install` correctly throws. If the directory mark ever fails, key material is written into an unexcluded directory and the write-window guarantee lapses with no error, no log, and no test able to notice. The re-mark on every call self-heals for the next install, which is the pattern this same finding's history says not to rely on. Smallest fix: let it throw, as the file mark already does — `install` has a caller prepared for failure on every other line.
+>
+> Recorded, not defects
+>
+> * Mixed versions, the direction the docs don't cover: an old watch receiving `"busy"` fails the `rawValue` init and lands on "treated as a refusal" — an instant "Not set up. Try again." where the old pairing showed a spinner then a timeout. Self-healing and arguably kinder, but it is a behavior change for old watches that nothing documents; VAULT.md's new compatibility paragraph covers the nonce key and says the older watch keeps "exactly the behaviour it already had," which is true of declines and not of `.busy`.
+> * The narrowed-not-closed path the account discloses is described accurately: I re-traced it, and `.busy` plus the timeout is where it honestly ends. Whether that is sufficient — I think yes: every remaining dead-end in the machine now terminates at a screen with a button within 25 seconds, and the alternatives round two tried were worse.
+> * One missing test that is core-reachable today: nothing exercises the orphan sweep (`stagingDirectory` deleting a leftover pending file). Plant a file, install, assert it is gone — three lines, and it pins the half of change 1 that exists specifically because `defer` doesn't run after a kill.
+>
+> Question 3: claims vs. code
+>
+> The model comment "Anything but 'asking' ends this attempt" (F1) is the significant one — it states the defect as policy. The `age` docstring's "never negative" (change 3, above) is the small one. SECURITY.md's new storage paragraph is accurate conditional on the `try?` in F2 holding, which is exactly the kind of condition this project prefers written down. The new VAULT.md third-message table is accurate and the kind of thing a second implementer genuinely needs; its "exactly the behaviour it already had" clause is the only sentence in it that overreaches, per the mixed-version note above.
+>
+> Question 4: is this converging?
+>
+> Split answer, said plainly.
+>
+> The storage path: yes, now. Three rewrites for one finding is a bad number, but the trajectory is not circular — each rewrite failed at a strictly deeper layer (unmarked file -> unmarked staging file -> destination metadata), and the current shape is the first one that is right by construction rather than by ordering: exclusion precedes content, repair reaches devices that never write, and the one metadata question was measured rather than believed. Residual risk is F2's swallowed error and the unmeasured protection-class half on watch hardware. I would not expect a fourth rewrite.
+>
+> The core protocol and flow: yes, throughout. Every core-side change across three rounds landed with the test that would catch its regression, one of those tests caught a defect in its own batch before any reviewer saw it, and the negative-control suite now pins properties (ephemeral freshness, label participation, monotonic age) that round one proved the old suite could not see.
+>
+> The app-target seam: no, and it is the generator. The pattern is now three rounds long and exact: round one's races lived in the untestable watch model; round two's re-ask and consent window landed in app targets argued for by comments, and two of the three needed rework; round three's `.busy` landed tested in the core and wrong in the model — F1 is the same species of defect as the two races that started this scope, in the same file, for the same reason, found the same way (by reading, because nothing else can reach it). The defect surface is not moving around at random; it is pooling exactly where the tests cannot go, and the extraction that would drain it — the pending-request rule and the answer-handling into core value types, the pattern this project already executed twice under the names `WatchProvisioningFlow` and `AppLockPresentation` — has now been proposed in round one by two engines, acknowledged in round two, posed as "a fair question" in round three's own account, and not done. That is the most useful sentence I can write here: the next defect in this scope is already predictable to be in `WatchVaultModel` or `WatchKeyProvider`, because that is where the last five were, and it will keep being true until the decisions leave the targets the suite cannot reach.

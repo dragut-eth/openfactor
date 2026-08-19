@@ -337,7 +337,14 @@ The compatibility rule is deliberate and asymmetric. **A decline carrying no non
 because it comes from a phone built before this field existed and refusing it would strand a watch
 whose owner has plainly said no. **A decline carrying a nonce that is not this attempt's is
 ignored**, which is the whole point of the field. An older watch reads neither and ignores the key
-entirely, leaving it exactly the behaviour it already had. A version 2 of the two payloads would
+entirely, leaving it exactly the behaviour it already had for declines.
+
+**`busy` is the one answer that changes what an older watch does**, and the compatibility
+paragraph above does not cover it, which round three pointed out. A watch built before this answer
+existed fails to construct it from the wire value and falls to its rule for anything it cannot
+read, which is to treat the answer as a refusal. It shows "not set up, try again" at once where it
+would previously have shown a spinner until its own timeout. That is arguably the kinder of the
+two, and it is a behaviour change rather than the no-op the nonce key is. A version 2 of the two payloads would
 change `OFW1`; this dictionary would need its own answer, and does not have one yet.
 
 ### There is no six digit comparison, and what that costs
