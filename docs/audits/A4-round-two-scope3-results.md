@@ -134,49 +134,51 @@ took outside reviewers to apply it here.
 
 # What was done
 
-**Review commit for round three: `fc844aa`.** All six open items are fixed, and one needed nothing.
+**Review commit for round three: `658051f`.** All six open items are fixed, and one needed
+nothing.
 
 **S3-5, the fix all three rejected.** The plaintext is bounded before sealing. The rule had no seam
 a test could reach without building eight mebibytes of accounts, **which is why the first attempt
-checked the quantity that was reachable**: the finished container.  is now split so 
+checked the quantity that was reachable**: the finished container. `write` is now split so `seal`
 takes a payload, and the boundary is tested from both sides. Removing the guard reddens the test.
 
 **S3-7.** Whitespace is dropped across the whole input. The input is already bounded by
- before it reaches the sniff, so the 512-byte cap protected nothing and refused
+`ImportLimits` before it reaches the sniff, so the 512-byte cap protected nothing and refused
 conforming archives.
 
-**S3-8.**  reads  and reports . Its test
+**S3-8.** `GoogleAuthenticatorImport` reads `AccountLimits` and reports `secretTooShort`. Its test
 asserted the wrong reason, so the test changed with the code.
 
 **S3-12.** Manual entry applies both limits, in the problem messages *and* in the account the form
 describes, so a form showing no problem cannot still describe an account the format refuses. With
-the door closed, 's message no longer claims the account "was saved before OpenFactor
+the door closed, `BackupError`'s message no longer claims the account "was saved before OpenFactor
 checked for this" and no longer advises re-adding it through the screen that caused it.
 
 **S3-13.** One cheap bound before the format is recognised, which is the pattern the reorder that
 introduced it existed to remove.
 
 **S3-14 needed no work.** Closing scope 4 made all three of its call sites fail closed: the import
-preflight, the extension's preflight, and 's handle-based read.
+preflight, the extension's preflight, and `take`'s handle-based read.
 
 Each fix was reverted individually and its test confirmed red. **One of those checks caught a test
 that was not running at all**: four new tests had been appended to the wrong suite in the same
-file, and a filter naming a suite that does not exist reports success rather than failure.
+file, and a filter naming a suite that does not exist reports success rather than failure, which is
+the same shape as every other false green this gate has found.
 
 ## For round three
 
 The three questions, and the fourth about convergence.
 
-** was split to make a bound testable.** That is a refactor of the writer for
+**`BackupArchive.write` was split to make a bound testable.** That is a refactor of the writer for
 the sake of a test, which is exactly the kind of change that can be faithful and still wrong. Check
-that  and  compose to what  did before.
+that `write` and `seal` compose to what `write` did before.
 
 **Manual entry now refuses rather than truncates**, unlike the importers, which truncate. Both
 choices are defended in comments; ask whether the inconsistency is right. A person looking at a
-field can fix it, and a file cannot.
+field can correct it, and a file cannot.
 
-**The sniff no longer has any cap on how much whitespace it will skip.** The bound is now entirely
-', one layer up. Check that nothing reaches  without passing it.
+**The sniff no longer caps how much whitespace it will skip.** The bound is entirely
+`ImportLimits`', one layer up. Check that nothing reaches `JSONSniff.body` without passing it.
 
 **S3-14 was closed by work in another scope**, so nobody has reviewed those three call sites
-against this scope's question about what an importer does with hostile bytes.
+against this scope's own question about what an importer does with hostile bytes.
