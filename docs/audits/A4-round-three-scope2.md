@@ -4,7 +4,11 @@ Round two reviewed the eleven fixes from round one and changed ten more things. 
 not been reviewed by anybody.** This is the "what changed" block the round three prompt in
 `docs/audits/A4-prompts.md` calls for.
 
-**Review commit `PENDING`.** Round two read `350375b`; round one read `74fe841`.
+**The code under review is `71e88c3`.** Round two read `350375b`; round one read `74fe841`.
+
+Check out the tip of `a4-fixes`, which is what the reviewing copy holds. It differs from `71e88c3`
+only in this file, and only by the paragraph you are reading: a page that names its own commit
+cannot be committed at the number it names.
 
 Round two's returns are reproduced in full in `A4-round-two-scope2.md`, and round one's in
 `A4-scope2-watch.md`. Both are worth reading before this: round two's three returns disagreed with
