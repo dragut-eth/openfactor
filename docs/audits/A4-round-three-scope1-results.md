@@ -138,3 +138,43 @@ iPhone does not have the key to these accounts.
 Reaching it needs another device to replace the vault while this one is open and watching, so it is
 rare. It is filed because "your accounts appear broken" is the wrong sentence at that moment, and
 because a code that fails to generate is a signal the list could act on rather than render.
+
+---
+
+# S1-12, the last medium in the gate
+
+**Fixed at `dc486b7`.**
+
+Three engines agreed the shape of it and one said the useful thing about the fix: another count
+will not settle state that arrives later. So the fix does not count.
+
+**Unlock tries every record, and the passphrase decides.** A wrap only opens under the passphrase
+it was sealed with, so with two records the right one identifies itself. Nobody is asked anything,
+no conflict screen exists, and the cost is one extra derivation on a path that already runs one,
+only when a twin is present.
+
+**The loser is then discarded**, so the conflict cannot outlive the first successful unlock. A
+failure to remove it does not fail the unlock: the person is already in, and the next unlock
+settles it the same way.
+
+**The refusal is reported on the best evidence across every record tried.** A device holding
+rubbish beside a real wrap hears about the passphrase rather than about the rubbish, which is the
+same rule S1-9 established for a single record.
+
+Four tests, and both halves were reverted individually to watch them go red: reading one record
+again reddens the twin test, and removing the discard reddens the resolution test.
+
+**The fake store now holds a list**, with a way to plant a twin carrying the opposite flag. That
+case could not be expressed at all while it held one optional value, which is why the twin was
+argued about for three rounds rather than tested.
+
+## Still open in this scope
+
+**S1-14**, the wrapped store's sync flag being a launch-time snapshot, and **S1-17**, an open list
+drawing dashes when its records change underneath. Both low.
+
+## What a device could still show
+
+The twin case is now reproducible on hardware, and the Debug readout added for E9 reports the
+record count. Creating a vault on two phones inside the same propagation window should produce
+"2 records", and one unlock should take it back to one.
