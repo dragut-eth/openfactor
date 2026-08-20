@@ -128,6 +128,7 @@ OpenFactorWatch Watch App/     watchOS app. Read only: it shows the list and one
 OpenFactorWatch Complication/  Launches the app. Holds no data and no Keychain entitlement.
 OpenFactorTests/               Runs the suite above inside a real app, for the Keychain.
 docs/                          Architecture, roadmap, UI specification, audits.
+site/                          Exactly what openfactor.dev serves. Nothing else is published.
 ```
 
 ## Building
@@ -210,6 +211,13 @@ they do not soften the warning above.
 - [docs/audits/](docs/audits/), findings from each review gate
 - [SECURITY.md](SECURITY.md), threat model and how to report a vulnerability
 - [CONTRIBUTING.md](CONTRIBUTING.md), how changes get reviewed
+- [site/README.md](site/README.md), the pages at [openfactor.dev](https://openfactor.dev) and the
+  rule they are written under
+
+**The website derives from this repository and never the reverse.** Every claim on
+`openfactor.dev` was copied out of this file and `docs/APP_STORE.md` rather than written fresh,
+and that is the only reason the website, the App Store listing and this file agree. A claim
+changes here or in `SECURITY.md` first, and the other two follow.
 
 ## Inspiration
 

@@ -8,6 +8,16 @@ step, no dependencies.
 published, which is why the engineering documents in `docs/` stay unpublished while living in
 the same public repository.
 
+## The rule: this derives from the repository, never the reverse
+
+Every claim on these pages was copied out of `README.md` and `docs/APP_STORE.md` rather than
+written fresh, which is the only reason three surfaces currently agree with each other.
+
+**A claim changes in `README.md` or `SECURITY.md` first, and this follows.** The failure to
+prevent is somebody sharpening a sentence here because it reads better on a landing page, and
+this becoming the one surface that over-claims. `docs/APP_STORE.md` states the same rule for the
+listing.
+
 ## Status
 
 **Live at `openfactor.dev`. The copy has not had a proper pass.**
@@ -36,10 +46,21 @@ Re-adding a dark palette means revisiting the icon at the same time.
 
 ## Deploying
 
-The intended shape is a host that pulls from this repository and publishes `site/` to
-`openfactor.dev`. Nothing in these files assumes a particular host: they are static and relative
-linked, so any static host serves them, and the privacy policy URL given to App Store Connect is
-`https://openfactor.dev/privacy.html`.
+Cloudflare Pages, building from `main`, build output directory `site`, no build command. Nothing
+in these files assumes that host: they are static and relative linked, so any static host serves
+them.
+
+The privacy policy URL given to App Store Connect is `https://openfactor.dev/privacy`, without
+the extension, because `/privacy.html` 308-redirects to it and Apple should be handed the
+destination.
+
+**Build watch paths should be set to `site/*`.** Without them every commit to the repository
+redeploys the site, which is harmless and wasteful. The warning that matters is the other
+direction: **if the site ever moves out of `site/`, deploys will stop silently** and nothing will
+report an error. Whoever moves it changes the watch path in the same breath.
+
+**`www.openfactor.dev` currently returns 521** and needs adding as a second custom domain in
+Cloudflare Pages. The apex is fine. A person typing `www` gets an error page.
 
 ## The privacy page is not a template
 

@@ -272,6 +272,22 @@ jobs:
           check "PRODUCT_BUNDLE_IDENTIFIER = dev.openfactor.app.share;"
           check "Embed Foundation Extensions"
           check "dstSubfolderSpec = 13;"
+          # Xcode's default here is "1,2,7", iPhone and iPad and Vision Pro, and it sat
+          # in this file unnoticed against a README and a listing that both say iPhone
+          # and Apple Watch. It is not tidiness: App Store Connect requires a screenshot
+          # set per declared family, so the default demanded iPad and Vision Pro sets and
+          # invited a reviewer to open the app on hardware the UI was never designed for.
+          # The test targets still say "1,2,7" and are not checked, because they never
+          # ship.
+          if grep -n "TARGETED_DEVICE_FAMILY" OpenFactor.xcodeproj/project.pbxproj \
+            | grep -v "TARGETED_DEVICE_FAMILY = 1;" \
+            | grep -v "TARGETED_DEVICE_FAMILY = 4;" \
+            | grep -v "1,2,7"; then
+            echo "A shipping target declares a device family that is not iPhone or watch."
+            echo "The app and the share extension are 1; the watch targets are 4."
+            exit 1
+          fi
+          echo "ok: no unexpected device family"
 
       # The share extension's security claim is what it CANNOT do, and the absence of an
       # entitlement is the whole of it. An absence is invisible in review and costs one

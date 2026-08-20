@@ -5,8 +5,10 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). Work is on
-`a4-fixes`, pushed. The phone and watch carry a build from `83e5cdd`.
+**Last updated:** 2026-08-19, on TestFlight as `dev.openfactor.app`, 1.0 (5). Work is on
+`a4-fixes`, which is 69 commits ahead of `main` and not pushed. `main` itself is 11 commits ahead
+of `origin/main` and also not pushed. **`openfactor.dev` is live**, served from `origin/main`,
+which does carry the site.
 
 ## Gate A4: where it stands, and what tomorrow is for
 
@@ -19,29 +21,25 @@ back with nothing above low and no fix called incomplete.
 medium that round one produced. What remains is what the later rounds found while reading the
 fixes.
 
-**Twenty five items are open, six of them medium**, and they are numbered so they can be discussed
-one at a time. Each scope's results page carries the full text of every engine's return.
+**The severity half of the goal is met: no high and no medium is open anywhere.** Five items are
+open, all low, and they are numbered so they can be discussed one at a time. Each scope's results
+page carries the full text of every engine's return.
 
-| Scope | Rounds | Open | Mediums | Page |
+| Scope | Rounds | Open | Above low | Latest page |
 | --- | --- | --- | --- | --- |
-| 1, the vault | 3 | 4 | S1-12, S1-13 | `A4-round-three-scope1-results.md` |
-| 2, the Watch | 4 | 6 | none | `A4-round-four-scope2-results.md` |
-| 3, the parsers | 2 | 6 | S3-5, S3-12, S3-14 | `A4-round-two-scope3-results.md` |
-| 4, the boundaries | 3 | 9 | S4-23 | `A4-round-three-scope4-results.md` |
+| 1, the vault | 3 | S1-14, S1-17 | none | `A4-round-three-scope1-results.md` |
+| 2, the Watch | 6 | none | none | `A4-round-six-scope2-results.md` |
+| 3, the parsers | 3 | none | none | `A4-round-three-scope3-results.md` |
+| 4, the boundaries | 3 | S4-24, S4-25, S4-26 | none | `A4-round-three-scope4-results.md` |
 
-The six mediums, shortest description each:
+**Thirteen fixes are made but not yet read by anybody outside**, which is what the remaining
+rounds are for: scope 2's three from round six, scope 1's four, and scope 4's six.
 
-- **S1-12** two wraps can coexist after creation, and unlock picks one unspecified. Another count
-  will not settle it; conflict detection after creation would.
-- **S1-13** the launch reconcile abandons a failure in silence. Contested: one engine rates it
-  medium, one accepts it, one calls it weaker than the key file's repair-on-read.
-- **S3-5** the writer bounds the container while the reader bounds the plaintext, so this app can
-  still write an archive it will not read back. Rejected by all three engines as a fix.
-- **S3-12** manual entry accepts what the format forbids, and the export failure that results
-  blames the past and advises re-adding through the same screen.
-- **S3-14** the import size preflight fails open when the file system gives no size.
-- **S4-23** `take` can block the main actor on a named pipe a sibling planted, and the deferred
-  removal never runs.
+**Scope 2 is the one waiting on a decision.** Round six found no code defect at all; its whole
+return was two false claims in comments, both since fixed in `51d34b1`. The three engines split on
+whether that closes the scope, so a seventh round exists only to settle that split. The class it
+keeps returning is a sentence corrected in one of two twin files and not the other, four rounds
+running, which is why both headers are now written together and say so.
 
 **The four documentation items are done.** Every comment and sentence the reviews found claiming
 something the code does not do has been corrected, including a broken splice left in
@@ -74,6 +72,90 @@ what `VaultDecisionTests` exists to answer.
 - The Watch exchange has been rewritten four times and last met a wrist before any of it.
 - One engine proposes a CI check tying the number in `SECURITY.md` to the constant in the code,
   because the inbox prose has trailed the inbox code by exactly one fix for three rounds running.
+- `xcodebuild -scheme "OpenFactorWatch Watch App" -destination 'generic/platform=watchOS'` fails
+  at link: that destination pulls the iOS app target in and tries to link a watchOS
+  `OpenFactorCore.o` into an iOS dylib. It fails the same way on a clean checkout, so it predates
+  the gate. The simulator destination builds. It means the generic device build of the watch app
+  is not currently a check anyone can run.
+
+## PR 18: the site, the listing, and the device families
+
+**`openfactor.dev` is live**, Cloudflare Pages, building from `main`, output directory `site`, no
+build command. The apex and `/privacy` both return 200 and `/privacy.html` 308-redirects to
+`/privacy`. `site/` is exactly what is served, which is how the engineering documents in `docs/`
+stay unpublished while living in the same public repository.
+
+**The device families are corrected.** The app target and the share extension declared
+`TARGETED_DEVICE_FAMILY = "1,2,7"` and `"1,2"`, which is iPhone, iPad and Vision Pro, against a
+README and a listing that both say iPhone and Apple Watch. It was an untouched Xcode default.
+Both are `1` now; the test targets still say `"1,2,7"` and do not matter because they never ship.
+This is not tidiness: **App Store Connect requires a screenshot set per declared device family**,
+so the old value demanded iPad and Vision Pro screenshots and invited a reviewer to open the app
+on hardware the UI was never designed for.
+
+**The claims rule now covers three surfaces.** `README.md`, the App Store listing and
+`openfactor.dev` agree today only because the site was built by copying from the first two. Both
+`docs/APP_STORE.md` and `site/README.md` now state that the site derives from the repository and
+never the reverse: a claim changes in `README.md` or `SECURITY.md` first. The failure being
+prevented is somebody sharpening a sentence on a landing page and the landing page becoming the
+one surface that over-claims.
+
+**What still gates a submission:** Apple Watch screenshots, and the export compliance answer,
+which is a legal call. The privacy policy URL no longer gates anything.
+
+### Findings from PR 18 worth keeping
+
+**`otpauth://` is arbitrated by an iOS setting, not by scheme registration.** Settings, AutoFill
+and Passwords, Verification Codes, Set Up Codes In. Declaring the scheme makes an app *eligible*
+for that picker and the person then chooses. On a simulator, where nobody has chosen, it falls to
+the preinstalled Passwords app. PR 16c did what it set out to do. The future bug report "it opens
+Passwords instead" has a settings answer, not a code answer.
+
+**The watch cannot be tested end to end in a simulator, and this is not flakiness.** The
+provisioning handshake works fine between paired simulators, all the way to the key being
+delivered. The watch then sits on "No accounts yet" forever, because **accounts reach the watch
+through iCloud Keychain rather than the direct link**, and simulators do not sync it. Turning sync
+on changes nothing. The simulator-only workaround that produced watch screenshots: shut the watch
+down, copy the phone simulator's `data/Library/Keychains/keychain-2-debug.db` over the watch
+simulator's, reboot.
+
+**A near miss in the same family as the entitlement check that passed while lying.** `.gitignore`
+had an unanchored `assets/` rule meant for the repository root. It also matched `site/assets/`, so
+`git add` silently excluded the stylesheet and the app icon with no error. It built, committed and
+pushed clean, and would have surfaced as a completely unstyled page on a live domain. Found only
+because the staged file list was read rather than assumed. The rule is `/assets/` now.
+
+**Simulator harness quirk.** Taps below the vertical midpoint are dropped: a tap at y=336 worked,
+an identical one at y=470 did nothing. `swipe` and `touch_path` work at any position.
+
+**Two UI observations from seeding a realistic account list.** Automatic colour assignment repeats
+badly, five accounts coming out teal, purple, then olive three times, which looks unpolished at
+realistic sizes and probably wants to avoid recently used colours. And the Service placeholder in
+manual entry is `GitHub`, which puts a third-party mark on screen and into any screenshot of that
+flow, inconsistent with the generic labels used elsewhere.
+
+### The 2FAS comparison, checked against the code
+
+An externally authored feature comparison was checked rather than accepted. **Its structure is
+sound and its top recommendations are wrong**, because it wrote "not documented" wherever it
+lacked information and then converted that into a recommendation to build the thing. Account
+search already exists (`AccountListView.swift:127`). Alphabetical sorting already exists
+(`AccountSortOrder`). Custom digits, period and algorithm are fully built behind the Advanced row
+in `ManualSetupView.swift:165`. Accessibility as "needs verification" overstates it: 26 modifiers
+across eight files including both watch views. Steam Guard as "planned" is unfounded. And it
+marked app-switcher protection "Yes", which is more generous than the truth, since PR 15b measured
+the zoom-from-home-screen cache showing issuer and name for about a sixth of a second and
+`docs/APP_LOCK.md` records that as accepted rather than fixed.
+
+What it got right, verified absent: Raivo, OTP Auth and 2FAS importers; all localization, with no
+`.lproj` and no String Catalog anywhere; individual account export and export as QR; trash and
+restore; groups; widgets and Control Center; hide-codes-until-tapped as a setting.
+
+It flagged **watch revocation** without knowing that `Vault.swift:232` says "This is not
+revocation and must never be offered as one" and `docs/VAULT.md` has a section titled "Rewrapping
+is not revocation". The gap is not that nobody thought about it. **The gap is that the answer
+lives only in the design documents, and nothing a user can read says what to do when a watch is
+lost or stolen.**
 
 
 **Last updated:** 2026-08-18, on TestFlight as `dev.openfactor.app`, 1.0 (4). PR 15b is

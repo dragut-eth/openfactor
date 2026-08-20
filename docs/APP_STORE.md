@@ -14,31 +14,51 @@ imply the vault has been reviewed by anyone independent. `README.md` carries a s
 this listing carries the same one, in the promotional text where it can be updated without a
 review cycle.
 
-## Blocked, and these need decisions rather than drafting
+## The URLs, and where the claims on them come from
 
-**A privacy policy URL is required** and the project has none. App Store Connect will not accept
-a submission without one, and it must be a public page.
+**The privacy policy URL is `https://openfactor.dev/privacy`.** Given without the extension
+deliberately: `/privacy.html` serves a 308 redirect to it, and Apple should be handed the
+destination rather than the redirect.
 
 That sits oddly beside the first principle, "no OpenFactor servers", so it is worth saying
-plainly why it does not break it: a static document served by GitHub is not a backend the app
+plainly why it does not break it: a static document served by a CDN is not a backend the app
 talks to. The app still makes no network requests. What the URL costs is a page someone must
 keep current, not an operational service.
 
-Two options, and I would take the first:
+The page won over `PRIVACY.md` at a GitHub URL because the same host was needed for the marketing
+URL anyway, and one page that can expire is better than an inconsistent pair. The draft at the
+end of this document is what `site/privacy.html` was built from.
 
-- **`PRIVACY.md` in the repository**, linked at its GitHub URL. Nothing new to run, it is
-  versioned alongside the code it describes, and a reviewer can see its history. A draft is at
-  the end of this document.
-- **GitHub Pages on `openfactor.dev`.** Prettier, and one more thing that can expire or break.
+**The marketing URL is `https://openfactor.dev`.**
 
-**A support URL is required too.** The repository's issues page is the honest answer, since that
-is where support actually happens: `https://github.com/dragut-eth/openfactor/issues`.
+**The support URL stays `https://github.com/dragut-eth/openfactor/issues`.** This was reconsidered
+when the site went up and deliberately not changed: the site carries no support content, and what
+Apple asks for is a page where a person can actually get help.
 
-**Screenshots do not exist.** Apple needs 6.7 inch iPhone screenshots at minimum, and Apple Watch
-screenshots if the watch app is listed. `assets/` is gitignored, so wherever these are produced
-they are not committed. Worth noting that the App Store frames are the one place people will look
-at this app before installing it, and the vault setup screen is a strange first impression: the
-list with real codes is what to show.
+### The site derives from the repository, never the reverse
+
+There are now three surfaces carrying the same claims: `README.md`, the App Store listing, and
+`openfactor.dev`. They agree today for one reason only, which is that the site was built by
+copying sentences out of the first two rather than writing them fresh.
+
+**So a claim changes in `README.md` or `SECURITY.md` first, and the site and the listing follow.**
+Never the other way round. The failure this rule exists to prevent is somebody softening or
+sharpening a sentence on the website because it reads better there, and the website quietly
+becoming the one surface that over-claims. It is the same rule as the one at the top of this
+document, extended to the surface that did not exist when that rule was written.
+
+### Screenshots
+
+Seven iPhone screenshots were uploaded to App Store Connect on 2026-08-18. **Apple Watch
+screenshots are still outstanding and still gate a submission.**
+
+The App Store frames are the one place people will look at this app before installing it, and the
+vault setup screen is a strange first impression: the list with real codes is what to show.
+
+**Watch screenshots cannot be produced in a simulator by the obvious route**, and the reason is
+recorded under the findings in `HANDOFF.md`: accounts reach the watch through iCloud Keychain,
+which simulators do not sync, so a simulated watch sits on "No accounts yet" forever even after a
+successful provisioning handshake. That is not flakiness and no amount of retrying fixes it.
 
 ## App information
 
@@ -395,12 +415,13 @@ document that is a value to paste is now in the form.
 submission. Attaching a build is the last step, once there is one worth shipping and the export
 compliance call has been made.
 
-**Three things gate a submission, and none is drafting:**
+**Two things gate a submission, and neither is drafting:**
 
-- **The privacy policy URL**, which is required and does not exist. The plan is GitHub Pages
-  serving `PRIVACY.md`, decided separately.
-- **Screenshots**, which do not exist. See the note under blocked items about what to show.
+- **Apple Watch screenshots**, which do not exist. The seven iPhone screenshots are uploaded.
 - **The export compliance answer**, which is Xavier's legal call, recorded under its own heading.
+
+**The privacy policy URL no longer gates anything.** It is `https://openfactor.dev/privacy`,
+live, and recorded above with the marketing URL.
 
 The copyright was entered as `2026 ReVeNG System`, the publishing entity, which must match the
 Apple Developer account.
