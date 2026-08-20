@@ -36,18 +36,39 @@ enum InboxOpener {
     /// completion handler of `completeRequest`, and refused again from a live button somebody had
     /// just tapped. So the app looks for itself instead.
     ///
-    /// Takes the newest and **sweeps the rest**, so nothing accumulates. An item older than
-    /// `SharedInbox.freshness` is swept unread rather than presented, because opening the app
-    /// into an import sheet for something shared days ago would be a strange thing to do to
-    /// somebody who was reaching for a code.
+    /// Takes the newest and supersedes the rest of what it read, so nothing accumulates. An item
+    /// older than `SharedInbox.freshness` is left for the stale sweep rather than presented,
+    /// because opening the app into an import sheet for something shared days ago would be a
+    /// strange thing to do to somebody who was reaching for a code.
+    ///
+    /// **The supersede happens only after a take succeeds, and only over what this call read.**
+    /// Both halves of that sentence were a defect. Sweeping in a `defer` ran the sweep on the
+    /// failure path too, so one item that `take` refuses, a named pipe or a file over the limit,
+    /// deleted every genuine share beside it while presenting nothing: the newest sorts first, so
+    /// planting one is enough. And sweeping the whole directory rather than the identifiers read
+    /// here deletes whatever arrived while the person was deciding.
+    ///
+    /// Nothing is lost by leaving the rest on a failure. `take` removes the item it refused, so
+    /// the obstruction is gone; what remains is what somebody shared, and the next collection
+    /// presents it.
+    ///
+    /// **Too stale to present is still a decision, and it supersedes.** Everything read here is
+    /// at least as old as the newest, so if the newest is past `freshness` then all of them are,
+    /// and the whole set goes. That keeps the property the container argument rests on, which is
+    /// that nothing accumulates. A failed take is the only outcome that leaves anything, because
+    /// it is the only one where nothing was judged.
     static func collect(from inbox: SharedInbox = SharedInbox()) -> Arrival? {
-        defer { inbox.sweep() }
+        let waiting = inbox.pending()
+        guard let newest = waiting.first else { return nil }
 
-        guard let newest = inbox.pending().first,
-            newest.arrived.timeIntervalSinceNow > -SharedInbox.freshness,
-            let data = try? inbox.take(newest.id)
-        else { return nil }
+        guard newest.arrived.timeIntervalSinceNow > -SharedInbox.freshness else {
+            inbox.sweep(waiting.map(\.id))
+            return nil
+        }
 
+        guard let data = try? inbox.take(newest.id) else { return nil }
+
+        inbox.sweep(waiting.map(\.id))
         return .image(data)
     }
 

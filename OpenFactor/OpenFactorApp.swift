@@ -22,10 +22,12 @@ struct OpenFactorApp: App {
 
     /// The vault gate's state, which includes a generated passphrase when one is on screen.
     ///
-    /// **Held here so App Lock cannot destroy it.** The lock screen replaces the root view, and
-    /// anything owned below it goes with it. A generated passphrase lives only in this object,
-    /// so owning it at the top is what lets somebody copy it, go and paste it somewhere, and
-    /// come back to the same screen.
+    /// **Held here so App Lock cannot destroy it.** On a locked cold launch the lock is the root
+    /// and everything below is built fresh once it clears, so anything owned down there is gone.
+    /// A generated passphrase lives only in this object, and owning it at the top is what lets
+    /// somebody copy it, go and paste it somewhere, and come back to the same screen. A warm lock
+    /// is a window above the tree and would not have destroyed it, but the rule is written for
+    /// the case that does.
     @State private var gate: VaultGateModel
 
     /// The add flow's state: the sheet's presence, the pushed manual screen, and every typed
@@ -250,14 +252,28 @@ struct OpenFactorApp: App {
                 if !presented { addSession.reset() }
             }
             .onChange(of: gate.stage) { collectWhatArrived() }
+            // **A dismissal is one of the moments something waiting can finally be shown.**
+            // Collection refuses while an arrival is on screen, and the events that drive it are
+            // the scene, the lock and the vault, none of which a person changes by swiping a
+            // sheet down. Without this, a share made while a link was open waits for an unrelated
+            // event or ages out unread, which is the newest-wins rule failing in the one
+            // direction it is not written at.
+            .onChange(of: arrival?.id) { _, id in
+                if id == nil { collectWhatArrived() }
+            }
             .onOpenURL { url in
                 guard let value = InboxOpener.arrival(from: url) else { return }
 
                 // **This supersedes whatever was pending, and takes it off the device.** An
-                // uncollected share left in the inbox is the difference between a rule and the
-                // behaviour a hardware test caught: it reappeared on one run in four, whenever
-                // some unrelated scene or lock event happened to trigger a collection later.
-                SharedInbox().sweep()
+                // uncollected share left in the inbox reappears later, whenever some unrelated
+                // scene or lock event happens to trigger a collection, which is the difference
+                // between a rule and behaviour a hardware test caught one run in four.
+                //
+                // **What is superseded is what was read a line earlier, not the directory.**
+                // Emptying the directory here deletes an item the extension is still writing, and
+                // deletes it for being too new to have been part of this decision.
+                let inbox = SharedInbox()
+                inbox.sweep(inbox.pending().map(\.id))
                 arrival = IdentifiedArrival(value: value)
             }
             // The root swap and the shield hide land in the same transaction, so there is

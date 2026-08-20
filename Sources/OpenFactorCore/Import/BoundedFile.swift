@@ -1,40 +1,37 @@
 import Foundation
 
-/// Reads a file with a limit that cannot be skipped, raced, or hung.
+/// Reads a file with a limit that cannot be skipped, and refuses what would hang.
 ///
-/// ## Why this exists, in one sentence per round
+/// ## Why one primitive rather than four
 ///
-/// Gate A4 found the same mistake in four places across three scopes, and fixed it four different
-/// ways before anybody noticed it was one mistake.
+/// A bound on an untrusted file is easy to write four different ways and hard to write right, and
+/// this project had four: read then measure, measure then read, stat then read, and open then
+/// read. Only the last is sound, and the difference is not visible at a call site.
 ///
-/// **Round one:** the import path read the whole file and then measured it, so a four hundred
-/// megabyte attachment was a four hundred megabyte allocation before anything refused it.
+/// **Measuring first is the mistake with two shapes.** The size and the read are separate calls,
+/// so whoever supplied the file can change it in the gap and the bound describes a file that no
+/// longer exists; and when the file system gives no size at all, a check written that way skips
+/// itself. Reading first is the same mistake with the allocation already made.
 ///
-/// **Round two:** the fix asked the file system for a size first, which a review then took apart
-/// twice over. The check was skipped entirely when no size came back, and even when it did, the
-/// size and the read are two calls with a gap between them: whoever supplied the file can change
-/// it in that gap, so the bound describes a file that no longer exists.
-///
-/// **Round three:** `SharedInbox.take` was rewritten to open once and read through the handle,
-/// which all three engines called the correct shape. Two other call sites were left as a stat
-/// followed by a read, and one engine filed that while two passed it, on the reasoning that only
-/// the shared container faces a hostile writer. **That disagreement is not settled here.** The
-/// primitive removes the need to settle it: one open, one bounded read, no window for anybody to
-/// be right about.
-///
-/// And `take`'s rewrite had a hole of its own that a fourth review found: it assumed the path
-/// named a regular file. A named pipe in a shared container blocks the reader on open, and this
-/// app opens inbox items on the main actor.
+/// One open and one bounded read leaves no gap for either. There is one implementation, so a
+/// mistake found here is fixed for every caller at once, and a caller that wants a different
+/// bound passes a different number rather than writing a fifth shape.
 ///
 /// ## What it refuses, and why each one
 ///
 /// - **Not a regular file.** A pipe blocks, a directory is not readable as bytes, and a device
 ///   node is neither. Checked with `fstat` on the descriptor that will be read, not on the path,
 ///   so the answer cannot go stale.
-/// - **Symbolic links**, via `O_NOFOLLOW`, because a link is a way of naming a file this app did
-///   not intend to open.
+/// - **A symbolic link in the last path component**, via `O_NOFOLLOW`, because a link is a way of
+///   naming a file this app did not intend to open. `O_NOFOLLOW` covers that component and no
+///   other: a caller whose *directory* can be substituted needs a descriptor for it, which is
+///   what `read(descriptor:limit:)` is for.
 /// - **One byte past the limit**, which is how the limit is enforced: it reads `limit + 1` and
 ///   refuses if that many arrive. Nothing measures the file first, so nothing can be wrong.
+///
+/// **What it does not promise.** A file already open can still be changed underneath the read by
+/// whoever can write it. The bound holds regardless, because the bound is on how much is taken,
+/// not on what the file was.
 public enum BoundedFile {
 
     public enum ReadError: Error, Equatable, Sendable {
@@ -45,7 +42,10 @@ public enum BoundedFile {
         case unreadable
         /// A pipe, a directory, a socket, a device, or a symbolic link.
         case notARegularFile
-        /// More than the limit allows. The bytes past it were never held.
+        /// More than the limit allows.
+        ///
+        /// One byte past the limit is read, because that is how the limit is detected, and then
+        /// dropped. Nothing beyond it is ever held.
         case tooLarge
     }
 
@@ -71,7 +71,18 @@ public enum BoundedFile {
             }
         }
         defer { close(descriptor) }
+        return try read(descriptor: descriptor, limit: limit)
+    }
 
+    /// The same bounded read, given a descriptor somebody else opened.
+    ///
+    /// **Exists so the inbox can open relative to a directory it has already verified.** Opening
+    /// by pathname resolves every component afresh, and only the last one is protected by
+    /// `O_NOFOLLOW`; a caller that has a descriptor for the containing directory can do better,
+    /// and should not have to carry a second copy of this loop to do it.
+    ///
+    /// The descriptor stays the caller's to close.
+    static func read(descriptor: Int32, limit: Int) throws(ReadError) -> Data {
         var info = stat()
         guard fstat(descriptor, &info) == 0 else { throw .unreadable }
         guard info.st_mode & S_IFMT == S_IFREG else { throw .notARegularFile }

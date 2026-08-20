@@ -39,9 +39,12 @@ Stated by Xavier as the ideal, and adopted as requirements:
   meantime, it takes precedence: whatever was open closes, and the import or add flow
   presents clean from the root.
 
-  **Precedence includes another arrival: the newest one wins.** A link opened while a shared
-  image is waiting supersedes it, and the superseded share is swept from the inbox rather than
-  left there. Two reviews filed the older version of this as a defect, and a queue holding two
+  **Precedence includes another arrival: the newest one wins, in both directions.** A link
+  opened while a shared image is waiting supersedes it, and the superseded share is removed from
+  the inbox rather than left there. A share made while a link is open presents as soon as the
+  link is dismissed, because the dismissal is itself a trigger to look; without that the rule
+  would hold in one direction only and a deliberate share could wait unseen for an unrelated
+  event. Two reviews filed the older version of this as a defect, and a queue holding two
   was built in answer; it produced two findings of its own in a file no test can reach, and it
   needed this page to carry an exception to its own rule. The queue is gone. What a person does
   is tap the newest thing, a superseded arrival costs a repeated gesture rather than an account,
@@ -234,7 +237,13 @@ opened from Files or Mail. One rule for all three, Xavier's:
 is open, and nothing else is pending. An arrival that lands while locked **waits**: it is
 held above the lock and presents after Face ID clears, never over the lock screen and never
 lost to it. Unlocking is itself a trigger to look, because it does not change the scene
-phase.
+phase, and so is the dismissal of whatever was pending.
+
+**"Nothing else is pending" is about presenting, not about precedence.** A link arriving over
+an image supersedes it immediately, because a link arrives as an event this app can act on. A
+share cannot announce itself, so the app finds it by looking, and looking while a sheet is up
+would replace what somebody is reading mid-gesture. It waits for the dismissal instead, which
+is the same rule reached by the only route available to it.
 
 **What closing means.** Every presented sheet is dismissed through its presentation
 binding: the add sheet, the settings sheet with anything nested inside it, and the edit

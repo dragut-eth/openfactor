@@ -551,19 +551,18 @@ file protection, is never synced by OpenFactor, contains no OpenFactor key mater
 deleted immediately after the containing app consumes it, and excluded from device backups so a
 backup taken at any point in that window does not carry it away.
 
-**Leftovers are swept at launch, and until gate A4 that sentence was not true.** The only sweep sat
-inside the collection path, which does nothing until the scene is active, the app lock is open, the
-vault is open, and no other arrival is pending, so an image shared to a locked phone that was never
-unlocked again stayed in the container. All three reviewers found it. A launch sweep now runs under
-none of those conditions and removes anything older than `SharedInbox.staleAfter`, which is ten
-minutes and is the same constant that decides whether an item is still worth presenting. That is
-long enough that the ordinary share, where the person is carried straight into the app, is
-untouched.
+**Leftovers are swept on every foreground transition**, under none of the conditions the
+collection path imposes. That matters because collection does nothing until the scene is active,
+the app lock is open, the vault is open, and no other arrival is pending, so a sweep that lived
+inside it would never reach an image shared to a locked phone that was never unlocked again. The
+sweep removes anything older than `SharedInbox.staleAfter`, ten minutes, which is the same
+constant that decides whether an item is still worth presenting. That is long enough that the
+ordinary share, where the person is carried straight into the app, is untouched.
 
-**The number in this paragraph was wrong for a round**, and so was its trigger: it said five
-minutes when the constant became ten, and said launch when the sweep runs on every foreground
-transition. This page has now been corrected once per round for three rounds on this one
-mechanism, which is a fact about how these edits are made rather than about the mechanism.
+**Removing what a person just superseded is a different operation with a different rule.** It
+deletes exactly the items the app read and decided against, by name, rather than emptying the
+directory. Emptying it would also delete whatever the extension wrote while the decision was being
+made, and delete it precisely for being too new to have been part of that decision.
 
 Photos creates a different exposure. When iCloud Photos is enabled, the image can become part of
 the user's persistent synchronized photo library, accessible across their devices and through

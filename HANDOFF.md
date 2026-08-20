@@ -21,7 +21,13 @@ back with nothing above low and no fix called incomplete.
 medium that round one produced. What remains is what the later rounds found while reading the
 fixes.
 
-**The severity half of the goal is met: no high and no medium is open anywhere.** Five items are
+**Scope 4's round four returned two mediums, and both are fixed.** One of them, S4-32, was made
+reachable by our own fix: closing the named-pipe hang turned a blocking read into a fast failure,
+and a `defer` that had never run before started running. A failed take swept the whole inbox. The
+other, S4-33, was the inbox being reached by pathname, so a substituted directory redirected the
+sweep out of the container.
+
+**The severity half of the goal is met again: no high and no medium is open anywhere.** Five items are
 open, all low, and they are numbered so they can be discussed one at a time. Each scope's results
 page carries the full text of every engine's return.
 
@@ -30,7 +36,7 @@ page carries the full text of every engine's return.
 | 1, the vault | 3 | S1-14, S1-17 | none | `A4-round-three-scope1-results.md` |
 | 2, the Watch | 7 | closed | none | `A4-round-seven-scope2-results.md` |
 | 3, the parsers | 3 | none | none | `A4-round-three-scope3-results.md` |
-| 4, the boundaries | 3 | S4-24, S4-25, S4-26 | none | `A4-round-three-scope4-results.md` |
+| 4, the boundaries | 4 | S4-36 rejected, S4-37 needs a device | none | `A4-round-four-scope4-results.md` |
 
 **Thirteen fixes are made but not yet read by anybody outside**, which is what the remaining
 rounds are for: scope 2's three from round six, scope 1's four, and scope 4's six.

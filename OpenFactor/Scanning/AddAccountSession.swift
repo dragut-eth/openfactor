@@ -3,8 +3,11 @@ import OpenFactorCore
 
 /// The add flow's state, owned by the app so App Lock cannot destroy it.
 ///
-/// **The third instance of the pattern, and the reason it is a named thing now.** The lock
-/// replaces the root view, which tears down everything beneath it, and beneath it here was
+/// **The third instance of the pattern, and the reason it is a named thing now.** On a locked
+/// cold launch the lock *is* the root, so the account list and everything under it are built
+/// fresh when it clears; a warm lock is a window above the surviving tree and takes nothing with
+/// it. State owned below the list therefore survives one of those and not the other, and the one
+/// it does not survive is the one this app opens into. Beneath it here was
 /// somebody halfway through typing a secret key by hand. Leaving to copy that key out of an
 /// email or a password manager is not an edge case of manual entry, it is how manual entry is
 /// actually performed, and coming back to an empty form was reported within a day of the vault

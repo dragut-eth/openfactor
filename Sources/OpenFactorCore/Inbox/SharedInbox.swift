@@ -36,9 +36,12 @@ import Foundation
 ///
 /// **The sweep is driven by the app coming forward, not by a clock.** An item is removed on the
 /// first sweep after `staleAfter`, which is not the same as being removed at `staleAfter`: a phone
-/// that never opens this app again never runs one. The previous version of this paragraph was
-/// mangled by an edit and left a fragment of a deleted sentence in the middle of it, which round
-/// three of gate A4 read as the front page of a file nobody could parse.
+/// that never opens this app again never runs one.
+///
+/// **Sweeping is two operations and they follow different rules.** `sweepStale` collects garbage
+/// and decides by age. `sweep(_:)` supersedes a set the caller has already chosen against and
+/// decides by identity. Writing the second as "empty the directory" is what makes it delete the
+/// arrival that turned up while the caller was deciding.
 public struct SharedInbox: Sendable {
 
     /// Both targets read this constant rather than each spelling the group out, because a
@@ -86,6 +89,9 @@ public struct SharedInbox: Sendable {
         /// The inbox directory could not be kept out of device backups, so nothing was written
         /// into it. A QR of every secret is not worth writing on the hope that it is excluded.
         case notExcludedFromBackup
+        /// The inbox path is not a directory this app can open: missing, not a directory, or a
+        /// symbolic link. Nothing is written into something that may not be ours.
+        case directoryNotOurs
     }
 
     private func directory() throws(InboxError) -> URL {
@@ -111,19 +117,17 @@ public struct SharedInbox: Sendable {
             attributes: Self.protectionAttributes)
 
         // **Excluded before anything is put in it, and the write is refused if it is not.** An
-        // item is usually collected within seconds and may sit until the first sweep after
+        // item is usually collected within seconds, but it may sit until the first sweep after
         // `staleAfter`, and a backup taken at any point in that window carries a QR image of
         // every secret in somebody's authenticator into iCloud, where nothing sweeps it. The
-        // "lives for seconds" wording here survived two rounds after the lifecycle it described
-        // stopped being true. The
         // directory carries the flag rather than each file, and it is marked before the write for
         // the same reason the vault key's staging directory is: a mark applied afterwards leaves
         // a window with nothing to close it.
         //
-        // **This used to be `try?` and write anyway**, which a review called failing open: any
-        // metadata failure that did not also stop ordinary writes produced a backup-eligible
-        // image of every seed, silently. `VaultKeyStore` already refused to write a key it could
-        // not exclude, and there was no argument for holding this to a weaker rule.
+        // **Failing to exclude refuses the write rather than writing anyway.** Failing open here
+        // means any metadata failure that does not also stop ordinary writes produces a
+        // backup-eligible image of every seed, silently. `VaultKeyStore` refuses to write a key
+        // it cannot exclude, and there is no argument for holding this to a weaker rule.
         var marked = directory
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
@@ -137,6 +141,14 @@ public struct SharedInbox: Sendable {
         else {
             throw InboxError.notExcludedFromBackup
         }
+
+        // **The directory is opened before it is written into, and the write is refused if that
+        // fails.** A group is not a confidentiality boundary, so `Inbox` can be replaced with a
+        // symbolic link by a sibling, and `createDirectory` above follows one happily. This
+        // catches a directory already substituted. It does not catch a substitution made between
+        // here and the write below, which is why the sweep and the read hold a descriptor instead
+        // of trusting a check like this one.
+        guard InboxDirectory(at: directory) != nil else { throw InboxError.directoryNotOurs }
 
         let id = UUID()
         try data.write(
@@ -193,26 +205,21 @@ public struct SharedInbox: Sendable {
     /// **Reading does not remove**, unlike `take`, because the caller has to choose before it
     /// consumes. Everything it does not choose must then be swept, which is what the app does.
     public func pending(now: Date = Date()) -> [Pending] {
-        guard let directory = try? directory(),
-            let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path)
+        guard let directory = try? directory(), let handle = InboxDirectory(at: directory)
         else { return [] }
 
-        return names.compactMap { name -> Pending? in
+        return handle.names().compactMap { name -> Pending? in
             guard let id = UUID(uuidString: name) else { return nil }
-            let attributes = try? FileManager.default.attributesOfItem(
-                atPath: directory.appendingPathComponent(name).path)
-            // **A timestamp after now is refused, not clamped.** The first fix clamped it to
-            // `now`, and all three engines of round two walked out why that is inert: the value
-            // is recomputed on every read, so a file stamped in 2090 reports an age of zero
-            // forever. It still sorted ahead of a genuine share, still passed the freshness
-            // test, and could never satisfy the launch sweep, which asks whether the age exceeds
-            // a threshold. **The item the sweep exists to remove became the one item it could
-            // never remove.**
+            // **A timestamp after now is refused, not clamped.** Clamping it to `now` is inert:
+            // the value is recomputed on every read, so a file stamped in 2090 reports an age of
+            // zero forever. It still sorts ahead of a genuine share, still passes the freshness
+            // test, and can never satisfy a sweep that asks whether an age exceeds a threshold.
+            // **The item the sweep exists to remove becomes the one item it can never remove.**
             //
             // Nothing legitimate writes a stamp in the future, so a stamp in the future is
             // evidence about the writer rather than about the time. It is treated as arriving
             // before everything, which sorts it last and makes it immediately sweepable.
-            let stamped = (attributes?[.modificationDate] as? Date) ?? .distantPast
+            let stamped = handle.modified(name) ?? .distantPast
             let arrived = stamped > now ? .distantPast : stamped
             return Pending(id: id, arrived: arrived)
         }
@@ -225,21 +232,22 @@ public struct SharedInbox: Sendable {
     /// not leave a transfer QR sitting in a container waiting for the next process that can read
     /// the group.
     public func take(_ id: UUID) throws -> Data {
-        let url = try directory().appendingPathComponent(id.uuidString)
-        defer { try? FileManager.default.removeItem(at: url) }
+        guard let directory = try? directory(), let handle = InboxDirectory(at: directory) else {
+            throw InboxError.notFound
+        }
+        let name = id.uuidString
+        defer { handle.remove(name) }
 
-        // **One open, one bounded read, through the shared primitive.** This file had the right
-        // shape first and it still had a hole: it assumed the name identified a regular file. A
-        // sibling with access to this container can create a named pipe, and opening one blocks
-        // until a writer appears, on the main actor, with the removal below never reached.
-        // `BoundedFile` refuses anything that is not a regular file before it reads a byte.
+        // **One open, one bounded read, relative to a directory this app opened.** The name alone
+        // does not promise a regular file: a sibling with access to this container can create a
+        // named pipe, and opening one blocks until a writer appears, on the main actor, with the
+        // removal above never reached. The primitive refuses anything that is not a regular file
+        // before it reads a byte.
         //
         // Bounded at the image policy, since what the extension writes here is an image. The
-        // archive ceiling was four megabytes of slack nothing in this path can use.
+        // archive ceiling would be four megabytes of slack nothing in this path can use.
         do {
-            return try BoundedFile.read(url, limit: ImportLimits.policyBytes)
-        } catch .missing {
-            throw InboxError.notFound
+            return try handle.read(name, limit: ImportLimits.policyBytes)
         } catch .tooLarge {
             throw InboxError.tooLarge
         } catch {
@@ -247,69 +255,65 @@ public struct SharedInbox: Sendable {
         }
     }
 
-    /// Removes everything, whatever its age.
+    /// Removes exactly these items, whatever their age.
     ///
-    /// **Not called at launch**, which this line claimed for three rounds. `sweepStale` is what
-    /// runs when the app comes forward. This one runs after a collection, where taking one item
-    /// means the rest were seen and not chosen.
+    /// **This is supersession rather than collection**, and the two must not be one operation.
+    /// Collecting garbage asks how old a file is. Superseding asks whether a newer arrival has
+    /// replaced this one, which is a question about a set the caller already holds and not a
+    /// question about the directory. A supersede written as "empty the directory" deletes
+    /// whatever arrived between the caller's decision and the deletion, and deletes it precisely
+    /// because it is too new to have been part of the decision.
     ///
-    /// Covers what `take` cannot: the app never opened after the extension wrote, or was killed
-    /// between the two. Deliberately silent, because there is nothing a person could do about a
-    /// failure and nothing they lose by one.
-    public func sweep() {
-        guard let directory = try? directory() else { return }
-        guard
-            let names = try? FileManager.default.contentsOfDirectory(
-                atPath: directory.path)
-        else { return }
-
-        for name in names {
-            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
+    /// So the caller passes the identifiers it read, and files that arrived after that reading
+    /// survive to be presented. Removing a name that is already gone is not an error and is not
+    /// reported: there is nothing a person could do about it and nothing they lose by it.
+    public func sweep(_ ids: [UUID]) {
+        guard let directory = try? directory(), let handle = InboxDirectory(at: directory) else {
+            return
         }
+        for id in ids { handle.remove(id.uuidString) }
     }
 
     /// How long an item may sit in the inbox before a sweep removes it regardless.
     ///
-    /// **The same number as `freshness`, and that is the point.** These were five minutes and ten
-    /// minutes, so an item aged between them was worth presenting by one rule and deleted unread
-    /// by the other, and which happened depended on whether iOS had kept the process alive. Round
-    /// two found the split in all three reviews and the normative lock document sided with
-    /// neither. One idea, one constant: an item is removed exactly when it stops being worth
-    /// presenting.
+    /// **The same number as `freshness`, and that is the point.** Two different numbers give an
+    /// item an age at which it is worth presenting by one rule and deleted unread by the other,
+    /// and which happens depends on whether iOS has kept the process alive. One idea, one
+    /// constant: an item is removed exactly when it stops being worth presenting.
     public static let staleAfter = freshness
 
     /// Removes what nobody is coming for, and leaves what somebody just shared.
     ///
-    /// **All three engines found the sweep unreachable in the case it exists for.** `SharedInbox`
-    /// said the directory was swept at every launch and `SECURITY.md` said leftovers are swept
-    /// when OpenFactor launches, but the only sweep sat inside the collection path, which refuses
-    /// to run until the scene is active, the lock is open, the vault is open and no arrival is
-    /// pending. An image shared to a locked phone that was never unlocked again stayed there.
+    /// **This is the collection half, and it runs on nothing but the app coming forward.** Not
+    /// inside the collection path, which refuses to run until the scene is active, the lock is
+    /// open, the vault is open and no arrival is pending: an image shared to a phone that is
+    /// locked and never unlocked again would stay there under every one of those conditions.
     ///
-    /// This runs whenever the app comes forward, with none of those conditions. Round two of the
-    /// gate found the first version running once per process, which made the threshold a
-    /// condition evaluated at launch rather than a deadline.
+    /// It runs on every foreground rather than once per process, so the threshold is a deadline
+    /// and not a condition evaluated at launch.
     public func sweepStale(now: Date = Date()) {
-        guard let directory = try? directory() else { return }
-        guard
-            let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path)
-        else { return }
+        guard let directory = try? directory(), let handle = InboxDirectory(at: directory) else {
+            return
+        }
 
-        let ages = Dictionary(
-            pending(now: now).map { ($0.id.uuidString, now.timeIntervalSince($0.arrived)) },
-            uniquingKeysWith: { first, _ in first })
-
-        for name in names {
-            // **A name this app did not write is removed on sight.** The sweep used to consider
-            // only names that parse as a UUID, which is every name this app writes and no
-            // guarantee about what else is in a shared container. A review pointed out that
-            // anything else was the original leftover under a name the sweep could not see.
-            guard let age = ages[name] else {
-                try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
-                continue
-            }
-            guard age > Self.staleAfter else { continue }
-            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
+        for name in handle.names() {
+            // **Every deletion here is decided by that file's own timestamp, read immediately
+            // before the removal.** Reading the directory and then judging its contents against a
+            // clock taken earlier means a file written during the pass is measured against a
+            // moment before it existed.
+            //
+            // **Including names this app did not write.** Deleting a foreign name on sight was
+            // the stricter rule, and it collides with the atomic write it shares the directory
+            // with: `Data.write(options: .atomic)` puts a temporary file alongside the real one
+            // and renames it, and the temporary name is exactly a name this app did not write. In
+            // a group whose only members are this app's own targets, the foreign name being
+            // deleted on sight is almost always the extension's own half-finished write. Age
+            // still removes it: a genuine leftover under an unrecognised name is old on the next
+            // pass, and an in-progress write is seconds old and survives.
+            guard let modified = handle.modified(name) else { continue }
+            let arrived = modified > now ? Date.distantPast : modified
+            guard now.timeIntervalSince(arrived) > Self.staleAfter else { continue }
+            handle.remove(name)
         }
     }
 }

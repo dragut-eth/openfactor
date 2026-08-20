@@ -71,16 +71,70 @@ struct SharedInboxTests {
 
     /// The case `take` cannot cover: the app never opened, or died between the write and the
     /// read. Without this the image stays until the container is deleted.
-    @Test("The sweep removes everything, including items nobody asked for")
-    func sweepRemovesEverything() throws {
+    @Test("Superseding removes every item it was given")
+    func sweepRemovesWhatItIsGiven() throws {
         let (inbox, container) = makeInbox()
         defer { try? FileManager.default.removeItem(at: container) }
 
-        for _ in 0..<4 { _ = try inbox.write(Data("a QR code".utf8)) }
+        var written: [UUID] = []
+        for _ in 0..<4 { written.append(try inbox.write(Data("a QR code".utf8))) }
         #expect(names(in: container).count == 4)
 
-        inbox.sweep()
+        inbox.sweep(written)
         #expect(names(in: container).isEmpty)
+    }
+
+    /// **The finding this signature exists for.** Superseding used to empty the directory, so an
+    /// item written between the caller reading the inbox and the caller deleting it was destroyed
+    /// for being too new to have been part of the decision. Revert `sweep` to a directory listing
+    /// and this goes red.
+    @Test("Superseding leaves what arrived after the caller looked")
+    func sweepLeavesWhatArrivedLater() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        let seen = try inbox.write(Data("the one the app read".utf8))
+        let snapshot = inbox.pending().map(\.id)
+        let arrivedDuring = try inbox.write(Data("shared a moment later".utf8))
+
+        inbox.sweep(snapshot)
+
+        #expect(inbox.pending().map(\.id) == [arrivedDuring])
+        #expect(!names(in: container).contains(seen.uuidString))
+    }
+
+    /// **The inbox is reached through a descriptor, not a path, and this is why.** A group is not
+    /// a confidentiality boundary. A sibling that removes `Inbox` and puts a symbolic link there
+    /// redirects everything resolved by name, and a sweep that enumerates by path and deletes by
+    /// path would then be deleting somebody else's tree on this app's authority, recursively.
+    ///
+    /// `O_DIRECTORY | O_NOFOLLOW` refuses to open it at all, so every operation declines rather
+    /// than following it. Drop `O_NOFOLLOW` from `InboxDirectory` and the last expectation here
+    /// goes red.
+    @Test("A substituted inbox directory is refused rather than followed")
+    func aSymlinkedDirectoryIsRefused() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        let elsewhere = container.appendingPathComponent("somebody-elses")
+        try FileManager.default.createDirectory(
+            at: elsewhere, withIntermediateDirectories: true)
+        let theirs = elsewhere.appendingPathComponent("do-not-delete-this")
+        try Data("not ours to touch".utf8).write(to: theirs)
+
+        let inboxPath = container.appendingPathComponent(SharedInbox.directoryName)
+        try FileManager.default.createDirectory(
+            at: container, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: inboxPath, withDestinationURL: elsewhere)
+
+        #expect(inbox.pending().isEmpty, "nothing is read through it")
+        #expect(throws: (any Error).self) { _ = try inbox.write(Data("a QR code".utf8)) }
+        inbox.sweepStale(now: Date().addingTimeInterval(SharedInbox.staleAfter + 1))
+        inbox.sweep([UUID()])
+
+        #expect(
+            FileManager.default.fileExists(atPath: theirs.path),
+            "and nothing beyond the link was removed")
     }
 
     @Test("Sweeping an inbox that was never used is not an error")
@@ -88,7 +142,7 @@ struct SharedInboxTests {
         let (inbox, container) = makeInbox()
         defer { try? FileManager.default.removeItem(at: container) }
 
-        #expect(throws: Never.self) { inbox.sweep() }
+        #expect(throws: Never.self) { inbox.sweep([UUID()]) }
     }
 
     /// Names must carry nothing. A URL can be logged, can appear in handoff, and can end up in a
@@ -108,8 +162,8 @@ struct SharedInboxTests {
         let inbox = SharedInbox(container: { nil })
 
         #expect(throws: SharedInbox.InboxError.noContainer) { _ = try inbox.write(Data()) }
-        #expect(throws: SharedInbox.InboxError.noContainer) { _ = try inbox.take(UUID()) }
-        #expect(throws: Never.self) { inbox.sweep() }
+        #expect(throws: SharedInbox.InboxError.notFound) { _ = try inbox.take(UUID()) }
+        #expect(throws: Never.self) { inbox.sweep([UUID()]) }
     }
 
 }
@@ -243,9 +297,10 @@ struct SharedInboxCollectionTests {
         #expect(SharedInbox.staleAfter == SharedInbox.freshness)
     }
 
-    /// A name this app did not write is not something to leave in a shared container.
-    @Test("A file the app did not write is swept on sight")
-    func unknownNamesAreSwept() throws {
+    /// A name this app did not write is not something to leave in a shared container, but it is
+    /// judged by age like everything else.
+    @Test("A file the app did not write is swept once it is stale")
+    func unknownNamesAreSweptWhenStale() throws {
         let (inbox, directory) = makeInbox()
         defer { try? FileManager.default.removeItem(at: directory) }
 
@@ -254,10 +309,45 @@ struct SharedInboxCollectionTests {
             .appendingPathComponent("not-a-uuid")
         try Data("planted under a name the sweep could not see".utf8).write(to: theirs)
 
-        inbox.sweepStale()
+        inbox.sweepStale(now: Date().addingTimeInterval(SharedInbox.staleAfter + 1))
 
         #expect(!FileManager.default.fileExists(atPath: theirs.path))
-        #expect(inbox.pending().map(\.id) == [mine], "and what this app wrote is untouched")
+        #expect(inbox.pending().map(\.id) == [], "and everything else stale went with it")
+        _ = mine
+    }
+
+    /// **Deleting a foreign name on sight collides with the atomic write it shares the directory
+    /// with.** `Data.write(options: .atomic)` puts a temporary file alongside the real one and
+    /// renames it, and that temporary name is exactly a name this app did not write. Age is what
+    /// separates a genuine leftover from a write still in progress. Remove the age gate on the
+    /// unknown branch and this goes red.
+    @Test("A file the app did not write is left alone while it is fresh")
+    func unknownNamesSurviveWhileFresh() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        _ = try inbox.write(Data("mine".utf8))
+        let inProgress = directory.appendingPathComponent(SharedInbox.directoryName)
+            .appendingPathComponent("openfactor-write-in-progress")
+        try Data("half of an atomic write".utf8).write(to: inProgress)
+
+        inbox.sweepStale()
+
+        #expect(FileManager.default.fileExists(atPath: inProgress.path))
+    }
+
+    /// **A sweep that reads one clock and then judges every file against it** measures a file
+    /// written during the pass against a moment before it existed. Each timestamp is read
+    /// immediately before its own removal.
+    @Test("An item written during a sweep is judged by its own timestamp")
+    func agesAreReadPerFile() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let fresh = try inbox.write(Data("just shared".utf8))
+        inbox.sweepStale(now: Date())
+
+        #expect(inbox.pending().map(\.id) == [fresh])
     }
 
     /// **The bound cannot be skipped, and there is nothing to race.** The old shape asked for a

@@ -26,9 +26,10 @@ struct AccountListView: View {
     /// What arrived from outside the app, if anything.
     ///
     /// **Owned by the app, not by this view.** Collecting from the share extension's inbox is
-    /// destructive: it takes the image out of the container. If this view held the result, App
-    /// Lock swapping the root would destroy it after the image was already gone, and sharing
-    /// would silently do nothing. The same lesson as the vault passphrase, one screen along.
+    /// destructive: it takes the image out of the container. If this view held the result, a
+    /// locked cold launch would rebuild this view and destroy it after the image was already
+    /// gone, and sharing would silently do nothing. The same lesson as the vault passphrase, one
+    /// screen along.
     @Binding var arrival: IdentifiedArrival?
 
     /// Whether the arrival sheet may present right now. False for exactly the gap between

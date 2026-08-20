@@ -119,6 +119,55 @@ struct InboxCollectionTests {
         #expect(InboxOpener.collect(from: inbox) == nil)
     }
 
+    /// **The medium a round four review walked out, and the fix for an earlier one is what made
+    /// it reachable.** The sweep used to run in a `defer`, so it ran on the failure path too. A
+    /// sibling plants one item `take` will refuse, a named pipe or a file over the limit, with a
+    /// newer timestamp so it sorts first; the take fails, nothing is presented, and the sweep
+    /// deletes every genuine share beside it. Before the read was bounded, the pipe hung on the
+    /// main actor and the `defer` never ran, so closing the hang opened this.
+    ///
+    /// Move the supersede back into a `defer` and this goes red.
+    @Test("A poison item that cannot be taken does not destroy what is beside it")
+    func afailedTakeLeavesTheRest() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        let genuine = try inbox.write(Data("somebody's transfer QR".utf8))
+        let directory = container.appendingPathComponent(SharedInbox.directoryName)
+        // Aged so the poison written next sorts ahead of it. A future stamp would not do it:
+        // `pending` refuses one of those and sorts it last, deliberately.
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(-5)],
+            ofItemAtPath: directory.appendingPathComponent(genuine.uuidString).path)
+
+        let poison = directory.appendingPathComponent(UUID().uuidString)
+        try Data(repeating: 0, count: ImportLimits.policyBytes + 1).write(to: poison)
+
+        #expect(InboxOpener.collect(from: inbox) == nil, "the poison sorts first and is refused")
+        #expect(
+            inbox.pending().map(\.id) == [genuine],
+            "and the share somebody actually made is still there")
+        #expect(
+            !FileManager.default.fileExists(atPath: poison.path),
+            "while the item that could not be taken is gone")
+    }
+
+    /// The other half: what a successful collection supersedes is what it read, not whatever the
+    /// directory holds by the time the deletion runs.
+    @Test("Collecting leaves an item that arrived while it was deciding")
+    func collectingLeavesALaterArrival() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        _ = try inbox.write(Data("older, and superseded".utf8))
+        let newest = try inbox.write(Data("the one collected".utf8))
+        #expect(InboxOpener.collect(from: inbox) == .image(Data("the one collected".utf8)))
+        _ = newest
+
+        let arrivedDuring = try inbox.write(Data("shared a moment later".utf8))
+        #expect(inbox.pending().map(\.id) == [arrivedDuring])
+    }
+
     @Test("A fresh item is collected")
     func freshIsCollected() throws {
         let (inbox, container) = makeInbox()
