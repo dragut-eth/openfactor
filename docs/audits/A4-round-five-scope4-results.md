@@ -296,3 +296,32 @@ missing name has no timestamp, a file does not open as a directory, and a symbol
 open whatever it points at.
 
 481 core tests pass, the app suite passes, both targets build.
+
+## What was done: S4-42
+
+**The candidate is what should never have existed.** Every refusal downstream was already correct:
+the bounded read refuses a directory because it is not a regular file, and `unlinkat` refuses it
+because it does not take directories. `pending` now asks whether an entry is a regular file before
+offering it as an item.
+
+**Both answers come from one `fstatat`.** `InboxDirectory.entry(_:)` returns the timestamp and the
+kind together, so the two cannot describe different states of the directory, and `modified(_:)` is
+now that call with the kind discarded. **The sweep deliberately keeps using `modified`**: what it
+removes is decided by age, and a leftover under a foreign name is worth removing whether it is a
+file, a link or a socket. Only the reading side insists on a regular file, because only the reading
+side offers the thing to somebody.
+
+**The optional half of the filed remedy was declined.** Removing empty directories with
+`AT_REMOVEDIR` would add deletion authority to a scope that has produced a high and a medium by
+adding exactly that, and the property `InboxDirectoryTests` now pins is that nothing inside a
+directory is reachable by a removal. A planted directory therefore stays, unlistable as an item and
+unremovable by the sweep, which is an accumulation a hostile sibling can already cause directly and
+which the filing engine accepted as an availability cost. Anything else that sibling plants, a link
+or a pipe or a socket, is not an item and is still swept by age.
+
+Two tests, both red before the change and mutation tested after: a directory with a UUID name is
+never offered as an item, and, at the app level, a planted directory does not hide a genuine share.
+The second is the consequence the core test cannot show, since a directory sorts by its own
+timestamp and is therefore what a collection reaches for first.
+
+482 core tests pass, the app suite passes, both targets build.

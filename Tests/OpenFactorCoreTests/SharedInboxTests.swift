@@ -137,6 +137,29 @@ struct SharedInboxTests {
             "and nothing beyond the link was removed")
     }
 
+    /// **A name is not enough to make something an item.** `pending` admitted any entry whose
+    /// name parsed as a UUID, without asking whether it was a file. A sibling can create a
+    /// directory with a canonical UUID name: it is then offered as the thing to collect, `take`
+    /// opens it, the bounded read correctly refuses it as not a regular file, and the removal
+    /// that follows is `unlinkat` without `AT_REMOVEDIR`, which correctly refuses directories.
+    /// The POSIX behaviour is right at every step and the candidate should never have existed.
+    ///
+    /// Drop the regular-file requirement from `pending` and this goes red.
+    @Test("A directory with a UUID name is never offered as an item")
+    func aDirectoryIsNotAnItem() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        let mine = try inbox.write(Data("a genuine share".utf8))
+        // Created after the share, so it carries the newer timestamp and would sort first.
+        try FileManager.default.createDirectory(
+            at: container.appendingPathComponent(SharedInbox.directoryName)
+                .appendingPathComponent(UUID().uuidString),
+            withIntermediateDirectories: true)
+
+        #expect(inbox.pending().map(\.id) == [mine], "only the file is an item")
+    }
+
     @Test("Sweeping an inbox that was never used is not an error")
     func sweepIsSafeWhenEmpty() {
         let (inbox, container) = makeInbox()

@@ -82,22 +82,37 @@ struct InboxDirectory: ~Copyable {
         return found
     }
 
-    /// When a name was last written, without following it if it is a link.
+    /// What one entry is: when it was last written, and whether it is a regular file.
+    ///
+    /// **Both from a single `fstatat`**, so the two answers cannot describe different states of
+    /// the directory, and without following the name if it is a link.
     ///
     /// **Read at the moment the caller needs it rather than once for a whole pass.** A sweep that
-    /// takes one timestamp and then judges every file against it is judging later files by an
-    /// earlier clock, which is how a file that arrives during a sweep gets deleted for being old.
-    func modified(_ name: String) -> Date? {
+    /// takes one timestamp and then judges every entry against it is judging later entries by an
+    /// earlier clock, which is how something that arrives during a sweep gets deleted for being
+    /// old.
+    func entry(_ name: String) -> (modified: Date, isRegularFile: Bool)? {
         var info = stat()
         guard fstatat(descriptor, name, &info, AT_SYMLINK_NOFOLLOW) == 0 else { return nil }
+
         // **Nanoseconds included.** Whole seconds are not enough resolution here: two items
         // written in the same second would sort arbitrarily, and the newest one is the one the
         // app presents.
         let stamp = info.st_mtimespec
-        return Date(
+        let modified = Date(
             timeIntervalSince1970: TimeInterval(stamp.tv_sec)
                 + TimeInterval(stamp.tv_nsec) / 1_000_000_000)
+
+        return (modified, info.st_mode & S_IFMT == S_IFREG)
     }
+
+    /// When a name was last written, for a caller that does not care what kind of thing it is.
+    ///
+    /// **The sweep is one of those and must stay one.** What it removes is decided by age, and a
+    /// leftover under a foreign name is worth removing whether it is a file, a link or a socket.
+    /// Only the reading side needs to insist on a regular file, because only the reading side
+    /// offers the thing to somebody.
+    func modified(_ name: String) -> Date? { entry(name)?.modified }
 
     /// Removes one name. Never a directory, and never recursively.
     func remove(_ name: String) {

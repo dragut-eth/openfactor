@@ -211,12 +211,26 @@ public struct SharedInbox: Sendable {
         return handle.names().compactMap { name -> Pending? in
             guard let id = UUID(uuidString: name) else { return nil }
 
-            // **An item whose age cannot be read is not a candidate.** The alternative is to
+            // **An entry whose age cannot be read is not a candidate.** The alternative is to
             // invent one, and an invented age is not evidence: `.distantPast` here would make an
             // unreadable entry sort last and then sit inside the identifier set a collection
             // supersedes, so it would be deleted for an age nobody measured. It stays instead,
             // which costs an entry nobody can stat sitting in the directory.
-            guard let stamped = handle.modified(name) else { return nil }
+            //
+            // **And a name is not enough to make something an item.** A sibling can create a
+            // directory with a canonical UUID name. Admitted, it sorts by its own timestamp and
+            // becomes the thing a collection reaches for; the read then refuses it because it is
+            // not a regular file, and the removal that follows refuses it because `unlinkat` does
+            // not take directories. Every one of those refusals is correct, and the result is a
+            // genuine share sitting unseen behind something that cannot be collected and cannot
+            // be removed. The candidate is what should never have existed.
+            //
+            // A directory therefore stays where it is, unlistable as an item and unremovable by
+            // the sweep, which is an accumulation a hostile sibling can already cause directly.
+            // Everything else it might plant, a link or a pipe or a socket, is not an item here
+            // and is still swept by age.
+            guard let entry = handle.entry(name), entry.isRegularFile else { return nil }
+            let stamped = entry.modified
 
             // **The clock is read after the file, not before the directory.** A listing that
             // samples the clock at entry judges an item that lands mid-pass against a moment

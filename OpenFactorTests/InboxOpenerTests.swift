@@ -152,6 +152,27 @@ struct InboxCollectionTests {
             "while the item that could not be taken is gone")
     }
 
+    /// **The consequence the core test cannot show.** A directory with a UUID name sorts newest,
+    /// so it is what a collection reaches for; the take refuses it, the collection returns
+    /// nothing, and the genuine share behind it is never presented. Unlike a poison file, the
+    /// directory cannot be removed either, so refreshing its timestamp hides the share again on
+    /// every attempt.
+    @Test("A planted directory does not hide a genuine share")
+    func aPlantedDirectoryDoesNotHideSomethingReal() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        _ = try inbox.write(Data("somebody's transfer QR".utf8))
+        try FileManager.default.createDirectory(
+            at: container.appendingPathComponent(SharedInbox.directoryName)
+                .appendingPathComponent(UUID().uuidString),
+            withIntermediateDirectories: true)
+
+        #expect(
+            InboxOpener.collect(from: inbox) == .image(Data("somebody's transfer QR".utf8)),
+            "the share is presented rather than shadowed by something that is not a file")
+    }
+
     /// The other half: what a successful collection supersedes is what it read, not whatever the
     /// directory holds by the time the deletion runs.
     @Test("Collecting leaves an item that arrived while it was deciding")
