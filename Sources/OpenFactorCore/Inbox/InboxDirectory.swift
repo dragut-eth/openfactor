@@ -48,13 +48,23 @@ struct InboxDirectory: ~Copyable {
 
     /// Every name in the directory, excluding `.` and `..`.
     ///
-    /// `fdopendir` takes ownership of the descriptor it is given and `closedir` closes it, so it
-    /// is handed a duplicate and this type keeps its own.
+    /// **`fdopendir` takes ownership of the descriptor it is given**, and `closedir` closes it, so
+    /// it must not be handed this type's own.
+    ///
+    /// **It is handed a fresh opening rather than a `dup`, and the difference is not cosmetic.**
+    /// `dup` produces a second descriptor that shares one file offset with the first, so reading
+    /// the stream to its end leaves that shared offset at the end: a second listing through
+    /// another `dup` starts where the last one stopped and reports an empty directory. Opening
+    /// `.` relative to the descriptor gives an independent offset, so every listing starts at the
+    /// beginning.
+    ///
+    /// `.` cannot be a symbolic link and is resolved relative to a descriptor this type already
+    /// holds, so this re-opens the directory it has rather than a path anybody can move.
     func names() -> [String] {
-        let duplicate = dup(descriptor)
-        guard duplicate >= 0 else { return [] }
-        guard let stream = fdopendir(duplicate) else {
-            close(duplicate)
+        let listing = openat(descriptor, ".", O_RDONLY | O_DIRECTORY)
+        guard listing >= 0 else { return [] }
+        guard let stream = fdopendir(listing) else {
+            close(listing)
             return []
         }
         defer { closedir(stream) }

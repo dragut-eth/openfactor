@@ -255,3 +255,44 @@ arrival recorded as `.distantPast`.
 true now. They were not rewritten; the code came to meet them.
 
 472 core tests pass, the app suite passes, both targets build.
+
+## What was done: S4-44, and the defect it found
+
+**The test found a defect in the primitive on its first run**, which is the whole argument for
+writing it.
+
+`InboxDirectory.names()` handed `fdopendir` a `dup` of its own descriptor, so that `closedir`
+would not close the one the type keeps. **A `dup` shares one file offset with the original.**
+Reading the stream to its end leaves that shared offset at the end, so a second listing through
+another `dup` starts where the first stopped and reports an **empty directory**, silently.
+
+All three engines cleared this file by reading, and one of them named this exact mechanism and
+reached the opposite conclusion: that `dup` is why a second listing does not resume a consumed
+stream. It is not. `dup` protects the descriptor from being closed and shares its offset.
+
+**Not reachable in production today**: `pending` and `sweepStale` are the only callers and each
+lists once per handle. The fix is prophylactic, and the silent-empty failure mode is why it was not
+left alone. `names()` now opens `.` relative to its own descriptor, which gives an independent
+offset and re-opens the directory the type already holds rather than a path anybody can move.
+
+**So this commit is not test-only, and I said it would be.** That claim was wrong within the hour.
+
+### The tests
+
+`InboxDirectoryTests` is the primitive's first direct coverage. Three mutations, each verified to
+apply before the run:
+
+- **Dropping `tv_nsec` from `modified`** reddens the sub-second ordering test, which is S4-44 as
+  filed: two files written twenty milliseconds apart must carry distinguishable timestamps in the
+  right order, and the existing ordering test sleeps 1.1 seconds so it cannot see this.
+- **Passing `AT_REMOVEDIR` to `unlinkat`** reddens the suite through the file-removal tests, since
+  that flag refuses ordinary files. Stated precisely: the new directory test pins **non-recursion**,
+  that nothing inside a directory is reachable by a removal, which is the property S4-33 rests on.
+  It does not pin the flag's exact value; the suite as a whole does.
+- **Returning to `dup`** reddens the repeatability test, which is the defect above.
+
+The rest covers what the other engines verified by reading: listing excludes `.` and `..`, a
+missing name has no timestamp, a file does not open as a directory, and a symbolic link does not
+open whatever it points at.
+
+481 core tests pass, the app suite passes, both targets build.
