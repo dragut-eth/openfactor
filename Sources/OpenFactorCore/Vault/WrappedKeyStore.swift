@@ -23,14 +23,21 @@ public struct WrappedKeyStore: Sendable {
 
     /// Follows the account items. The record is ciphertext, and a device that syncs its accounts
     /// and not the means of reading them would be a device that syncs nothing usable.
-    public let synchronizable: Bool
+    ///
+    /// **A question rather than a value, asked at each write.** Held as a `Bool`, this was the
+    /// sync preference as it stood when the app launched, while `SyncAwareKeychainStore` re-reads
+    /// the preference on every call precisely so there is no cached setting to go stale. Enable
+    /// sync, erase, and create a new vault in the same session, and a stored `Bool` writes the
+    /// wrap device-only while every new account syncs: the original total-loss shape, for one
+    /// session, on a phone lost inside it.
+    private let synchronizable: @Sendable () -> Bool
 
     public let accessGroup: String?
 
     public init(
         service: String = "app.openfactor.vault.key",
         accessibility: SecretAccessibility = .whenUnlockedThisDeviceOnly,
-        synchronizable: Bool = false,
+        synchronizable: @escaping @Sendable () -> Bool = { false },
         accessGroup: String? = nil
     ) {
         self.service = service
@@ -62,8 +69,10 @@ public struct WrappedKeyStore: Sendable {
     /// The record, or `nil` when no vault has ever been created on this Apple Account.
     ///
     /// **`nil` is not an error and must never be shown as one.** It is the ordinary state of a
-    /// first launch, and it is also the ordinary state of a device whose record has not finished
-    /// arriving, which this project has measured taking half an hour.
+    /// first launch, and it is also the ordinary state of a second device set up while the record
+    /// is still travelling, which this project has measured taking half an hour for a freshly
+    /// written item. A replacement phone is the other case and is faster: the record is already
+    /// resident in the Apple Account, and E8 measured one readable on first launch.
     public func load() throws(SecretStoreError) -> Data? {
         var find = query()
         find[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -108,16 +117,6 @@ public struct WrappedKeyStore: Sendable {
         }
     }
 
-    /// Removes the record carrying this candidate's flag, and nothing else.
-    public func discard(_ candidate: WrappedCandidate) throws(SecretStoreError) {
-        var target = query()
-        target[kSecAttrSynchronizable as String] = candidate.isSynchronizable
-
-        let status = SecItemDelete(target as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw error(for: status)
-        }
-    }
 
     public var exists: Bool {
         (try? load()) != nil
@@ -149,6 +148,13 @@ public struct WrappedKeyStore: Sendable {
     /// between iCloud and this device as a side effect. **Where the record lives is
     /// `setSynchronizable`'s decision and nothing else's.**
     public func save(_ record: Data) throws(SecretStoreError) {
+        // **A twin pair is refused before anything is found to update.** `SecItemUpdate` under a
+        // one-item match would replace whichever record it happened to find, and with two live
+        // vaults' records present that can overwrite the wrong vault's only recovery credential.
+        // If the overwritten one is synchronizable, the mistake reaches every device on the
+        // account. Nothing that exists today can tell the two apart, so nothing may write.
+        guard try countingBothFlags() <= 1 else { throw .twinnedRecord }
+
         // Any, so an existing record is found whichever flag it carries.
         var find = query()
         find[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -185,7 +191,7 @@ public struct WrappedKeyStore: Sendable {
         guard found == errSecItemNotFound else { throw error(for: found) }
 
         var attributes = query()
-        attributes[kSecAttrSynchronizable as String] = synchronizable
+        attributes[kSecAttrSynchronizable as String] = synchronizable()
         attributes[kSecAttrAccessible as String] = accessibility.attribute
         attributes[kSecAttrLabel as String] = "OpenFactor"
         attributes[kSecValueData as String] = record
@@ -215,7 +221,7 @@ public struct WrappedKeyStore: Sendable {
     /// conflict detection after creation, which this does not have.
     public func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool {
         var attributes = query()
-        attributes[kSecAttrSynchronizable as String] = synchronizable
+        attributes[kSecAttrSynchronizable as String] = synchronizable()
         attributes[kSecAttrAccessible as String] = accessibility.attribute
         attributes[kSecAttrLabel as String] = "OpenFactor"
         attributes[kSecValueData as String] = record
@@ -230,7 +236,7 @@ public struct WrappedKeyStore: Sendable {
         // all. Remove what it wrote, pinned to this store's own flag so the record that was
         // already present is never the one deleted.
         var mine = query()
-        mine[kSecAttrSynchronizable as String] = synchronizable
+        mine[kSecAttrSynchronizable as String] = synchronizable()
         SecItemDelete(mine as CFDictionary)
         return false
     }
@@ -258,7 +264,8 @@ public struct WrappedKeyStore: Sendable {
     ///
     /// - Returns: `nil` when there is no record, otherwise whether it is offered to iCloud, and
     ///   the number of records found under both flags. **A count above one is the twin case**,
-    ///   S1-12, which `load` resolves by picking one unspecified.
+    ///   S1-12. `load` still resolves it by picking one unspecified, which is why nothing that
+    ///   matters reads through `load` alone; `unlock` reads `candidates()` and tries every one.
     public func syncReport() -> (isSynchronizable: Bool, records: Int)? {
         var find = query()
         find[kSecMatchLimit as String] = kSecMatchLimitAll

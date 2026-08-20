@@ -70,11 +70,16 @@ public struct VaultKeyStore: Sendable {
         return FileManager.default.fileExists(atPath: url.path)
     }
 
-    /// The key, or `nil` when this device has not been given one yet.
+    /// The key, or `nil` when this device has not been given one, **or holds one it cannot
+    /// read**.
     ///
     /// **Absent is not damaged.** A device that has ciphertext and no key is the ordinary state
     /// of a fresh install or a new phone, and the interface must offer the passphrase rather than
-    /// report a fault. Only a file that exists and is the wrong size is a fault.
+    /// report a fault. A file that exists and cannot be opened or read is folded into the same
+    /// `nil` deliberately: the gate then reads `locked` when a wrapped record is present, and the
+    /// passphrase re-derives the same key and overwrites the unreadable file, so the state heals
+    /// on the path the interface offers anyway. A file that is the wrong size, or is not a
+    /// regular file at all, is a fault and throws.
     public func load() throws -> SymmetricKey? {
         let url = try fileURL()
         // **The same primitive as every other read in this project**, which matters less here
@@ -93,7 +98,9 @@ public struct VaultKeyStore: Sendable {
             return nil
         } catch .tooLarge, .notARegularFile {
             throw KeyStoreError.damaged
-        } catch {
+        } catch .unreadable {
+            // Exhaustive rather than a catch-all, so a future `ReadError` case has to be
+            // classified here on purpose instead of silently becoming "no key".
             return nil
         }
 

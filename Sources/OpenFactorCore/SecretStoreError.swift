@@ -45,6 +45,18 @@ public enum SecretStoreError: Error, Equatable, Sendable {
     /// back to zero, which would replay every code the account has ever produced.
     case counterExhausted
 
+    /// Two wrapped records exist where there should be one, and the write cannot name which
+    /// it means.
+    ///
+    /// `kSecAttrSynchronizable` is part of a Keychain item's primary key, so a record arriving
+    /// from iCloud after this device wrote its own is a second item rather than a duplicate.
+    /// While both exist, a replacement written through a one-item match would update whichever
+    /// it happened to find, which can overwrite the wrong vault's only recovery credential and,
+    /// when the overwritten record is the synchronizable one, propagate that mistake to every
+    /// device on the account. Refused instead. Unlocking still works throughout: `unlock` reads
+    /// every record and tries the passphrase against each.
+    case twinnedRecord
+
     /// Anything else the Keychain reported, carrying the raw status so a bug report can
     /// name it exactly.
     case keychain(status: Int32)
@@ -80,6 +92,12 @@ extension SecretStoreError: CustomStringConvertible {
             return "This account has run out of codes and needs to be set up again."
         case let .migrationIncomplete(moved, failed):
             return "Moved \(moved) accounts, and \(failed) could not be moved."
+
+        case .twinnedRecord:
+            return """
+                Two vault records exist where there should be one, so nothing was changed. \
+                Unlocking with your passphrase still works.
+                """
 
         case let .keychain(status):
             let message = SecCopyErrorMessageString(status, nil) as String? ?? "no description"

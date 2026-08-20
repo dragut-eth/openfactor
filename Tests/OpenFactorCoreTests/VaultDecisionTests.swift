@@ -242,21 +242,50 @@ struct VaultDecisionTests {
         #expect(try keys.load() != nil, "the vault opened")
     }
 
-    /// **And the twin does not survive its own resolution.** The passphrase has proved which
-    /// record belongs to these accounts, so the other is a wrap for a vault that no longer exists
-    /// and can only cause this again on the next device.
-    @Test("The losing wrap is discarded once the passphrase has chosen")
-    func theLoserIsDiscarded() throws {
+    /// **Both wraps survive a successful unlock, whichever passphrase was typed.** This test
+    /// replaces one that asserted the opposite: that the record the passphrase did not open was
+    /// discarded, as a wrap "for a vault that no longer exists". All three engines of round four
+    /// rejected the premise. Opening a wrap proves which record that passphrase belongs to and
+    /// nothing about the other, because nothing in OFK1 binds a wrap to the account ciphertext,
+    /// and in the state that produces twins both records are live vaults' only recovery
+    /// credentials. The two wraps here are around two fresh random keys, exactly that state.
+    ///
+    /// Reintroduce a discard into `unlock` and both halves of this go red.
+    @Test("A successful unlock deletes nothing, in either direction")
+    func aSuccessfulUnlockDeletesNothing() throws {
         let (vault, _, wrapped) = makeVault()
 
-        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "a different vault entirely"))
-        let mine = try BackupPassphraseFixture.wrap(passphrase: "the passphrase somebody wrote down")
-        wrapped.plantTwin(mine, isSynchronizable: true)
+        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "phone A's passphrase"))
+        wrapped.plantTwin(
+            try BackupPassphraseFixture.wrap(passphrase: "phone B's passphrase"),
+            isSynchronizable: true)
 
-        try vault.unlock(with: "the passphrase somebody wrote down")
+        try vault.unlock(with: "phone B's passphrase")
+        #expect(wrapped.recordCount == 2, "the wrap this passphrase did not open is untouched")
 
-        #expect(wrapped.recordCount == 1, "one record left, and it is the one that opened")
-        #expect(wrapped.storedRecord == mine)
+        try vault.unlock(with: "phone A's passphrase")
+        #expect(wrapped.recordCount == 2, "and the same is true typed the other way around")
+    }
+
+    /// **A replacement cannot pick between twins, so it refuses.** `save` under a one-item match
+    /// would update whichever record it found, which with two live vaults present can overwrite
+    /// the wrong vault's only recovery credential and propagate the mistake through iCloud. The
+    /// same destruction as the discard, through a different door, needing no unlock.
+    @Test("A passphrase change is refused while two records exist")
+    func replacementRefusesTwins() throws {
+        let (vault, _, wrapped) = makeVault()
+
+        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "phone A's passphrase"))
+        wrapped.plantTwin(
+            try BackupPassphraseFixture.wrap(passphrase: "phone B's passphrase"),
+            isSynchronizable: true)
+        try vault.unlock(with: "phone B's passphrase")
+
+        let replacement = try vault.prepareReplacementPassphrase()
+        #expect(throws: Vault.VaultError.storage(.twinnedRecord)) {
+            try vault.replacePassphrase(with: replacement)
+        }
+        #expect(wrapped.recordCount == 2, "and neither record was touched by the refusal")
     }
 
     /// A genuinely wrong passphrase is still wrong, however many records there are.

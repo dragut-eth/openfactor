@@ -170,4 +170,106 @@ struct WrappedKeySyncTests {
             synchronizableFlag(of: store) == true,
             "a passphrase change must not withdraw the record from iCloud")
     }
+
+    // MARK: - The twin pair, against the real Keychain
+
+    /// Writes a second record under the opposite flag, which is what iCloud delivering a twin
+    /// does: `kSecAttrSynchronizable` is part of the primary key, so the add succeeds beside the
+    /// existing record rather than colliding with it.
+    private func plantTwin(_ record: Data, in store: WrappedKeyStore) {
+        let attributes: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: store.service,
+            kSecAttrAccount as String: "wrapped",
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: true,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+            kSecValueData as String: record,
+        ]
+        _ = SecItemAdd(attributes as CFDictionary, nil)
+    }
+
+    private func deleteBothFlags(of store: WrappedKeyStore) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: store.service,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
+    /// **The adapter half of the round-four coverage gap.** `candidates()` had no test anywhere
+    /// that executed the Keychain implementation, while `unlock`'s whole resolution of the twin
+    /// case depends on it returning both records with the right flags.
+    @Test("Candidates returns both twins, each under its own flag")
+    func candidatesSeesBothTwins() throws {
+        let store = makeStore()
+        defer { deleteBothFlags(of: store) }
+
+        try store.save(Data("device-only wrap".utf8))
+        plantTwin(Data("synced wrap".utf8), in: store)
+        #expect(recordCount(of: store) == 2, "the premise: a real twin pair in the Keychain")
+
+        let found = try store.candidates()
+        #expect(found.count == 2)
+        #expect(
+            Set(found.map(\.isSynchronizable)) == [false, true],
+            "one under each flag, so unlock can try both")
+        #expect(
+            Set(found.map(\.record)) == [Data("device-only wrap".utf8), Data("synced wrap".utf8)])
+    }
+
+    /// **A replacement written into a twin pair would update one record unspecified**, which can
+    /// overwrite the wrong vault's only recovery credential and propagate through iCloud. The
+    /// real store must refuse, and the refusal must leave both records exactly as they were.
+    /// Remove the `countingBothFlags` guard from `save` and this goes red.
+    @Test("Saving into a twin pair is refused and touches nothing")
+    func savingIntoTwinsIsRefused() throws {
+        let store = makeStore()
+        defer { deleteBothFlags(of: store) }
+
+        try store.save(Data("device-only wrap".utf8))
+        plantTwin(Data("synced wrap".utf8), in: store)
+
+        #expect(throws: SecretStoreError.twinnedRecord) {
+            try store.save(Data("a replacement that cannot name its target".utf8))
+        }
+
+        let after = try store.candidates()
+        #expect(after.count == 2, "both records survived the refusal")
+        #expect(
+            Set(after.map(\.record)) == [Data("device-only wrap".utf8), Data("synced wrap".utf8)],
+            "byte for byte")
+    }
+
+    /// **The sync preference is a question asked at each write, not a launch-time snapshot.**
+    /// Held as a `Bool`, the store wrote every wrap under the preference as it stood when the
+    /// app started, so enabling sync and creating a vault in the same session wrote the wrap
+    /// device-only while every new account synced.
+    @Test("A write follows the preference as it stands, not as it started")
+    func theFlagIsAskedAtWriteTime() throws {
+        let preference = LockedFlag()
+        let store = WrappedKeyStore(
+            service: "app.openfactor.tests.key.\(UUID().uuidString)",
+            synchronizable: { preference.value })
+        defer { deleteBothFlags(of: store) }
+
+        preference.value = true
+        _ = try store.addIfAbsent(Data("created after the switch moved".utf8))
+
+        #expect(
+            synchronizableFlag(of: store) == true,
+            "the wrap follows the switch that already reads on")
+    }
+}
+
+/// A mutable flag the `@Sendable` store closure can read, standing in for `UserDefaults`.
+private final class LockedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored = false
+    var value: Bool {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
+    }
 }

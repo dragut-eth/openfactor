@@ -43,10 +43,6 @@ final class InMemoryWrappedStore: WrappedRecordStore, @unchecked Sendable {
         return lock.withLock { records }
     }
 
-    func discard(_ candidate: WrappedCandidate) throws(SecretStoreError) {
-        lock.withLock { records.removeAll { $0 == candidate } }
-    }
-
     func load() throws(SecretStoreError) -> Data? {
         if let readFailure { throw readFailure }
         return lock.withLock { records.first?.record }
@@ -70,12 +66,18 @@ final class InMemoryWrappedStore: WrappedRecordStore, @unchecked Sendable {
     /// anybody.
     var writeFailure: SecretStoreError?
 
+    /// Mirrors the Keychain implementation's twin refusal rather than collapsing the pair.
+    ///
+    /// The first version of this fake replaced every record with one, so the decision `save`
+    /// now makes when two exist, refuse rather than update one unspecified, was inexpressible
+    /// here and its coverage was an illusion. Round four filed that as its own finding.
     func save(_ record: Data) throws(SecretStoreError) {
         if let writeFailure { throw writeFailure }
-        lock.withLock {
-            let flag = records.first?.isSynchronizable ?? false
-            records = [WrappedCandidate(record: record, isSynchronizable: flag)]
-        }
+        lock.lock()
+        defer { lock.unlock() }
+        guard records.count <= 1 else { throw .twinnedRecord }
+        let flag = records.first?.isSynchronizable ?? false
+        records = [WrappedCandidate(record: record, isSynchronizable: flag)]
     }
 
     func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool {

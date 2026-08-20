@@ -136,6 +136,21 @@ final class AccountListViewModel {
     /// Called when a drag switches the sort order to manual, so the view can persist it.
     var onSortOrderChange: ((AccountSortOrder) -> Void)?
 
+    /// Called when a code that was generating stops, once per failure rather than once per tick.
+    ///
+    /// **A code that fails to generate is a signal, not just something to draw.** A second device
+    /// replacing the vault while this list is open re-seals every synced record under a key this
+    /// phone does not hold. The rows were read while they were readable, so they keep drawing,
+    /// and every regeneration fails: the list shows dashes for as long as the app stays
+    /// foregrounded, telling somebody their codes are broken while the app already knows how to
+    /// say the true thing, which is that this iPhone does not have the key to these accounts.
+    /// Found on hardware while manufacturing E9's loss shape, and filed as S1-17.
+    ///
+    /// The receiver re-reads the gate. `StoredRecords.suggestsAWrongKey` decides from a fresh
+    /// read, so one broken account among working ones changes nothing, and only a list where
+    /// nothing is readable moves the gate to the passphrase screen.
+    var onCodeFailure: (() -> Void)?
+
     var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -217,9 +232,13 @@ final class AccountListViewModel {
             rows[index].codeFailure = nil
             rows[index].generatedCounter = counter
         } catch {
+            let wasGenerating = rows[index].codeFailure == nil
             rows[index].code = nil
             rows[index].generatedCounter = nil
             rows[index].codeFailure = error.description
+            // On the transition only. A row that failed last tick stays failed without asking
+            // again, so a single permanently broken account cannot re-run the gate every period.
+            if wasGenerating { onCodeFailure?() }
         }
     }
 

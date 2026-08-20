@@ -21,6 +21,20 @@ back with nothing above low and no fix called incomplete.
 medium that round one produced. What remains is what the later rounds found while reading the
 fixes.
 
+**Scope 1's round four returned a high, found by all three engines independently, and it was
+introduced by this gate's own fix for S1-12.** Unlock tried every wrap, which was right, and then
+deleted the wraps the passphrase did not open, which rested on a false premise: opening a wrap
+proves which record that passphrase belongs to, not that the other record's vault is dead. In the
+twin state both records are usually live vaults' only recovery credentials, and deleting the
+synchronizable one propagates to every device on the account. The fix was removal: unlock deletes
+nothing, the remove operation is off the protocol entirely, and a surviving twin costs one extra
+derivation per unlock. `save` now refuses a twin pair outright, the adapter's new methods are
+under the hosted suite with the refusal mutation tested against the real Keychain, and the test
+that had asserted the deletion now asserts its absence in both directions. The same round also
+closed S1-14 (the sync flag is asked at each write, not snapshotted at launch) and S1-17 (a code
+that fails to generate re-runs the gate once, so a replaced vault shows the passphrase prompt
+rather than dashes).
+
 **Scope 4's round four returned two mediums, and both are fixed.** One of them, S4-32, was made
 reachable by our own fix: closing the named-pipe hang turned a blocking read into a fast failure,
 and a `defer` that had never run before started running. A failed take swept the whole inbox. The
@@ -33,7 +47,7 @@ page carries the full text of every engine's return.
 
 | Scope | Rounds | Open | Above low | Latest page |
 | --- | --- | --- | --- | --- |
-| 1, the vault | 3 | S1-14, S1-17 | none | `A4-round-three-scope1-results.md` |
+| 1, the vault | 4 | none above low | none | `A4-round-four-scope1-results.md` |
 | 2, the Watch | 7 | closed | none | `A4-round-seven-scope2-results.md` |
 | 3, the parsers | 3 | none | none | `A4-round-three-scope3-results.md` |
 | 4, the boundaries | 4 | none | none | `A4-round-four-scope4-results.md` |

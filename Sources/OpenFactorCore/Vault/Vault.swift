@@ -181,31 +181,31 @@ public struct Vault: Sendable {
 
         guard !candidates.isEmpty else { throw .nothingToUnlock }
 
-        // **Every record is tried, and the passphrase decides which one was real.** There should
+        // **Every record is tried, and the passphrase decides which one it opens.** There should
         // be one. There can be two, because `kSecAttrSynchronizable` is part of a Keychain item's
         // primary key, so a record arriving from iCloud after this device wrote its own is a
-        // second item rather than a duplicate. Reading one of them and hoping meant a correct
-        // passphrase could be tested against the wrong wrap and reported as wrong: the person is
+        // second item rather than a duplicate. Reading one of them and hoping means a correct
+        // passphrase can be tested against the wrong wrap and reported as wrong: the person is
         // told their passphrase is bad while holding the passphrase that opens their accounts.
         //
         // Nobody is asked anything. A wrap only opens under the passphrase it was sealed with, so
         // trying each is the resolution, and the cost of a second attempt is one more derivation
         // on a path that already runs one.
+        //
+        // **And the loser survives, deliberately.** Opening a wrap proves which record this
+        // passphrase belongs to. It proves nothing about the other record: nothing in the OFK1
+        // format binds a wrap to the account ciphertext, and in the state that actually produces
+        // twins, a second device creating during the arrival window, both wraps are live vaults'
+        // only recovery credentials. Deleting one on the strength of the other having opened
+        // would destroy a credential on inference, and deleting the synchronizable one would
+        // propagate that destruction to every device on the Apple Account. A surviving twin
+        // costs one extra derivation per unlock, forever. That is the correct price.
         var sawWrongPassphrase = false
 
         for candidate in candidates {
             do {
                 let key = try WrappedVaultKey.unwrap(candidate.record, passphrase: passphrase)
                 try keys.install(key)
-
-                // **And the twin does not survive its own resolution.** The passphrase has just
-                // proved which record belongs to these accounts, so the other one is a record for
-                // a vault that no longer exists and can only cause this again. Failing to remove
-                // it is not worth failing the unlock over: the person is in, and the next unlock
-                // will settle it again the same way.
-                for loser in candidates where loser != candidate {
-                    try? wrapped.discard(loser)
-                }
                 return
             } catch let error as WrappedVaultKey.WrapError {
                 // The two decided before any derivation runs are not a passphrase problem. See

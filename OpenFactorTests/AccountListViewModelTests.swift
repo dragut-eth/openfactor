@@ -214,6 +214,27 @@ struct AccountListViewModelTests {
         #expect(model.loadFailure == nil)
     }
 
+    /// **S1-17: a code that fails to generate is a signal, not just something to draw.** A vault
+    /// replaced by another device while this list is open leaves every row regenerating into
+    /// failure; the receiver of this signal re-reads the gate, which is what turns a screen of
+    /// dashes into the passphrase prompt.
+    ///
+    /// Once per failure, not once per tick: a row that failed last period must not re-run the
+    /// gate every period.
+    @Test("A code failing to generate signals once, not every tick")
+    func codeFailureSignalsOnce() {
+        let model = AccountListViewModel(store: SecretlessStore())
+        var signals = 0
+        model.onCodeFailure = { signals += 1 }
+
+        model.load(at: Date(timeIntervalSince1970: 0))
+        #expect(signals == 1, "the transition into failure is reported")
+
+        model.tick(at: Date(timeIntervalSince1970: 30))
+        model.tick(at: Date(timeIntervalSince1970: 60))
+        #expect(signals == 1, "and staying failed is not")
+    }
+
     // MARK: - Counter based accounts
 
     /// A counter based code does not expire on a clock, so a countdown ring would be a

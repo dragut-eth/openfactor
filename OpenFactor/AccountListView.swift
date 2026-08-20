@@ -110,12 +110,15 @@ struct AccountListView: View {
     init(
         store: any SecretStore,
         arrival: Binding<IdentifiedArrival?> = .constant(nil),
-        addSession: AddAccountSession? = nil
+        addSession: AddAccountSession? = nil,
+        onCodeFailure: (() -> Void)? = nil
     ) {
         _arrival = arrival
         self.addSession = addSession
         self.store = store
-        _model = State(initialValue: AccountListViewModel(store: store))
+        let model = AccountListViewModel(store: store)
+        model.onCodeFailure = onCodeFailure
+        _model = State(initialValue: model)
     }
 
     var body: some View {

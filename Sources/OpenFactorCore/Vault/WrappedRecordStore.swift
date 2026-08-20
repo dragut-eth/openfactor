@@ -29,7 +29,13 @@ public protocol WrappedRecordStore: Sendable {
     /// all, which is deliberately different from finding nothing. See `Vault.State.unavailable`.
     func load() throws(SecretStoreError) -> Data?
 
-    /// Stores the record, replacing any earlier one.
+    /// Stores the record, replacing the earlier one.
+    ///
+    /// **Refuses when two records exist**, throwing `SecretStoreError.twinnedRecord`, because a
+    /// replacement that cannot name which record it replaces can overwrite the wrong vault's only
+    /// recovery credential, and if the overwritten record is the synchronizable one the mistake
+    /// propagates to every device on the account. A caller holding a twin pair has nothing safe
+    /// to write until the pair is resolved by something with evidence, which today is nothing.
     func save(_ record: Data) throws(SecretStoreError)
 
     func delete() throws(SecretStoreError)
@@ -44,10 +50,14 @@ public protocol WrappedRecordStore: Sendable {
     /// passphrase can be tested against the wrong wrap and reported as wrong.
     ///
     /// Returning all of them is what lets `unlock` settle it without asking anybody anything.
+    ///
+    /// **Settle means try, never delete.** An earlier version of `unlock` discarded the records
+    /// the passphrase did not open, on the reasoning that the one it opened had been proved
+    /// real. All three engines of round four rejected the premise: opening a wrap proves which
+    /// record that passphrase belongs to and nothing about whether the other record's vault is
+    /// alive, and in the twin state both usually are. There is no remove operation on this
+    /// protocol on purpose.
     func candidates() throws(SecretStoreError) -> [WrappedCandidate]
-
-    /// Removes one specific record, identified by the flag that distinguishes it from its twin.
-    func discard(_ candidate: WrappedCandidate) throws(SecretStoreError)
 
     /// Stores the record **only if the store is empty**, and says which happened.
     ///
@@ -83,7 +93,7 @@ public struct WrappedCandidate: Sendable, Equatable {
     public let record: Data
 
     /// Whether this copy is the one offered to iCloud. Two records differing only in this are the
-    /// twin case, and it is how the loser is named once the passphrase has picked a winner.
+    /// twin case.
     public let isSynchronizable: Bool
 
     public init(record: Data, isSynchronizable: Bool) {

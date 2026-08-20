@@ -67,14 +67,17 @@ struct OpenFactorApp: App {
         let store = SyncAwareKeychainStore(vaultKeys: keys)
         self.store = store
 
-        // **The wrapped key is created under the sync preference that is already set**, rather
-        // than always locally with a conversion expected later. Round two of gate A4's scope 1
-        // found the leftover: erase from the locked screen with sync on, create again, and the
-        // wrap is written device-only while every new account syncs, which is the original
-        // total-loss shape reached by a different tap. Nothing prompts anybody to toggle a switch
-        // that already reads "on".
+        // **The wrapped key is created under the sync preference as it stands at the write**,
+        // rather than always locally with a conversion expected later, and the preference is a
+        // question the store asks rather than a value baked in here. Erase from the locked screen
+        // with sync on and create again, and the wrap must follow the switch that already reads
+        // "on"; flip the switch and create in the same session, and a value read once at launch
+        // would write the wrap under the setting that no longer holds, device-only while every
+        // new account syncs, for the life of the session. `SyncAwareKeychainStore` re-reads its
+        // preference on every call for exactly this reason, and the two must not follow
+        // different rules.
         let wrapped = WrappedKeyStore(
-            synchronizable: UserDefaults.standard.bool(forKey: PreferenceKey.syncEnabled))
+            synchronizable: { UserDefaults.standard.bool(forKey: PreferenceKey.syncEnabled) })
         self.wrapped = wrapped
         _gate = State(
             initialValue: VaultGateModel(
@@ -156,7 +159,14 @@ struct OpenFactorApp: App {
                     // never had a vault must be offered one: the list cannot render either
                     // state honestly, because to it both look like a shelf of unreadable rows.
                     VaultGateView(model: gate, store: store) {
-                        AccountListView(store: store, arrival: $arrival, addSession: addSession)
+                        // **A list whose codes stop generating asks the gate to look again.**
+                        // Without this, a vault replaced by another device while this one is
+                        // open and foregrounded draws dashes until the app is next backgrounded,
+                        // when the true screen is the passphrase prompt. The gate re-reads the
+                        // records, so one broken account among working ones changes nothing.
+                        AccountListView(
+                            store: store, arrival: $arrival, addSession: addSession,
+                            onCodeFailure: { gate.refresh() })
                         // Accounts saved before the shared access group was declared are
                         // still in the app's bundle group. The phone reads them either
                         // way, so nothing looks wrong here; the watch cannot see them at
@@ -235,8 +245,10 @@ struct OpenFactorApp: App {
                 SharedInbox().sweepStale()
                 // Retried here rather than only at launch: the failure this is most likely to
                 // meet is a Keychain refusing a locked device during a cold start, and coming
-                // forward is exactly the moment that stops being true.
-                Self.reconcileWrappedKeySync(wrapped)
+                // forward is exactly the moment that stops being true. Only on coming forward:
+                // this handler also fires on the way to the background, which is a moment a
+                // Keychain write is likely to be refused for nothing.
+                if phase == .active { Self.reconcileWrappedKeySync(wrapped) }
                 collectWhatArrived()
             }
             .onChange(of: lock.isLocked) {
