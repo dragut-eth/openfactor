@@ -21,6 +21,9 @@ import Foundation
 ///
 /// - the condition that arms the expiry timer, whose removal would leave every test below passing
 ///   and auto-clearing dead
+/// - on the phone, that a refusal it cannot name is not sent at all
+/// - on the phone, that failing to read the key or build a response refuses by name rather than
+///   going quiet, which was finding S2-15 and is reachable by deleting one call
 /// - on the watch, the whole asking cadence: when to ask, `keyOpensNothing`, and the
 ///   `hasReplacedStaleKey` latch, which its own comment records as having been wrong once
 ///
@@ -28,6 +31,10 @@ import Foundation
 /// gate, which is the reason they were not moved and not a claim that they could not be. The
 /// honest description is that the extraction moved the message-handling rules and left the cadence
 /// rules.
+///
+/// **The three phone-side entries appear in `WatchKeyProvider`'s header too, in the same words.**
+/// Four consecutive rounds of this gate returned a sentence corrected in one of these two files
+/// and not the other, so neither list is edited alone.
 public struct ProvisioningDesk: Sendable {
 
     /// How long a request may wait for an answer, in seconds.

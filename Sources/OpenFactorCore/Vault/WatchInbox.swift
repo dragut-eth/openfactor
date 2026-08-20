@@ -27,7 +27,16 @@ public enum WatchInbox {
     /// from a phone too old to send one, and honoured. A review separated them; this makes the
     /// separation something a test can hold onto.
     public enum Nonce: Equatable, Sendable {
-        /// No nonce key at all: a phone built before the field existed.
+        /// No nonce key at all, which happens two ways.
+        ///
+        /// **A standalone refusal with no nonce comes from a phone built before the field
+        /// existed**, and that is the case `shouldHonourDecline` is deciding about.
+        ///
+        /// **A current phone also replies `declined` with no nonce**, to a request that failed to
+        /// parse: there was no nonce to echo, because nothing was ever read out of it. That answer
+        /// arrives on the reply handler of the attempt that sent the request, which binds it to
+        /// that attempt at least as strongly as a nonce would, and it never reaches
+        /// `shouldHonourDecline`. `docs/VAULT.md` states the split.
         case absent
         /// The key is there and this build cannot read it.
         case unreadable
@@ -40,7 +49,8 @@ public enum WatchInbox {
         case answer(WatchProvisioning.Answer?)
         /// The second message, carrying the sealed key.
         case sealedResponse(Data)
-        /// The second message, refusing.
+        /// A refusal: the phone's second message, or the direct reply to a request it could not
+        /// parse. See `Nonce.absent` for why those two are not the same message.
         case decline(Nonce)
         /// Nothing this build recognises.
         case unrecognised
@@ -78,11 +88,15 @@ public enum WatchInbox {
     ///   meant for somebody else's request was being honoured against whatever this watch was
     ///   doing.
     ///
-    /// **A nonce-less decline is honoured, and that is a judgment rather than a deduction.** It
-    /// comes from a phone built before the field existed, refusing it costs one screen that says
-    /// to try again, and a refusal releases nothing either way. The reason first written down for
-    /// it was that refusing would leave a watch waiting forever, which is false: the timeout is
-    /// twenty five seconds and then there is a button.
+    /// **A nonce-less decline is honoured, and that is a judgment rather than a deduction.** Only
+    /// standalone refusals reach this function, so a nonce-less one here comes from a phone built
+    /// before the field existed. Refusing it would cost one screen that says to try again, and a
+    /// refusal releases nothing either way. The reason first written down for it was that refusing
+    /// would leave a watch waiting forever, which is false: the timeout is twenty five seconds and
+    /// then there is a button.
+    ///
+    /// The other nonce-less decline, the direct reply to an unparseable request, does not come
+    /// through here at all. It is bound to its attempt by the reply handler that receives it.
     public static func shouldHonourDecline(_ nonce: Nonce, matchesCurrentAttempt: Bool) -> Bool {
         switch nonce {
         case .absent: return true

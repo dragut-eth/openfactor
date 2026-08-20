@@ -35,14 +35,21 @@ final class WatchKeyProvider: NSObject {
     /// five defects in those rules across three rounds, each one by a person reading this file,
     /// because nothing else could reach them.
     ///
-    /// What is left here: the session, the alert, the key file, the sending, **and two decisions**.
-    /// This file decides when to arm the expiry timer, on `answer == .asking`, and deleting that
-    /// line would leave every desk test green while auto-clearing quietly died. It also decides
-    /// that a refusal it cannot name is not sent at all.
+    /// What is left here: the session, the alert, the key file, the sending, **and three
+    /// decisions**, each of which would survive its own deletion with the whole suite still green:
     ///
-    /// The sentence that used to stand here claimed every rule had moved. Round four rejected it,
-    /// `ProvisioningDesk`'s header was corrected, **and this copy was left behind** — which round
-    /// five found, in two returns, in the file the extraction was meant to empty.
+    /// - when to arm the expiry timer, on `answer == .asking`. Delete that line and every desk
+    ///   test passes while auto-clearing quietly dies.
+    /// - that a refusal it cannot name is not sent at all.
+    /// - that a phone which cannot read its own key, or cannot build a response, refuses by name
+    ///   rather than going quiet, in `approve()`'s release path below. That one was finding S2-15;
+    ///   delete the `refuse` call from its `guard` and the silence returns unopposed.
+    ///
+    /// **The count has been wrong twice, in opposite directions.** The sentence that used to stand
+    /// here claimed every rule had moved; round four rejected it, `ProvisioningDesk`'s header was
+    /// corrected, and this copy was left behind, which round five found. The replacement then said
+    /// two decisions and omitted the third, which round six found. Both headers are written
+    /// together now, and the same three appear in `ProvisioningDesk`'s.
     private var desk = ProvisioningDesk()
 
     private let keys: VaultKeyStore

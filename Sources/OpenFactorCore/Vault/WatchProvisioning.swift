@@ -113,8 +113,13 @@ public enum WatchProvisioning {
         public static let response = "response"
         /// An `Answer`, in either message.
         public static let status = "status"
-        /// The nonce a refusal refuses, so a stale decline cannot end a live attempt. Absent
-        /// from a build older than this, which the watch honours rather than ignoring.
+        /// The nonce a refusal refuses, so a stale decline cannot end a live attempt.
+        ///
+        /// **Every standalone refusal this build sends carries it**, and one that arrives without
+        /// it comes from a build older than this, which the watch honours rather than ignoring.
+        /// **A direct reply of `declined` carries no nonce and needs none**: it answers a request
+        /// that failed to parse, so there is nothing to echo, and the reply handler already binds
+        /// it to the attempt that asked.
         public static let nonce = "nonce"
     }
 
