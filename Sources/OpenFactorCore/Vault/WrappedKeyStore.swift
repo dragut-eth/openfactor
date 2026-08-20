@@ -19,8 +19,6 @@ public struct WrappedKeyStore: Sendable {
     /// returns an account.
     public let service: String
 
-    public let accessibility: SecretAccessibility
-
     /// Follows the account items. The record is ciphertext, and a device that syncs its accounts
     /// and not the means of reading them would be a device that syncs nothing usable.
     ///
@@ -36,12 +34,10 @@ public struct WrappedKeyStore: Sendable {
 
     public init(
         service: String = "app.openfactor.vault.key",
-        accessibility: SecretAccessibility = .whenUnlockedThisDeviceOnly,
         synchronizable: @escaping @Sendable () -> Bool = { false },
         accessGroup: String? = nil
     ) {
         self.service = service
-        self.accessibility = accessibility
         self.synchronizable = synchronizable
         self.accessGroup = accessGroup
     }
@@ -190,9 +186,10 @@ public struct WrappedKeyStore: Sendable {
 
         guard found == errSecItemNotFound else { throw error(for: found) }
 
+        let shouldSync = synchronizable()
         var attributes = query()
-        attributes[kSecAttrSynchronizable as String] = synchronizable()
-        attributes[kSecAttrAccessible as String] = accessibility.attribute
+        attributes[kSecAttrSynchronizable as String] = shouldSync
+        attributes[kSecAttrAccessible as String] = SecretAccessibility.forSync(shouldSync).attribute
         attributes[kSecAttrLabel as String] = "OpenFactor"
         attributes[kSecValueData as String] = record
 
@@ -220,9 +217,16 @@ public struct WrappedKeyStore: Sendable {
     /// twin that is already present when the add runs. Settling a record that arrives later needs
     /// conflict detection after creation, which this does not have.
     public func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool {
+        // **Asked once, and every decision in this call is made from that one answer.** Asking
+        // again below to build the undo means a preference that moved in between names the other
+        // slot, and the undo then deletes the record that was already there rather than the one
+        // this call just wrote. That is a flag-keyed deletion of a record nobody examined, which
+        // is the shape this store removed from `unlock` and must not keep here.
+        let shouldSync = synchronizable()
+
         var attributes = query()
-        attributes[kSecAttrSynchronizable as String] = synchronizable()
-        attributes[kSecAttrAccessible as String] = accessibility.attribute
+        attributes[kSecAttrSynchronizable as String] = shouldSync
+        attributes[kSecAttrAccessible as String] = SecretAccessibility.forSync(shouldSync).attribute
         attributes[kSecAttrLabel as String] = "OpenFactor"
         attributes[kSecValueData as String] = record
 
@@ -233,10 +237,10 @@ public struct WrappedKeyStore: Sendable {
         guard try countingBothFlags() > 1 else { return true }
 
         // Something with the other flag was already there, so this call was not a creation after
-        // all. Remove what it wrote, pinned to this store's own flag so the record that was
-        // already present is never the one deleted.
+        // all. Remove what it wrote, pinned to the flag this call actually wrote under so the
+        // record that was already present is never the one deleted.
         var mine = query()
-        mine[kSecAttrSynchronizable as String] = synchronizable()
+        mine[kSecAttrSynchronizable as String] = shouldSync
         SecItemDelete(mine as CFDictionary)
         return false
     }
@@ -303,10 +307,9 @@ public struct WrappedKeyStore: Sendable {
 
         let changes: [String: Any] = [
             kSecAttrSynchronizable as String: shouldSync,
-            // A synchronizable item cannot be device-only by definition, so this follows.
-            kSecAttrAccessible as String: shouldSync
-                ? SecretAccessibility.whenUnlocked.attribute
-                : SecretAccessibility.whenUnlockedThisDeviceOnly.attribute,
+            // A synchronizable item cannot be device-only by definition, so this follows. The
+            // pairing lives in one place now; this was the only site that had it right.
+            kSecAttrAccessible as String: SecretAccessibility.forSync(shouldSync).attribute,
         ]
 
         let status = SecItemUpdate(find as CFDictionary, changes as CFDictionary)

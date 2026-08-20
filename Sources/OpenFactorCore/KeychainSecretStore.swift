@@ -716,6 +716,21 @@ public enum SecretAccessibility: Sendable, Equatable {
     /// plain words before it is enabled.
     case whenUnlocked
 
+    /// The class that belongs with a sync flag.
+    ///
+    /// **The two travel together or the item is malformed.** A synchronizable Keychain item may
+    /// not carry a class ending in `ThisDeviceOnly`, and the Keychain does not refuse the
+    /// combination: it writes the item with the flag set and a class that keeps it on the device,
+    /// so the flag says leave and the class says stay. Nothing syncs, and anything reading the
+    /// flag back reports the item as synced.
+    ///
+    /// **This exists because the rule was written out at four call sites and one of them split
+    /// the pair**, which is how a vault created with sync already on got a wrapped key iCloud
+    /// could never carry while every account synced. One function, checked once.
+    public static func forSync(_ shouldSync: Bool) -> SecretAccessibility {
+        shouldSync ? .whenUnlocked : .whenUnlockedThisDeviceOnly
+    }
+
     var attribute: CFString {
         switch self {
         case .whenUnlockedThisDeviceOnly: kSecAttrAccessibleWhenUnlockedThisDeviceOnly

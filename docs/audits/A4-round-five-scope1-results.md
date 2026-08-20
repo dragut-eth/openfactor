@@ -216,3 +216,64 @@ screen, so each vault can be reached without touching either wrap.
   path is invalid and the save refusal still has a twin-arrival window.
 
 **Two of three say do not close. Nobody says the scope is stuck.**
+
+## What was done: S1-25, and S1-27 with it
+
+### The test answered the question neither engine could
+
+Both returns said the incompatible add would either be **refused** or **accepted**, and that both
+outcomes were defects, and that the code could not tell you which. The hosted test settles it:
+
+**It is accepted.** The Keychain reported the stored class as `"aku"`,
+`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, on an item written with
+`kSecAttrSynchronizable = true`. So the flag says leave and the class says stay.
+
+That is the worse of the two, and it is worse than either engine described. Nothing syncs, while
+every account does, which is S1-1, the finding this scope opened with. **And `syncReport` reads the
+flag back and reports the record as synced**, so the one readout that exists to make this visible
+would have said it was fine. `theFlagIsAskedAtWriteTime` passed throughout, exactly as ChatGPT
+predicted it would.
+
+### The rule now has one home
+
+The pairing was written out at four sites. `setSynchronizable` had it right, `SyncAwareKeychainStore`
+had it right for the accounts, and the two add paths split it. **Writing it a fifth time at the two
+broken sites would have left the same shape that produced this.**
+
+`SecretAccessibility.forSync(_:)` is the rule, and all four sites call it. A reviewer checks it
+once.
+
+**`WrappedKeyStore`'s stored `accessibility` was removed rather than left.** With the class derived
+from the flag it chose nothing, and a constructor parameter that is silently ignored is the kind of
+false affordance this gate keeps finding in prose. No caller passed it.
+
+### S1-27 came with it, and could not honestly be left
+
+The fix requires `let shouldSync = synchronizable()` so the flag and the class come from one
+answer. Once that local exists, leaving a second `synchronizable()` call three lines below to build
+the rollback delete would be deliberate: a preference that moved in between names the other slot,
+and the undo deletes the record that was already there instead of the one this call just wrote.
+That is a flag-keyed deletion of a record nobody examined, which is the shape removed from `unlock`
+one commit earlier. One snapshot serves the add and the undo.
+
+**This is one medium and one low that share the same lines, not a batch.** The rule from the post
+mortem was one medium per commit, and that holds.
+
+### The tests, and one of them was wrong first
+
+Three hosted tests against the real Keychain: creating with sync on is eligible for iCloud,
+creating with sync off stays on the device, and a preference that moves mid-call cannot redirect
+the undo.
+
+**The third passed before the fix, which is how I found it was wrong.** Its closure read the
+preference before flipping it, so both reads returned false and the undo hit its own record for the
+right reason by accident. Corrected to answer false once and true afterwards, it goes red.
+
+Both mutations verified applied before running: collapsing `forSync` to always device-only reddens
+the eligibility test, and restoring the second `synchronizable()` call reddens the undo test.
+
+**A residual, stated rather than fixed:** `KeychainSecretStore` still takes `accessibility` and
+`synchronizable` as independent parameters, so the pair can still be split at that boundary. Its
+one caller uses `forSync` now. Changing that signature is outside this finding.
+
+482 core tests pass, the app suite passes, both targets build.

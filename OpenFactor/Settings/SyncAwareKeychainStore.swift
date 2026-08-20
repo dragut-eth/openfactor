@@ -60,8 +60,7 @@ struct SyncAwareKeychainStore: SynchronizableSecretStore {
 
     private var store: KeychainSecretStore {
         let shouldSync = syncEnabled()
-        let accessibility: SecretAccessibility =
-            shouldSync ? .whenUnlocked : .whenUnlockedThisDeviceOnly
+        let accessibility = SecretAccessibility.forSync(shouldSync)
 
         if let service {
             return KeychainSecretStore(

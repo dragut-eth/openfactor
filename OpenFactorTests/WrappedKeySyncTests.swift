@@ -47,6 +47,26 @@ struct WrappedKeySyncTests {
         return attributes[kSecAttrSynchronizable as String] as? Bool
     }
 
+    /// The protection class the Keychain actually stored, read back outside the store for the
+    /// same reason the sync flag is.
+    private func accessibility(of store: WrappedKeyStore) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: store.service,
+            kSecAttrAccount as String: "wrapped",
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecReturnAttributes as String: true,
+        ]
+
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+            let attributes = result as? [String: Any]
+        else { return nil }
+        return attributes[kSecAttrAccessible as String] as? String
+    }
+
     /// Every record under this service, so a twin is visible rather than hidden behind
     /// `kSecMatchLimitOne`.
     private func recordCount(of store: WrappedKeyStore) -> Int {
@@ -261,6 +281,85 @@ struct WrappedKeySyncTests {
         #expect(
             synchronizableFlag(of: store) == true,
             "the wrap follows the switch that already reads on")
+    }
+    /// **The flag and the protection class travel together or not at all.** A synchronizable
+    /// Keychain item may not carry an accessibility value ending in `ThisDeviceOnly`; Apple
+    /// documents the pairing as unsupported. `setSynchronizable` has always written both together,
+    /// with a comment saying a synchronizable item cannot be device-only by definition. The add
+    /// paths wrote the flag from the preference and the class from a stored default, so creating
+    /// a vault with sync on asked for exactly the combination that is not allowed.
+    ///
+    /// Both outcomes were defects and neither could be told from the code. Refused, setup is
+    /// blocked after an erase while Settings sit behind the vault gate. Accepted, the wrap is
+    /// ineligible for iCloud while every account syncs, which is the finding this scope opened
+    /// with. **This test answers which**: it fails by throwing in the first case and by reporting
+    /// a device-only class in the second.
+    @Test("Creating with sync on writes a record iCloud can actually carry")
+    func creatingWithSyncOnIsEligibleForICloud() throws {
+        let preference = LockedFlag()
+        preference.value = true
+        let store = WrappedKeyStore(
+            service: "app.openfactor.tests.key.\(UUID().uuidString)",
+            synchronizable: { preference.value })
+        defer { deleteBothFlags(of: store) }
+
+        #expect(try store.addIfAbsent(Data("created with sync on".utf8)))
+
+        #expect(synchronizableFlag(of: store) == true, "offered to iCloud")
+        #expect(
+            accessibility(of: store) == (kSecAttrAccessibleWhenUnlocked as String),
+            "and readable off this device, which is what being offered to iCloud requires")
+    }
+
+    /// The device-only direction, so the pairing is pinned in both directions rather than one.
+    @Test("Creating with sync off keeps the record on this device")
+    func creatingWithSyncOffStaysLocal() throws {
+        let preference = LockedFlag()
+        let store = WrappedKeyStore(
+            service: "app.openfactor.tests.key.\(UUID().uuidString)",
+            synchronizable: { preference.value })
+        defer { deleteBothFlags(of: store) }
+
+        #expect(try store.addIfAbsent(Data("created with sync off".utf8)))
+
+        #expect(synchronizableFlag(of: store) == false)
+        #expect(
+            accessibility(of: store) == (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String),
+            "a record that does not leave the device is protected as one that does not")
+    }
+
+    /// **The preference is asked once per call, not once per attribute and again per decision.**
+    /// `addIfAbsent` adds, counts, and undoes its own write when a twin is already there. Asking
+    /// the closure a second time to build that undo means a preference that moved in between
+    /// names the other slot, and the undo deletes the record that was already present rather than
+    /// the one this call just wrote. That is the flag-keyed wrong-record deletion, through the one
+    /// remove this store still performs.
+    ///
+    /// The closure here answers false to the add and true afterwards. Take the snapshot away and
+    /// this goes red, with the planted record gone.
+    @Test("A preference that moves mid-call cannot redirect the undo")
+    func aMovingPreferenceCannotRedirectTheUndo() throws {
+        // False to the first question and true to every one after it, which is a preference
+        // moving between the add and whatever else the call decides to ask about.
+        let preference = LockedFlag()
+        let store = WrappedKeyStore(
+            service: "app.openfactor.tests.key.\(UUID().uuidString)",
+            synchronizable: {
+                let answer = preference.value
+                preference.value = true
+                return answer
+            })
+        defer { deleteBothFlags(of: store) }
+
+        // The other device's record, already in the synchronizable slot.
+        plantTwin(Data("the record that was already there".utf8), in: store)
+
+        #expect(try store.addIfAbsent(Data("this call's write".utf8)) == false, "a twin was found")
+
+        let survivors = try store.candidates()
+        #expect(
+            survivors.contains { $0.record == Data("the record that was already there".utf8) },
+            "the record this call did not write is untouched")
     }
 }
 
