@@ -80,31 +80,36 @@ struct OpenFactorApp: App {
         _addSession = State(initialValue: AddAccountSession(store: store))
     }
 
-    /// Kept so the launch reconcile below can reach it. See `reconcileWrappedKeySync`.
+    /// Kept so the reconcile below can reach it. See `reconcileWrappedKeySync`.
     private let wrapped: WrappedKeyStore
 
-    /// Tries once per cold start to bring an already-written wrapped key into iCloud, when the
+    /// Brings an already-written wrapped key into iCloud whenever the app comes forward, if the
     /// preference says it belongs there.
     ///
-    /// **Two things this deliberately does not do, both of which the comment used to imply.** It
-    /// does nothing when the preference is off, because the withdrawal direction cannot drift:
-    /// the switch is only flipped after a successful conversion, so a failed withdrawal leaves it
-    /// honestly reading "on". And it abandons a failure in silence, which a review rated a medium
-    /// and is filed as such: a device that fails this at every launch stays in the loss shape with
-    /// nothing on screen saying so, unlike the access-group migration below, which refuses to hide
-    /// its failures.
+    /// **Measured on hardware, and it works.** `docs/audits/E9-the-reconcile-repairs-a-real-device.md`
+    /// records an iPhone put into the loss shape by the build that originally caused it, upgraded,
+    /// opened once, and repaired: accounts in iCloud, wrapped key device-only, and after one launch
+    /// the record was in iCloud with nothing touched by hand.
     ///
-    /// **A fix to a toggle governs the next toggle, not the state a device is already in.** A
-    /// phone that enabled sync before the wrapped key followed the accounts is sitting in the
-    /// exact loss shape: accounts in iCloud, the key that opens them on one device, and nothing
-    /// prompting anybody to flip a switch that already reads "on". Round two of gate A4 named it
-    /// and pointed at this commit's own precedent, `VaultKeyStore.load` repairing a key written
-    /// under the old rules, on the reasoning that the device most needing the fix is the one
-    /// already working.
+    /// **On every foreground, not once per cold start, and that is this method's whole history.**
+    /// A review rated the single attempt a medium: the failure that actually happens is a Keychain
+    /// refusing a locked device at launch, which is precisely the case that succeeds a moment later
+    /// when somebody unlocks their phone. One attempt per process turns a transient failure into a
+    /// permanent one for the life of that process, and the device stays in the loss shape with
+    /// nothing on screen saying so.
     ///
-    /// Idempotent, and quiet: `setSynchronizable` updates in place and returns whether there was
-    /// anything to move, so a device already in the right state does nothing and a device with no
-    /// vault does nothing.
+    /// **It still swallows its error, and that is a decision rather than an oversight.** The
+    /// argument against surfacing it is that a person cannot act on "your recovery key has not
+    /// reached iCloud" except by turning sync off and on, and a warning nobody can act on is its
+    /// own harm. The argument for surfacing it is that the access-group migration below refuses to
+    /// hide its failures, and that a *persistent* failure is invisible precisely when it matters.
+    /// If one is ever observed, the place for it is a line under the sync toggle in Settings,
+    /// where the person is already thinking about sync and where the only useful action lives.
+    ///
+    /// Two things it deliberately does not do. It does nothing when the preference is off, because
+    /// the withdrawal direction cannot drift: the switch is only flipped after a successful
+    /// conversion, so a failed withdrawal leaves it honestly reading "on". And it does nothing
+    /// when there is no vault.
     private static func reconcileWrappedKeySync(_ wrapped: WrappedKeyStore) {
         let shouldSync = UserDefaults.standard.bool(forKey: PreferenceKey.syncEnabled)
         guard shouldSync else { return }
@@ -226,6 +231,10 @@ struct OpenFactorApp: App {
                 lock.scenePhaseChanged(to: phase)
                 PrivacyShield.apply(lock)
                 SharedInbox().sweepStale()
+                // Retried here rather than only at launch: the failure this is most likely to
+                // meet is a Keychain refusing a locked device during a cold start, and coming
+                // forward is exactly the moment that stops being true.
+                Self.reconcileWrappedKeySync(wrapped)
                 collectWhatArrived()
             }
             .onChange(of: lock.isLocked) {
