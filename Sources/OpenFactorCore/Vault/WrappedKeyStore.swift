@@ -216,6 +216,31 @@ public struct WrappedKeyStore: Sendable {
         return (result as? [[String: Any]])?.count ?? 0
     }
 
+    /// What the wrapped record's own sync flag says, and how many records exist.
+    ///
+    /// **Nothing in the interface has ever shown this**, which is why two of gate A4's findings
+    /// about it could only be argued rather than checked. S1-1 was the wrapped key never
+    /// syncing while every account did, and S1-13 is the repair for devices already in that
+    /// state failing in silence. Both are questions about one boolean nobody could see.
+    ///
+    /// - Returns: `nil` when there is no record, otherwise whether it is offered to iCloud, and
+    ///   the number of records found under both flags. **A count above one is the twin case**,
+    ///   S1-12, which `load` resolves by picking one unspecified.
+    public func syncReport() -> (isSynchronizable: Bool, records: Int)? {
+        var find = query()
+        find[kSecMatchLimit as String] = kSecMatchLimitAll
+        find[kSecReturnAttributes as String] = true
+
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(find as CFDictionary, &result) == errSecSuccess,
+            let items = result as? [[String: Any]],
+            let first = items.first
+        else { return nil }
+
+        let synchronizable = (first[kSecAttrSynchronizable as String] as? Bool) ?? false
+        return (synchronizable, items.count)
+    }
+
     /// Moves the record between iCloud and this device, following the account items.
     ///
     /// **Nothing did this before, which is the defect that loses every account.** The record was

@@ -339,10 +339,25 @@ struct SettingsView: View {
         ///
         /// A confirmation, but no Face ID. The point is to be fast, and the thing this protects
         /// is a developer's test data. The real erase is untouched and still authenticates.
+        /// Reads the wrapped record's own sync flag, for a device under test.
+        static func wrappedKeyReport() -> String {
+            guard let report = WrappedKeyStore().syncReport() else { return "none on this device" }
+
+            let place = report.isSynchronizable ? "in iCloud" : "this device only"
+            return report.records == 1 ? place : "\(place), \(report.records) records"
+        }
+
         @ViewBuilder
         private var debugSection: some View {
             if let forget = forgetEverything {
                 Section {
+                    // **The one boolean two findings turned on and nobody could see.** S1-1 was
+                    // the wrapped key never syncing while every account did; S1-13 is the repair
+                    // for devices already in that state failing in silence. A record count above
+                    // one is the twin case, S1-12. Debug only: an instrument for testing recovery
+                    // on real devices, not something to explain to anybody.
+                    LabeledContent("Wrapped key", value: Self.wrappedKeyReport())
+
                     if let lockDevice {
                         // Not destructive, and no confirmation, because nothing is lost: the
                         // accounts stay sealed and the passphrase still opens them. It exists
