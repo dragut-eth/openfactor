@@ -348,6 +348,18 @@ item names its expected result; anything else is a finding.
    landing on the confirm screen.
 10. Face ID cancel, then the button, then succeed. **Expected:** stays locked in between,
     one prompt at a time, no cover flashes.
+11. Share a QR image in, wait for the import sheet to appear, and with it on screen open an
+    `otpauth://` link from another app. Return and dismiss the import. **Expected:** the
+    add-account screen for the link presents by itself. **Measured 2026-08-19, four runs, four
+    times yes.** This item exists because a reviewer argued the second arrival could be lost
+    here: promotion happens as a side effect of the sheet binding being set to `nil`, so the
+    held arrival has to present while the previous sheet is still animating out, and this
+    document elsewhere records SwiftUI dropping exactly that kind of request. It does not drop
+    this one. Anything that changes how arrivals are presented must re-run this item.
+12. Share a QR image in, and before opening OpenFactor, open an `otpauth://` link. **Expected,
+    once the rule below is settled:** today the link presents and the shared image waits in the
+    inbox, uncollected, appearing only if some unrelated event triggers a collection. Measured
+    2026-08-19: it reappeared on one run in four.
 
 ## Invariants
 

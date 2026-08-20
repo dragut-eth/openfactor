@@ -120,3 +120,47 @@ on a device rather than in the suite, and the instrument that closes it is the m
 The three are not really in conflict about the code. They are in conflict about whether the
 cross-process races ChatGPT lists are worth a fourth source round, or whether they are the kind of
 thing only a device settles.
+
+---
+
+# Measured on hardware, 2026-08-19
+
+Two of round three's findings were about behaviour no test in this repository can reach, and both
+were checked by hand on an iPhone 15 Pro running the build from `83e5cdd`, which is the commit that
+introduced `ArrivalQueue`.
+
+## S4-28 does not reproduce
+
+**Four runs, four times the held arrival presented.** The procedure is now item 11 of the manual
+checklist in `docs/APP_LOCK.md` so it can be re-run: share a QR image, wait for the import sheet to
+appear, open an `otpauth://` link from another app while it is up, return, dismiss the import, and
+watch for the add-account screen.
+
+Fable's reasoning for filing it was sound and is worth keeping even though the conclusion did not
+hold: promotion happens as a side effect of the sheet binding being set to `nil`, so the held
+arrival must present while the previous sheet is animating out, and `AccountListView`'s own comment
+records SwiftUI dropping that kind of request. **It does not drop this one.** That comment was
+written about a different pairing of sheets, which is the difference.
+
+The second shape it named, SwiftUI writing `nil` twice for one dismissal and silently discarding
+the held arrival, would have shown as nothing appearing. It did not appear in four runs either.
+
+**What this measurement does not cover:** one device, one iOS version, four trials, and a timing
+dependent behaviour. The checklist item is the guard against that rather than this paragraph.
+
+## S4-27 reproduces, and it is the one that bit
+
+The sequence tried first was a different one: share an image, then open a link **before** OpenFactor
+comes forward. The URL takes the arrival slot, `collectWhatArrived` refuses to run while anything is
+current, and the shared image is never collected at all. It is not destroyed; it sits in the inbox
+for `staleAfter` and presents only if some unrelated event triggers a collection later.
+
+**On one run in four the image did appear after the link was cancelled**, which is exactly what the
+finding predicts: cancelling clears the arrival, and any subsequent scene, lock or gate change
+runs a collection that picks the image up. **The intermittency is the defect**, not an
+observational error. Whether your share survives depends on whether an unrelated event happens to
+fire.
+
+That turns S4-27 from a reading of the code into a reproduced observation, and it raises a product
+question the code has never actually answered: whether the newer arrival should win outright, or
+whether the queue should hold both. The behaviour today is neither.
