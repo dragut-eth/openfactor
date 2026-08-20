@@ -115,3 +115,26 @@ self-healing one-session window, and an ignored status code.
 ChatGPT's reservation is the one to carry forward: **the repeated weak point is the wrapped-key
 state machine, which still assumes a one-time observation can settle asynchronously arriving
 Keychain state.** Another count will not fix that; conflict detection after creation would.
+
+---
+
+# Found on hardware, not by a reviewer
+
+**S1-17, low: an open list keeps drawing dashes when its records change underneath it.**
+
+Found while manufacturing E9's loss shape, and recorded in
+`E10-a-device-holding-the-wrong-key.md`. A second phone replaced the shared vault while the first
+was foregrounded and looking at its accounts. The rows had been read while they were still
+readable, so they kept drawing, and every attempt to generate a code failed against records that
+were gone or sealed under a key this device no longer had. The list showed `------` for each one.
+
+Force-quitting and relaunching produced the correct screen immediately: "Enter your vault
+passphrase", because `suggestsAWrongKey` fires when the app comes forward or the gate re-reads.
+
+**The defect is the window, not the rule.** For as long as the app stays foregrounded, it tells
+somebody their codes are broken while already knowing how to say the true thing, which is that this
+iPhone does not have the key to these accounts.
+
+Reaching it needs another device to replace the vault while this one is open and watching, so it is
+rare. It is filed because "your accounts appear broken" is the wrong sentence at that moment, and
+because a code that fails to generate is a signal the list could act on rather than render.
