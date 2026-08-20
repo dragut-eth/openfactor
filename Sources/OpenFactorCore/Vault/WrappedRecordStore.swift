@@ -34,6 +34,21 @@ public protocol WrappedRecordStore: Sendable {
 
     func delete() throws(SecretStoreError)
 
+    /// Every wrapped record this device can see, under either sync flag.
+    ///
+    /// **There should be one, and the whole of S1-12 is that there can be two.**
+    /// `kSecAttrSynchronizable` is part of a Keychain item's primary key, so a record carrying the
+    /// opposite flag is a different item rather than a duplicate: `addIfAbsent` narrows that window
+    /// and cannot close it, because a record can arrive from iCloud minutes after the check. When
+    /// it happens, `load()` returns one of them and which one is unspecified, so a correct
+    /// passphrase can be tested against the wrong wrap and reported as wrong.
+    ///
+    /// Returning all of them is what lets `unlock` settle it without asking anybody anything.
+    func candidates() throws(SecretStoreError) -> [WrappedCandidate]
+
+    /// Removes one specific record, identified by the flag that distinguishes it from its twin.
+    func discard(_ candidate: WrappedCandidate) throws(SecretStoreError)
+
     /// Stores the record **only if the store is empty**, and says which happened.
     ///
     /// - Returns: `true` when this call is what put the record there. `false` when something was
@@ -61,3 +76,18 @@ public protocol WrappedRecordStore: Sendable {
 }
 
 extension WrappedKeyStore: WrappedRecordStore {}
+
+/// One wrapped record, and the flag that tells it apart from a twin.
+public struct WrappedCandidate: Sendable, Equatable {
+
+    public let record: Data
+
+    /// Whether this copy is the one offered to iCloud. Two records differing only in this are the
+    /// twin case, and it is how the loser is named once the passphrase has picked a winner.
+    public let isSynchronizable: Bool
+
+    public init(record: Data, isSynchronizable: Bool) {
+        self.record = record
+        self.isSynchronizable = isSynchronizable
+    }
+}

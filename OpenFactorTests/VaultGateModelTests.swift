@@ -112,6 +112,17 @@ struct VaultGateModelTests {
             self.record = record
             return true
         }
+
+        // The gate never unlocks through this fake, so one record is all it needs to model. The
+        // twin case lives in `VaultDecisionTests`, against the store that can hold two.
+        func candidates() throws(SecretStoreError) -> [WrappedCandidate] {
+            if let readFailure { throw readFailure }
+            return record.map { [WrappedCandidate(record: $0, isSynchronizable: false)] } ?? []
+        }
+
+        func discard(_ candidate: WrappedCandidate) throws(SecretStoreError) {
+            if record == candidate.record { record = nil }
+        }
     }
 
     private func makeGate(on store: FailingStore) -> (VaultGateModel, VaultKeyStore) {

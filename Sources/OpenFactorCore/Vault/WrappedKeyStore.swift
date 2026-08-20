@@ -86,6 +86,39 @@ public struct WrappedKeyStore: Sendable {
     /// remedy is to create a vault over whatever is really there. `Vault.state()` calls `load()`
     /// and reports `unavailable` now. This is kept for callers with nothing to lose by guessing,
     /// and a caller that has something to lose should call `load()` and handle the throw.
+    /// Every record under this service, under either flag. See `WrappedRecordStore.candidates`.
+    public func candidates() throws(SecretStoreError) -> [WrappedCandidate] {
+        var find = query()
+        find[kSecMatchLimit as String] = kSecMatchLimitAll
+        find[kSecReturnData as String] = true
+        find[kSecReturnAttributes as String] = true
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(find as CFDictionary, &result)
+
+        if status == errSecItemNotFound { return [] }
+        guard status == errSecSuccess, let items = result as? [[String: Any]] else {
+            throw error(for: status)
+        }
+
+        return items.compactMap { item in
+            guard let data = item[kSecValueData as String] as? Data else { return nil }
+            let synchronizable = (item[kSecAttrSynchronizable as String] as? Bool) ?? false
+            return WrappedCandidate(record: data, isSynchronizable: synchronizable)
+        }
+    }
+
+    /// Removes the record carrying this candidate's flag, and nothing else.
+    public func discard(_ candidate: WrappedCandidate) throws(SecretStoreError) {
+        var target = query()
+        target[kSecAttrSynchronizable as String] = candidate.isSynchronizable
+
+        let status = SecItemDelete(target as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw error(for: status)
+        }
+    }
+
     public var exists: Bool {
         (try? load()) != nil
     }

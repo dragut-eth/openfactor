@@ -14,23 +14,42 @@ import Foundation
 final class InMemoryWrappedStore: WrappedRecordStore, @unchecked Sendable {
 
     private let lock = NSLock()
-    private var record: Data?
+    private var records: [WrappedCandidate] = []
 
     /// When set, every read fails with it. This is the state that used to be indistinguishable
     /// from an empty store, and being able to reach it is the point of this type.
     var readFailure: SecretStoreError?
 
     init(record: Data? = nil) {
-        self.record = record
+        records = record.map { [WrappedCandidate(record: $0, isSynchronizable: false)] } ?? []
     }
 
     var storedRecord: Data? {
-        lock.withLock { record }
+        lock.withLock { records.first?.record }
+    }
+
+    /// Plants a second record carrying the opposite flag, which is the twin case S1-12 is about
+    /// and which no test could express while this held one optional value.
+    func plantTwin(_ record: Data, isSynchronizable: Bool) {
+        lock.withLock {
+            records.append(WrappedCandidate(record: record, isSynchronizable: isSynchronizable))
+        }
+    }
+
+    var recordCount: Int { lock.withLock { records.count } }
+
+    func candidates() throws(SecretStoreError) -> [WrappedCandidate] {
+        if let readFailure { throw readFailure }
+        return lock.withLock { records }
+    }
+
+    func discard(_ candidate: WrappedCandidate) throws(SecretStoreError) {
+        lock.withLock { records.removeAll { $0 == candidate } }
     }
 
     func load() throws(SecretStoreError) -> Data? {
         if let readFailure { throw readFailure }
-        return lock.withLock { record }
+        return lock.withLock { records.first?.record }
     }
 
     /// Runs immediately before a creation write commits, so a test can do what iCloud does:
@@ -53,20 +72,23 @@ final class InMemoryWrappedStore: WrappedRecordStore, @unchecked Sendable {
 
     func save(_ record: Data) throws(SecretStoreError) {
         if let writeFailure { throw writeFailure }
-        lock.withLock { self.record = record }
+        lock.withLock {
+            let flag = records.first?.isSynchronizable ?? false
+            records = [WrappedCandidate(record: record, isSynchronizable: flag)]
+        }
     }
 
     func addIfAbsent(_ record: Data) throws(SecretStoreError) -> Bool {
         if let writeFailure { throw writeFailure }
         duringWrite?()
         return lock.withLock {
-            guard self.record == nil else { return false }
-            self.record = record
+            guard records.isEmpty else { return false }
+            records = [WrappedCandidate(record: record, isSynchronizable: false)]
             return true
         }
     }
 
     func delete() throws(SecretStoreError) {
-        lock.withLock { record = nil }
+        lock.withLock { records = [] }
     }
 }

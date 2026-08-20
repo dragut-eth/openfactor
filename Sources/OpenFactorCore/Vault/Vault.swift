@@ -172,32 +172,59 @@ public struct Vault: Sendable {
 
     /// Opens this device with a passphrase, and installs the key it recovers.
     public func unlock(with passphrase: String) throws(VaultError) {
-        let record: Data?
+        let candidates: [WrappedCandidate]
         do {
-            record = try wrapped.load()
+            candidates = try wrapped.candidates()
         } catch {
             throw .storage(error)
         }
 
-        guard let record else { throw .nothingToUnlock }
+        guard !candidates.isEmpty else { throw .nothingToUnlock }
 
-        do {
-            let key = try WrappedVaultKey.unwrap(record, passphrase: passphrase)
-            try keys.install(key)
-        } catch let error as WrappedVaultKey.WrapError {
-            // The two that are decided before any derivation runs are not a passphrase problem
-            // and must not be reported as one. See `VaultError.recordNotUnderstood`.
-            switch error {
-            case .notAWrappedKey, .iterationsOutOfRange: throw .recordNotUnderstood
-            case .wrongPassphrase: throw .wrongPassphrase
-            // A CommonCrypto failure is this device's problem, not a mistyped character, and
-            // telling somebody to check their typing for it is the same category error in
-            // miniature. A review noticed it in the fix for the larger one.
-            case .derivationFailed: throw .storage(.keychain(status: -1))
+        // **Every record is tried, and the passphrase decides which one was real.** There should
+        // be one. There can be two, because `kSecAttrSynchronizable` is part of a Keychain item's
+        // primary key, so a record arriving from iCloud after this device wrote its own is a
+        // second item rather than a duplicate. Reading one of them and hoping meant a correct
+        // passphrase could be tested against the wrong wrap and reported as wrong: the person is
+        // told their passphrase is bad while holding the passphrase that opens their accounts.
+        //
+        // Nobody is asked anything. A wrap only opens under the passphrase it was sealed with, so
+        // trying each is the resolution, and the cost of a second attempt is one more derivation
+        // on a path that already runs one.
+        var sawWrongPassphrase = false
+
+        for candidate in candidates {
+            do {
+                let key = try WrappedVaultKey.unwrap(candidate.record, passphrase: passphrase)
+                try keys.install(key)
+
+                // **And the twin does not survive its own resolution.** The passphrase has just
+                // proved which record belongs to these accounts, so the other one is a record for
+                // a vault that no longer exists and can only cause this again. Failing to remove
+                // it is not worth failing the unlock over: the person is in, and the next unlock
+                // will settle it again the same way.
+                for loser in candidates where loser != candidate {
+                    try? wrapped.discard(loser)
+                }
+                return
+            } catch let error as WrappedVaultKey.WrapError {
+                // The two decided before any derivation runs are not a passphrase problem. See
+                // `VaultError.recordNotUnderstood`.
+                switch error {
+                case .wrongPassphrase: sawWrongPassphrase = true
+                case .derivationFailed: throw .storage(.keychain(status: -1))
+                case .notAWrappedKey, .iterationsOutOfRange: break
+                }
+            } catch {
+                throw .storage(.keychain(status: -1))
             }
-        } catch {
-            throw .storage(.keychain(status: -1))
         }
+
+        // **Reported on the best evidence across every record tried.** A device holding one
+        // unreadable record and one real wrap should hear about the passphrase, not about the
+        // rubbish beside it; a device holding nothing this build understands should hear the
+        // opposite.
+        throw sawWrongPassphrase ? .wrongPassphrase : .recordNotUnderstood
     }
 
     /// Replaces the passphrase, returning the new one.

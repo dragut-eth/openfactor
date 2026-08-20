@@ -217,4 +217,80 @@ struct VaultDecisionTests {
 
         #expect(vault.state() == .locked)
     }
+
+    // MARK: - S1-12, the twin
+
+    /// **The defect: a correct passphrase reported as wrong.** Two records can exist, because the
+    /// sync flag is part of a Keychain item's primary key, so a record arriving from iCloud after
+    /// this device wrote its own is a second item rather than a duplicate. Reading one of them and
+    /// hoping meant the passphrase could be tried against the wrong wrap and refused.
+    @Test("A passphrase opens its own wrap even when a twin is read first")
+    func aTwinDoesNotHideTheRightWrap() throws {
+        let (vault, keys, wrapped) = makeVault()
+
+        // The wrap that belongs to somebody else's vault, sitting where `load` would find it.
+        let stranger = try BackupPassphraseFixture.wrap(passphrase: "a different vault entirely")
+        try wrapped.save(stranger)
+
+        // And this device's own, arriving under the other flag.
+        let mine = try BackupPassphraseFixture.wrap(passphrase: "the passphrase somebody wrote down")
+        wrapped.plantTwin(mine, isSynchronizable: true)
+        #expect(wrapped.recordCount == 2, "the premise: two records, one unspecified winner")
+
+        try vault.unlock(with: "the passphrase somebody wrote down")
+
+        #expect(try keys.load() != nil, "the vault opened")
+    }
+
+    /// **And the twin does not survive its own resolution.** The passphrase has proved which
+    /// record belongs to these accounts, so the other is a wrap for a vault that no longer exists
+    /// and can only cause this again on the next device.
+    @Test("The losing wrap is discarded once the passphrase has chosen")
+    func theLoserIsDiscarded() throws {
+        let (vault, _, wrapped) = makeVault()
+
+        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "a different vault entirely"))
+        let mine = try BackupPassphraseFixture.wrap(passphrase: "the passphrase somebody wrote down")
+        wrapped.plantTwin(mine, isSynchronizable: true)
+
+        try vault.unlock(with: "the passphrase somebody wrote down")
+
+        #expect(wrapped.recordCount == 1, "one record left, and it is the one that opened")
+        #expect(wrapped.storedRecord == mine)
+    }
+
+    /// A genuinely wrong passphrase is still wrong, however many records there are.
+    @Test("A wrong passphrase against two records is still a wrong passphrase")
+    func wrongPassphraseAgainstTwins() throws {
+        let (vault, _, wrapped) = makeVault()
+
+        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "one vault"))
+        wrapped.plantTwin(
+            try BackupPassphraseFixture.wrap(passphrase: "another vault"), isSynchronizable: true)
+
+        #expect(throws: Vault.VaultError.wrongPassphrase) {
+            try vault.unlock(with: "neither of them")
+        }
+        #expect(wrapped.recordCount == 2, "nothing is discarded when nothing opened")
+    }
+
+    /// One unreadable record beside a real wrap should report the passphrase, not the rubbish.
+    @Test("Rubbish beside a real wrap does not change what the person is told")
+    func rubbishBesideARealWrap() throws {
+        let (vault, _, wrapped) = makeVault()
+
+        try wrapped.save(Data("not a wrapped key at all".utf8))
+        wrapped.plantTwin(
+            try BackupPassphraseFixture.wrap(passphrase: "the real one"), isSynchronizable: true)
+
+        #expect(throws: Vault.VaultError.wrongPassphrase) { try vault.unlock(with: "mistyped") }
+    }
+}
+
+/// Builds a wrapped record for a given passphrase, so a test can plant one that belongs to a
+/// different vault.
+enum BackupPassphraseFixture {
+    static func wrap(passphrase: String) throws -> Data {
+        try WrappedVaultKey.wrap(vaultKey: SymmetricKey(size: .bits256), passphrase: passphrase)
+    }
 }
