@@ -21,6 +21,29 @@ back with nothing above low and no fix called incomplete.
 medium that round one produced. What remains is what the later rounds found while reading the
 fixes.
 
+**Where the night of 2026-08-19 ended, and the problem with it.** Eleven items open, three of them
+medium, against eight open and none above low when the evening started. The codebase is safer at
+every point that was measured, and the counters are worse.
+
+**Roughly eight of the eleven open items are defects in fixes made that same day**, not findings
+about older code. S4-41 is an incomplete fix of S4-24. S4-42 was created by the S4-33 fix. S1-25
+and S1-27 are both defects in the S1-14 fix. S1-26 is an incomplete S1-19. Two of the seven false
+claims in S4-45 were written by that day's change. **That is the finding about the method, and it
+is not a finding about the reviewers.**
+
+Three causes, all mine and all repeatable:
+
+- **Volume.** Two rounds of seven findings each were fixed in one sitting per scope. Care does not
+  survive that rate.
+- **The test is written in the same pass as the fix**, so it inherits the fix's blind spot. Five
+  separate rounds of this gate have now named that exact pattern, and it keeps happening.
+- **Coupled things get changed one at a time.** S1-25 is one of two coupled Keychain attributes.
+  S4-41 is one of two coupled clock reads. S1-27 is one closure read of two. Each is a pair where
+  only half moved.
+
+**No methodology has been decided.** The next session begins by choosing one, before any further
+fixing.
+
 **Scope 1's round four returned a high, found by all three engines independently, and it was
 introduced by this gate's own fix for S1-12.** Unlock tried every wrap, which was right, and then
 deleted the wraps the passphrase did not open, which rested on a false premise: opening a wrap
@@ -47,10 +70,10 @@ page carries the full text of every engine's return.
 
 | Scope | Rounds | Open | Above low | Latest page |
 | --- | --- | --- | --- | --- |
-| 1, the vault | 4 | none above low | none | `A4-round-four-scope1-results.md` |
+| 1, the vault | 5 | S1-25 to S1-30 | S1-25, S1-26 | `A4-round-five-scope1-results.md` |
 | 2, the Watch | 7 | closed | none | `A4-round-seven-scope2-results.md` |
 | 3, the parsers | 3 | none | none | `A4-round-three-scope3-results.md` |
-| 4, the boundaries | 4 | none | none | `A4-round-four-scope4-results.md` |
+| 4, the boundaries | 5 | S4-41 to S4-45 | S4-41 | `A4-round-five-scope4-results.md` |
 
 **Thirteen fixes are made but not yet read by anybody outside**, which is what the remaining
 rounds are for: scope 2's three from round six, scope 1's four, and scope 4's six.
