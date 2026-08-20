@@ -309,10 +309,25 @@ swept at launch.
 
 ### What is not closed
 
-**S4-37 needs a device.** The wedge is not a sweep problem and no test in this repository can
-answer it. What has to be watched is an image sheet on screen, a link opened over it, and whether
-SwiftUI swaps one sheet item for the other or drops the transition. The four-of-four measurement
-recorded against checklist item 11 was taken against the queue that no longer exists, which is a
-different sheet pairing, so it does not transfer.
+**S4-37 was answered on a device, and it is closed.** Four runs out of four on an iPhone 15 Pro
+carrying `4b8317f`: the panel stays on screen and its contents change from the image's account to
+the link's. The swap does not drop in the pairing that ships. Recorded in
+`E11-two-arrivals-of-different-kinds.md`, and checklist item 11 now carries a measurement of the
+build it describes rather than of the queue that was removed.
+
+**The fourth run was a variant the tester improvised and it is worth more than the repeat.** The
+image was shared and the app was not opened in between, so the link arrived over an item still
+sitting uncollected in the inbox. That is checklist item 12 rather than 11, and it exercises
+`onOpenURL` superseding a set it just read, which is the path `sweep(_:)` was rewritten for. It
+passed on the first attempt.
+
+Four runs is not proof that a race is impossible. The defect this replaced showed at one in four,
+so four clean runs is evidence against a fault of that frequency and not against a rarer one.
 
 469 core tests pass, the app suite passes, both targets build.
+
+## Where the scope stands
+
+**Nothing is open.** Both mediums are fixed and mutation tested, the three sweep races carried in
+from round three are closed as one shape, the four lows this round added are fixed, S4-36 is
+rejected with its reason recorded, and S4-37 is measured. The scope is ready for round five.

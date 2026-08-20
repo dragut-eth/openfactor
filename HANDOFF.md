@@ -36,7 +36,7 @@ page carries the full text of every engine's return.
 | 1, the vault | 3 | S1-14, S1-17 | none | `A4-round-three-scope1-results.md` |
 | 2, the Watch | 7 | closed | none | `A4-round-seven-scope2-results.md` |
 | 3, the parsers | 3 | none | none | `A4-round-three-scope3-results.md` |
-| 4, the boundaries | 4 | S4-36 rejected, S4-37 needs a device | none | `A4-round-four-scope4-results.md` |
+| 4, the boundaries | 4 | none | none | `A4-round-four-scope4-results.md` |
 
 **Thirteen fixes are made but not yet read by anybody outside**, which is what the remaining
 rounds are for: scope 2's three from round six, scope 1's four, and scope 4's six.
