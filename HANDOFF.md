@@ -28,18 +28,32 @@ page carries the full text of every engine's return.
 | Scope | Rounds | Open | Above low | Latest page |
 | --- | --- | --- | --- | --- |
 | 1, the vault | 3 | S1-14, S1-17 | none | `A4-round-three-scope1-results.md` |
-| 2, the Watch | 6 | none | none | `A4-round-six-scope2-results.md` |
+| 2, the Watch | 7 | closed | none | `A4-round-seven-scope2-results.md` |
 | 3, the parsers | 3 | none | none | `A4-round-three-scope3-results.md` |
 | 4, the boundaries | 3 | S4-24, S4-25, S4-26 | none | `A4-round-three-scope4-results.md` |
 
 **Thirteen fixes are made but not yet read by anybody outside**, which is what the remaining
 rounds are for: scope 2's three from round six, scope 1's four, and scope 4's six.
 
-**Scope 2 is the one waiting on a decision.** Round six found no code defect at all; its whole
-return was two false claims in comments, both since fixed in `51d34b1`. The three engines split on
-whether that closes the scope, so a seventh round exists only to settle that split. The class it
-keeps returning is a sentence corrected in one of two twin files and not the other, four rounds
-running, which is why both headers are now written together and say so.
+**Scope 2 is closed**, after seven rounds and twenty six accepted findings. Round seven came back
+two to one to close, the same split as round six with the same engine dissenting, so what closed
+it was an amendment to the exit rule rather than the verdict.
+
+**The rule had no severity floor on its second half.** "No fix called incomplete" is a condition
+three independent readers looking at prose can always fail, so it never fires. The floor now says
+a finding that lives only in a comment or a document is recorded and does not hold a scope open.
+The evidence is scope 2's own last four rounds: no code defect in any of them, every finding a
+false claim in a comment, and by round six the fixes creating the next round's findings at close
+to one for one. The gate had begun reviewing text written during the gate.
+
+**The remedy was the comments, not the rule.** All five instances of the surviving class were
+history-narrating: which round found what, what a paragraph used to say. History is append-only
+and code is not. Scope 2's files now state what is true in the present tense and point at
+`docs/audits/` for how it came to be, and the enumerations no longer claim to be exhaustive.
+**The same narration is everywhere in the vault and parser files and was deliberately left alone**,
+because scopes 1 and 4 are still open and a large unreviewed prose diff in files three cold readers
+are about to read is the bet this gate exists to refuse. It is the first thing to do when they
+close.
 
 **The four documentation items are done.** Every comment and sentence the reviews found claiming
 something the code does not do has been corrected, including a broken splice left in

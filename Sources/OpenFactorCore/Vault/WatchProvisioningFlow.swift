@@ -173,9 +173,9 @@ public struct WatchProvisioningFlow: Equatable, Sendable {
         guard !obsolete else { return }
         // **Guarded like every sibling transition.** Without this, a call with nothing
         // outstanding demotes any stage, including `.ready`, so a watch showing its accounts
-        // would revert to "Not set up". Gate A4 found it unreachable today and filed it anyway,
-        // correctly: this type exists to be the place those guarantees are tested, and it was
-        // the one method carrying no guard of its own.
+        // would revert to "Not set up". No caller does that today. The guard is here because
+        // this type exists to be the place those guarantees are tested, and every sibling
+        // carries one.
         guard outstanding != nil else { return }
         outstanding = nil
         stage = .notSetUp

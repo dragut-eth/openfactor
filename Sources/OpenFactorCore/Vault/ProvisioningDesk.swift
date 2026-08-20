@@ -5,36 +5,22 @@ import Foundation
 ///
 /// ## Why this is here rather than in the app
 ///
-/// `WatchKeyProvider` held all of this, and `WatchKeyProvider` cannot be reached by any test this
-/// package runs. Everything below was found by a reviewer reading it: that the phone answered
-/// "asking" to a request it had already dropped, that a second request silently replaced the one
-/// the alert was about, that consent had no deadline, that the deadline was measured on a clock
-/// that can move backwards, and that expiry returned in silence leaving the alert up. Five
-/// defects in one small object, none reachable by the suite.
+/// `WatchKeyProvider` held all of it, and `WatchKeyProvider` cannot be reached by any test this
+/// package runs. Every defect this project has found in these rules was found by a person reading
+/// that file, one at a time, which is a discovery method that does not scale and does not stay
+/// fixed.
 ///
-/// **What stayed behind is the session, the alert, reading the key file, and sending bytes.** This
-/// type never sees a key.
+/// **This type never sees a key.** What stays in the app targets is the session, the alert,
+/// reading the key file and sending bytes, along with rules no test here can reach: when the
+/// expiry timer is armed, that a refusal the desk cannot name is not sent at all, that a failure
+/// to read the key or build a response refuses by name rather than going quiet, and, on the
+/// watch, the whole asking cadence.
 ///
-/// The sentence here used to say that what stayed behind is "everything that is not a decision",
-/// and all three engines of round four rejected it in their own words. What is still resident in
-/// the app targets, and still unreachable by any test here:
+/// Those are named because each is removable with this suite still green, which is what makes
+/// them worth naming. It is not a claim that the list is complete.
 ///
-/// - the condition that arms the expiry timer, whose removal would leave every test below passing
-///   and auto-clearing dead
-/// - on the phone, that a refusal it cannot name is not sent at all
-/// - on the phone, that failing to read the key or build a response refuses by name rather than
-///   going quiet, which was finding S2-15 and is reachable by deleting one call
-/// - on the watch, the whole asking cadence: when to ask, `keyOpensNothing`, and the
-///   `hasReplacedStaleKey` latch, which its own comment records as having been wrong once
-///
-/// Those are decisions. They predate this extraction and none of them produced a finding in this
-/// gate, which is the reason they were not moved and not a claim that they could not be. The
-/// honest description is that the extraction moved the message-handling rules and left the cadence
-/// rules.
-///
-/// **The three phone-side entries appear in `WatchKeyProvider`'s header too, in the same words.**
-/// Four consecutive rounds of this gate returned a sentence corrected in one of these two files
-/// and not the other, so neither list is edited alone.
+/// `docs/audits/` carries how the split came to be, what was argued about it, and what was
+/// rejected.
 public struct ProvisioningDesk: Sendable {
 
     /// How long a request may wait for an answer, in seconds.
@@ -50,13 +36,14 @@ public struct ProvisioningDesk: Sendable {
     /// protected, so a phone woken in the background cannot read it, and nobody is looking at a
     /// screen to agree to anything.
     ///
-    /// **`hasVault` is a question rather than an answer, and that is the fix for a defect the
-    /// extraction introduced.** Swift evaluates arguments eagerly, so building this out of a
-    /// `Bool` meant the app read its vault key *before* the desk had checked the request's length
-    /// or whether anybody was looking at the screen. A forty byte piece of rubbish caused a key
-    /// read; so did a request arriving in the background. No key was ever sent, but it restored an
-    /// ordering this project had already fixed once and contradicted three documents that say the
-    /// phone validates and foregrounds first. Asking only when the answer matters restores it.
+    /// **`hasVault` is a question rather than an answer, and it has to stay one.** Swift
+    /// evaluates arguments eagerly, so a `Bool` here means the app reads its vault key *before*
+    /// the desk has checked the request's length or whether anybody is looking at the screen. A
+    /// forty byte piece of rubbish causes a key read, and so does a request arriving in the
+    /// background. No key is sent either way, but the ordering is one that `docs/VAULT.md`,
+    /// `SECURITY.md` and `docs/ARCHITECTURE.md` all describe the other way round: the phone
+    /// validates and foregrounds first. Asking only when the answer matters is what keeps that
+    /// true.
     public struct Conditions: Sendable {
         public let isFrontmost: Bool
 
@@ -96,23 +83,22 @@ public struct ProvisioningDesk: Sendable {
     /// **Exists so a test can anchor on the request rather than on a fresh clock read.** A test
     /// that builds "a millisecond inside the window" from `.now` is really measuring the window
     /// plus however long passed since the request was stamped, which a stall on a loaded machine
-    /// turns into a failure with no product meaning. Round five of gate A4 caught that anchor
-    /// before it flaked, in a suite this project relies on for reverting each fix and watching it
-    /// go red.
+    /// turns into a failure with no product meaning. This suite is what every fix here is
+    /// reverted against, so a test that can fail for no product reason is worse than no test.
     var pendingInstant: ContinuousClock.Instant? { pending?.validatedAt }
 
     /// Decides what to answer a request, and remembers it if the answer is a question.
     ///
-    /// **The pending request is never overwritten while it is set.** A second request used to
-    /// replace it silently, so a tap offered for one watch key sealed the vault to whichever key
+    /// **The pending request is never overwritten while it is set.** If a second request could
+    /// replace it silently, a tap offered for one watch key would seal the vault to whichever key
     /// arrived last. Under WatchConnectivity's routing exclusivity both come from the genuine
-    /// watch, so no exploit follows today, but that exclusivity is load bearing and undocumented
-    /// by Apple, and this is exactly the defect that would turn a weakening of it into key
-    /// exfiltration.
+    /// watch, so no exploit follows from it today, but that exclusivity is load bearing and
+    /// undocumented by Apple, and this is exactly the defect that would turn a weakening of it
+    /// into key exfiltration.
     ///
-    /// **And the watch is told the truth about it.** The answer to a request this phone is about
-    /// to drop used to be `.asking`, which left the watch waiting twenty five seconds for a
-    /// question nobody was being shown. `.busy` says what happened.
+    /// **And the watch is told the truth about it.** Answering `.asking` to a request this phone
+    /// is about to drop leaves the watch waiting twenty five seconds for a question nobody is
+    /// being shown. `.busy` says what happened.
     public mutating func received(
         _ request: Data, when conditions: Conditions
     ) -> WatchProvisioning.Answer {
@@ -130,14 +116,14 @@ public struct ProvisioningDesk: Sendable {
     /// Clears the desk whatever the outcome: the question has been answered, and a second tap on
     /// a lingering alert must not release anything.
     ///
-    /// **Ask before reading the key.** The app used to load the key first and ask afterwards, so
-    /// an expired request, a cleared desk, or a second tap all read it for nothing. The caller
-    /// now reads a key only for `.release`.
+    /// **Ask before reading the key.** Loading the key first and asking afterwards reads it for
+    /// nothing on an expired request, a cleared desk, or a second tap. The caller reads a key
+    /// only for `.release`.
     public mutating func approve(now: ContinuousClock.Instant = .now) -> Approval {
         guard let request = pending else { return .nothing }
         pending = nil
 
-        // **Expiry is a refusal rather than silence.** Returning quietly left the alert up and
+        // **Expiry is a refusal rather than silence.** Returning quietly leaves the alert up and
         // the request in memory: the owner taps, nothing is sent, and nothing says why.
         guard request.isAnswerable(within: Self.consentWindow, now: now) else {
             return .refuse(nonce: request.requestNonce)
@@ -149,9 +135,9 @@ public struct ProvisioningDesk: Sendable {
     ///
     /// - Returns: the nonce to echo, or `nil` when there was nothing to refuse.
     ///
-    /// **The refusal names the request it refuses.** Every other message in this protocol is
-    /// bound to its attempt; this was the one that carried nothing, so a refusal of an abandoned
-    /// attempt ended the one the watch was still waiting on.
+    /// **The refusal names the request it refuses.** Every message in this protocol is bound to
+    /// its attempt. Unbound, a refusal of an abandoned attempt ends the one the watch is still
+    /// waiting on.
     public mutating func decline() -> Data? {
         defer { pending = nil }
         return pending?.requestNonce

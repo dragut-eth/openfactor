@@ -92,11 +92,10 @@ public enum WatchProvisioning {
         case declined
         /// The phone is already asking about a different request and did not keep this one.
         ///
-        /// **Added in round two of gate A4, after the watch-side fix alone proved insufficient.**
-        /// The phone will not replace the request its alert is asking about, which is right. It
-        /// used to answer a later one with `asking` anyway and then discard it, so the watch
-        /// waited for a message that could never arrive. The first fix had the watch re-ask when
-        /// an obsolete response arrived, which two reviewers independently showed was not enough:
+        /// **The phone will not replace the request its alert is asking about, so the later
+        /// request needs an answer of its own.** Answering it `asking` and then discarding it
+        /// leaves the watch waiting for a message that can never arrive. Having the watch re-ask
+        /// when an obsolete response arrives is not enough on its own:
         /// it does nothing when the phone declines instead of approving, and when a response is
         /// merely delayed it makes the watch abandon the very request the phone is asking about.
         ///
@@ -118,8 +117,8 @@ public enum WatchProvisioning {
         /// **Every standalone refusal this build sends carries it**, and one that arrives without
         /// it comes from a build older than this, which the watch honours rather than ignoring.
         /// **A direct reply of `declined` carries no nonce and needs none**: it answers a request
-        /// that failed to parse, so there is nothing to echo, and the reply handler already binds
-        /// it to the attempt that asked.
+        /// that failed to validate, so no validated request reaches the caller and the caller has
+        /// nothing to echo, and the reply handler already binds it to the attempt that asked.
         public static let nonce = "nonce"
     }
 
@@ -291,7 +290,7 @@ public enum WatchProvisioning {
         ///
         /// **Not a `Date`.** Wall time can go backwards, and a negative elapsed value passes any
         /// "less than the window" test forever, which is precisely the hole the window exists to
-        /// close. Round two of gate A4 found it in all three reviews.
+        /// close.
         let validatedAt: ContinuousClock.Instant
 
         /// Whether this request may still be answered, given how long a window it was given.
@@ -302,33 +301,29 @@ public enum WatchProvisioning {
         /// through. `AppLockEngine` treats a backward clock as indistinguishable from tampering
         /// and locks; this refuses for the same reason.
         ///
-        /// Round three found the test for the clock fix asserting a negative reading while its
-        /// own message claimed such a reading could never be inside the window. It could. It is
-        /// unreachable in production, because `ContinuousClock` does not go backwards, and the
-        /// policy that made the sentence true was missing. It is here now, in the core, where a
-        /// test can reach it.
+        /// A backward reading is unreachable in production, since `ContinuousClock` does not go
+        /// backwards. The policy still lives here rather than in the app, because here a test can
+        /// reach it.
         public func isAnswerable(within window: TimeInterval, now: ContinuousClock.Instant = .now)
             -> Bool
         {
-            // **Compared without truncating, which is what made the timer inert.** `age` reports
-            // whole seconds, and the app arms a timer that sleeps for exactly the window. It woke
-            // at the window plus a fraction, `age` rounded that fraction away, the request was
-            // still inside an inclusive comparison, and nothing expired: the alert stayed up for
-            // as long as it took somebody to notice. Two engines of round four walked out the
-            // same arithmetic.
+            // **Compared without truncating, because truncating makes the timer inert.** `age`
+            // reports whole seconds, and the app arms a timer that sleeps for exactly the window.
+            // It wakes at the window plus a fraction; rounded away, that fraction leaves the
+            // request inside an inclusive comparison and nothing expires, so the alert stays up
+            // until somebody notices.
             //
             // The duration comparison is exact, so the moment the timer actually wakes is past
             // the window rather than level with it.
-            // **Strictly inside, not level with.** At exactly the window the request stayed
-            // answerable, and the timer that asks is one-shot: having asked once at the moment it
-            // woke, it never asks again. Two engines of round five said that instant is
-            // unreachable, since `Task.sleep` waits at least its duration and `validatedAt` is
-            // stamped before the sleep is even scheduled, and they are very likely right. The
-            // third asked for the character anyway, and a character is cheaper than a physics
-            // argument nobody can rerun.
+            // **Strictly inside, not level with.** Level with the window, the request would
+            // stay answerable, and the timer that asks is one-shot: having asked once at the
+            // moment it woke, it never asks again. That instant is very likely unreachable, since
+            // `Task.sleep` waits at least its duration and `validatedAt` is stamped before the
+            // sleep is scheduled. A character is cheaper than a physics argument nobody can
+            // rerun.
             //
             // What it trades away is the symmetric case: a tap arriving at exactly the window is
-            // now refused. That instant is equally unreachable, and refusing is the safe side.
+            // refused. That instant is equally unreachable, and refusing is the safe side.
             let elapsed = now - validatedAt
             return elapsed >= .zero && elapsed < .seconds(window)
         }

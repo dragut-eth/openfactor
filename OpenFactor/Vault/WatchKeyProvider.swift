@@ -31,25 +31,22 @@ final class WatchKeyProvider: NSObject {
 
     /// Which request is being asked about, and what may be done about it.
     ///
-    /// **The message-handling rules moved into it, and the cadence stayed here.** Gate A4 found
-    /// five defects in those rules across three rounds, each one by a person reading this file,
-    /// because nothing else could reach them.
-    ///
-    /// What is left here: the session, the alert, the key file, the sending, **and three
-    /// decisions**, each of which would survive its own deletion with the whole suite still green:
+    /// **The message-handling rules live in the desk, where a test can reach them. The cadence
+    /// lives here, where none can.** What is decided in this file, rather than merely performed
+    /// by it:
     ///
     /// - when to arm the expiry timer, on `answer == .asking`. Delete that line and every desk
     ///   test passes while auto-clearing quietly dies.
-    /// - that a refusal it cannot name is not sent at all.
+    /// - that a refusal this file cannot name is not sent at all.
     /// - that a phone which cannot read its own key, or cannot build a response, refuses by name
-    ///   rather than going quiet, in `approve()`'s release path below. That one was finding S2-15;
-    ///   delete the `refuse` call from its `guard` and the silence returns unopposed.
+    ///   rather than going quiet, in `approve()`'s release path below. Delete the `refuse` call
+    ///   from its `guard` and the watch is told nothing.
     ///
-    /// **The count has been wrong twice, in opposite directions.** The sentence that used to stand
-    /// here claimed every rule had moved; round four rejected it, `ProvisioningDesk`'s header was
-    /// corrected, and this copy was left behind, which round five found. The replacement then said
-    /// two decisions and omitted the third, which round six found. Both headers are written
-    /// together now, and the same three appear in `ProvisioningDesk`'s.
+    /// Each is listed because deleting it leaves the whole suite green while changing what the
+    /// watch is told. That is what makes them worth naming here, and it is not a claim that
+    /// nothing else in this file decides anything.
+    ///
+    /// `docs/audits/` carries how this split came to be and what was argued about it.
     private var desk = ProvisioningDesk()
 
     private let keys: VaultKeyStore
@@ -75,11 +72,10 @@ final class WatchKeyProvider: NSObject {
     ///
     /// **A consent prompt whose premise has expired is a weaker gate than the design claims.**
     /// A request arriving while App Lock is up is accepted and the alert suppressed until
-    /// unlock, with nothing bounding how much later that is. Gate A4 found that somebody could
-    /// be shown "Your Apple Watch is asking for the key to your accounts" hours after it stopped
-    /// asking, and a tap would release the sealed key. The human tap is the one defence this
-    /// design kept when the comparison string was removed, so it should be asked about something
-    /// that is still true.
+    /// unlock, and nothing else bounds how much later that is. Unbounded, somebody can be shown
+    /// "Your Apple Watch is asking for the key to your accounts" hours after it stopped asking,
+    /// and a tap releases the sealed key. The human tap is the one defence this design has left,
+    /// so it must be asked about something that is still true.
     ///
     /// Two minutes is comfortably longer than the watch's own retry cycle, so a live exchange is
     /// never cut off, and short enough that the question and the answer belong to each other.
@@ -92,14 +88,13 @@ final class WatchKeyProvider: NSObject {
         defer { isAsking = desk.isAsking }
 
         // **The desk is asked first, and a key is read only when there is something to release.**
-        // This used to load the key before asking, so an expired request, an empty desk, or a
-        // second tap on a lingering alert all read it for nothing.
+        // Loading the key before asking reads it for nothing on an expired request, an empty
+        // desk, or a second tap on a lingering alert.
         switch desk.approve() {
         case let .release(request):
-            // **A phone that cannot read its own key refuses, rather than going quiet.** The
-            // silence was faithful to the version before the extraction and a review found it
-            // sitting three lines from the expired path, which answers the identical situation by
-            // telling the watch. Two answers to one question, in the file no test can reach.
+            // **A phone that cannot read its own key refuses, rather than going quiet.** Silence
+            // here would be a second answer to the question the expired path three lines below
+            // already answers by telling the watch.
             guard let key = (try? keys.load()) ?? nil,
                 let response = try? WatchProvisioning.respond(to: request, with: key)
             else {

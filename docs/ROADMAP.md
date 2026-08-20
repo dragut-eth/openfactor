@@ -750,10 +750,23 @@ resolved without checking is itself a finding about the method.
 
 ##### When the gate is met
 
-**Rounds run until one comes back with nothing above low and no fix called incomplete.** That is
-the exit condition, and it was written down after four rounds had already run without one, which
-is why it is stated rather than assumed: reviewers always find something, so "iterate until
-everyone is happy" has no end.
+**Rounds run until one comes back with nothing above low and no fix called incomplete, where a
+finding that lives only in a comment or a document does not count as incomplete.** That is the
+exit condition, and it was written down after four rounds had already run without one, which is
+why it is stated rather than assumed: reviewers always find something, so "iterate until everyone
+is happy" has no end.
+
+**The floor was added after scope 2 ran three rounds past its own usefulness.** The rule as first
+written had no severity floor on the second half, so any engine holding any reservation about any
+sentence kept a scope open. With three independent reviewers and prose-heavy comments that
+condition can never clear, which makes it a treadmill rather than a stop rule. Scope 2 finished
+rounds five, six and seven finding no code defect at all: every finding was a false claim in a
+comment, and by round six the fixes were generating the next round's findings at close to one for
+one. The gate had begun reviewing its own exhaust.
+
+**So a documentation-only finding is recorded and does not hold a scope open.** It is still
+fixed, and still fixed carefully, but it is not evidence that the code needs another cold reader.
+The related change to the code itself is under "History belongs in the audit record" below.
 
 Every high and every medium is fixed and accepted by the engines that filed it. Lows are fixed
 where they are cheap, and any left standing are listed with the reason, because a low nobody
@@ -765,6 +778,29 @@ reviewing *those* produced fewer again, each round smaller and less severe than 
 Four of the rounds rejected a fix outright, three of them unanimously, and in every one of those
 cases the fix had a passing test written by whoever wrote the fix. **That is the finding about
 the method, and it is worth more than any individual defect the gate produced.**
+
+##### History belongs in the audit record, not in the code
+
+**Every instance of the class that outlived scope 2's real defects was a history-narrating
+comment**: who found what, when a rule was born, why it stayed, which round rejected which
+sentence. Five instances, and the fifth was created by the fix for the fourth.
+
+The mechanism is not carelessness. **History is append-only and code is not**, so a sentence
+written truthfully about an earlier state is falsified by the next change to the thing it
+describes, and nothing catches it. Worse, these comments made *exhaustive* claims about surfaces
+no test reaches. A claim like "three decisions stayed here, and here they are" has to be
+re-verified by a person every time anything moves, and the only mechanism that ever verified it
+was a review round.
+
+**So a code comment states what is true now, and the audit record carries how it came to be.**
+`docs/audits/` is append-only by nature and is the right home for provenance. A header that says
+what a type decides, and points at the record for the argument behind it, cannot go stale in the
+way five rounds of this gate proved these can.
+
+This is not an argument for thin comments. The reasoning that makes a rule non-obvious stays,
+because that is what stops somebody deleting it. What leaves is the narration: round numbers,
+finding numbers, which reviewer said what, and any sentence whose truth depends on a state the
+code has left.
 
 ##### Publication
 

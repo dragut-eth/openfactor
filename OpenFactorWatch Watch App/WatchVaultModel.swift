@@ -176,17 +176,15 @@ final class WatchVaultModel: NSObject {
     private func phoneAnswered(_ reply: [String: Any], token: WatchProvisioningFlow.Token) {
         guard flow.isCurrent(token) else { return }
 
-        // **Read by `WatchInbox`, like every other message.** This kept its own copy of the
-        // vocabulary, `status as? String` and then `Answer(rawValue:)`, so one wire protocol had
-        // two readers and a sixth answer would have had to be taught to both. A review found the
-        // second door in the round that reviewed the extraction meant to close doors like it.
+        // **Read by `WatchInbox`, like every other message.** Keeping a second copy of the
+        // vocabulary here, `status as? String` and then `Answer(rawValue:)`, gives one wire
+        // protocol two readers, and a sixth answer would then have to be taught to both.
         //
         // **Almost everything that arrives here is an `.answer`, and one thing is not.** A phone
-        // refusing a malformed request replies with `declined`, which `classify` reads as a
-        // decline rather than an answer, so it lands in the branch below. The outcome is the same
-        // either way, because a decline and an answer this build cannot name reach the same
-        // terminal case in the flow. The comment here used to claim only an answer could arrive:
-        // round five found it right by two paths converging rather than by the reasoning it gave.
+        // refusing a request that failed to validate replies with `declined`, which `classify`
+        // reads as a decline rather than an answer, so it lands in the branch below. That is
+        // right by rule rather than by luck: a decline and an answer this build cannot name reach
+        // the same terminal case in the flow.
         //
         // A reply carrying a sealed key would land below too, and be treated as a refusal. No
         // build this app talks to sends one, and a build that did would be changing the protocol
