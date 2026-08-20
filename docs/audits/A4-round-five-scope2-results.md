@@ -106,3 +106,53 @@ and not to its twin, which is the exact failure mode this gate has now produced 
 
 Fixing the four items above is perhaps an hour. A sixth round on that would be the one that closes
 it, and both of the engines recommending a stop would presumably say so again.
+
+---
+
+# What was done
+
+**The code under review is `1f7e65f`.** All five are fixed.
+
+**S2-17**, the one that held the scope open. The claim now names the two decisions that genuinely
+stayed in `WatchKeyProvider`: when to arm the expiry timer, and that a refusal it cannot name is not
+sent at all. It also records that this copy was left behind when its twin was corrected, because the
+pattern is the point.
+
+**S2-19.** The comparison is strict, and both sides of that instant now have a test. Grok and Fable
+are probably right that `Task.sleep` cannot produce it; the character costs less than an argument
+nobody can rerun, and the tests make it permanent either way.
+
+**S2-21.** The documents were wrong, not the code. A reply returns through the handler of the
+message that asked, so it is bound by the channel rather than by a nonce, and a request that failed
+to parse has none to echo. `VAULT.md` and `SECURITY.md` now distinguish a standalone refusal from a
+reply, and the reply site says why.
+
+**S2-22.** The comment says what actually arrives, including the `declined` reply that lands in the
+branch the comment claimed nothing could reach.
+
+**S2-23.** `ProvisioningDesk` exposes the pending request's instant, and the three window tests
+anchor on it rather than on a fresh clock read.
+
+Each was reverted individually where it had a test to revert against.
+
+## For round six
+
+**This is the round that can close the scope.** Round five failed the exit condition on one half
+only, and that half was a sentence in a second file.
+
+The four questions, and the honest places to attack:
+
+**S2-19 was decided against two engines' advice.** If either still thinks the strict comparison is
+wrong, or that it trades one unreachable instant for another that matters more, say so: it is one
+character in either direction and the tests would move with it.
+
+**S2-21 was answered by changing documents rather than code.** The argument is that the reply
+channel binds the answer to its request, so the nonce adds nothing there. If that reasoning is
+wrong, the fix is the opposite one and the wire changes.
+
+**The `refuse(naming:)` consolidation now has three callers and one non-caller**, the reply
+wrapper. That asymmetry is deliberate and freshly documented, which makes it the kind of thing worth
+a second reading.
+
+**Nothing else in this scope changed.** If this round finds nothing above low and calls no fix
+incomplete, scope 2 meets the gate's exit condition and stops being reviewed.
