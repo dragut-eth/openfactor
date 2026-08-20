@@ -304,9 +304,15 @@ before deriving anything.
 
 **A refusal names the request it refuses**, for the same reason. The decline message used to
 carry only a status, so a refusal of an attempt the Watch had already abandoned ended the one it
-was still waiting on. It echoes the nonce of the request being refused, and the Watch ignores a decline
-meant for anything else. A decline carrying no nonce comes from an older build and is honoured,
-which is a deliberate mixed-version choice rather than an oversight. This is matching rather than authentication, and is not claimed as more: a refusal releases
+was still waiting on. A **standalone** refusal echoes the nonce of the request being refused, and
+the Watch ignores one meant for anything else. A standalone decline carrying no nonce comes from an
+older build and is honoured, which is a deliberate mixed-version choice rather than an oversight.
+
+**A refusal sent as the direct reply to a request carries no nonce and needs none**, because it
+returns through the reply handler of the message that asked and is bound to it by the channel. The
+only request answered that way is one that failed to parse, which has no nonce to echo. Round five
+of gate A4 found this paragraph claiming otherwise while a current build sent exactly such a
+reply. This is matching rather than authentication, and is not claimed as more: a refusal releases
 nothing, and the worst a forged one can do is end an exchange that can be started again.
 
 **Consent expires.** A request that arrives while App Lock is up is accepted and its alert

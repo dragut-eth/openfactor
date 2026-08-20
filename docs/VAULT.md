@@ -351,11 +351,19 @@ it is written down here:
 ```
 key      type    notes
 status   String  "asking", "busy", "needsApp", "noVault" or "declined"
-nonce    Data    16 bytes, present on a decline, echoing the request being refused
+nonce    Data    16 bytes, present on a standalone decline, echoing the request refused
 ```
 
-The compatibility rule is deliberate and asymmetric. **A decline carrying no nonce is honoured**,
-because it comes from a phone built before this field existed, and the cost of being wrong is one
+**Only a standalone refusal carries the nonce.** A refusal sent as the direct reply to a request
+does not, and does not need one: it travels back through the reply handler of the message that
+asked, so it is bound to its request by the channel rather than by a field. There is also nothing
+to echo, because the only request answered that way is one that failed to parse. Round five of gate
+A4 found this page claiming every decline carries a nonce while a current build sent one that did
+not.
+
+The compatibility rule is deliberate and asymmetric. **A standalone decline carrying no nonce is
+honoured**, because it comes from a phone built before this field existed, and the cost of being
+wrong is one
 screen that says to try again. An earlier version of this sentence said refusing it would strand a
 watch, which is false and was corrected in the code before it was corrected here: the twenty five
 second timeout ends every wait at a screen with a button on it. **A decline carrying a nonce that is not this attempt's is

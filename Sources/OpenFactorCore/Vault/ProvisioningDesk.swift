@@ -84,6 +84,16 @@ public struct ProvisioningDesk: Sendable {
     /// The nonce of the request being asked about, for a caller that needs to tell two apart.
     public var pendingNonce: Data? { pending?.requestNonce }
 
+    /// The instant the pending request was validated at.
+    ///
+    /// **Exists so a test can anchor on the request rather than on a fresh clock read.** A test
+    /// that builds "a millisecond inside the window" from `.now` is really measuring the window
+    /// plus however long passed since the request was stamped, which a stall on a loaded machine
+    /// turns into a failure with no product meaning. Round five of gate A4 caught that anchor
+    /// before it flaked, in a suite this project relies on for reverting each fix and watching it
+    /// go red.
+    var pendingInstant: ContinuousClock.Instant? { pending?.validatedAt }
+
     /// Decides what to answer a request, and remembers it if the answer is a question.
     ///
     /// **The pending request is never overwritten while it is set.** A second request used to

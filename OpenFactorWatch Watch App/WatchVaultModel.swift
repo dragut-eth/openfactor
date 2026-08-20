@@ -181,9 +181,16 @@ final class WatchVaultModel: NSObject {
         // two readers and a sixth answer would have had to be taught to both. A review found the
         // second door in the round that reviewed the extraction meant to close doors like it.
         //
-        // A reply carries no sealed key, so the only case that can arrive here is `.answer`.
-        // Anything else is a phone saying something this build has no name for, which is a
-        // refusal by the same rule that governs an unreadable answer.
+        // **Almost everything that arrives here is an `.answer`, and one thing is not.** A phone
+        // refusing a malformed request replies with `declined`, which `classify` reads as a
+        // decline rather than an answer, so it lands in the branch below. The outcome is the same
+        // either way, because a decline and an answer this build cannot name reach the same
+        // terminal case in the flow. The comment here used to claim only an answer could arrive:
+        // round five found it right by two paths converging rather than by the reasoning it gave.
+        //
+        // A reply carrying a sealed key would land below too, and be treated as a refusal. No
+        // build this app talks to sends one, and a build that did would be changing the protocol
+        // and owning its own versioning.
         guard case let .answer(answer) = WatchInbox.classify(reply) else {
             flow.phoneAnswered(nil, token: token)
             releaseAttemptIfFinished()

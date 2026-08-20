@@ -31,10 +31,18 @@ final class WatchKeyProvider: NSObject {
 
     /// Which request is being asked about, and what may be done about it.
     ///
-    /// **Every rule that used to live in this file is in there now**, in the core, where the test
-    /// suite can reach it. Gate A4 found five defects in those rules across three rounds, each
-    /// one by a person reading this file, because nothing else could. What is left here is the
-    /// session, the alert, the key file and the sending.
+    /// **The message-handling rules moved into it, and the cadence stayed here.** Gate A4 found
+    /// five defects in those rules across three rounds, each one by a person reading this file,
+    /// because nothing else could reach them.
+    ///
+    /// What is left here: the session, the alert, the key file, the sending, **and two decisions**.
+    /// This file decides when to arm the expiry timer, on `answer == .asking`, and deleting that
+    /// line would leave every desk test green while auto-clearing quietly died. It also decides
+    /// that a refusal it cannot name is not sent at all.
+    ///
+    /// The sentence that used to stand here claimed every rule had moved. Round four rejected it,
+    /// `ProvisioningDesk`'s header was corrected, **and this copy was left behind** — which round
+    /// five found, in two returns, in the file the extraction was meant to empty.
     private var desk = ProvisioningDesk()
 
     private let keys: VaultKeyStore
@@ -203,6 +211,16 @@ extension WatchKeyProvider: WCSessionDelegate {
             return
         }
 
+        // **A reply is bound to its request by the channel, not by a nonce.** Round five found a
+        // malformed request being answered `declined` with no nonce, which two documents said
+        // could only come from a build too old to send one. The documents were wrong rather than
+        // the code: this answer travels back through the reply handler of the very message that
+        // asked, so the watch already knows which request it belongs to, and the nonce that binds
+        // a *standalone* refusal has nothing to add here. There is also no nonce to send, because
+        // a request that did not parse has none.
+        //
+        // `docs/VAULT.md` and `SECURITY.md` now draw that distinction rather than claiming every
+        // decline carries a nonce.
         Task { @MainActor in
             replyHandler(
                     [WatchProvisioning.MessageKey.status: self.answer(to: request).rawValue])

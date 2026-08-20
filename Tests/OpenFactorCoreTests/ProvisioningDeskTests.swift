@@ -215,7 +215,7 @@ struct ProvisioningDeskTests {
 
         // What `Task.sleep(for: .seconds(120))` produces: the window, plus however long it took
         // to wake up.
-        let wake = ContinuousClock.Instant.now.advanced(by: .milliseconds(120_001))
+        let wake = desk.pendingInstant!.advanced(by: .milliseconds(120_001))
         #expect(desk.expire(nonce, now: wake) == nonce, "the question comes down")
         #expect(!desk.isAsking)
     }
@@ -228,7 +228,12 @@ struct ProvisioningDeskTests {
         let (request, nonce) = try request()
         _ = desk.received(request, when: ready)
 
-        let justInside = ContinuousClock.Instant.now.advanced(by: .milliseconds(119_999))
+        // **Anchored on the request's own instant, not on a fresh clock read.** Reading `.now`
+        // here measures 119.999 seconds plus however long passed between `received` stamping the
+        // request and this line running, so a millisecond of scheduler stall on a loaded machine
+        // turned a release into a refusal and the test red for no product reason. Round five
+        // caught it before it ever flaked.
+        let justInside = desk.pendingInstant!.advanced(by: .milliseconds(119_999))
         guard case let .release(released) = desk.approve(now: justInside) else {
             Issue.record("a request a millisecond inside the window still releases")
             return
@@ -243,8 +248,40 @@ struct ProvisioningDeskTests {
         let (request, nonce) = try request()
         _ = desk.received(request, when: ready)
 
-        let justOutside = ContinuousClock.Instant.now.advanced(by: .milliseconds(120_500))
+        let justOutside = desk.pendingInstant!.advanced(by: .milliseconds(120_500))
         #expect(desk.approve(now: justOutside) == .refuse(nonce: nonce))
+    }
+
+    /// **Exactly the window, which is the instant three engines argued about.** Two of them said
+    /// `Task.sleep` can never produce it, because it waits at least its duration and the request
+    /// is stamped before the sleep is scheduled. They are very likely right, and the comparison is
+    /// strict anyway: a character is cheaper than a physics argument nobody can rerun, and this
+    /// test is what makes the character permanent.
+    @Test("At exactly the window, the request has expired")
+    func exactlyAtTheWindowIsExpired() throws {
+        var desk = ProvisioningDesk()
+        let (request, nonce) = try request()
+        _ = desk.received(request, when: ready)
+
+        let exactly = try #require(desk.pendingInstant).advanced(
+            by: .seconds(ProvisioningDesk.consentWindow))
+
+        #expect(desk.expire(nonce, now: exactly) == nonce, "the deadline has arrived")
+        #expect(!desk.isAsking)
+    }
+
+    /// And the symmetric case the strict comparison creates: a tap at exactly the window refuses
+    /// rather than releasing. Equally unreachable, and refusing is the safe side.
+    @Test("At exactly the window, a tap refuses")
+    func exactlyAtTheWindowATapRefuses() throws {
+        var desk = ProvisioningDesk()
+        let (request, nonce) = try request()
+        _ = desk.received(request, when: ready)
+
+        let exactly = try #require(desk.pendingInstant).advanced(
+            by: .seconds(ProvisioningDesk.consentWindow))
+
+        #expect(desk.approve(now: exactly) == .refuse(nonce: nonce))
     }
 
     /// **The key is not read until the desk has a reason to want one.** Building `Conditions` out

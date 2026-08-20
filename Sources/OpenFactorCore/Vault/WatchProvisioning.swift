@@ -314,8 +314,18 @@ public enum WatchProvisioning {
             //
             // The duration comparison is exact, so the moment the timer actually wakes is past
             // the window rather than level with it.
+            // **Strictly inside, not level with.** At exactly the window the request stayed
+            // answerable, and the timer that asks is one-shot: having asked once at the moment it
+            // woke, it never asks again. Two engines of round five said that instant is
+            // unreachable, since `Task.sleep` waits at least its duration and `validatedAt` is
+            // stamped before the sleep is even scheduled, and they are very likely right. The
+            // third asked for the character anyway, and a character is cheaper than a physics
+            // argument nobody can rerun.
+            //
+            // What it trades away is the symmetric case: a tap arriving at exactly the window is
+            // now refused. That instant is equally unreachable, and refusing is the safe side.
             let elapsed = now - validatedAt
-            return elapsed >= .zero && elapsed <= .seconds(window)
+            return elapsed >= .zero && elapsed < .seconds(window)
         }
 
         /// How long this request has been waiting for an answer, in seconds.
