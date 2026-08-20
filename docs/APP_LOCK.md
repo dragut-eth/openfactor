@@ -37,16 +37,16 @@ Stated by Xavier as the ideal, and adopted as requirements:
   interface exactly as it was.
 - **R5, arrivals win.** If a share, an opened file, or a scanned code arrived in the
   meantime, it takes precedence: whatever was open closes, and the import or add flow
-  presents clean from the root. **Precedence is over what was already on screen, never over
-  another arrival**: the first one to land is shown, and a second is held until that one is
-  answered rather than replacing it. A review found the code silently discarding the second,
-  which loses a link somebody deliberately opened.
+  presents clean from the root.
 
-  **A third is refused, and the refusal is not shown to anybody.** The queue holds two because
-  whatever can send a third can send a thousand, and the app does not yet use the value that says
-  a refusal happened. So a third link opened while two are waiting is lost in silence, which is a
-  deliberate availability limit rather than an oversight, and is written here because a normative
-  page that describes an unbounded queue would be describing something else.
+  **Precedence includes another arrival: the newest one wins.** A link opened while a shared
+  image is waiting supersedes it, and the superseded share is swept from the inbox rather than
+  left there. Two reviews filed the older version of this as a defect, and a queue holding two
+  was built in answer; it produced two findings of its own in a file no test can reach, and it
+  needed this page to carry an exception to its own rule. The queue is gone. What a person does
+  is tap the newest thing, a superseded arrival costs a repeated gesture rather than an account,
+  and against an app sending links repeatedly this is the safer rule, because first-wins lets
+  whatever arrives first block a genuine share until it is dismissed.
 
 **The honest limit, stated up front: R3 holds only while the process lives.** If iOS
 terminates the app while the person is away, every draft is gone, because the only cure is
@@ -349,17 +349,15 @@ item names its expected result; anything else is a finding.
 10. Face ID cancel, then the button, then succeed. **Expected:** stays locked in between,
     one prompt at a time, no cover flashes.
 11. Share a QR image in, wait for the import sheet to appear, and with it on screen open an
-    `otpauth://` link from another app. Return and dismiss the import. **Expected:** the
-    add-account screen for the link presents by itself. **Measured 2026-08-19, four runs, four
-    times yes.** This item exists because a reviewer argued the second arrival could be lost
-    here: promotion happens as a side effect of the sheet binding being set to `nil`, so the
-    held arrival has to present while the previous sheet is still animating out, and this
-    document elsewhere records SwiftUI dropping exactly that kind of request. It does not drop
-    this one. Anything that changes how arrivals are presented must re-run this item.
-12. Share a QR image in, and before opening OpenFactor, open an `otpauth://` link. **Expected,
-    once the rule below is settled:** today the link presents and the shared image waits in the
-    inbox, uncollected, appearing only if some unrelated event triggers a collection. Measured
-    2026-08-19: it reappeared on one run in four.
+    `otpauth://` link from another app. **Expected:** the import closes and the add-account
+    screen for the link presents. The share is not added, and is not waiting behind it.
+    *(Measured 2026-08-19 against the queue this replaced, where the held arrival presented on
+    dismissal, four runs out of four. That measurement is what showed the queue worked, and the
+    queue was removed anyway because the rule it implemented was the wrong one.)*
+12. Share a QR image in, and before opening OpenFactor, open an `otpauth://` link.
+    **Expected:** the link presents, and the shared image is gone rather than appearing later.
+    Measured 2026-08-19 against the previous rule, where the image was left in the inbox: it
+    reappeared on one run in four, which is what decided this.
 
 ## Invariants
 

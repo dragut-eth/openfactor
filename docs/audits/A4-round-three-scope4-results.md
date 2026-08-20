@@ -164,3 +164,54 @@ fire.
 That turns S4-27 from a reading of the code into a reproduced observation, and it raises a product
 question the code has never actually answered: whether the newer arrival should win outright, or
 whether the queue should hold both. The behaviour today is neither.
+
+---
+
+# The arrival rule was decided rather than fixed
+
+**S4-7, S4-15, S4-27 and S4-28 were all about the same question, and the code had never answered
+it.** Round one filed a second link destroying a waiting arrival. Round two filed the fix for that
+silently dropping the second instead. Round three filed the queue built in answer as unable to fill
+its own second slot from the inbox, and as possibly wedging at the SwiftUI seam.
+
+Four findings, one unanswered question: **when two things arrive, which one does the person get?**
+
+## What was decided, 2026-08-19
+
+**The newest arrival wins, and the superseded one is swept.** The queue is removed.
+
+The reasoning, in the order it actually weighed:
+
+**The normative page already said so.** `docs/APP_LOCK.md` has always stated that an arrival takes
+precedence and whatever was open closes. The queue was the thing that contradicted it, and building
+the queue required amending that page to carry an exception to its own rule.
+
+**The queue was more surface in the place this gate keeps finding defects.** S4-28 exists only
+because the queue exists, and so does S4-27. Two findings in the app target no test can reach,
+created by a mechanism whose purpose was to avoid losing something recoverable.
+
+**Neither loss is a loss.** A superseded link can be tapped again; a superseded share can be shared
+again. Nothing is added without a tap under either rule.
+
+**First-wins is the worse rule against a hostile sender**, which is the opposite of the assumption
+behind it. Under first-wins, whatever arrives first occupies the slot and blocks a genuine share
+until it is dismissed. That is precisely the sequence reproduced on hardware.
+
+## What this reverses, deliberately
+
+**S4-7 and S4-15 are closed by decision rather than by code.** A second arrival destroying a pending
+one was filed as a defect twice, by reviewers reasoning from the code with no rule to check it
+against. There is a rule now, it is written in the normative page and in the source, and the
+behaviour follows it.
+
+**A reviewer may well file it again**, and that is expected rather than a problem. The answer is
+this section: it is a decision with reasons, taken by the person whose app it is, after using it on
+a phone.
+
+**S4-28's measurement stands and is now moot.** Four runs out of four showed the queue promoting
+correctly. That measurement is what proved the queue worked, and the queue was removed anyway,
+because working was never the question.
+
+**S4-27 is closed by the sweep.** The intermittent reappearance was the superseded share sitting in
+the inbox waiting for an unrelated event. It is taken off the device at the moment it is
+superseded.

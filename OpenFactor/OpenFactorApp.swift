@@ -40,17 +40,25 @@ struct OpenFactorApp: App {
     /// that happens moments before App Lock swaps the root would take the image out of the
     /// container and then be thrown away with the view that asked for it. Sharing would appear to
     /// do nothing at all, which is what it did.
-    /// What has arrived and is waiting to be dealt with. See `ArrivalQueue` for the rule and
-    /// for the two rounds of gate A4 that produced it.
-    @State private var arrivals = ArrivalQueue<IdentifiedArrival>()
 
-    /// What the account list binds to. Setting it to `nil` is the person having finished with
-    /// what was on screen, which is when anything held behind it comes forward.
-    private var arrival: Binding<IdentifiedArrival?> {
-        Binding(
-            get: { arrivals.current },
-            set: { if $0 == nil { arrivals.finished() } })
-    }
+    /// What has arrived and is waiting to be dealt with.
+    ///
+    /// **The newest arrival wins, and this is a decision rather than an accident.** Two reviews
+    /// filed the older behaviour as a defect: a link opened while a shared image waited threw the
+    /// image away with no sign. The answer built for that was a queue holding two, and it produced
+    /// two findings of its own in the file no test can reach, plus an exception in a normative
+    /// page that had always said an arrival takes precedence over whatever was open.
+    ///
+    /// Tested on hardware instead of argued about. What a person actually does is tap the newest
+    /// thing, and a superseded arrival costs one repeated gesture rather than an account: a link
+    /// can be tapped again and an image can be shared again. Against an app spamming links, last
+    /// wins is also the better rule, because first wins lets whatever arrives first block a
+    /// genuine share until it is dismissed, which is exactly the sequence that was reproduced.
+    ///
+    /// What makes it a rule rather than the behaviour that was observed: the superseded item is
+    /// **swept**, not left in the inbox to reappear the one time in four that something else
+    /// triggers a collection.
+    @State private var arrival: IdentifiedArrival?
 
     init() {
         let keys = VaultKeyStore()
@@ -141,7 +149,7 @@ struct OpenFactorApp: App {
                     // never had a vault must be offered one: the list cannot render either
                     // state honestly, because to it both look like a shelf of unreadable rows.
                     VaultGateView(model: gate, store: store) {
-                        AccountListView(store: store, arrival: arrival, addSession: addSession)
+                        AccountListView(store: store, arrival: $arrival, addSession: addSession)
                         // Accounts saved before the shared access group was declared are
                         // still in the app's bundle group. The phone reads them either
                         // way, so nothing looks wrong here; the watch cannot see them at
@@ -234,10 +242,14 @@ struct OpenFactorApp: App {
             }
             .onChange(of: gate.stage) { collectWhatArrived() }
             .onOpenURL { url in
-                // The rule and its history are in `ArrivalQueue`: the first arrival keeps the
-                // screen, one more is held behind it, and a third is refused.
                 guard let value = InboxOpener.arrival(from: url) else { return }
-                arrivals.arrived(IdentifiedArrival(value: value))
+
+                // **This supersedes whatever was pending, and takes it off the device.** An
+                // uncollected share left in the inbox is the difference between a rule and the
+                // behaviour a hardware test caught: it reappeared on one run in four, whenever
+                // some unrelated scene or lock event happened to trigger a collection later.
+                SharedInbox().sweep()
+                arrival = IdentifiedArrival(value: value)
             }
             // The root swap and the shield hide land in the same transaction, so there is
             // no frame between them for the interface to show through.
@@ -278,12 +290,15 @@ struct OpenFactorApp: App {
     /// vault is open, because an import sheet over a setup screen is nonsense. And not if
     /// something is already waiting, or a second look would discard the first.
     private func collectWhatArrived() {
-        guard scenePhase == .active, !lock.isLocked, gate.stage == .open, arrivals.current == nil
+        // Collection is not a fresh arrival: it is this app noticing something shared earlier.
+        // So it waits for the screen rather than superseding what is on it, which is the other
+        // half of the newest-wins rule.
+        guard scenePhase == .active, !lock.isLocked, gate.stage == .open, arrival == nil
         else {
             return
         }
         guard let value = InboxOpener.collect() else { return }
-        arrivals.arrived(IdentifiedArrival(value: value))
+        arrival = IdentifiedArrival(value: value)
     }
 
 }
