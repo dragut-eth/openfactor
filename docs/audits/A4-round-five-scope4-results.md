@@ -211,3 +211,47 @@ review copy was synced at `1ea2589`, and that file did not land until `b3e7e08`.
 brief pointed reviewers at a file that was not there**, and one of the three worked around it by
 using the brief's own description of the neighbouring finding. The other two did not mention it.
 The sync should follow the brief rather than precede it.
+
+## What was done: S4-41 only
+
+**One medium, one commit.** The other four findings in this round are untouched.
+
+`pending` and `sweepStale` take the clock as `@Sendable () -> Date` rather than a `Date`, and read
+it **after** each entry's `fstatat` rather than once at entry. A share that lands mid-pass is then
+at or before the reading that judges it and is ordinary; a plant stamped in 2090 is still ahead of
+every reading and is still refused. **No tolerance window was added.** The fix is the order of two
+calls, which is what both engines that filed it proposed.
+
+`pending` also stops manufacturing an age. An entry whose `fstatat` fails used to become
+`.distantPast`, which sorted it last and put it inside the identifier set a collection supersedes,
+so it was deleted for an age nobody measured. It is now omitted, and `sweepStale` already skipped
+it. **The cost is honest and worth stating: an entry nobody can stat now stays in the directory.**
+
+### The test, and what it took to make it real
+
+Written from the finding's own words before the fix existed, per the method decided after the
+night this round came from.
+
+**The first two attempts did not discriminate**, and both failures are worth recording because
+they are the same failure this gate keeps finding. A clock returning a list of readings cannot tell
+the versions apart, because the broken code's single read and the fixed code's first per-entry read
+take the same value. A clock that writes the share and *then* returns `Date()` cannot either,
+because the reading is taken after the write it is supposed to precede.
+
+What works is a clock that captures its reading, then lands the share, then returns the earlier
+reading. That is the race exactly: the pass has its clock, and the extension writes a moment later.
+Under the broken ordering the share is listed, its stamp is later than the sample, and it is
+removed. Under the fixed ordering the listing happens before any clock read, so the share is not in
+that pass at all.
+
+**Mutation tested by hoisting the read back above the listing at both sites**, verified applied
+rather than assumed: both tests go red, one reporting the share deleted and the other reporting its
+arrival recorded as `.distantPast`.
+
+### Two of S4-45's claims are now true without being edited
+
+`SharedInbox`'s header says the sweep cannot take the item somebody shared a moment ago, and
+`SECURITY.md` says the ordinary share is untouched. Both were false because of S4-41 and both are
+true now. They were not rewritten; the code came to meet them.
+
+472 core tests pass, the app suite passes, both targets build.

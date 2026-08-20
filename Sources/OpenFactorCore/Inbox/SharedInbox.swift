@@ -204,23 +204,38 @@ public struct SharedInbox: Sendable {
     ///
     /// **Reading does not remove**, unlike `take`, because the caller has to choose before it
     /// consumes. Everything it does not choose must then be swept, which is what the app does.
-    public func pending(now: Date = Date()) -> [Pending] {
+    public func pending(now: @Sendable () -> Date = { Date() }) -> [Pending] {
         guard let directory = try? directory(), let handle = InboxDirectory(at: directory)
         else { return [] }
 
         return handle.names().compactMap { name -> Pending? in
             guard let id = UUID(uuidString: name) else { return nil }
-            // **A timestamp after now is refused, not clamped.** Clamping it to `now` is inert:
-            // the value is recomputed on every read, so a file stamped in 2090 reports an age of
-            // zero forever. It still sorts ahead of a genuine share, still passes the freshness
-            // test, and can never satisfy a sweep that asks whether an age exceeds a threshold.
-            // **The item the sweep exists to remove becomes the one item it can never remove.**
+
+            // **An item whose age cannot be read is not a candidate.** The alternative is to
+            // invent one, and an invented age is not evidence: `.distantPast` here would make an
+            // unreadable entry sort last and then sit inside the identifier set a collection
+            // supersedes, so it would be deleted for an age nobody measured. It stays instead,
+            // which costs an entry nobody can stat sitting in the directory.
+            guard let stamped = handle.modified(name) else { return nil }
+
+            // **The clock is read after the file, not before the directory.** A listing that
+            // samples the clock at entry judges an item that lands mid-pass against a moment
+            // before it existed: its honest timestamp is later than the sample, which is exactly
+            // the shape of a plant stamped in 2090, and nothing can tell the two apart.
             //
-            // Nothing legitimate writes a stamp in the future, so a stamp in the future is
-            // evidence about the writer rather than about the time. It is treated as arriving
-            // before everything, which sorts it last and makes it immediately sweepable.
-            let stamped = handle.modified(name) ?? .distantPast
-            let arrived = stamped > now ? .distantPast : stamped
+            // Read after the stat, a share that just landed is at or before the reading and is
+            // ordinary. A plant stamped tomorrow is still ahead of every reading and is still
+            // refused. No tolerance window is involved: the fix is the order of two calls.
+            let observed = now()
+
+            // **A timestamp after the observation is refused, not clamped.** Clamping to the
+            // observation is inert: the value is recomputed on every read, so a file stamped in
+            // 2090 reports an age of zero forever. It sorts ahead of a genuine share, passes the
+            // freshness test, and can never satisfy a sweep asking whether an age exceeds a
+            // threshold. **The item the sweep exists to remove becomes the one it can never
+            // remove.** Treated as arriving before everything, it sorts last and is immediately
+            // sweepable.
+            let arrived = stamped > observed ? Date.distantPast : stamped
             return Pending(id: id, arrived: arrived)
         }
         .sorted { $0.arrived > $1.arrived }
@@ -291,28 +306,30 @@ public struct SharedInbox: Sendable {
     ///
     /// It runs on every foreground rather than once per process, so the threshold is a deadline
     /// and not a condition evaluated at launch.
-    public func sweepStale(now: Date = Date()) {
+    public func sweepStale(now: @Sendable () -> Date = { Date() }) {
         guard let directory = try? directory(), let handle = InboxDirectory(at: directory) else {
             return
         }
 
         for name in handle.names() {
-            // **Every deletion here is decided by that file's own timestamp, read immediately
-            // before the removal.** Reading the directory and then judging its contents against a
-            // clock taken earlier means a file written during the pass is measured against a
-            // moment before it existed.
+            // **Each file's own timestamp, and then a clock read after it.** Both halves are the
+            // rule. Reading the timestamp late and comparing it against a clock sampled before
+            // the directory was listed judges an item that landed mid-pass against a moment
+            // before it existed, so its honest stamp reads as the future and the branch below
+            // deletes it as ancient. The order of the two calls is the whole of it.
             //
             // **Including names this app did not write.** Deleting a foreign name on sight was
             // the stricter rule, and it collides with the atomic write it shares the directory
             // with: `Data.write(options: .atomic)` puts a temporary file alongside the real one
-            // and renames it, and the temporary name is exactly a name this app did not write. In
-            // a group whose only members are this app's own targets, the foreign name being
-            // deleted on sight is almost always the extension's own half-finished write. Age
-            // still removes it: a genuine leftover under an unrecognised name is old on the next
-            // pass, and an in-progress write is seconds old and survives.
+            // and renames it, and that temporary name is exactly a name this app did not write.
+            // In a group whose only members are this app's own targets, the foreign name deleted
+            // on sight is almost always the extension's own half-finished write. Age still
+            // removes it: a genuine leftover is old on the next pass, and a write in progress is
+            // seconds old and survives.
             guard let modified = handle.modified(name) else { continue }
-            let arrived = modified > now ? Date.distantPast : modified
-            guard now.timeIntervalSince(arrived) > Self.staleAfter else { continue }
+            let observed = now()
+            let arrived = modified > observed ? Date.distantPast : modified
+            guard observed.timeIntervalSince(arrived) > Self.staleAfter else { continue }
             handle.remove(name)
         }
     }

@@ -129,7 +129,7 @@ struct SharedInboxTests {
 
         #expect(inbox.pending().isEmpty, "nothing is read through it")
         #expect(throws: (any Error).self) { _ = try inbox.write(Data("a QR code".utf8)) }
-        inbox.sweepStale(now: Date().addingTimeInterval(SharedInbox.staleAfter + 1))
+        inbox.sweepStale(now: { Date().addingTimeInterval(SharedInbox.staleAfter + 1) })
         inbox.sweep([UUID()])
 
         #expect(
@@ -244,7 +244,7 @@ struct SharedInboxCollectionTests {
         let id = try inbox.write(Data("a transfer QR nobody collected".utf8))
         #expect(inbox.pending().count == 1)
 
-        inbox.sweepStale(now: Date().addingTimeInterval(SharedInbox.staleAfter + 1))
+        inbox.sweepStale(now: { Date().addingTimeInterval(SharedInbox.staleAfter + 1) })
         #expect(inbox.pending().isEmpty)
         #expect(throws: (any Error).self) { try inbox.take(id) }
     }
@@ -309,7 +309,7 @@ struct SharedInboxCollectionTests {
             .appendingPathComponent("not-a-uuid")
         try Data("planted under a name the sweep could not see".utf8).write(to: theirs)
 
-        inbox.sweepStale(now: Date().addingTimeInterval(SharedInbox.staleAfter + 1))
+        inbox.sweepStale(now: { Date().addingTimeInterval(SharedInbox.staleAfter + 1) })
 
         #expect(!FileManager.default.fileExists(atPath: theirs.path))
         #expect(inbox.pending().map(\.id) == [], "and everything else stale went with it")
@@ -336,6 +336,64 @@ struct SharedInboxCollectionTests {
         #expect(FileManager.default.fileExists(atPath: inProgress.path))
     }
 
+    /// **The clock is read after the file, not before the directory.** A pass that samples the
+    /// clock at entry and then judges each entry against it is judging a file written during the
+    /// pass against a moment before that file existed: its honest timestamp is later than the
+    /// sample, which is the same shape as a hostile plant stamped in 2090, and the pass cannot
+    /// tell them apart. It deletes the share somebody made a second ago for being from the future.
+    ///
+    /// **The clock is the seam, because the clock is what makes the race deterministic.** Reading
+    /// it is the first thing a pass that samples early does, and it happens after the listing in
+    /// a pass that samples late. So a clock that writes a share the first time it is read lands
+    /// that share squarely inside the window. Sample `now()` once at the top of `sweepStale` and
+    /// this goes red: the share is listed, its stamp is later than that sample, and it is removed.
+    @Test("A share that lands during a sweep is not deleted for being from the future")
+    func aShareLandingDuringASweepSurvives() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        // Something to iterate over, so the pass has an entry whose clock reading can land the
+        // share below.
+        let alreadyHere = try inbox.write(Data("shared earlier".utf8))
+
+        // The reading is taken **before** the share is written, which is the race: the pass has
+        // its clock, and the extension lands a file a moment later.
+        let landed = LockedBox<UUID>()
+        inbox.sweepStale(now: {
+            let reading = Date()
+            if landed.value == nil { landed.value = try? inbox.write(Data("landed mid-pass".utf8)) }
+            return reading
+        })
+
+        let arrived = try #require(landed.value, "the clock was read, so the share was written")
+        #expect(
+            inbox.pending().map(\.id).sorted() == [alreadyHere, arrived].sorted(),
+            "the share that landed during the sweep is still here")
+    }
+
+    /// The same ordering in `pending`, where the consequence is different and no less bad: a share
+    /// that lands during the listing is stamped `.distantPast`, sorts last, and is then inside the
+    /// identifier set a collection supersedes. Last wins, inverted.
+    @Test("A share that lands during a listing is never recorded as ancient")
+    func aShareLandingDuringAListingIsNotAncient() throws {
+        let (inbox, directory) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        _ = try inbox.write(Data("shared earlier".utf8))
+
+        let landed = LockedBox<UUID>()
+        let waiting = inbox.pending(now: {
+            let reading = Date()
+            if landed.value == nil { landed.value = try? inbox.write(Data("landed mid-pass".utf8)) }
+            return reading
+        })
+
+        #expect(landed.value != nil, "the clock was read, so the share was written")
+        #expect(
+            waiting.allSatisfy { $0.arrived != .distantPast },
+            "nothing a moment old may be recorded as arriving before everything")
+    }
+
     /// **A sweep that reads one clock and then judges every file against it** measures a file
     /// written during the pass against a moment before it existed. Each timestamp is read
     /// immediately before its own removal.
@@ -345,7 +403,7 @@ struct SharedInboxCollectionTests {
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let fresh = try inbox.write(Data("just shared".utf8))
-        inbox.sweepStale(now: Date())
+        inbox.sweepStale(now: { Date() })
 
         #expect(inbox.pending().map(\.id) == [fresh])
     }
@@ -430,5 +488,17 @@ struct SharedInboxCollectionTests {
         try Data(repeating: 0, count: ImportLimits.policyBytes + 1).write(to: url)
 
         #expect(throws: SharedInbox.InboxError.tooLarge) { try inbox.take(id) }
+    }
+}
+
+/// Somewhere a `@Sendable` clock closure can record what it did, so a test can land a share
+/// inside a pass and then assert on it afterwards.
+private final class LockedBox<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Value?
+
+    var value: Value? {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
     }
 }
