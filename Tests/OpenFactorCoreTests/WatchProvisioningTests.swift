@@ -280,27 +280,64 @@ struct WatchProvisioningTests {
     /// responses regardless. The consequence of a static key is that a captured response plus a
     /// later compromise of the phone recovers the vault key, which is the whole reason the
     /// exchange is ephemeral.
-    @Test("Two responses to the same request differ, and both open")
-    func responsesToOneRequestAreFresh() throws {
-        let attempt = try WatchProvisioning.Attempt()
-        let key = vaultKey()
+    /// The property, applied to one way of asking the phone to seal.
+    ///
+    /// **Separated out because there are two entry points and only one of them ships.** Written
+    /// inline against a single call, this checks whichever overload the test happened to name.
+    private func freshnessHolds(
+        for attempt: WatchProvisioning.Attempt,
+        key: SymmetricKey,
+        path: Comment,
+        respond: () throws -> Data
+    ) throws {
+        let first = try respond()
+        let second = try respond()
 
-        let first = try WatchProvisioning.respond(to: attempt.request, with: key)
-        let second = try WatchProvisioning.respond(to: attempt.request, with: key)
-
-        #expect(first != second, "a static phone keypair would make these identical")
+        #expect(first != second, path)
 
         // Both must still open: freshness that broke the exchange would be no use.
-        #expect(try attempt.open(first) == key)
-        #expect(try attempt.open(second) == key)
+        #expect(try attempt.open(first) == key, path)
+        #expect(try attempt.open(second) == key, path)
 
         // And the difference must be in the phone's public key, not only in the GCM nonce,
         // since a fresh nonce under a reused key is the case this is guarding against.
         let publicKeyRange = 4 + WatchProvisioning.nonceCount..<(4 + WatchProvisioning.nonceCount
             + WatchProvisioning.publicKeyCount)
-        #expect(
-            first[publicKeyRange] != second[publicKeyRange],
-            "the ephemeral key itself must change, not just the nonce")
+        #expect(first[publicKeyRange] != second[publicKeyRange], path)
+    }
+
+    /// **Both entry points, because the one the app uses is not the one this test used to check.**
+    ///
+    /// `respond` is overloaded: one takes raw bytes and validates them itself, the other takes a
+    /// `ValidatedRequest` that has already been parsed and approved. Each generates its own
+    /// ephemeral phone key, so each can lose that independently.
+    ///
+    /// This test called the raw bytes overload only. **`WatchKeyProvider.approve` calls the
+    /// validated one**, because the phone parses the request, asks its owner, and seals after the
+    /// tap. So a static phone keypair introduced on the shipping path passed the whole suite.
+    /// **Measured rather than reasoned**: that change was made, and twenty eight tests stayed
+    /// green.
+    ///
+    /// Make either overload reuse a keypair and this goes red for that overload by name.
+    @Test("Two responses to the same request differ, on both paths a caller can take")
+    func responsesToOneRequestAreFresh() throws {
+        let attempt = try WatchProvisioning.Attempt()
+        let key = vaultKey()
+        let validated = try WatchProvisioning.validate(attempt.request)
+
+        try freshnessHolds(
+            for: attempt, key: key,
+            path: "the raw bytes overload reused a phone keypair"
+        ) {
+            try WatchProvisioning.respond(to: attempt.request, with: key)
+        }
+
+        try freshnessHolds(
+            for: attempt, key: key,
+            path: "the validated overload, which is the one the app calls, reused a phone keypair"
+        ) {
+            try WatchProvisioning.respond(to: validated, with: key)
+        }
     }
 
     /// **The HKDF label is domain separation and nothing else pins it.** Deleting `label +` from
@@ -328,6 +365,69 @@ struct WatchProvisioningTests {
         #expect(
             withLabel != withoutLabel,
             "the label must take part, or this exchange shares a key with any other use of it")
+    }
+
+    // MARK: - The pinned vector
+
+    private func hex(_ data: Data) -> String {
+        data.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// **Fixed inputs, fixed outputs, so the construction cannot drift without saying so.**
+    ///
+    /// Every other test in this suite compares one half of this exchange against the other half,
+    /// and two halves of one implementation agree with each other however the construction is
+    /// weakened. A review demonstrated exactly that: a static ephemeral key and a deleted HKDF
+    /// label each passed the entire suite at the time.
+    ///
+    /// This asks a different question. The bytes below were produced by this implementation and
+    /// are now a constant, so **any** change to the derivation reddens it rather than only the two
+    /// weakenings somebody thought to name: the label, the transcript order, the empty salt, the
+    /// hash, the output length, the magic, the field layout, the AEAD's additional data.
+    ///
+    /// It is a regression anchor and does not by itself prove today's construction correct. The
+    /// label test above does that part, by spelling the derivation out a second way.
+    ///
+    /// The deterministic seams are the ones marked "for test vectors only", and this is the only
+    /// caller of them in the exchange.
+    @Test("The exchange reproduces its pinned vector")
+    func exchangeVector() throws {
+        let watchPrivate = try P256.KeyAgreement.PrivateKey(
+            rawRepresentation: Data((0..<32).map { UInt8(0x10 + $0) }))
+        let phonePrivate = try P256.KeyAgreement.PrivateKey(
+            rawRepresentation: Data((0..<32).map { UInt8(0x40 + $0) }))
+        let nonce = Data(repeating: 0x5A, count: WatchProvisioning.nonceCount)
+        let sealNonce = try AES.GCM.Nonce(data: Data(repeating: 0x77, count: 12))
+
+        let attempt = WatchProvisioning.Attempt(privateKey: watchPrivate, nonce: nonce)
+        let response = try WatchProvisioning.respond(
+            to: attempt.request, with: vaultKey(),
+            phonePrivateKey: phonePrivate, sealNonce: sealNonce)
+
+        let transcript = WatchProvisioning.transcript(
+            nonce: nonce,
+            watchPublicKey: watchPrivate.publicKey.x963Representation,
+            phonePublicKey: phonePrivate.publicKey.x963Representation)
+        let derived = try WatchProvisioning.wrappingKey(
+            privateKey: watchPrivate, peer: phonePrivate.publicKey, transcript: transcript)
+
+        #expect(
+            hex(attempt.request)
+                == "4f4657315a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a048e71ca9d7a62917be7f0db9896b47bf9b9"
+                    + "1c8b86628eed55d47fe750e65e5bcb75937f2ef48092880eaa8335c33f344c181e9de1797f23"
+                    + "9955a0bb2d56f84099")
+        #expect(
+            hex(bytes(derived))
+                == "7da9cde6c2039c0462fd55e6e1e9226ccd6484f9accf822e2d3157a4eb97a212")
+        #expect(
+            hex(response)
+                == "4f4657315a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0468ec7cf08cd4106e43b14de895426522bd"
+                    + "0a45150c027e45c7953434d747e7bae3af39a88ebbee8679bb61e7845c3a89cb9b5a3237c3fd"
+                    + "b0b0587dbaf415118d777777777777777777777777e9eba11ec689616450997f5817995fdd1a"
+                    + "2671b7c376e3f5ba1557b802864b22329d15526ef3893c6b6312a698d6027b")
+
+        // And it must still be a working exchange, not only a stable one.
+        #expect(try attempt.open(response) == vaultKey())
     }
 
     // MARK: - The derivation itself
