@@ -321,6 +321,39 @@ struct WrappedKeySyncTests {
         #expect(store.syncReport()?.protectionMatchesFlag == true, "and says so once repaired")
     }
 
+    /// **A repair that did not happen must not read as one that did.** The failure was silent: a
+    /// failed update was counted as nothing-to-repair, `setSynchronizable` returned normally
+    /// because its own move query legitimately found nothing to move, and its caller then
+    /// converted every account to iCloud and committed the preference. Accounts in iCloud, the
+    /// wrapped key device-only, and a switch reading on, which is the loss this repair exists to
+    /// prevent.
+    ///
+    /// The seam removes the record in the gap, so the class update lands on nothing. Restore the
+    /// swallowed status and this goes red: the call returns instead of throwing.
+    @Test("A repair that cannot be made is reported rather than swallowed")
+    func aFailedRepairIsReported() throws {
+        let service = "app.openfactor.tests.key.\(UUID().uuidString)"
+        let plain = WrappedKeyStore(service: service)
+        defer { deleteBothFlags(of: plain) }
+
+        plantSplitPair(Data("a wrap written before the pairing was fixed".utf8), in: plain)
+
+        let racing = WrappedKeyStore(
+            service: service,
+            beforeWrite: {
+                let everything: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: service,
+                    kSecAttrAccount as String: "wrapped",
+                    kSecUseDataProtectionKeychain as String: true,
+                    kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+                ]
+                SecItemDelete(everything as CFDictionary)
+            })
+
+        #expect(throws: (any Error).self) { _ = try racing.setSynchronizable(true) }
+    }
+
     /// The ordinary record must not be rewritten on every foreground just because the reconcile
     /// runs there. Repairing only what is wrong is what makes this idempotent.
     @Test("A record that already matches is left alone")
@@ -364,7 +397,7 @@ struct WrappedKeySyncTests {
 
         let racing = WrappedKeyStore(
             service: service,
-            duringSave: {
+            beforeWrite: {
                 // What iCloud reconciliation looks like from in here: the observed record is
                 // gone, and a different one is present under the other flag.
                 let mine: [String: Any] = [

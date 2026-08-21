@@ -40,10 +40,10 @@ public struct WrappedKeyStore: Sendable {
         self.service = service
         self.synchronizable = synchronizable
         self.accessGroup = accessGroup
-        duringSave = nil
+        beforeWrite = nil
     }
 
-    /// Runs inside `save`, between reading the store and writing to it.
+    /// Runs between reading the store and writing to it, in `save` and in the class repair.
     ///
     /// **A test seam, internal, and `nil` on every path that ships.** What it exists to express is
     /// what iCloud does: a record arriving, or being replaced, in the gap between deciding what to
@@ -51,18 +51,18 @@ public struct WrappedKeyStore: Sendable {
     /// property nothing can express is a property nothing can hold onto. This project has already
     /// paid for that lesson twice, in a vault suite that never ran and in a fake whose `save`
     /// could not represent a twin.
-    let duringSave: (@Sendable () -> Void)?
+    let beforeWrite: (@Sendable () -> Void)?
 
-    /// The initialiser tests use to reach `duringSave`.
+    /// The initialiser tests use to reach `beforeWrite`.
     init(
         service: String,
         synchronizable: @escaping @Sendable () -> Bool = { false },
-        duringSave: @escaping @Sendable () -> Void
+        beforeWrite: @escaping @Sendable () -> Void
     ) {
         self.service = service
         self.synchronizable = synchronizable
         accessGroup = nil
-        self.duringSave = duringSave
+        self.beforeWrite = beforeWrite
     }
 
     private static let account = "wrapped"
@@ -184,7 +184,7 @@ public struct WrappedKeyStore: Sendable {
         // this refuses.
         guard existing.count <= 1 else { throw .twinnedRecord }
 
-        duringSave?()
+        beforeWrite?()
 
         if let target = existing.first {
             // **Pinned to the flag that was observed, not to whatever a fresh query returns.**
@@ -360,9 +360,22 @@ public struct WrappedKeyStore: Sendable {
             let changes: [String: Any] = [
                 kSecAttrAccessible as String: SecretAccessibility.forSync(synchronizable).attribute
             ]
-            if SecItemUpdate(slot as CFDictionary, changes as CFDictionary) == errSecSuccess {
-                repaired += 1
-            }
+
+            beforeWrite?()
+
+            // **A repair that did not happen must not read as one that did.** Counting a failure
+            // as "nothing to repair" let `setSynchronizable` return normally, and its caller
+            // converts every account to iCloud on the strength of that return and then commits the
+            // preference. The result is accounts in iCloud, the wrapped key device-only, and a
+            // switch reading on, which is the loss this repair exists to prevent.
+            //
+            // The rule is this project's own, from gate A2: the failure that understates exposure
+            // must not be the quiet one. `SharedInbox.write` refuses when it cannot exclude a
+            // directory from backup and `VaultKeyStore` refuses to write a key it cannot exclude,
+            // for the same reason.
+            let status = SecItemUpdate(slot as CFDictionary, changes as CFDictionary)
+            guard status == errSecSuccess else { throw error(for: status) }
+            repaired += 1
         }
 
         return repaired
