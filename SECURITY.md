@@ -363,7 +363,7 @@ digit comparison performed on a wrist. It was removed rather than kept as theate
 
 What the exchange now rests on is that WatchConnectivity connects an iOS app to its own companion
 Watch app rather than to arbitrary apps. A sibling phone app was measured activating a session
-and reaching nothing, in `docs/audits/E5-watchconnectivity-routing.md`.
+and reaching nothing, in `docs/audits/E/E5-watchconnectivity-routing.md`.
 
 **Apple documents the functional relationship and not a security property.** The framework is
 described as two way communication between an app and its **paired counterpart**, and nothing in

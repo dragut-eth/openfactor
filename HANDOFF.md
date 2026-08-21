@@ -174,7 +174,7 @@ quietly record four the day a target stops being embedded, and a missing one is 
 MISSING. Run against a fake archive rather than reasoned about.
 
 **The hardware probes are prose because of topology, not effort, and that is now written down.**
-`docs/audits/E-probes-what-can-be-rerun.md` says for each of the eleven exactly what re-running it
+`docs/audits/E/README.md` says for each of the eleven exactly what re-running it
 would take: a second signed app, a second signed app with its own watch app, two devices on one
 Apple Account, a device already in a state the fix prevents, two installs over each other. **A
 test bundle is one app, on one device, in one install.**
@@ -372,7 +372,7 @@ device, which was pinned by no test at all.
 whole-file read in the project was checked for the same mistake instead of waiting for a reviewer
 to find the next instance. One was left, the vault key file, and it was closed anyway.
 
-Round two is ready to send for both: `docs/audits/A4-round-two-scope3.md` and
+Round two is ready to send for both: `docs/audits/A4/A4-round-two-scope3.md` and
 `A4-round-two-scope4.md`.
 
 **Scope 1's round two found a high-severity defect in a fix that had a test, where the test
@@ -397,7 +397,7 @@ class back onto a record sync had moved to iCloud. Grok: creation always wrote t
 device-only, so erase-and-recreate with sync on reaches the original total-loss shape by a
 different tap.
 
-Round three's brief is at the end of `docs/audits/A4-round-two-scope1-results.md`, which also
+Round three's brief is at the end of `docs/audits/A4/A4-round-two-scope1-results.md`, which also
 carries all three returns verbatim. **Not everything in this batch is satisfying, and the brief
 says which:** `addIfAbsent` narrows the twin race rather than eliminating it, because a Keychain
 add is atomic against a same-flag duplicate and not against an opposite-flag twin.
@@ -446,7 +446,7 @@ generates, shows, then saves. Plus the document mismatches, the sorted keys the 
 always claimed and the encoder never did, and the padding section finally saying what padding
 leaves behind.
 
-Round two for scope 1 is ready to send. `docs/audits/A4-round-two-scope1.md` is the what-changed
+Round two for scope 1 is ready to send. `docs/audits/A4/A4-round-two-scope1.md` is the what-changed
 block, and it opens by telling the reviewers the suite never ran, because that is what they most
 need to know before they weigh anything else.
 
@@ -489,7 +489,7 @@ re-reviewed the eleven fixes with the diffs in hand: Fable and Grok. **ChatGPT w
 round**, and an earlier version of this file and of the audit page said "all three", which was
 wrong and is corrected in both. Between them they found three fixes incomplete, one new defect the
 fixes introduced, and four claims in comments or documents that the code did not support.
-`docs/audits/A4-round-two-scope2.md` carries both returns verbatim; the four that mattered:
+`docs/audits/A4/A4-round-two-scope2.md` carries both returns verbatim; the four that mattered:
 
 - The staging file that was supposed to close the unexcluded-key window merely moved it one
   pathname along, since a backup enumerates a container rather than a filename. The key is now
@@ -676,7 +676,7 @@ reasoned from the project file; the shipped `Info.plist` says otherwise. Its ins
 uncertainty was right and it would still have left the defect in place had it been the only engine.
 
 **A4 scope 3, the parsers, found a data-loss path that needs no attacker.** Fable's pass is in
-`docs/audits/A4-scope3-parsers.md`. The backup format demands a secret decode to at least ten
+`docs/audits/A4/A4-scope3-parsers.md`. The backup format demands a secret decode to at least ten
 bytes and a counter stay under 2^53. The archive reader enforces both. **Three of the four
 enrollment paths do not**, and `BackupPayload.write` serializes whatever the account holds, so an
 account with a short secret works every day, exports into a backup, and is refused when that
@@ -732,7 +732,7 @@ vector keys independently in Python, the first external check of those vectors, 
 between believing a parser is trap-free and knowing it.
 
 **A4 scope 2, the Watch exchange, is two thirds done and found that yesterday's fixes created
-two new defects.** Recorded in `docs/audits/A4-scope2-watch.md`. ChatGPT and Fable independently
+two new defects.** Recorded in `docs/audits/A4/A4-scope2-watch.md`. ChatGPT and Fable independently
 reached the same one: the `guard pendingRequest == nil else { return .asking }` added yesterday
 correctly stops a second request replacing the approved one, and then tells the watch "you are
 being asked" while the phone discards it. The watch waits for a message that cannot arrive, and
@@ -781,7 +781,7 @@ should know the two were not equally readable.
 
 **Gate A4 has started, and its first pass found a defect that loses every synced account.**
 ChatGPT 5.6 Sol reviewed scope 1, the vault at rest, against commit `74fe841`. The pass and the
-triage are in `docs/audits/A4-scope1-vault.md`. Eight findings, all eight confirmed against the
+triage are in `docs/audits/A4/A4-scope1-vault.md`. Eight findings, all eight confirmed against the
 code, none rejected: the second consecutive cold review with no false positives.
 
 **The one that matters: the wrapped vault key never syncs.** `WrappedKeyStore` defaults to
@@ -1150,7 +1150,7 @@ proved on hardware that a second app signed by the same team reads another app's
 items, including the default group Apple's documentation calls private. Access groups are not a
 boundary; the sandboxed container is. `docs/VAULT.md` is the design that follows, encrypting
 accounts and keeping the key where no entitlement can reach it. It went through one cold audit
-round recorded in `docs/audits/V1.md`, twelve findings, five blocking, three of them data loss,
+round recorded in `docs/audits/V/V1.md`, twelve findings, five blocking, three of them data loss,
 and then an external round recorded in the `V2-*.md` files.
 
 **PR 16d is implementing it, and the phone now works end to end.** `Sources/OpenFactorCore/Vault/`
@@ -1324,7 +1324,7 @@ ID and typed word intact, and the vault is destroyed only after the accounts are
 
 **The external audit round is complete and the design has been revised once, at the end of it.**
 ChatGPT, Grok and Fable all approve the central move and all three refused to freeze the page.
-Ten further findings, recorded in `docs/audits/V2-chatgpt.md`, `V2-grok.md` and `V2-fable.md`,
+Ten further findings, recorded in `docs/audits/V/V2-chatgpt.md`, `V2-grok.md` and `V2-fable.md`,
 all now in `docs/VAULT.md`. They divided almost perfectly: protocol and format precision, then
 integration with the code that exists, then semantic errors. None of the three would have been
 enough alone.
@@ -1347,7 +1347,7 @@ controls, plus the store losing no queryability to an opaque item.
 **One remains and it is blocked on hardware.** The two-writer rewrap case needs a second device
 signed into the same iCloud account; only the iPhone and the watch are paired for development,
 and the watch is a reader under this design. The Vision Pro would serve, with developer mode
-enabled and pairing set up. `docs/audits/E7-exchange-and-queryability.md` records what it would
+enabled and pairing set up. `docs/audits/E/E7-exchange-and-queryability.md` records what it would
 and would not establish, and it matters more after the audit than before, because every account
 item is now rewritten on a rename or an HOTP counter rather than only the wrapped key.
 
@@ -1389,7 +1389,7 @@ says which is which, because conflating them is what makes this take an afternoo
 | Gate A2, audit of sync | Done, twice. Original eleven findings closed except F8 and F13's two device half; three new findings from the re-verification, all fixed |
 | PR 14, watchOS app | Feature complete on `pr-14-watch`, re-verified, pushed |
 | PR 15, app lock | Built on `pr-15-app-lock`, pushed. Face ID needs a real device |
-| PR 16, export and import | **Merged to main.** Format audited three times before the code, then the implementation audited separately: erase, both file importers, the import preview, the encrypted archive reproducing every published test vector value, the export and passphrase screens, and the plain Aegis vault pinned to a fixed revision of their documentation. Five findings from the implementation review, two blocking, all fixed and recorded in `docs/audits/A3-implementation.md` |
+| PR 16, export and import | **Merged to main.** Format audited three times before the code, then the implementation audited separately: erase, both file importers, the import preview, the encrypted archive reproducing every published test vector value, the export and passphrase screens, and the plain Aegis vault pinned to a fixed revision of their documentation. Five findings from the implementation review, two blocking, all fixed and recorded in `docs/audits/A3/A3-implementation.md` |
 | PR 16a, Google Authenticator import | Built on `pr-16a-google-import`. A hand written protobuf reader, the transfer recognized by the + scanner, and the import preview reused unchanged. Verified against a real export from Xavier's phone: eight accounts, no refusals. Parts are rescanned rather than collected, and the finish screen says which part of how many arrived |
 | PR 16b, Steam Guard, and PR 16c, a share extension | Both planned in `docs/ROADMAP.md`, neither started. Steam Guard is parked. Small in core, and it ripples into storage, the card, the watch and the backup format's `type` enumeration. 16c stops a transfer QR having to rest in the photo library, and its design is mostly a list of what the extension is forbidden to do |
 | PR 17 onward | Not started, see [docs/ROADMAP.md](docs/ROADMAP.md) |
@@ -1409,7 +1409,7 @@ UUID twin that may defeat the repair claim. The experiment is written at the end
 
 Two independent reviews of `docs/BACKUP_FORMAT.md`, Fable then Grok, plus a third from a
 model Xavier ran outside the repository. Reports are `docs/audits/A3.md` and
-`docs/audits/A3-grok.md`. **All findings from both are fixed.**
+`docs/audits/A3/A3-grok.md`. **All findings from both are fixed.**
 
 The sequence is the lesson. Fable found the test vector had been built by feeding the key
 derivation the hyphenated passphrase, contradicting the document's own rule. The fix
@@ -1470,7 +1470,7 @@ was invisible to review and to testing, and appeared only from standing in the s
 
 The format was written before the implementation, because an archive in a user's hands makes
 version 1 permanent. `docs/BACKUP_FORMAT.md` is the artefact gate A3 audits, and the prompt
-is ready in `docs/audits/A3-prompt.md`.
+is ready in `docs/audits/A3/A3-prompt.md`.
 
 The document carries a test vector produced by three implementations sharing no code:
 CommonCrypto and Python's `hashlib` agree on the derived key, and Node's OpenSSL decrypts
@@ -1615,8 +1615,8 @@ OpenFactorTests/                           App only tests: palette and watch pal
                                            group migration, and the lock engine
 docs/audits/A1.md                          Gate A1 findings and disposition
 docs/audits/A2.md                          Gate A2, plus the dated re-verification
-docs/audits/A2-prompt.md                   The prompt A2 was run with
-docs/audits/A3-implementation.md           A3's second half: the code, not the
+docs/audits/A2/A2-prompt.md                   The prompt A2 was run with
+docs/audits/A3/A3-implementation.md           A3's second half: the code, not the
                                            page. Five findings, all fixed
 scripts/ship-testflight.sh                 Archive, export, validate, upload. Read
                                            its header before running it once

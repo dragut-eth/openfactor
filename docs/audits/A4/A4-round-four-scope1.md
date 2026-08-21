@@ -70,8 +70,8 @@ Listed so the round is not spent rediscovering them:
 ## Hardware evidence that did not exist at round three
 
 Three experiments were run on two physical phones and are written up in `docs/audits/`:
-`E8-recovery-on-a-replacement-phone.md`, `E9-the-reconcile-repairs-a-real-device.md`, and
-`E10-a-device-holding-the-wrong-key.md`. They are the first measurements of all three legs of
+`../E/E8-recovery-on-a-replacement-phone.md`, `../E/E9-the-reconcile-repairs-a-real-device.md`, and
+`../E/E10-a-device-holding-the-wrong-key.md`. They are the first measurements of all three legs of
 recovery.
 
 **One measured claim contradicts a document.** iCloud Keychain propagation to a replacement device

@@ -1,7 +1,7 @@
 # A4, scope 1: the vault at rest
 
 Gate A4 round one, the scope covering what a device holds at rest and what an attacker who reads
-it learns. The prompt is `docs/audits/A4-prompts.md`, preamble plus Scope 1, unchanged.
+it learns. The prompt is `docs/audits/A4/A4-prompts.md`, preamble plus Scope 1, unchanged.
 
 **Commit under review: `74fe841`.** Three engines run this scope independently, in fresh
 conversations, and each pass is recorded here whole as it arrives.

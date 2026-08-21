@@ -1,7 +1,7 @@
 # A4, scope 4: the app's boundaries
 
 Gate A4 round one, the scope covering the share extension, the shared inbox, URL schemes, App
-Lock, the clipboard, and screen capture. The prompt is `docs/audits/A4-prompts.md`, preamble plus
+Lock, the clipboard, and screen capture. The prompt is `docs/audits/A4/A4-prompts.md`, preamble plus
 Scope 4, unchanged.
 
 **Commit under review: `74fe841`.** No source has changed since; only `docs/audits/` has.

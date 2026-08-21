@@ -640,7 +640,7 @@ exists: every secret key readable by anyone who opens it.
 This page was reviewed three times before any code existed, and the code was reviewed
 separately afterwards, because the two are different artefacts and a clean page says nothing
 about the thing claiming to implement it. That second review is recorded in
-`docs/audits/A3-implementation.md`. It found five defects, two of them blocking, none of them
+`docs/audits/A3/A3-implementation.md`. It found five defects, two of them blocking, none of them
 reachable from the test vector: the vector proves bytes, not lifecycles.
 
 One of the five is worth repeating here, because it is a mistake this page invites. The

@@ -14,7 +14,7 @@ Read-only. Do not build and do not run tests; keep the checkout clean.
 
 **Already open, so do not spend the round on them:** S1-33, the same-slot substitution window in
 `save`, which `A4-verify-S1-26-results.md` records along with the measurement in
-`E12-a-compare-and-swap-token.md`; and S1-34, that the seam can express a case no test does. Both
+`../E/E12-a-compare-and-swap-token.md`; and S1-34, that the seam can express a case no test does. Both
 are recorded and neither is in scope here.
 
 ## The finding, as filed

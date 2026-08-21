@@ -1,0 +1,70 @@
+# The audit record
+
+**Everything this project has had reviewed, and everything it has measured on real hardware.**
+Published whether or not it is flattering, which is the only rule this folder has.
+
+**Reviews are model-assisted adversarial reviews, not professional human audits**, and
+`README.md` at the root says so in the warning that stays until it stops being true.
+
+## The gates
+
+| Gate | What it reviewed | When | Result |
+| --- | --- | --- | --- |
+| [A1](A1.md) | the core: TOTP, HOTP, base32, the store | 2026-08-14 | 2 defects, RFC vector tables re-verified, 17,000+ fuzz iterations. Working files: none |
+| [A2](A2.md) | iCloud Keychain sync, the only feature that lets account material leave the device | 2026-08-14, and again after the watch app | 14 findings across two passes. Working files: [A2/](A2/) |
+| [A3](A3.md) | the encrypted backup format, before implementation and then the implementation | before PR 16 | Public test vectors reproduced by independent implementations. Working files: [A3/](A3/) |
+| [A4](A4.md) | the vault at rest, the watch key exchange, the parsers, the process boundaries | 2026-08-16 to 2026-08-21 | **133 findings, three high, all closed.** Two waived, two withdrawn. Working files: [A4/](A4/) |
+| [V](V/) | the vault **design**, twice, before any of it was built | before PR 16d | A different instrument from auditing code that exists: it is why the design has the shape it has |
+
+**[A4-board.md](A4-board.md) is the register**: all 133 findings in the words they were filed in,
+the arc of the counts across twenty nine board redraws, and the standing panels about the gate's
+own recurring mistakes. It is kept at this level because it is a reference rather than a working
+file.
+
+## The hardware measurements
+
+**[E/](E/) is evidence rather than paperwork**, which is why it is not filed under the gate that
+happened to produce it. E1 predates A4 and is what the whole vault design answers. E12 and E13 came
+out of A4. Two of them are still live: E5 carries a reopening condition that has already fired once,
+and E12 carries a precondition nobody has measured.
+
+**[E/README.md](E/README.md) says what re-running each one would take**, which is the honest answer
+to a reviewer who pointed out that these read as comments rather than as behaviour. Most need a
+second signed app, two devices, or two installs over each other, and a test bundle is one app on
+one device in one install.
+
+| | What it answered |
+| --- | --- |
+| [E1](E/E1-keychain-access-groups.md) | **No**, a Keychain access group is not a boundary between apps of the same team. The finding the vault design exists to answer |
+| [E4](E/E4-container-isolation.md) | **No**, a sibling cannot reach another app's private container, even knowing the exact path |
+| [E5](E/E5-watchconnectivity-routing.md) | A sibling phone app activates `WCSession` and finds it inert. **The rogue watch direction was never run** |
+| [E6](E/E6-container-durability.md) | The protection class and backup exclusion are real and read back. **An app update preserves the data and moves the container** |
+| [E7](E/E7-exchange-and-queryability.md) | The watch exchange fits in the message limits, the transcript binding works, and an opaque item costs no queryability |
+| [E8](E/E8-recovery-on-a-replacement-phone.md) | Recovery on a clean second phone, on two devices and one Apple Account |
+| [E9](E/E9-the-reconcile-repairs-a-real-device.md) | The launch reconcile repairs a device already in the loss shape |
+| [E10](E/E10-a-device-holding-the-wrong-key.md) | A device holding the wrong key notices, asks, and recovers |
+| [E11](E/E11-two-arrivals-of-different-kinds.md) | A link arriving over a shared image, four runs out of four |
+| [E12](E/E12-a-compare-and-swap-token.md) | **Yes**, `kSecAttrGeneric` can carry a compare and swap token, which disproved a reviewer's claim that no shape of the code could close a window |
+| [E13](E/E13-neither-phone-was-stranded.md) | Neither device held a record with a split pair |
+
+**E2 and E3 do not exist, and nothing in this repository says why.** They were never committed and
+never mentioned; the series jumps from E1, added alongside the vault design on 16 August, straight
+to E4. **The numbering does not track the vault prove list either**, since E5 answers item 2, E7
+answers items 4 and 5, and E6 answers item 7, so the gap cannot be explained that way.
+
+**It is recorded as an unexplained gap rather than renumbered or given a plausible reason.** An
+evidence series that renumbers itself after the fact stops being one, and inventing an explanation
+for a gap is the exact habit gate A4 spent five days finding in this project's own documents.
+
+## How to read a findings document
+
+**A finding's identifier is stable and never reused.** `S1-33` is scope 1, finding 33, for the
+life of the project.
+
+**Returns are reproduced whole**, under a heading saying so, rather than summarised. For a stretch
+of gate A4 that promise was not kept, and the repair is recorded in the files it applies to.
+
+**A claim carries its basis.** Measured means observed on hardware once, by a person, and it can
+rot silently. Tested means something in this repository fails if it stops being true. Reasoned
+means it follows from the design and nothing checks it. Those three are not interchangeable, and
+gate A4 spent most of its worst days learning that.

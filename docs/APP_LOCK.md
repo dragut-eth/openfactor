@@ -408,14 +408,14 @@ item names its expected result; anything else is a finding.
     screen for the link presents. The share is not added, and is not waiting behind it.
     *(Measured 2026-08-19 on an iPhone 15 Pro against the build that ships, four runs out of
     four: the panel stays up and its contents change from the image's account to the link's.
-    Recorded in `docs/audits/E11-two-arrivals-of-different-kinds.md`. An earlier four out of four
+    Recorded in `docs/audits/E/E11-two-arrivals-of-different-kinds.md`. An earlier four out of four
     was taken against the queue this replaced, which is a different pairing of sheets, and did not
     transfer.)*
 12. Share a QR image in, and before opening OpenFactor, open an `otpauth://` link.
     **Expected:** the link presents, and the shared image is gone rather than appearing later.
     Measured 2026-08-19 against the previous rule, where the image was left in the inbox: it
     reappeared on one run in four, which is what decided this. Measured again the same day against
-    the current build, where it passed, in `docs/audits/E11-two-arrivals-of-different-kinds.md`.
+    the current build, where it passed, in `docs/audits/E/E11-two-arrivals-of-different-kinds.md`.
 
 ## Invariants
 

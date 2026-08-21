@@ -8,7 +8,7 @@ import Testing
 ///
 /// **What these tests cannot see, stated first.** They run on macOS, where data protection
 /// classes do not exist, so nothing here proves `.complete` is applied. That was measured on
-/// hardware instead, in `docs/audits/E6-container-durability.md`, where the attribute was written
+/// hardware instead, in `docs/audits/E/E6-container-durability.md`, where the attribute was written
 /// and read back as `NSFileProtectionComplete`. A test that quietly passed on a platform with no
 /// data protection would be the check-that-promises-more-than-it-delivers this project has found
 /// three times, so it is named here rather than implied.

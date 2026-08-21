@@ -1,7 +1,7 @@
 # A4 round two, scope 1: what changed and why
 
 Round one found eleven items in the vault at rest. All eleven are fixed. This is the "what
-changed" block the round two prompt in `docs/audits/A4-prompts.md` calls for.
+changed" block the round two prompt in `docs/audits/A4/A4-prompts.md` calls for.
 
 **Review commit `a7f9121`.** Round one read `74fe841`.
 

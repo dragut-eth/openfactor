@@ -143,7 +143,7 @@ it the remainder of S1-26.
 microsecond window during a concurrent passphrase change on this device, and **passphrase
 replacement has no interface at all**: `replacePassphrase(with:)` is called by nothing but tests.
 
-**And the available fix is not cheap.** `E12-a-compare-and-swap-token.md` measured that
+**And the available fix is not cheap.** `../E/E12-a-compare-and-swap-token.md` measured that
 `kSecAttrGeneric` can carry a compare-and-swap token, so the floor claim is false and a mechanism
 exists. But it rests on two things nobody has measured: whether iCloud carries the token between
 devices unchanged, and whether every writer maintains it, since a peer on an older build updates

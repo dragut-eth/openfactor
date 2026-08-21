@@ -2,7 +2,7 @@
 
 Round two reviewed the eleven fixes from round one and changed ten more things. **Those ten have
 not been reviewed by anybody.** This is the "what changed" block the round three prompt in
-`docs/audits/A4-prompts.md` calls for.
+`docs/audits/A4/A4-prompts.md` calls for.
 
 **The code under review is `71e88c3`.** Round two read `350375b`; round one read `74fe841`.
 

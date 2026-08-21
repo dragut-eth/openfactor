@@ -91,7 +91,7 @@ rather than guaranteed, and that is now written down.
 it can be, not to close the question.
 
 **S4-37 was measured, four runs out of four, on an iPhone 15 Pro carrying this build**, and is
-recorded in `E11-two-arrivals-of-different-kinds.md`. The three outcomes were named before the runs.
+recorded in `../E/E11-two-arrivals-of-different-kinds.md`. The three outcomes were named before the runs.
 The fourth run was a variant the tester improvised: the app was not opened between the share and
 the link, so the link superseded an item still uncollected in the inbox, which is a different path
 and the one `sweep(_:)` was rewritten for.

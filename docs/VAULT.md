@@ -8,10 +8,10 @@ This document is normative. Where the code and this page disagree, the page is c
 code is a defect.
 
 **Revised twice before a line was written.** An internal round found twelve defects, five
-blocking, three of them data loss (`docs/audits/V1.md`). Three external reviews then found ten
+blocking, three of them data loss (`docs/audits/V/V1.md`). Three external reviews then found ten
 more, including a protocol that was half a protocol, a property the design was giving away
 without mentioning it, and a sentence that was true and led to a false conclusion
-(`docs/audits/V2-chatgpt.md`, `V2-grok.md`, `V2-fable.md`). Each draft read as finished. That is
+(`docs/audits/V/V2-chatgpt.md`, `V2-grok.md`, `V2-fable.md`). Each draft read as finished. That is
 the argument for auditing a page rather than a diff.
 
 ## The problem this exists to solve
@@ -95,15 +95,15 @@ It was waived on one ground above all others, that `replacePassphrase(with:)` is
 nothing but tests, so the window it needs cannot be reached by anybody using the app.
 **Shipping an interface for it removes that ground**, and the waiver is void the day it does.
 
-A mechanism to close it exists and was measured: `docs/audits/E12-a-compare-and-swap-token.md`
+A mechanism to close it exists and was measured: `docs/audits/E/E12-a-compare-and-swap-token.md`
 shows `kSecAttrGeneric` carrying a compare and swap token, matched and replaced by the same
 update. It rests on two things nobody has measured, whether iCloud carries the token between
 devices unchanged and whether every writer maintains it. The full reasoning, and what else would
-reopen the decision, is in `docs/audits/A4-verify-S1-31-results.md`.
+reopen the decision, is in `docs/audits/A4/A4-verify-S1-31-results.md`.
 
 **A reopening condition kept only in an audit file is a condition nobody re-reads.** That has
 already happened once in this project, to the scheduling note in
-`docs/audits/E5-watchconnectivity-routing.md`, which named its own trigger and then stood
+`docs/audits/E/E5-watchconnectivity-routing.md`, which named its own trigger and then stood
 through round after round with nobody noticing the trigger had fired.
 
 ### The vault key file
@@ -114,7 +114,7 @@ user action and no signal.
 *Implemented as `VaultKeyStore` in PR 16d.*
 
 **Always located through `FileManager`, never through a remembered path.** An app update
-preserves the data and **moves the container**, measured in `docs/audits/E6-container-durability.md`:
+preserves the data and **moves the container**, measured in `docs/audits/E/E6-container-durability.md`:
 the file survived byte for byte while its directory changed identity. Anything that caches or
 persists the absolute path, including the tripwire anchor, breaks at the first update, and
 breaks by pointing at a container that is no longer there rather than by failing loudly.
@@ -673,9 +673,9 @@ from one of two people with disposable data.
 
 ## What must be proven before implementation
 
-1. ~~A sibling app cannot read another app's private container.~~ **Proven**, `docs/audits/E4-container-isolation.md`.
+1. ~~A sibling app cannot read another app's private container.~~ **Proven**, `docs/audits/E/E4-container-isolation.md`.
 2. **WatchConnectivity routing is exclusive to the paired counterpart app.** Half measured in
-   `docs/audits/E5-watchconnectivity-routing.md`: a sibling app with no watch of its own
+   `docs/audits/E/E5-watchconnectivity-routing.md`: a sibling app with no watch of its own
    activates a session and finds it inert, so a session is not a device wide channel. What is
    still unmeasured is a rogue watch app *claiming to be* OpenFactor's counterpart. **This is
    blocking, and it is load bearing.** The sentence here used to call it defense in depth on the
@@ -701,7 +701,7 @@ from one of two people with disposable data.
 3. **Backup exclusion behaves as documented on a real restore**, and separately under Quick
    Start, which is a different mechanism.
 4. ~~A watch can hold a P-256 private key and complete the exchange inside the message size
-   limits.~~ **Measured**, `docs/audits/E7-exchange-and-queryability.md`: 85 bytes out and 145
+   limits.~~ **Measured**, `docs/audits/E/E7-exchange-and-queryability.md`: 85 bytes out and 145
    back against a 65,536 byte limit, both sides agreeing, and the negative control showing that a
    substituted key fails to open. That measurement was taken while the six digit string still
    existed, so it also recorded the string moving with the transcript; that half describes a
@@ -712,9 +712,9 @@ from one of two people with disposable data.
 6. **Rewrapping survives the two-writer case**, which this project has never tested, and which
    now applies to every account item rather than one. Blocked on a second device: only the
    iPhone and the watch are paired for development, and the watch is a reader under this design.
-   See `docs/audits/E7-exchange-and-queryability.md` for what it would and would not establish.
+   See `docs/audits/E/E7-exchange-and-queryability.md` for what it would and would not establish.
 7. **The container survives a restore and Quick Start.** Narrowed by
-   `docs/audits/E6-container-durability.md` rather than closed. Measured there: the protection
+   `docs/audits/E/E6-container-durability.md` rather than closed. Measured there: the protection
    class and the backup exclusion both stick and both survive an update, and an app update
    preserves the data while **moving the container**, so nothing may ever cache the absolute
    path. Offload is not offered for a development install and stays unmeasured, though Apple

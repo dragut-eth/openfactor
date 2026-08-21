@@ -123,7 +123,7 @@ Keychain state.** Another count will not fix that; conflict detection after crea
 **S1-17, low: an open list keeps drawing dashes when its records change underneath it.**
 
 Found while manufacturing E9's loss shape, and recorded in
-`E10-a-device-holding-the-wrong-key.md`. A second phone replaced the shared vault while the first
+`../E/E10-a-device-holding-the-wrong-key.md`. A second phone replaced the shared vault while the first
 was foregrounded and looking at its accounts. The rows had been read while they were still
 readable, so they kept drawing, and every attempt to generate a code failed against records that
 were gone or sealed under a key this device no longer had. The list showed `------` for each one.

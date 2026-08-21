@@ -17,7 +17,7 @@ import Foundation
 /// path breaks at the first update, and breaks by pointing at a container that no longer exists,
 /// which fails silently rather than loudly.
 ///
-/// `docs/audits/E6-container-durability.md` has the two container identifiers side by side.
+/// `docs/audits/E/E6-container-durability.md` has the two container identifiers side by side.
 ///
 /// ## What is deliberately absent
 ///

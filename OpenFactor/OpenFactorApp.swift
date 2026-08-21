@@ -90,7 +90,7 @@ struct OpenFactorApp: App {
     /// Brings an already-written wrapped key into iCloud whenever the app comes forward, if the
     /// preference says it belongs there.
     ///
-    /// **Measured on hardware, and it works.** `docs/audits/E9-the-reconcile-repairs-a-real-device.md`
+    /// **Measured on hardware, and it works.** `docs/audits/E/E9-the-reconcile-repairs-a-real-device.md`
     /// records an iPhone put into the loss shape by the build that originally caused it, upgraded,
     /// opened once, and repaired: accounts in iCloud, wrapped key device-only, and after one launch
     /// the record was in iCloud with nothing touched by hand.

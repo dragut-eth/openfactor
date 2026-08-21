@@ -115,7 +115,7 @@ re-seals the metadata and copies the secret half verbatim.
 
 That the old mechanism was being discarded, and with it a property this document states, was
 caught by an external reviewer of the design rather than by the design. It is recorded in
-`docs/audits/V2-grok.md`. There is still deliberately no call that returns every account with
+`docs/audits/V/V2-grok.md`. There is still deliberately no call that returns every account with
 its secret.
 
 **No hand rolled cryptography.** HMAC and the hash functions come from CryptoKit. The only

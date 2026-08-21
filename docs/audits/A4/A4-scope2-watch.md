@@ -1,7 +1,7 @@
 # A4, scope 2: the Watch key exchange
 
 Gate A4 round one, the scope covering handing the vault key from an iPhone to a paired Apple
-Watch. The prompt is `docs/audits/A4-prompts.md`, preamble plus Scope 2, unchanged.
+Watch. The prompt is `docs/audits/A4/A4-prompts.md`, preamble plus Scope 2, unchanged.
 
 **Commit under review: `74fe841`**, the same commit scope 1 read. No code has changed since.
 
@@ -447,6 +447,6 @@ about the routing assumption the design rests on.
 
 **Nothing has been changed.** Scopes 3 and 4 run against the same commit. Fixes begin when round
 one is complete, and findings 2 and 3 join the ordered list in
-`docs/audits/A4-scope1-vault.md`, which they belong beside: they are the same family as the twin
+`docs/audits/A4/A4-scope1-vault.md`, which they belong beside: they are the same family as the twin
 record and the creation race, all of them a message or a tap arriving against state that has moved
 on.

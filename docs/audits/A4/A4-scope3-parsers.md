@@ -1,7 +1,7 @@
 # A4, scope 3: everything that parses bytes somebody else wrote
 
 Gate A4 round one, the scope covering the backup format, the three importers, the URI parser, and
-Base32. The prompt is `docs/audits/A4-prompts.md`, preamble plus Scope 3, unchanged.
+Base32. The prompt is `docs/audits/A4/A4-prompts.md`, preamble plus Scope 3, unchanged.
 
 **Commit under review: `74fe841`**, the same commit scopes 1 and 2 read. No source has changed
 since; only `docs/audits/` has.

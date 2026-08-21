@@ -1,7 +1,7 @@
 # V2: the prompt for an external audit of the vault design
 
-Give this, along with `docs/VAULT.md`, `docs/audits/E1-keychain-access-groups.md`,
-`docs/audits/V1.md` and `docs/BACKUP_FORMAT.md`, to a reviewer that did not write the design.
+Give this, along with `docs/VAULT.md`, `docs/audits/E/E1-keychain-access-groups.md`,
+`docs/audits/V/V1.md` and `docs/BACKUP_FORMAT.md`, to a reviewer that did not write the design.
 
 The V1 round was two models under one roof. This round is for genuinely independent ones, and
 its value is proportional to how little they defer to the document's confidence.
@@ -12,8 +12,8 @@ You are auditing a **design document, not code**. Nothing has been implemented. 
 auditing now is that this decides how every secret is stored on every device of an open source
 two factor authentication app, and it cannot be fixed by an update once people have data.
 
-Read `docs/VAULT.md`. It is normative. Read `docs/audits/E1-keychain-access-groups.md` for the
-measured finding it rests on, `docs/audits/V1.md` for the first audit round and what was
+Read `docs/VAULT.md`. It is normative. Read `docs/audits/E/E1-keychain-access-groups.md` for the
+measured finding it rests on, `docs/audits/V/V1.md` for the first audit round and what was
 already fixed, and `docs/BACKUP_FORMAT.md` for the audited format it deliberately reuses.
 
 **The design in one line:** iOS Keychain access groups are not a boundary between apps of the

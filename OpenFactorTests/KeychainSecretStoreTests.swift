@@ -89,7 +89,7 @@ struct KeychainSecretStoreTests {
     /// E1 measured that a Keychain access group is not a boundary between two apps of the same
     /// team: a sibling can read this app's items, including from the default group most people
     /// assume is private. That measurement cannot be a test, because it needs a second signed
-    /// app, and `docs/audits/E-probes-what-can-be-rerun.md` says so.
+    /// app, and `docs/audits/E/README.md` says so.
     ///
     /// **What the sibling then finds can be a test, and this is it.** The whole vault design is
     /// the answer to E1, and until now nothing looked at the bytes it produces. Every other

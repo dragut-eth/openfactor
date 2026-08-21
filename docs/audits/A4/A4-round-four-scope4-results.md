@@ -323,7 +323,7 @@ swept at launch.
 **S4-37 was answered on a device, and it is closed.** Four runs out of four on an iPhone 15 Pro
 carrying `4b8317f`: the panel stays on screen and its contents change from the image's account to
 the link's. The swap does not drop in the pairing that ships. Recorded in
-`E11-two-arrivals-of-different-kinds.md`, and checklist item 11 now carries a measurement of the
+`../E/E11-two-arrivals-of-different-kinds.md`, and checklist item 11 now carries a measurement of the
 build it describes rather than of the queue that was removed.
 
 **The fourth run was a variant the tester improvised and it is worth more than the repeat.** The
