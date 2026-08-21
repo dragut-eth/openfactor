@@ -127,10 +127,18 @@ one on every successful upload, into `docs/releases/`, one file per build. It ca
 whether the working tree was clean, the toolchain to its build number, and the SHA-256 of the
 exported archive and of each shipping binary inside it.
 
-**The five binaries are named in the script rather than discovered by walking the bundle.** A
-search for Mach-O files would quietly record four the day a target stops being embedded, which is
-the failure the archive's own watch app check exists for. A binary that is not there is written
-out as missing.
+**Four binaries, named in the script rather than discovered by walking the bundle**, plus the
+exported archive. A search for Mach-O files would quietly record three the day a target stops
+being embedded, which is the failure the archive's own watch app check exists for. A binary that
+is not there is written out as missing.
+
+**Four rather than the five lines in the comparison above**, and the difference is worth stating
+because a reviewer caught this document claiming five. The fifth line,
+`OpenFactorShare.appex/OpenFactorShare`, is the standalone build product sitting beside the app
+rather than a member of it; the same extension binary appears inside the bundle at
+`OpenFactor.app/PlugIns/`. The comparison walked the build products directory and so saw it twice.
+**The record hashes what ships**, which is the four inside `OpenFactor.app` and the archive built
+from them.
 
 **What this changes, stated narrowly.** A reader still cannot verify their download, for the
 reason measured above. What exists now is a claim made at the moment of shipping rather than
