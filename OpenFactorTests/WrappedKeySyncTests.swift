@@ -263,6 +263,66 @@ struct WrappedKeySyncTests {
             "byte for byte")
     }
 
+    /// **The refusal counted the store and then asked it again.** `save` guarded on
+    /// `countingBothFlags() <= 1` and then ran a separate `SecItemCopyMatching` under `Any` with
+    /// `kSecMatchLimitOne`. Those are two reads of a store another device writes into, so a record
+    /// arriving between them is invisible to the guard and can be what the match returns: the
+    /// write then lands on a record nothing counted and nobody examined, and if that record is the
+    /// synchronizable one it is the other live vault's only recovery credential, replaced on every
+    /// device at once.
+    ///
+    /// The seam expresses the reconciliation exactly: between the read and the write, the record
+    /// that was observed is gone and another has taken its place under the opposite flag. A write
+    /// aimed at what was observed finds nothing and fails, which is honest. A write aimed at
+    /// whatever the store happens to return next overwrites a stranger.
+    ///
+    /// Restore the second query and this goes red, with the planted record carrying this call's
+    /// bytes instead of its own.
+    @Test("A record arriving mid-save cannot become the thing that is written")
+    func aRecordArrivingMidSaveIsNotTheTarget() throws {
+        let service = "app.openfactor.tests.key.\(UUID().uuidString)"
+        let stranger = Data("the other vault's recovery record".utf8)
+
+        let plain = WrappedKeyStore(service: service)
+        defer { deleteBothFlags(of: plain) }
+        try plain.save(Data("this device's record".utf8))
+
+        let racing = WrappedKeyStore(
+            service: service,
+            duringSave: {
+                // What iCloud reconciliation looks like from in here: the observed record is
+                // gone, and a different one is present under the other flag.
+                let mine: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: service,
+                    kSecAttrAccount as String: "wrapped",
+                    kSecUseDataProtectionKeychain as String: true,
+                    kSecAttrSynchronizable as String: false,
+                ]
+                SecItemDelete(mine as CFDictionary)
+
+                let theirs: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: service,
+                    kSecAttrAccount as String: "wrapped",
+                    kSecUseDataProtectionKeychain as String: true,
+                    kSecAttrSynchronizable as String: true,
+                    kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+                    kSecValueData as String: stranger,
+                ]
+                SecItemAdd(theirs as CFDictionary, nil)
+            })
+
+        // The write is aimed at something that is no longer there, so it fails. That is the
+        // correct outcome and not the assertion; the assertion is below.
+        _ = try? racing.save(Data("a replacement passphrase's wrap".utf8))
+
+        let survivors = try plain.candidates()
+        #expect(
+            survivors.map(\.record) == [stranger],
+            "the record this call never examined still carries its own bytes")
+    }
+
     /// **The sync preference is a question asked at each write, not a launch-time snapshot.**
     /// Held as a `Bool`, the store wrote every wrap under the preference as it stood when the
     /// app started, so enabling sync and creating a vault in the same session wrote the wrap

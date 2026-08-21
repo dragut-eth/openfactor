@@ -40,6 +40,29 @@ public struct WrappedKeyStore: Sendable {
         self.service = service
         self.synchronizable = synchronizable
         self.accessGroup = accessGroup
+        duringSave = nil
+    }
+
+    /// Runs inside `save`, between reading the store and writing to it.
+    ///
+    /// **A test seam, internal, and `nil` on every path that ships.** What it exists to express is
+    /// what iCloud does: a record arriving, or being replaced, in the gap between deciding what to
+    /// write and writing it. That gap is where this store's worst defects have lived, and a
+    /// property nothing can express is a property nothing can hold onto. This project has already
+    /// paid for that lesson twice, in a vault suite that never ran and in a fake whose `save`
+    /// could not represent a twin.
+    let duringSave: (@Sendable () -> Void)?
+
+    /// The initialiser tests use to reach `duringSave`.
+    init(
+        service: String,
+        synchronizable: @escaping @Sendable () -> Bool = { false },
+        duringSave: @escaping @Sendable () -> Void
+    ) {
+        self.service = service
+        self.synchronizable = synchronizable
+        accessGroup = nil
+        self.duringSave = duringSave
     }
 
     private static let account = "wrapped"
@@ -144,47 +167,49 @@ public struct WrappedKeyStore: Sendable {
     /// between iCloud and this device as a side effect. **Where the record lives is
     /// `setSynchronizable`'s decision and nothing else's.**
     public func save(_ record: Data) throws(SecretStoreError) {
-        // **A twin pair is refused before anything is found to update.** `SecItemUpdate` under a
-        // one-item match would replace whichever record it happened to find, and with two live
-        // vaults' records present that can overwrite the wrong vault's only recovery credential.
-        // If the overwritten one is synchronizable, the mistake reaches every device on the
-        // account. Nothing that exists today can tell the two apart, so nothing may write.
-        guard try countingBothFlags() <= 1 else { throw .twinnedRecord }
+        // **One read decides both things, because two reads of a store another device writes
+        // into can disagree.** This counted the records and then asked separately which one to
+        // update. A record arriving between those two questions is invisible to the count and can
+        // be what the second question returns, so the write lands on a record nothing counted and
+        // nobody examined. If that record is the synchronizable one it is the other live vault's
+        // only recovery credential, replaced on every device at once.
+        //
+        // `candidates()` answers both from a single query: how many there are, and which flag the
+        // one to write carries.
+        let existing = try candidates()
 
-        // Any, so an existing record is found whichever flag it carries.
-        var find = query()
-        find[kSecMatchLimit as String] = kSecMatchLimitOne
-        find[kSecReturnAttributes as String] = true
+        // **A twin pair is refused.** With two live vaults' records present and no way to tell
+        // which belongs to the accounts here, every alternative writes into a slot nobody
+        // examined. `unlock` reads every record and tries each, so nobody is locked out while
+        // this refuses.
+        guard existing.count <= 1 else { throw .twinnedRecord }
 
-        var existing: CFTypeRef?
-        let found = SecItemCopyMatching(find as CFDictionary, &existing)
+        duringSave?()
 
-        if found == errSecSuccess {
-            // Matched on its own flag, so the update cannot create a twin, and the flag is
-            // absent from the changes, so the record does not move.
-            var target = query()
-            let attributes = existing as? [String: Any]
-            target[kSecAttrSynchronizable as String] =
-                (attributes?[kSecAttrSynchronizable as String] as? Bool) ?? kSecAttrSynchronizableAny
+        if let target = existing.first {
+            // **Pinned to the flag that was observed, not to whatever a fresh query returns.**
+            // A record arriving after the read lands under the other flag and is therefore not
+            // this write's target. If the observed record has since gone, the update finds
+            // nothing and fails, which is the honest outcome: what this call meant to replace is
+            // not there any more.
+            var slot = query()
+            slot[kSecAttrSynchronizable as String] = target.isSynchronizable
 
             // **Only the value changes.** The accessibility used to be written here too, from
-            // this store's construction-time default, which is `whenUnlockedThisDeviceOnly`. A
-            // record that `setSynchronizable(true)` had moved to iCloud, and to `whenUnlocked`
-            // because a synchronizable item cannot be device-only, would be updated back to a
-            // device-only class while still flagged as syncing. That is either an error from
-            // securityd or a record silently withheld from iCloud, and the second is the exact
-            // loss this store exists to prevent. Found in round two of gate A4, filed as
-            // plausible rather than confirmed because it needs a device to settle.
+            // this store's construction-time default, which was device-only. A record that
+            // `setSynchronizable(true)` had moved to iCloud, and to `whenUnlocked` because a
+            // synchronizable item cannot be device-only, would be updated back to a device-only
+            // class while still flagged as syncing: either an error from securityd or a record
+            // silently withheld from iCloud, and the second is the exact loss this store exists
+            // to prevent.
             //
             // Where the record lives is `setSynchronizable`'s decision, and the protection class
             // is half of that decision: it writes both together, so nothing else writes either.
             let changes: [String: Any] = [kSecValueData as String: record]
-            let updated = SecItemUpdate(target as CFDictionary, changes as CFDictionary)
+            let updated = SecItemUpdate(slot as CFDictionary, changes as CFDictionary)
             guard updated == errSecSuccess else { throw error(for: updated) }
             return
         }
-
-        guard found == errSecItemNotFound else { throw error(for: found) }
 
         let shouldSync = synchronizable()
         var attributes = query()

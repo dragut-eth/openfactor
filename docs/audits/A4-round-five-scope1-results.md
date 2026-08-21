@@ -277,3 +277,44 @@ the eligibility test, and restoring the second `synchronizable()` call reddens t
 one caller uses `forSync` now. Changing that signature is outside this finding.
 
 482 core tests pass, the app suite passes, both targets build.
+
+## What was done: S1-26
+
+**One read decides both things.** `save` counted the records and then asked separately which one to
+update. Those are two reads of a store another device writes into, so a record arriving between
+them is invisible to the count and can be what the second question returns. `candidates()` now
+answers both from a single query: how many there are, and which flag the one to write carries. The
+update is pinned to **the flag that was observed**, not to whatever a fresh query would return.
+
+A record arriving after the read lands under the other flag and is therefore not this write's
+target. If the observed record has gone, the update finds nothing and fails, which is the honest
+outcome: what the call meant to replace is no longer there.
+
+ChatGPT's remedy, taken as filed. The alternative it offered, withdrawing passphrase replacement
+until a targeted operation exists, was not needed once the operation could name its target.
+
+### The test needed a seam, and the seam is the point
+
+**A non-racy test cannot tell the two versions apart.** Both write the same record when nothing
+changes underneath, so a test that does not express the arrival is green either way, which is the
+failure this gate has found repeatedly.
+
+`WrappedKeyStore` gained an internal `duringSave` closure, `nil` on every shipping path, reached
+through an internal initialiser only tests can call. It runs in the gap between reading the store
+and writing to it, which is exactly where this store's worst defects have lived.
+
+**Adding a seam to production code was a deliberate trade.** The argument against is that a hook
+exists for tests rather than for the app. The argument for it is this gate's own central finding:
+untestable code is where defects pool, and this project has paid for that twice already, once in a
+vault suite that never ran and once in a fake whose `save` could not represent a twin. A property
+nothing can express is a property nothing can hold onto.
+
+The test makes the seam do what iCloud reconciliation does: the observed record is gone and a
+different one is present under the opposite flag. **Deterministic in both directions**, which
+matters because the underlying defect depends on an unspecified choice. Before the fix, the planted
+stranger came back carrying this call's 31 bytes instead of its own 33. After it, the stranger is
+untouched and the write fails.
+
+Mutation verified applied: restoring a second query for the target reddens it.
+
+482 core tests pass, the app suite passes, both targets build.
