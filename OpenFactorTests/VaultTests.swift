@@ -9,7 +9,7 @@ import Testing
 /// The distinction these tests are really about is `absent` versus `locked`. Confusing them is
 /// the failure that cannot be recovered from: asking somebody to type a passphrase that was
 /// never issued, or issuing a second one and stranding everything sealed under the first.
-@Suite("Vault lifecycle", .enabled(if: KeychainAvailability.isUsable))
+@Suite("Vault lifecycle")
 struct VaultTests {
 
     private func makeVault() -> (Vault, VaultKeyStore, WrappedKeyStore) {

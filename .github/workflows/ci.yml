@@ -15,6 +15,22 @@ jobs:
       # The project style forbids em dashes everywhere, including code, comments,
       # documentation, and commit messages. The character is written here as an escape
       # so that this file does not fail its own check.
+      # A suite that decides at run time whether to run can assure nothing while looking
+      # exactly like coverage. Two suites in this project sat behind such a gate, one of them
+      # covering the store that holds every secret: the package host has no Keychain so they
+      # skipped there, and the hosted job runs only the app target so they were never in it.
+      # Twenty six tests executed in no job and on no machine, which is the same shape this
+      # gate's founding finding had. Suites needing a real Keychain live in the hosted target
+      # now, where one always exists. If a conditional suite is ever genuinely needed, prove
+      # where it runs before adding it back, and change this check deliberately.
+      - name: No test suite decides at run time whether to run
+        run: |
+          if git grep -n -I -- "enabled(if:" -- 'Tests/*' 'OpenFactorTests/*'; then
+            echo "A conditionally enabled suite can skip everywhere and report success."
+            exit 1
+          fi
+          echo "No conditionally enabled suites."
+
       - name: No em dashes
         run: |
           DASH=$(printf '\xe2\x80\x94')

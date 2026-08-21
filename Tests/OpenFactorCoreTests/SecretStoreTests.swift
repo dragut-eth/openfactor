@@ -7,7 +7,8 @@ import Testing
 ///
 /// Written against the protocol rather than against an implementation, so the Keychain
 /// backed store is held to exactly the same contract as the in memory one the moment it
-/// can be reached. See ``KeychainAvailability`` for when that is.
+/// can be reached. The suites that need a real one live in the hosted test target, which runs in
+/// a simulator and therefore always has one.
 @Suite("SecretStore behaviour")
 struct SecretStoreTests {
 

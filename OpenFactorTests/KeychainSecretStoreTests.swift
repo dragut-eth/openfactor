@@ -8,13 +8,13 @@ import Testing
 ///
 /// **These are skipped by `swift test`.** An unsigned test bundle has no entitlement for
 /// the data protection Keychain, so there is nothing here to assert against. They run
-/// once there is a host application target, which is PR 5. See ``KeychainAvailability``
+/// only inside a host application, which is why this suite lives in the hosted target
 /// for why the legacy Keychain is not an acceptable stand in.
 ///
 /// The protection class on a stored secret is the single most consequential line in this
 /// project, and until these run it is unverified. That is written down in `HANDOFF.md`
 /// and in the checklist for gate A1.
-@Suite("Keychain storage", .enabled(if: KeychainAvailability.isUsable))
+@Suite("Keychain storage")
 struct KeychainSecretStoreTests {
 
     private func makeStore(
