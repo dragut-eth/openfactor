@@ -325,3 +325,25 @@ The second is the consequence the core test cannot show, since a directory sorts
 timestamp and is therefore what a collection reaches for first.
 
 482 core tests pass, the app suite passes, both targets build.
+
+## What was done: S4-43
+
+**The entry read and the entry acted on are now the same one.** `pending` required only that a name
+parse as a `UUID`, and then threw the spelling away; `take` and `sweep` rebuilt the path from
+`id.uuidString`, which is canonical uppercase. On a case-sensitive volume those are two different
+names, so an item chosen on one entry's timestamp was read and removed at another.
+
+`pending` now requires `name == id.uuidString`. **That can only ever turn away a name somebody else
+wrote**, because this app writes `id.uuidString` and nothing else, which is what makes the narrow
+form of the remedy sufficient rather than a partial one.
+
+The fuller remedy the finding also offered, carrying the validated basename through `Pending`,
+`take` and `sweep`, was not taken. It ripples through four files and two suites to reach the same
+property, and this scope has been burned by changes larger than their findings.
+
+**iOS volumes are case-insensitive by default**, which is why this survived three rounds. That is a
+property of the platform rather than of the code, and the code no longer depends on it.
+
+Red before the change, and mutation verified applied: removing the spelling check reddens it.
+
+483 core tests pass, the app suite passes, both targets build.

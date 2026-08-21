@@ -160,6 +160,31 @@ struct SharedInboxTests {
         #expect(inbox.pending().map(\.id) == [mine], "only the file is an item")
     }
 
+    /// **The entry that was read and the entry that is acted on must be the same one.** `pending`
+    /// turned a name into a `UUID` and threw the spelling away, and `take` and `sweep` then rebuilt
+    /// the path from `id.uuidString`, which is canonical uppercase. On a case-sensitive volume
+    /// those are two different names: the item chosen on one entry's timestamp is read and deleted
+    /// at another. Nothing this app writes is ever lowercase, so requiring the exact spelling can
+    /// only ever turn away a name somebody else wrote.
+    ///
+    /// Remove the spelling check from `pending` and this goes red.
+    @Test("A name that is not the canonical spelling is not an item")
+    func onlyTheCanonicalSpellingIsAnItem() throws {
+        let (inbox, container) = makeInbox()
+        defer { try? FileManager.default.removeItem(at: container) }
+
+        let mine = try inbox.write(Data("a genuine share".utf8))
+
+        let directory = container.appendingPathComponent(SharedInbox.directoryName)
+        let lowercased = UUID().uuidString.lowercased()
+        try Data("planted under a spelling this app never writes".utf8)
+            .write(to: directory.appendingPathComponent(lowercased))
+
+        #expect(
+            inbox.pending().map(\.id) == [mine],
+            "only the entry whose name this app would rebuild exactly is an item")
+    }
+
     @Test("Sweeping an inbox that was never used is not an error")
     func sweepIsSafeWhenEmpty() {
         let (inbox, container) = makeInbox()

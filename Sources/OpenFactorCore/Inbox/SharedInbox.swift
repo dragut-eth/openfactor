@@ -209,7 +209,13 @@ public struct SharedInbox: Sendable {
         else { return [] }
 
         return handle.names().compactMap { name -> Pending? in
-            guard let id = UUID(uuidString: name) else { return nil }
+            // **The entry read and the entry acted on have to be the same one.** `UUID(uuidString:)`
+            // accepts spellings this app never writes, and `take` and `sweep` rebuild the path from
+            // `id.uuidString`, which is canonical uppercase. On a case-sensitive volume those name
+            // two different files, so the item chosen on one entry's timestamp is read and removed
+            // at another. Requiring the exact spelling can only turn away a name somebody else
+            // wrote, because this app writes `id.uuidString` and nothing else.
+            guard let id = UUID(uuidString: name), name == id.uuidString else { return nil }
 
             // **An entry whose age cannot be read is not a candidate.** The alternative is to
             // invent one, and an invented age is not evidence: `.distantPast` here would make an
