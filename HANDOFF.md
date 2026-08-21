@@ -5,8 +5,8 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-20, on TestFlight as `dev.openfactor.app`, 1.0 (5), with both phones
-carrying a development build from `2196b97`. Work is on `a4-fixes`, around forty commits ahead of
+**Last updated:** 2026-08-21, on TestFlight as `dev.openfactor.app`, 1.0 (5), with both phones
+carrying a development build from `2196b97`. Work is on `a4-fixes`, around fifty commits ahead of
 `main` and **not pushed**. `main` itself is eleven commits ahead of `origin/main` and also not
 pushed. **`openfactor.dev` is live**, served from `origin/main`, which does carry the site.
 
@@ -14,22 +14,25 @@ pushed. **`openfactor.dev` is live**, served from `origin/main`, which does carr
 
 **No high and no medium is open anywhere.** The severity half of the goal set for A4 is met.
 
-Two lows remain, plus three items settled by decision rather than by code:
+**Nothing is open at any severity.** Four items are settled by decision rather than by code:
 
 | Item | Scope | State |
 | --- | --- | --- |
-| S1-34 | 1 | open: the test seam can express the same-slot case and no test does |
-| S4-45 | 4 | open: five false claims left in comments and documents |
 | S1-33 | 1 | **waived**: same-slot substitution in `save`, with what would reopen it |
 | S1-40 | 1 | **waived**: the disable path can move accounts before the refusal, on an arrival |
 | S1-37, S1-39 | 1 | **withdrawn**: see the correction below |
 
 | Scope | Rounds | State |
 | --- | --- | --- |
-| 1, the vault | 5 plus five verification rounds | S1-34 open |
+| 1, the vault | 5 plus verification rounds | closed |
 | 2, the Watch | 7 | closed |
 | 3, the parsers | 3 | closed |
-| 4, the boundaries | 5 plus two verification rounds | S4-45 open |
+| 4, the boundaries | 5 plus verification rounds | closed |
+
+**The whole board is preserved in `docs/audits/A4-board.md`**, recovered from the twenty nine
+renders of the working dashboard: all 133 findings with the words they were filed in, the arc of
+the counts, and the standing panels. The dashboard itself was a rendered widget and would have
+gone when the session did.
 
 ### The method changed halfway, and that is the useful part
 
@@ -74,14 +77,56 @@ grounds that it sounds prudent.
 found false.** Two days later a claim about a build system was not checked and was false. The
 lesson had been filed as being about the Keychain rather than about claims.
 
-### What still has to happen before A4 closes
+### The exit checks, and why they are not published yet
 
-1. Fix S1-34 and S4-45.
-2. **One final verification round carrying the correction**, so the engines learn that a finding
-   they verified as fixed was withdrawn, and why. One of them supplied the premise.
-3. **The closing opinions.** Each engine reads its own published passes in a fresh conversation and
-   writes a short opinion for `README.md`, unflattering parts included. This is the artifact the
-   gate exists to produce and it has not been asked for yet.
+All three items that gated A4 are done: S1-34 and S4-45 are closed, the final verification round
+carried the correction, and the exit checks were collected from all three engines.
+
+**The exit checks were two instruments stapled together.** Three closed questions (who supplied
+the S1-37 premise, are the two waivers acceptable, is MASVS believable) and one open one (would
+you trust this app). The closed half behaved like the eleven verification rounds before it: all
+three placed the premise correctly, all three accepted both waivers, all three believed the fail
+and the two partials while refusing the passes. **The open half produced a reflex** rather than a
+reading, and when asked what they would recommend instead, all three named a hardware token, which
+cannot do the thing they were asked about because it has no passphrase recovery path.
+
+**They are not published yet, and that is sequencing rather than a quiet drop.** The open half
+raised nineteen objections; those are tracked in `assets/closing-review-tracker.md`, which is
+outside the repository by `.gitignore`. **Both rounds get published together when the loop
+finishes, the first one included.**
+
+**What checking those objections has already found.** Four did not survive measurement: the
+absence of update enforcement, the vault key's protection, and the compromised-device scope all
+overstated the exposure, and half of the crypto coverage objection was stale. **One was live and
+worse than described**, and it is the item below.
+
+### The one exit-check objection that was real, and what it cost
+
+**A static phone keypair on the shipping path passed all 457 tests.**
+
+`WatchProvisioning.respond` is overloaded. One overload takes raw bytes and validates them, the
+other takes a `ValidatedRequest` that has already been parsed and approved, and **each generates
+its own ephemeral key**. The freshness test called the raw bytes overload.
+`WatchKeyProvider.approve` calls the validated one, because the phone parses the request, asks its
+owner, and seals after the tap.
+
+So the test guarded a path the app never takes. **Measured, not reasoned**: the mutation was
+applied and the whole suite stayed green.
+
+**That is the fifth instance of one class**, a test placed where the code under test does not
+reach, and the first where an overload hid it rather than a seam. The other four are in the
+standing panels of `docs/audits/A4-board.md`.
+
+**Fixed, and two anchors added.** The freshness property now runs over both entry points by name.
+The watch exchange gained a pinned vector, fixed input and fixed output, using the deterministic
+seams that already existed for it: request bytes, derived wrapping key, response bytes. Proof it
+earns its place, also measured: changing the HKDF salt from empty to the magic bytes is invisible
+to all 28 other tests in that suite and reddens only the vector.
+
+**The vault wrapping half of the same objection was already answered.** Dropping the magic from
+the wrapped record's additional data is a symmetric change no round trip can see, and
+`VaultVectorTests` catches it in two places, because that construction is pinned to published
+vectors rather than to itself.
 
 ## What the gate has cost and returned
 
@@ -106,7 +151,7 @@ Keychain, which is what `VaultDecisionTests` exists to answer. **It was not skip
 and a later finding that said so was wrong; see the correction above. The precise claim is the
 useful one, and the imprecise version of it cost coverage.
 
-**Eight verification rounds have now run** on top of the review rounds, and none produced a
+**Eleven verification rounds have now run** on top of the review rounds, and none produced a
 backlog. That is the second finding about the method: the instrument you use decides what you get
 back, and a round that asks a closed question returns an answer rather than work.
 
