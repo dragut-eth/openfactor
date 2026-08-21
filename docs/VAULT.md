@@ -683,6 +683,21 @@ from one of two people with disposable data.
    removing the string would make this blocking again. The string was removed, in the section
    above, and this line was not updated to match: `SECURITY.md` has said routing is load bearing
    since that day. Round three of gate A4 found the two documents disagreeing.
+
+   **This item is on a list titled "what must be proven before implementation", and the
+   implementation shipped without it being proven.** That is stated here rather than resolved by
+   softening the word. A decision was later recorded, in `SECURITY.md` and at the end of E5, not
+   to run the probe: it needs a second signed app carrying its own embedded watch app on a real
+   watch, the reasoning that a companion relationship cannot be claimed by a third party is
+   labelled as reasoning, and the remedy if that reasoning is wrong is written down as a third
+   message exchange.
+
+   **Two of the three reviewers who scored that decision rejected it**, on the same ground: that
+   labelling a gap is not measuring a property the design admits is load bearing, on a probe whose
+   own reopening condition already fired once and was missed. **Their objection is recorded here
+   because this is the document their objection is actually about.** The item stays open and stays
+   blocking, and the honest reading of this list today is that the vault design has one unproven
+   blocking item and shipped anyway.
 3. **Backup exclusion behaves as documented on a real restore**, and separately under Quick
    Start, which is a different mechanism.
 4. ~~A watch can hold a P-256 private key and complete the exchange inside the message size
