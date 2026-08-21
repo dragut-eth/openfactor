@@ -16,6 +16,14 @@ Published whether or not it is flattering, which is the only rule this folder ha
 | [A4](A4.md) | the vault at rest, the watch key exchange, the parsers, the process boundaries | 2026-08-16 to 2026-08-21 | **133 findings, three high, all closed.** Two waived, two withdrawn. Working files: [A4/](A4/) |
 | [V](V/) | the vault **design**, twice, before any of it was built | before PR 16d | A different instrument from auditing code that exists: it is why the design has the shape it has |
 
+**The closing round is published whole**, both halves: the exit checks in
+[A4/A4-closing-opinion-results.md](A4/A4-closing-opinion-results.md), and the reply round that
+put their nineteen objections back as closed questions in
+[A4/A4-reply-round-results.md](A4/A4-reply-round-results.md). **Each carries what happened when its
+claims were checked**, in both directions: four objections did not survive measurement, one was
+live and worse than described, and three factual errors in this project's own documents were found
+because reviewers were handed citations and told to check them.
+
 **[A4-board.md](A4-board.md) is the register**: all 133 findings in the words they were filed in,
 the arc of the counts across twenty nine board redraws, and the standing panels about the gate's
 own recurring mistakes. It is kept at this level because it is a reference rather than a working
