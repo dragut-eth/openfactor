@@ -131,6 +131,74 @@ echo "==> Uploading"
 xcrun altool --upload-app -f "$WORK/export/OpenFactor.ipa" -t ios \
   --apiKey "$KEY_ID" --apiIssuer "$(cat "$ISSUER_FILE")"
 
+# ---- Provenance, recorded rather than remembered ------------------------------------
+#
+# `docs/BUILD_PROVENANCE.md` measures exactly what a reader can check about a shipped
+# binary. The one thing it names as still missing is a hash recorded against the commit
+# that produced it, so this writes one on every successful upload.
+#
+# **It does not let anybody verify their download**, and the document says so at length:
+# Apple re-signs what it distributes, so no locally computed hash can match what lands on a
+# device. What it does is tie a build number to a commit and a toolchain at the moment of
+# shipping, which is what gate A5 needs to audit a release diff, and which is a claim made
+# before the fact rather than reconstructed from memory afterwards.
+#
+# **After the upload rather than before it.** A record of a build that failed validation
+# and never shipped would be worse than no record.
+echo "==> Recording provenance"
+ARCHIVE_PLIST="$WORK/app.xcarchive/Info.plist"
+SHORT_VERSION="$(plutil -extract ApplicationProperties.CFBundleShortVersionString raw -o - "$ARCHIVE_PLIST")"
+BUILD_VERSION="$(plutil -extract ApplicationProperties.CFBundleVersion raw -o - "$ARCHIVE_PLIST")"
+COMMIT="$(git rev-parse HEAD)"
+if [ -n "$(git status --porcelain)" ]; then
+  TREE_STATE="dirty, so this build is not any commit"
+else
+  TREE_STATE="clean"
+fi
+
+mkdir -p docs/releases
+RECORD="docs/releases/$SHORT_VERSION-$BUILD_VERSION.md"
+{
+  echo "# $SHORT_VERSION ($BUILD_VERSION)"
+  echo
+  echo "Uploaded $(date -u '+%Y-%m-%d %H:%M UTC')."
+  echo
+  echo "| | |"
+  echo "| --- | --- |"
+  echo "| Commit | \`$COMMIT\` |"
+  echo "| Working tree | $TREE_STATE |"
+  echo "| Toolchain | $(xcodebuild -version | tr '\n' ' ' | sed 's/  */ /g') |"
+  echo
+  echo "## Hashes of what was built"
+  echo
+  echo "SHA-256, computed locally. **Apple re-signs what it distributes, so none of these"
+  echo "will match a binary on a device.** See \`docs/BUILD_PROVENANCE.md\` for what that"
+  echo "does and does not leave a reader able to check."
+  echo
+  echo '```'
+  shasum -a 256 "$WORK/export/OpenFactor.ipa" | sed "s|$WORK/export/||"
+  # **Named rather than discovered.** A find that walks the bundle looking for Mach-O files
+  # would quietly record four binaries instead of five the day a target stops being
+  # embedded, which is the exact failure the watch check above exists for. These are the
+  # five docs/BUILD_PROVENANCE.md measured, and a missing one is said out loud.
+  APPS="$WORK/app.xcarchive/Products/Applications"
+  for binary in \
+    "OpenFactor.app/OpenFactor" \
+    "OpenFactor.app/PlugIns/OpenFactorShare.appex/OpenFactorShare" \
+    "OpenFactor.app/Watch/OpenFactorWatch.app/OpenFactorWatch" \
+    "OpenFactor.app/Watch/OpenFactorWatch.app/PlugIns/OpenFactorComplication.appex/OpenFactorComplication"
+  do
+    if [ -f "$APPS/$binary" ]; then
+      printf '%s  %s\n' "$(shasum -a 256 "$APPS/$binary" | cut -d' ' -f1)" "$binary"
+    else
+      printf '%-64s  %s\n' "MISSING" "$binary"
+    fi
+  done
+  echo '```'
+} > "$RECORD"
+
+echo "Wrote $RECORD. Commit it: it is the only thing tying this build to a commit."
+
 echo
 echo "Uploaded. Processing takes five to fifteen minutes, then in App Store Connect:"
 echo "  1. clear the export compliance question on the build"

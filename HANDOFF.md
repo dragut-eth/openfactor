@@ -100,6 +100,11 @@ absence of update enforcement, the vault key's protection, and the compromised-d
 overstated the exposure, and half of the crypto coverage objection was stale. **One was live and
 worse than described**, and it is the item below.
 
+**Fourteen of the twenty rows are closed.** Of the six left, three can never close (no outside
+penetration test, the four defects that existed before the review, and the one confidently false
+shared conclusion), one waits on an OS release, one is already published and needs nothing, and
+one needs the models rather than us.
+
 ### The one exit-check objection that was real, and what it cost
 
 **A static phone keypair on the shipping path passed all 457 tests.**
@@ -127,6 +132,57 @@ to all 28 other tests in that suite and reddens only the vector.
 the wrapped record's additional data is a symmetric change no round trip can see, and
 `VaultVectorTests` catches it in two places, because that construction is pinned to published
 vectors rather than to itself.
+
+### What the rest of the objections produced
+
+**Three documents were found underselling the project, which is a new direction of failure here.**
+The habit of stating limits sharply overshot into conceding things that are not true. Apple
+delivers app updates automatically by default, so "nothing forces you to update this app" is true
+about forcing and misleading about outcomes. Complete Protection derives its class key from the
+passcode **and the device UID** and discards it on lock, so the vault key file is not "a file in a
+container" in the sense a reader would take. And "compromised device" was hiding two cases: a
+compromise holding the device locked does not yield the vault key at all. `docs/MASVS.md` now says
+all three, and the verdicts are unchanged.
+
+**Build provenance was already answered and the reviewers had not seen it.**
+`docs/BUILD_PROVENANCE.md` measured two Release builds of identical source minutes apart, found
+every shipping binary differed, and refuses the phrase reproducible build outright. What was
+genuinely missing is the one thing that document names against itself: **a hash recorded against
+the commit that produced it, which nothing was doing.** Gate A5 audits the diff between releases
+and had nothing saying which commit a release came from.
+`scripts/ship-testflight.sh` now writes a record on every successful upload, into `docs/releases/`:
+commit, working tree state, toolchain, and the SHA-256 of the exported archive and each shipping
+binary. The five binaries are **named rather than discovered**, because a Mach-O search would
+quietly record four the day a target stops being embedded, and a missing one is written as
+MISSING. Run against a fake archive rather than reasoned about.
+
+**The hardware probes are prose because of topology, not effort, and that is now written down.**
+`docs/audits/E-probes-what-can-be-rerun.md` says for each of the eleven exactly what re-running it
+would take: a second signed app, a second signed app with its own watch app, two devices on one
+Apple Account, a device already in a state the fix prevents, two installs over each other. **A
+test bundle is one app, on one device, in one install.**
+
+**One conversion was available and nobody had noticed it.** Gate E1's finding cannot be a test.
+E1's defence can, and nothing was testing it: every assertion in the Keychain suite reads an item's
+*attributes*, and the helper it uses does not even request the data, so **nobody had ever looked at
+the stored bytes**. `theStoredBytesAreOpaque` reads the blob a sibling would read and asserts the
+issuer, the account name and the secret are absent, **with a positive control**, because three
+absence assertions prove nothing unless the same search finds something present.
+
+**The watch routing question was decided rather than left open.** A rogue watch app claiming to be
+this app's counterpart is unmeasured in that direction, and the probe is not being run: it needs a
+second signed app with its own embedded watch app on a real watch. The reasoning is stronger than
+the assumption gate E1 destroyed, because a companion watch app is installed as part of its iOS
+app's bundle rather than claimed in a property list, **and it is labelled as reasoning in both
+places it appears**. What makes it a decision is that the remedy is written down: restoring a
+comparison needs a third message, so both sides hold the transcript before the key travels, which
+is exactly what the six digit string could not do in two messages. Known design, known cost, not
+built. **The human gate does not discriminate here either**, and that is now stated: somebody shown
+a prompt asking to release the key to their watch would approve it.
+
+**Its trigger is attached to a process rather than to memory.** That is the lesson of E5, whose own
+reopening condition fired when the six digit string was removed and then stood through round after
+round with nobody noticing.
 
 ## What the gate has cost and returned
 

@@ -359,9 +359,36 @@ digit comparison performed on a wrist. It was removed rather than kept as theate
 
 What the exchange now rests on is that WatchConnectivity connects an iOS app to its own companion
 Watch app rather than to arbitrary apps. A sibling phone app was measured activating a session
-and reaching nothing. **Apple does not document this as a security guarantee**, and a rogue Watch
-app claiming to be the counterpart remains unmeasured; such an app would have to ship inside
-OpenFactor's own bundle, which is a malicious build and separately out of scope.
+and reaching nothing, in `docs/audits/E5-watchconnectivity-routing.md`.
+
+**Apple documents the functional relationship and not a security property.** The framework is
+described as two way communication between an app and its **paired counterpart**, and nothing in
+that documentation says what enforces the pairing or offers any way to authenticate the other
+side. So the exclusivity this design leans on is a documented behaviour, not a documented
+guarantee, and the difference matters.
+
+**A rogue Watch app claiming to be the counterpart is unmeasured, in that direction.** E5 measured
+a hostile phone reaching a watch. Nobody has measured a hostile watch app being reached by this
+phone. **The argument that it cannot happen is reasoning, and is labelled as reasoning here rather
+than promoted**: a companion Watch app is installed as part of its iOS app's bundle, so an
+attacker's Watch app is a different app pair rather than a claim anybody can make in a property
+list. That is stronger than the assumption gate E1 destroyed, which was about a default nobody had
+declared. It is still not a measurement.
+
+**And the human gate does not discriminate here.** Somebody shown a prompt asking to release the
+key to their Watch would approve it, because from the phone's screen a rogue counterpart and the
+real one ask the same question. Nothing in this exchange asks the person to compare anything.
+
+**The decision, recorded rather than left open.** The probe is not run, because it needs a second
+signed app carrying its own embedded Watch app installed to a real Watch, which E5 prices at a day
+of work. **What would be done if it came back badly is written down instead**: restoring a
+comparison needs a third message, so that both sides hold the transcript before the key is sent
+and can derive a code the wearer can check. That is a known design at a known cost, and it is the
+thing this section would reach for. It is not being built on a reasoned assumption alone.
+
+**What would make this urgent**: any change to the provisioning exchange, or a report that a
+third party Watch app can be reached by an app that is not its own. `docs/ROADMAP.md`'s gate A5
+audits the diff of every release, which is where a change to this exchange would surface.
 
 The human gate is on the phone. The key file is unreadable while the device is locked, so the
 phone must be unlocked and foregrounded, and the app asks before it answers.

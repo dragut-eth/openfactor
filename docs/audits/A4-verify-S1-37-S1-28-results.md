@@ -168,6 +168,12 @@ the platform's floor.
 **What would reopen it.** A Keychain transaction spanning two services, or a redesign that puts the
 wrapped record and the accounts under one primary key. Neither is contemplated.
 
+**What accepting it does not mean.** It is a shipping decision, not a statement that the window is
+safe, and it is not the same as the toggle being trustworthy under twins. For the length of one
+conversion span the switch can say something that is not true about where accounts are. That is
+accepted because no cheaper construction exists on this platform, not because it stopped being
+true.
+
 ## Correction: S1-37 was not real, and the fix for it removed coverage
 
 **Measured, after the fact, and the measurement should have come first.**

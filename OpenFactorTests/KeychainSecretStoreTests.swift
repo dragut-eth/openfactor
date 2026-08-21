@@ -65,6 +65,78 @@ struct KeychainSecretStoreTests {
         )
     }
 
+    /// The stored blob itself, which is what a sibling gets. `rawItem` returns attributes and
+    /// deliberately not this.
+    private func rawValue(from store: KeychainSecretStore) -> Data? {
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(
+            [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: store.service,
+                kSecUseDataProtectionKeychain as String: true,
+                kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+                kSecMatchLimit as String: kSecMatchLimitOne,
+                kSecReturnData as String: true,
+            ] as CFDictionary,
+            &result
+        )
+        guard status == errSecSuccess else { return nil }
+        return result as? Data
+    }
+
+    /// **The defence gate E1 exists for, run rather than read.**
+    ///
+    /// E1 measured that a Keychain access group is not a boundary between two apps of the same
+    /// team: a sibling can read this app's items, including from the default group most people
+    /// assume is private. That measurement cannot be a test, because it needs a second signed
+    /// app, and `docs/audits/E-probes-what-can-be-rerun.md` says so.
+    ///
+    /// **What the sibling then finds can be a test, and this is it.** The whole vault design is
+    /// the answer to E1, and until now nothing looked at the bytes it produces. Every other
+    /// assertion in this suite reads the item's *attributes*; `rawItem` does not even ask for the
+    /// data. So this reads the blob the sibling would read and asserts none of the three things
+    /// worth stealing is legible in it.
+    ///
+    /// A reviewer said the platform assumptions in this project were prose they could not run.
+    /// This one they can.
+    @Test("A sibling reading the raw item finds nothing legible in it")
+    func theStoredBytesAreOpaque() throws {
+        let store = makeStore()
+        defer { store.cleanUp() }
+
+        // Distinctive strings, so a match cannot be a coincidence and a miss cannot be luck.
+        let issuer = "AcmeIssuerZQX"
+        let name = "distinctive-holder-4718"
+        let secret = Data("NOTASECRETBUTLOOKSLIKEONE".utf8)
+
+        try store.add(
+            OTPAccount(issuer: issuer, name: name, secret: secret, generator: .totp(.standard)),
+            color: .blue)
+
+        let stored = try #require(rawValue(from: store), "there should be an item to read")
+
+        // **Not vacuous.** A store that wrote nothing, or wrote an empty blob, would pass every
+        // assertion below without meaning any of them.
+        #expect(stored.count > 32, "the item must actually carry a sealed record")
+
+        // **And the search itself has to be capable of finding something.** Three assertions
+        // that a needle is absent prove nothing unless the same search finds a needle that is
+        // present. The record's magic is the one thing deliberately in the clear.
+        #expect(
+            stored.range(of: Data("OFV1".utf8)) != nil,
+            "the search must be able to match, or the three below are decoration")
+
+        #expect(stored.range(of: Data(issuer.utf8)) == nil, "the issuer is legible in the item")
+        #expect(stored.range(of: Data(name.utf8)) == nil, "the account name is legible")
+        #expect(stored.range(of: secret) == nil, "the shared secret is legible")
+
+        // And the store itself must still be able to read what it wrote, or opacity would be
+        // indistinguishable from corruption.
+        let records = try store.records()
+        #expect(records.readable.count == 1)
+        #expect(records.readable.first?.metadata.issuer == issuer)
+    }
+
     /// The most important assertion in the project. Secrets must be unreadable while the
     /// device is locked, and must never travel to another device unless the user asks.
     @Test("Secrets are stored as unlocked only and device only")

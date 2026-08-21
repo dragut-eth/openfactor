@@ -120,5 +120,26 @@ into the binary.
 establishes that**, and until an artifact hash is published alongside a tagged commit and Apple's
 processing is accounted for, nobody should read this document as though it did.
 
+## The half of that gap this project can close, and now does
+
+**The first half is a record, and a record is not a memory.** `scripts/ship-testflight.sh` writes
+one on every successful upload, into `docs/releases/`, one file per build. It carries the commit,
+whether the working tree was clean, the toolchain to its build number, and the SHA-256 of the
+exported archive and of each shipping binary inside it.
+
+**The five binaries are named in the script rather than discovered by walking the bundle.** A
+search for Mach-O files would quietly record four the day a target stops being embedded, which is
+the failure the archive's own watch app check exists for. A binary that is not there is written
+out as missing.
+
+**What this changes, stated narrowly.** A reader still cannot verify their download, for the
+reason measured above. What exists now is a claim made at the moment of shipping rather than
+reconstructed afterwards: this build number came from this commit under this toolchain, published
+where it can be contradicted. **Gate A5 needs exactly that to audit a release diff**, and nothing
+was recording it.
+
+**The second half is not closable by this project.** Apple's processing sits between the archive
+and the device, and no local hash reaches across it.
+
 **This is the gap `docs/MASVS.md` and `SECURITY.md` already name, narrowed and measured rather
 than closed.**

@@ -72,5 +72,37 @@ sibling phone app reaching a watch was measured and found inert, in the directio
 `SECURITY.md` discloses that and argues such an app would have to ship inside OpenFactor's own
 bundle, which is a malicious build and separately out of scope. That argument is reasoning
 offered where this folder's standard is measurement, and it is labelled as reasoning rather than
-promoted. Whether to run the probe or to accept the assumption in writing is an open decision,
-not a closed one.
+promoted.
+
+## The decision, taken rather than left open
+
+**The probe is not run, and that is a decision with a price rather than a deferral.** Running it
+needs a second signed app carrying its own embedded watch app, installed to a real watch, which
+is the day of work priced above. The reasoning that it cannot happen is better than the assumption
+gate E1 destroyed, because a companion watch app is installed as part of its iOS app's bundle
+rather than declared by anybody who wants to claim the relationship. It is still reasoning.
+
+**What would be done if the answer were bad is written down, so this is not an assumption with no
+plan behind it.** Restoring a comparison the wearer can perform needs a third message: the phone
+answers first with its half of the transcript, both sides derive a short code from material they
+now share, the person checks it, and only then does the key travel. **That is exactly what the
+six digit string could not do in a two message exchange**, which is why it was removed rather than
+kept as theater. In a three message exchange it works. Known design, known cost, not built.
+
+**What Apple documents, checked rather than characterised.** The framework is described as two way
+communication between an app and its paired counterpart. That is a functional relationship.
+Nothing in it says what enforces the pairing, and nothing offers a way to authenticate the other
+side. So "Apple does not document this as a guarantee" is accurate, and the sharper statement is
+that Apple documents the behaviour and is silent on the property.
+
+**And the human gate does not help here.** A person shown a prompt asking to release the key to
+their watch would approve it. From the phone's screen, a rogue counterpart and the real one ask
+the same question, and nothing asks anybody to compare anything.
+
+**What would make this urgent**: any change to the provisioning exchange, or a report that a third
+party watch app can be reached by an app that is not its own. Gate A5 audits the diff of every
+release, which is where a change to this exchange surfaces.
+
+**This section exists because the last one did not fire.** A reopening condition written where
+nobody re-reads it is not a condition, so this decision names a trigger attached to a process that
+runs, rather than to somebody's memory.
