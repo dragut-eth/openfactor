@@ -18,8 +18,9 @@ container and never syncs.
 > professional independent security audit. Do not
 > entrust it with an account you cannot recover yet. The reviews and hardware experiments so far
 > are recorded in [docs/audits](docs/audits). The threat model against the finished app is PR 17
-> and reproducible build notes are PR 18, so a released binary cannot yet be checked against this
-> source by a third party. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is planned and
+> and build provenance is PR 18: [docs/BUILD_PROVENANCE.md](docs/BUILD_PROVENANCE.md) measures how
+> far a binary can be tied to this source and states plainly that a released binary still cannot be
+> checked against it. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is planned and
 > [HANDOFF.md](HANDOFF.md) for where the work stands.
 
 ## Why another authenticator

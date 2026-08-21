@@ -85,8 +85,12 @@ paragraph previously did not.
 exist so that anyone can, and a sample of them will be put to the same three models the audit gate
 used, as closed questions rather than as a review.
 
-**It says nothing about a released binary.** Reproducible build notes and build provenance are
-future work, so a reader cannot yet verify that a build on the App Store came from this source.
+**It says nothing about a released binary.** [docs/BUILD_PROVENANCE.md](BUILD_PROVENANCE.md)
+narrows this rather than closing it: the toolchain is pinned to its build number, the compiled code
+is deterministic under it, and two builds of identical source still differ because of the linker's
+UUID and the ad-hoc signature. **Bit for bit reproducibility is not reachable**, since Apple
+re-signs and processes what it distributes. A reader still cannot verify that a build on the App
+Store came from this source.
 
 **Two controls are partial and one fails**, and none of the three is hidden in prose: the app
 switcher's brief cache, the vault key's storage location, and the absence of an update-enforcement

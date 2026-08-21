@@ -473,9 +473,17 @@ commit it was built from, and only approximately. See below.
 
 ### Attacker who publishes a modified build
 
-The public source does not prove that a distributed binary was built from it. Reproducible build
-notes are planned for PR 18 so a third party can compare a released binary with the tagged source.
-Until then, this remains an open supply-chain limitation.
+The public source does not prove that a distributed binary was built from it, and
+[docs/BUILD_PROVENANCE.md](docs/BUILD_PROVENANCE.md) now says how far that can be taken rather than
+promising more later. **Measured**: two Release builds of identical source on one machine differ,
+because the linker stamps a fresh UUID into every Mach-O and the ad-hoc signature hashes everything
+above it. The compiled code in `__TEXT` is byte identical between them. **Bit for bit
+reproducibility is not reachable here anyway**, because Apple re-signs and processes the uploaded
+binary, so a hash computed locally cannot match one computed on a device.
+
+What that document pins instead is the toolchain to its build number, the absence of third party
+code, and the checks that constrain what can ship. **It does not establish that the build on the
+App Store came from any particular commit**, and this remains an open supply-chain limitation.
 
 ### System-added menu entries
 

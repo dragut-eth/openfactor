@@ -871,7 +871,12 @@ go away. Not investigated, and it should be read from the design rationale rathe
 ### PR 18: Release preparation
 
 - App Store metadata, privacy nutrition label declaring no data collected
-- Reproducible build notes so a third party can verify the shipped binary
+- **Build provenance notes, done**: `docs/BUILD_PROVENANCE.md`. The original wording promised
+  reproducible build notes "so a third party can verify the shipped binary", and that promise was
+  not keepable. Two Release builds of identical source differ, and Apple re-signs what it
+  distributes, so a locally computed hash cannot match a device's. What the document does instead
+  is pin the toolchain to its build number, measure where the difference actually is, and state
+  plainly that a released binary still cannot be tied to a commit
 - Version tagging and changelog
 
 #### Gate A5: audit the diff, every release after this one
