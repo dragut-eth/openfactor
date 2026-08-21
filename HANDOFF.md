@@ -5,105 +5,83 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-19, on TestFlight as `dev.openfactor.app`, 1.0 (5). Work is on
-`a4-fixes`, which is 69 commits ahead of `main` and not pushed. `main` itself is 11 commits ahead
-of `origin/main` and also not pushed. **`openfactor.dev` is live**, served from `origin/main`,
-which does carry the site.
+**Last updated:** 2026-08-20, on TestFlight as `dev.openfactor.app`, 1.0 (5), with both phones
+carrying a development build from `2196b97`. Work is on `a4-fixes`, around forty commits ahead of
+`main` and **not pushed**. `main` itself is eleven commits ahead of `origin/main` and also not
+pushed. **`openfactor.dev` is live**, served from `origin/main`, which does carry the site.
 
-## Gate A4: where it stands, and what tomorrow is for
+## Gate A4: where it stands
 
-**The goal, decided 2026-08-18: no highs and no mediums left open, and every cheap low fixed.**
-Anything left standing gets written down with the reason. `docs/ROADMAP.md` carries the same
-condition as the gate's exit criterion, along with the rule that rounds continue until one comes
-back with nothing above low and no fix called incomplete.
+**No high and no medium is open anywhere.** The severity half of the goal set for A4 is met.
 
-**All 44 of round one's findings are fixed and accepted.** So is every high in the gate, and every
-medium that round one produced. What remains is what the later rounds found while reading the
-fixes.
+Two lows remain, plus three items settled by decision rather than by code:
 
-**Where the night of 2026-08-19 ended, and the problem with it.** Eleven items open, three of them
-medium, against eight open and none above low when the evening started. The codebase is safer at
-every point that was measured, and the counters are worse.
+| Item | Scope | State |
+| --- | --- | --- |
+| S1-34 | 1 | open: the test seam can express the same-slot case and no test does |
+| S4-45 | 4 | open: five false claims left in comments and documents |
+| S1-33 | 1 | **waived**: same-slot substitution in `save`, with what would reopen it |
+| S1-40 | 1 | **waived**: the disable path can move accounts before the refusal, on an arrival |
+| S1-37, S1-39 | 1 | **withdrawn**: see the correction below |
 
-**Roughly eight of the eleven open items are defects in fixes made that same day**, not findings
-about older code. S4-41 is an incomplete fix of S4-24. S4-42 was created by the S4-33 fix. S1-25
-and S1-27 are both defects in the S1-14 fix. S1-26 is an incomplete S1-19. Two of the seven false
-claims in S4-45 were written by that day's change. **That is the finding about the method, and it
-is not a finding about the reviewers.**
+| Scope | Rounds | State |
+| --- | --- | --- |
+| 1, the vault | 5 plus five verification rounds | S1-34 open |
+| 2, the Watch | 7 | closed |
+| 3, the parsers | 3 | closed |
+| 4, the boundaries | 5 plus two verification rounds | S4-45 open |
 
-Three causes, all mine and all repeatable:
+### The method changed halfway, and that is the useful part
 
-- **Volume.** Two rounds of seven findings each were fixed in one sitting per scope. Care does not
-  survive that rate.
-- **The test is written in the same pass as the fix**, so it inherits the fix's blind spot. Five
-  separate rounds of this gate have now named that exact pattern, and it keeps happening.
-- **Coupled things get changed one at a time.** S1-25 is one of two coupled Keychain attributes.
-  S4-41 is one of two coupled clock reads. S1-27 is one closure read of two. Each is a pair where
-  only half moved.
+**Review rounds were generating more work than they closed.** On 2026-08-19 the count went from
+eight open and none above low to eleven open and three medium, and **roughly eight of the eleven
+were defects in fixes made that same day.** Three causes, all repeatable: fixing seven findings per
+sitting, writing the test in the same pass as the fix so it inherits the same blind spot, and
+moving one half of a coupled pair.
 
-**No methodology has been decided.** The next session begins by choosing one, before any further
-fixing.
+**The answer was the verification round**, which asks two closed questions and forbids anything
+else: is this finding fixed, yes or no, and does the fix introduce a new high or medium. Lows are
+not reportable, so the round cannot breed. Eight have now run. **None produced a backlog**, and
+three came back two-to-one with a dissent that was specific and right each time, which is the
+argument for keeping three engines rather than dropping to one.
 
-**Scope 1's round four returned a high, found by all three engines independently, and it was
-introduced by this gate's own fix for S1-12.** Unlock tried every wrap, which was right, and then
-deleted the wraps the passphrase did not open, which rested on a false premise: opening a wrap
-proves which record that passphrase belongs to, not that the other record's vault is dead. In the
-twin state both records are usually live vaults' only recovery credentials, and deleting the
-synchronizable one propagates to every device on the account. The fix was removal: unlock deletes
-nothing, the remove operation is off the protocol entirely, and a surviving twin costs one extra
-derivation per unlock. `save` now refuses a twin pair outright, the adapter's new methods are
-under the hosted suite with the refusal mutation tested against the real Keychain, and the test
-that had asserted the deletion now asserts its absence in both directions. The same round also
-closed S1-14 (the sync flag is asked at each write, not snapshotted at launch) and S1-17 (a code
-that fails to generate re-runs the gate once, so a replaced vault shows the passphrase prompt
-rather than dashes).
+The rule this all rests on was already written in `docs/ROADMAP.md` and had simply not been
+followed: highs and mediums are fixed and accepted, lows are fixed where cheap and otherwise listed
+with a reason.
 
-**Scope 4's round four returned two mediums, and both are fixed.** One of them, S4-32, was made
-reachable by our own fix: closing the named-pipe hang turned a blocking read into a fast failure,
-and a `defer` that had never run before started running. A failed take swept the whole inbox. The
-other, S4-33, was the inbox being reached by pathname, so a substituted directory redirected the
-sweep out of the container.
+### A correction that matters more than any single finding
 
-**The severity half of the goal is met again: no high and no medium is open anywhere.** Five items are
-open, all low, and they are numbered so they can be discussed one at a time. Each scope's results
-page carries the full text of every engine's return.
+**S1-37 was not a real finding, and the work done in its name removed coverage.**
 
-| Scope | Rounds | Open | Above low | Latest page |
-| --- | --- | --- | --- | --- |
-| 1, the vault | 5 | S1-25 to S1-30 | S1-25, S1-26 | `A4-round-five-scope1-results.md` |
-| 2, the Watch | 7 | closed | none | `A4-round-seven-scope2-results.md` |
-| 3, the parsers | 3 | none | none | `A4-round-three-scope3-results.md` |
-| 4, the boundaries | 5 | S4-41 to S4-45 | S4-41 | `A4-round-five-scope4-results.md` |
+It claimed twenty six tests executed in no job and on no machine. They executed in the hosted job
+all along: the `OpenFactorTests` target's `fileSystemSynchronizedGroups` lists **both**
+`OpenFactorTests` and `Tests/OpenFactorCoreTests`, so the package test directory compiles into the
+hosted bundle, and in a simulator the Keychain probe returns true. Measured at `2196b97`, before
+the fix: twenty six executions.
 
-**Thirteen fixes are made but not yet read by anybody outside**, which is what the remaining
-rounds are for: scope 2's three from round six, scope 1's four, and scope 4's six.
+The reasoning had two verified facts and one unchecked inference. `swift test` skips them, true.
+The hosted job passes `-only-testing:OpenFactorTests`, true. **Target membership was never
+checked.**
 
-**Scope 2 is closed**, after seven rounds and twenty six accepted findings. Round seven came back
-two to one to close, the same split as round six with the same engine dissenting, so what closed
-it was an amendment to the exit rule rather than the verdict.
+Worse, `StoreUnderTest` used the same probe to choose which stores `SecretStoreTests` runs against,
+so removing it dropped **fifteen Keychain executions** from the hosted run: thirty before, fifteen
+after, thirty again now. **S1-39 was created by that change rather than discovered**, and is
+withdrawn with S1-37. The probe is restored with its purpose written down, and the CI rule added in
+S1-37's name is removed, because a rule whose stated reason is untrue should not survive on the
+grounds that it sounds prudent.
 
-**The rule had no severity floor on its second half.** "No fix called incomplete" is a condition
-three independent readers looking at prose can always fail, so it never fires. The floor now says
-a finding that lives only in a comment or a document is recorded and does not hold a scope open.
-The evidence is scope 2's own last four rounds: no code defect in any of them, every finding a
-false claim in a comment, and by round six the fixes creating the next round's findings at close
-to one for one. The gate had begun reviewing text written during the gate.
+**`E12` exists to record that a claim about a platform API is checkable, and it was checked and
+found false.** Two days later a claim about a build system was not checked and was false. The
+lesson had been filed as being about the Keychain rather than about claims.
 
-**The remedy was the comments, not the rule.** All five instances of the surviving class were
-history-narrating: which round found what, what a paragraph used to say. History is append-only
-and code is not. Scope 2's files now state what is true in the present tense and point at
-`docs/audits/` for how it came to be, and the enumerations no longer claim to be exhaustive.
-**The same narration is everywhere in the vault and parser files and was deliberately left alone**,
-because scopes 1 and 4 are still open and a large unreviewed prose diff in files three cold readers
-are about to read is the bet this gate exists to refuse. It is the first thing to do when they
-close.
+### What still has to happen before A4 closes
 
-**The four documentation items are done.** Every comment and sentence the reviews found claiming
-something the code does not do has been corrected, including a broken splice left in
-`SharedInbox`'s front page by an earlier edit of mine. Two sentences were deliberately left wrong,
-because they only become true when the code behind them is fixed: `BackupError`'s message about an
-account "saved before OpenFactor checked for this", which waits on S3-12, and `SECURITY.md`'s claim
-that the phone validates before reading the key, which waits on S2-13.
+1. Fix S1-34 and S4-45.
+2. **One final verification round carrying the correction**, so the engines learn that a finding
+   they verified as fixed was withdrawn, and why. One of them supplied the premise.
+3. **The closing opinions.** Each engine reads its own published passes in a fresh conversation and
+   writes a short opinion for `README.md`, unflattering parts included. This is the artifact the
+   gate exists to produce and it has not been asked for yet.
 
 ## What the gate has cost and returned
 
@@ -119,13 +97,21 @@ targets no test can reach, and a class sweep rather than an instance fix.
 
 **Three structural extractions came out of it**, all following the pattern `WatchProvisioningFlow`
 and `AppLockPresentation` set: `ProvisioningDesk` and `WatchInbox` for the watch exchange,
-`WrappedRecordStore` for the vault, and `ImportLimits`, `JSONSniff` and `ArrivalQueue` for the
-boundaries. `VaultTests` was found to have never run on the machine that runs the suite, which is
-what `VaultDecisionTests` exists to answer.
+`WrappedRecordStore` for the vault, and `ImportLimits`, `JSONSniff` and `BoundedFile` for the
+boundaries. `ArrivalQueue` was a fourth and was later deleted on purpose, when last-wins replaced
+the queue it implemented.
+
+`VaultTests` was found to be skipped **by `swift test`**, on the unsigned package host that has no
+Keychain, which is what `VaultDecisionTests` exists to answer. **It was not skipped everywhere**,
+and a later finding that said so was wrong; see the correction above. The precise claim is the
+useful one, and the imprecise version of it cost coverage.
+
+**Eight verification rounds have now run** on top of the review rounds, and none produced a
+backlog. That is the second finding about the method: the instrument you use decides what you get
+back, and a round that asks a closed question returns an answer rather than work.
 
 ## Still open beyond the gate
 
-- The app ships to iPad and has never been run on one.
 - The Watch exchange has been rewritten four times and last met a wrist before any of it.
 - One engine proposes a CI check tying the number in `SECURITY.md` to the constant in the code,
   because the inbox prose has trailed the inbox code by exactly one fix for three rounds running.
@@ -191,7 +177,7 @@ realistic sizes and probably wants to avoid recently used colours. And the Servi
 manual entry is `GitHub`, which puts a third-party mark on screen and into any screenshot of that
 flow, inconsistent with the generic labels used elsewhere.
 
-### The 2FAS comparison, checked against the code
+### The external feature comparison, checked against the code
 
 An externally authored feature comparison was checked rather than accepted. **Its structure is
 sound and its top recommendations are wrong**, because it wrote "not documented" wherever it
@@ -204,7 +190,7 @@ marked app-switcher protection "Yes", which is more generous than the truth, sin
 the zoom-from-home-screen cache showing issuer and name for about a sixth of a second and
 `docs/APP_LOCK.md` records that as accepted rather than fixed.
 
-What it got right, verified absent: Raivo, OTP Auth and 2FAS importers; all localization, with no
+What it got right, verified absent: importers for three other authenticators; all localization, with no
 `.lproj` and no String Catalog anywhere; individual account export and export as QR; trash and
 restore; groups; widgets and Control Center; hide-codes-until-tapped as a setting.
 

@@ -83,7 +83,7 @@ reassignment. The store field covers the published app and names who publishes i
 reconcile between them, but the privacy policy is a statement by that same publishing entity and
 should name it, which the draft below does not yet do.
 
-**The subtitle was chosen against the competition rather than in the abstract.** Five listings
+**The subtitle was chosen against the competition rather than in the abstract.** Four listings
 were read for what they actually do with the field:
 
 | App | Name | Subtitle |
@@ -92,16 +92,15 @@ were read for what they actually do with the field:
 | Microsoft Authenticator | Microsoft Authenticator | Protects your online identity |
 | Ente Auth | Ente Auth - 2FA Authenticator | Secure sync across devices |
 | Raivo | Raivo - 2FA Authenticator app | tOTP, OTP & MFA Authentication |
-| 2FAS | 2FA Authenticator (2FAS) | #1 Rated 2FA Authenticator |
 
-Two things follow. **The category word lives in the name for most of them**, which is why Ente,
-Raivo and 2FAS can spend the subtitle on something else, and it is a disadvantage we carry:
+Two things follow. **The category word lives in the name for most of them**, which is why Ente and
+Raivo can spend the subtitle on something else, and it is a disadvantage we carry:
 `OpenFactor` is indexed as a brand and nothing more, so the subtitle is the only high weight
 field that can say what the app is. And **"2FA" is the term people type**. The polished listings
 write it out in prose, but the searches are on the abbreviation.
 
 So the subtitle does both jobs in 27 characters: `2FA` is what it is, and `Open source` and
-`no account` are the two things none of those five claim. It is not keyword duplication, because
+`no account` are the two things none of those four claim. It is not keyword duplication, because
 Apple weights the subtitle above the keyword field, so a term promoted out of keywords into the
 subtitle ranks better than the same term sitting in keywords alone.
 
