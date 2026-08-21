@@ -392,6 +392,26 @@ accepted rather than fixed and documented in full: a second iOS snapshot cache, 
 behind the home screen zoom, briefly shows the previous screen and is not reachable from
 the app. The switcher card stays blank.
 
+### PR 15c: what the app says about locking
+
+**Four pieces of text and nothing executable.** No key wrapping, no change to what App Lock does,
+no change to when the snapshot cover is raised or what it looks like. The design and every agreed
+string are in `docs/APP_LOCK.md`.
+
+**Why it exists.** `docs/audits/E/E14-the-system-lock-and-the-switcher.md` measured that iOS's
+per-app Face ID lock removes the app switcher exposure completely and from the first frame, which
+this app's own cover cannot do. **The app had never once mentioned that lock exists.** So the most
+useful thing available here is to say so: once when the first account is added, and again whenever
+App Lock is switched on.
+
+**What it does not do, stated because it would be easy to imply otherwise.** It closes no open
+finding. Not the switcher cache, not the unlocked-device posture that all three gate A4 reviewers
+reached, not either MASVS partial, not either waiver. **It changes the odds that somebody ends up
+in a safer configuration and nothing else**, and the app cannot even tell whether they acted. The
+security work in this area is the Enclave wrap costed under MASVS-CRYPTO-2, and it is not this.
+
+Status: **specified, not built.**
+
 ### PR 16: Encrypted export and import
 
 *Done and merged. The format document is `docs/BACKUP_FORMAT.md`, the audits are

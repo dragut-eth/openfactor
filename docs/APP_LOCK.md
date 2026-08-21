@@ -448,3 +448,187 @@ including the failures; the orientation scar and the frame leak are from PR 15's
 record. The risk in this PR is regression, not the unknown, which is why the required
 sequences ship as tests before the interface work starts and the checklist runs once at the
 end.
+
+## PR 15c: what the app says about locking
+
+**Specified before implementation, and agreed line by line.** PR 15b's entry records what happened
+the last time this area was changed without a design. Every string below was reviewed and revised
+by Xavier before anything was built.
+
+**Normative. Nothing is built until the text below is agreed**, because the text is most of what
+this pull request is. PR 15b's entry records what happened the last time this area was built
+without a design: three defects, a regressed snapshot, reverted the same day.
+
+#### What this changes, and what it does not
+
+**Nothing executable changes.** No key wrapping, no change to the vault, no change to what App Lock
+does when it is on, no change to when the snapshot cover is raised, and no change to what it looks
+like.
+
+**This pull request is four pieces of text**, and the whole of it is that somebody is told the
+choice exists rather than left to find it in Settings.
+
+#### The finding this answers
+
+**All three reviewers of gate A4 landed on the same posture**, by three different routes: the lock
+is off unless you turn it on, and somebody holding your unlocked phone sees your codes.
+
+**E14 then measured something that changes the honest answer.** iOS's per-app Face ID lock removes
+the app switcher exposure completely and from the first frame, which this app's cover cannot do,
+because a cover is raised in reaction to a lifecycle event while the system replaces the snapshot
+outright. **So the most useful thing this app can do about that attacker is say the system lock
+exists.** That is a measurement, not a preference, and it is why two of the four texts below
+recommend something this app does not own.
+
+#### The cover stays unconditional, and that was not the first answer
+
+**It is raised exactly as it is today**, for every departure, whatever anybody has turned on. No new
+state, no preference, nothing to record.
+
+**A version of this design tied the cover to a choice**, so that somebody using the iOS lock would
+not get two covers. It was measured, then argued, then dropped. **The record is kept because the
+next reviewer will reach for the same idea.**
+
+**What the measurement found.** The iOS lock does **not** re-arm on a switcher peek: swiping up and
+back without leaving the app keeps the card live. In a recording made on 21 August the launch
+frames carry Apple's placeholder with its text, while the switcher frames carry a plain black card
+with none, which is this app's own cover and not the system's. **The first version of the rule
+would have opened that hole itself.**
+
+**What the argument found, and it went the other way.** Reaching that window needs somebody watching
+during roughly half a second of transit, and **the same person, one moment earlier, was watching ten
+to twenty seconds of the account list at full size**, which this app does not cover and cannot: an
+authenticator that hides codes from the person using it is not one. So the transit is a smaller
+instance of an exposure the design already accepts on every use, and dropping the cover there would
+have been defensible.
+
+**Why it is kept anyway.** Acting on the iOS lock means recording a claim **no API can verify**, and
+that claim goes stale silently the moment somebody turns the lock off or replaces a phone. **The
+simplification was not worth introducing the only unverifiable state in the design**, and keeping
+the cover removes a settings row, a consent flow, and a staleness problem along with it.
+
+**What would reopen it.** An API that lets an app observe the per-app lock, which would make the
+rule rest on a fact rather than a claim.
+
+---
+
+### The text, agreed
+
+**Shorter than the first draft**, because the app no longer acts on any of these answers. Nothing
+here records a preference or changes behaviour; it is advice, and advice can be brief.
+
+**Every string is final unless something in the app contradicts it.** The place that will is length
+on a small screen at an accessibility type size, which is worth checking before these are called
+done.
+
+#### 1. The Settings footer, under the App Lock toggle
+
+> **App Lock**
+>
+> App Lock asks for Face ID, Touch ID, or your passcode before showing codes. Your accounts are
+> encrypted whether App Lock is on or off.
+>
+> For stronger protection, iOS can lock OpenFactor before it opens. Hold the OpenFactor icon on the
+> Home Screen and choose Require Face ID.
+
+**When the device has no passcode**, replacing the second paragraph:
+
+> App Lock requires a device passcode. Set one in iOS Settings first.
+
+**An earlier draft added "it is a gate in front of the screen, not encryption".** It was cut as
+redundant: the first sentence says what App Lock does and the second says what it is not, and a
+third saying the same thing in security language reads as documentation rather than as a footer.
+
+#### 2. Popup one, when the first account is added
+
+**Not at first launch on an empty list.** With nothing stored the sentence is abstract, and a dialog
+at that moment is dismissed without being read. It fires the first time this app holds something
+worth the question, and once only.
+
+> **Protect your codes**
+>
+> Your accounts are encrypted, but anyone using your unlocked phone can see your codes.
+>
+> For stronger protection, iOS can lock OpenFactor before it opens. Or you can use App Lock.
+
+Buttons: **Show Me How**, **Turn On App Lock**, **Not Now**
+
+**The title says what the dialog is for rather than what is wrong.** An earlier draft opened with
+the exposure itself, which is accurate and reads as an alarm. The fact still appears, one line
+down, where it explains the choice instead of announcing a problem.
+
+**"Not Now" is a real answer and nothing is recorded.** Choosing it changes nothing about how the
+app behaves.
+
+#### 3. Popup two, every time App Lock is switched on in Settings
+
+**Not gated to the first time.** It is a recommendation attached to an action rather than an
+onboarding step, and somebody turning the lock on is exactly somebody who cares about this.
+
+> **For stronger protection**
+>
+> App Lock protects your codes after OpenFactor opens. iOS can also lock OpenFactor before it
+> opens.
+
+Buttons: **Show Me How**, **Done**
+
+**The before and after distinction is the whole message**, and it is the shortest true statement of
+what the two locks do differently.
+
+**Neither button changes anything.** App Lock stays on down both paths, so the dismissal is "Done"
+rather than anything implying a choice. An earlier draft said "Turn On App Lock", which is wrong on
+a dialog that only appears because they just did.
+
+#### 4. The instructions sheet, shown by both "Show Me How" buttons
+
+> **Lock OpenFactor with iOS**
+>
+> 1. Go to the Home Screen and hold the OpenFactor icon.
+> 2. Choose **Require Face ID**.
+>
+> iOS will ask for Face ID or your passcode before OpenFactor opens.
+
+Button: **Done**
+
+**No "I've done it".** The app records nothing and acts on nothing, so there is nothing to confirm.
+
+**One sheet, one button label.** Both popups reach this by a button reading **Show Me How**, because
+two labels for one destination is the kind of drift that took three passes to clean out of this
+feature's documentation.
+
+### What must be proven before implementation
+
+**Honoured before a line is written**, which `docs/VAULT.md` records not happening once already.
+
+1. ~~**Where the double cover actually shows.**~~ **Run on 21 August, and it changed the design.**
+   The launch path carries Apple's placeholder only, so this app's cover never appears there. The
+   switcher carries this app's cover, because the iOS lock does not re-arm on a peek. That result
+   is what the section above is built on.
+2. **That the ten sequences in the manual checklist still pass**, unchanged. This pull request must
+   not regress PR 15b. **Only that**, because nothing else here is executable.
+
+### Out of scope, named rather than forgotten
+
+**The vault key.** Neither lock changes that it is readable by the process whenever the device is
+unlocked. That is the separate finding from gate A4, its remedy is costed in `docs/MASVS.md` under
+MASVS-CRYPTO-2, and it is not this pull request.
+
+**The watch**, which holds its own copy of the key after one tap and has no equivalent gate.
+
+**The peer comparison.** Whether other authenticators leak the way this one does with no lock set is
+still unmeasured, and the argument about it stays open in `docs/APP_LOCK.md`.
+
+**The cover's appearance, which is where this pull request started.** The black rectangle reads as
+a broken app rather than a protected one, and it cannot be picked out of the switcher by looking.
+Both are real and both stay. **Painting anything on that window means touching the one thing in
+this area that already works**, in a feature whose last unplanned change shipped three defects and
+was reverted the same day, and the whole point of keeping the cover unconditional was to avoid
+introducing a problem in exchange for tidiness.
+
+**So the complaint that opened this design is the one thing it does not fix**, and that is a
+decision rather than an oversight. What the design found on the way is worth more: that the iOS
+lock does not re-arm on a peek, that it removes the exposure completely when it does, and that the
+app had never once told anybody either fact.
+
+**App Lock's default.** It stays off. PR 15 gave three reasons and none of them has changed; what
+changes here is that the choice is surfaced once rather than left buried in Settings.
