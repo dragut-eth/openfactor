@@ -5,10 +5,15 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-21, on TestFlight as `dev.openfactor.app`, 1.0 (5), with both phones
-carrying a development build from `2196b97`. Work is on `a4-fixes`, around fifty commits ahead of
-`main` and **not pushed**. `main` itself is eleven commits ahead of `origin/main` and also not
-pushed. **`openfactor.dev` is live**, served from `origin/main`, which does carry the site.
+**Last updated:** 2026-08-21, on TestFlight as `dev.openfactor.app`, 1.0 (5). The iPhone 15 Pro
+carries a development build of PR 15c installed by `devicectl`. **Everything is on `main` and
+pushed**, which it had not been for 134 commits: `a4-fixes` was fast forwarded into `main` and the
+branch deleted. **`openfactor.dev` is live**, served from `origin/main`, and this push added
+`/.well-known/security.txt` to it.
+
+**Gate A4 is concluded and public**, including both halves of the closing round. **CI is green on
+`main` for the first time since at least 18 August**, which took fixing three checks that had never
+completed. **PR 15c is built and committed**, with one manual checklist left to run on a phone.
 
 ## Gate A4: where it stands
 
@@ -201,6 +206,38 @@ a prompt asking to release the key to their watch would approve it.
 reopening condition fired when the six digit string was removed and then stood through round after
 round with nobody noticing.
 
+## After the gate: 21 August, in one place
+
+**E14, and it goes against this app.** `docs/audits/E/E14-the-system-lock-and-the-switcher.md`
+measured that iOS's per-app Face ID lock removes the app switcher exposure **completely and from
+the first frame**, which this app's own cover cannot do, because a cover is raised in reaction to a
+lifecycle event and the system replaces the snapshot outright. Sampled at sixty frames a second
+across the transition, because the exposure being looked for spans about ten frames at that rate.
+
+**It was run because the project had asserted it twice and measured it zero times**, once by the
+maintainer and once by a reviewer agreeing. **It is also the only probe in that folder anybody can
+reproduce**, in about two minutes, with no second app and no second device.
+
+**Three CI checks had never once completed.** The Style job runs on `ubuntu-latest` and three of its
+steps read plists with `plutil`, which is macOS only. One was added this week and two predate it.
+**"The share extension cannot reach the Keychain" is the serious one**: its own comment says the
+extension's security claim is what it cannot do, that an absence is invisible in review, and that it
+is asserted by a check rather than promised in a comment. It was promised in a comment. All three
+now use `plistlib`, and the entitlement was correct the whole time, which is luck rather than
+process.
+
+**The audit folder has folders and an index.** Seventy five files at one level became four gate
+conclusions, the A4 register and a `README.md`, over `A2/`, `A3/`, `A4/`, `E/` and `V/`. Files were
+moved and not renamed, because fifty six of roughly ninety references are A4 files citing each other
+by bare name and those keep resolving when the files travel together. Every reference was rewritten
+and then verified by resolving it against the filesystem.
+
+**PR 15c is built.** Four pieces of text and one stored flag, specified line by line before anything
+was written and revised again on the device. Two bugs were found on hardware: a second `.sheet` on a
+sibling section of one `Form`, which `SettingsView`'s own header comment predicts exactly, and an
+alert that ended the question when somebody asked for help. **It closes no open finding**, and the
+roadmap entry says so in its own words.
+
 ## What the gate has cost and returned
 
 Round one found 44 items. Reviewing those fixes produced roughly 40 more; reviewing those produced
@@ -230,6 +267,14 @@ back, and a round that asks a closed question returns an answer rather than work
 
 ## Still open beyond the gate
 
+- **PR 15c's manual checklist**, the ten sequences from PR 15b, unchanged. It is the pull request's
+  only prove-list item and it needs a phone. Until it runs, 15c is committed and unverified.
+- **The Enclave wrap with user presence**, costed under `MASVS-CRYPTO-2`. **The only remaining item
+  that closes a real finding**, the one all three A4 reviewers reached by three different routes.
+  Not designed, not built, and it needs a written spec with a prove list before a line of it.
+- **The peer recording.** Whether other iOS authenticators leak the same app switcher window. Two
+  opposite claims are on the record with no evidence behind either, and settling it needs one phone
+  and an afternoon. The cheapest open question this project has.
 - The Watch exchange has been rewritten four times and last met a wrist before any of it.
 - One engine proposes a CI check tying the number in `SECURITY.md` to the constant in the code,
   because the inbox prose has trailed the inbox code by exactly one fix for three rounds running.
