@@ -210,6 +210,8 @@ they do not soften the warning above.
 - [docs/PROJECT.md](docs/PROJECT.md), what is in the Xcode project, in plain language
 - [docs/audits/](docs/audits/), findings from each review gate
 - [SECURITY.md](SECURITY.md), threat model and how to report a vulnerability
+- [docs/MASVS.md](docs/MASVS.md), a self-assessment against OWASP MASVS v2.1.0, published whole,
+  including the two partials, the one fail, and what is deliberately out of scope
 - [CONTRIBUTING.md](CONTRIBUTING.md), how changes get reviewed
 - [site/README.md](site/README.md), the pages at [openfactor.dev](https://openfactor.dev) and the
   rule they are written under

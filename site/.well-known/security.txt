@@ -1,0 +1,8 @@
+# OpenFactor. RFC 9116.
+# Reports go to the private channel SECURITY.md names, which is the only one.
+
+Contact: https://github.com/dragut-eth/openfactor/security/advisories/new
+Expires: 2027-08-21T00:00:00.000Z
+Preferred-Languages: en, fr
+Canonical: https://openfactor.dev/.well-known/security.txt
+Policy: https://github.com/dragut-eth/openfactor/blob/main/SECURITY.md

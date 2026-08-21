@@ -44,6 +44,16 @@ Re-adding a dark palette means revisiting the icon at the same time.
   either way. Uncomment the section once they are in place.
 - **A copy pass**, which should begin by deciding who the page is for.
 
+## security.txt
+
+`.well-known/security.txt` is RFC 9116, and it points at the GitHub Security Advisories channel
+`SECURITY.md` already names rather than introducing a second one: security reporting stays on one
+good channel.
+
+**`Expires` is required by the RFC and is a real deadline**, not decoration. A file past its expiry
+is worse than none, because it advertises a channel nobody has confirmed is still watched. The date
+here is 2027-08-21 and moving it is a deliberate act of saying the channel is still live.
+
 ## Deploying
 
 Cloudflare Pages, building from `main`, build output directory `site`, no build command. Nothing
