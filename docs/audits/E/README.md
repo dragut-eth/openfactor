@@ -25,6 +25,7 @@ hardware".
 | **E7 item 4**, the watch exchange and its transcript binding | `Tests/OpenFactorCoreTests/WatchProvisioningTests.swift`. The negative controls are tests, and the construction is now pinned to a fixed vector, so a changed label, salt, layout or output length reddens rather than round trips |
 | **E7 item 5**, what an opaque item costs queryability | Never a hardware question. It asks what the code puts in a Keychain query, which is visible in `KeychainSecretStore` |
 | **E1's defence**, what a sibling actually finds in a stored item | `OpenFactorTests/KeychainSecretStoreTests.swift`, `theStoredBytesAreOpaque`. Added because of this objection. See below |
+| **E14**, whether the system per-app lock removes the app switcher exposure | Not a test, but **the one probe here anybody can rerun**: no second app, no second device, no signing. Two minutes on any iPhone. See below |
 
 ### The one added because of the objection
 
