@@ -55,6 +55,7 @@ one device in one install.
 | [E12](E/E12-a-compare-and-swap-token.md) | **Yes**, `kSecAttrGeneric` can carry a compare and swap token, which disproved a reviewer's claim that no shape of the code could close a window |
 | [E13](E/E13-neither-phone-was-stranded.md) | Neither device held a record with a split pair |
 | [E14](E/E14-the-system-lock-and-the-switcher.md) | **Yes**, iOS's per-app Face ID lock removes the app switcher exposure completely, from the first frame. The only probe here anybody can reproduce in two minutes |
+| [E15](E/E15-the-enclave-and-a-sibling.md) | **Yes**, a same team sibling can find and use another app's Secure Enclave key and read the plaintext. User presence only adds a prompt. This is why the Enclave wrap was declined |
 
 **E2 and E3 do not exist, and nothing in this repository says why.** They were never committed and
 never mentioned; the series jumps from E1, added alongside the vault design on 16 August, straight

@@ -58,6 +58,7 @@ mistaken for either a broken search or a corrupted item.
 | **E10** | A device holding the wrong key notices, asks and recovers | **Two devices on one Apple Account**, one of which replaced the vault after the other stopped watching |
 | **E11** | A link arriving over a shared image | **The share extension and the app as separate processes**, with a real share sheet delivering a real attachment |
 | **E13** | Whether either device held a record with a split pair | **Two devices**, and a question about their existing contents rather than about anything a test could set up |
+| **E15** | Whether a same team sibling can use another app's Enclave key | **A second signed app** declaring the victim's access group, plus a control. Built and run on 21 August; the apps were throwaway and are gone |
 
 ## The one that is measured as unconvertible
 
