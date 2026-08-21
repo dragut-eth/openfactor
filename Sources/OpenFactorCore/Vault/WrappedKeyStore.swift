@@ -426,6 +426,8 @@ public struct WrappedKeyStore: Sendable {
         // threw it here.
         guard try countingBothFlags() <= 1 else { throw .twinnedRecord }
 
+        beforeWrite?()
+
         var find = query()
         find[kSecAttrSynchronizable as String] = !shouldSync
 
@@ -441,6 +443,18 @@ public struct WrappedKeyStore: Sendable {
         // Nothing to convert: no vault on this device, or it is already on the right side.
         // Idempotent on purpose, so a partial failure can simply be run again.
         if status == errSecItemNotFound { return false }
+
+        // **A collision here is the twin case, whenever the pair arrived.** The guard above counts
+        // and this update happens afterwards, so a record landing between them is invisible to
+        // that count. Nothing else can collide at this update: it moves one record into the
+        // opposite slot, and the only way that slot is occupied is by a second record. So the
+        // collision is evidence of a pair rather than a separate kind of failure, and reporting
+        // it as `.duplicate` sent a person the retry advice this method exists to stop.
+        //
+        // The race itself is not closed and cannot be by this shape, because a count and an
+        // update are two calls. What is closed is answering it with the wrong name.
+        if status == errSecDuplicateItem { throw .twinnedRecord }
+
         guard status == errSecSuccess else { throw error(for: status) }
         return true
     }

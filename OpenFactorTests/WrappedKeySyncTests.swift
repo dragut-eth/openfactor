@@ -396,6 +396,43 @@ struct WrappedKeySyncTests {
         #expect(try store.candidates().count == 2, "and neither record moved")
     }
 
+    /// **A collision at the move is the twin case, whenever the pair arrived.** The guard counts
+    /// and the update happens afterwards, so a record landing between them is invisible to the
+    /// count: the update then collides, `SecItemUpdate` reports `errSecDuplicateItem`, and that
+    /// used to surface as `.duplicate`, which Settings renders as advice to try again. The retry
+    /// advice this finding removed came back in exactly that window.
+    ///
+    /// The race is not closed here and cannot be, since a count and an update are two calls. What
+    /// is closed is the misnaming: nothing else can collide at this update, so the collision is
+    /// evidence of a pair by construction.
+    ///
+    /// The seam plants the twin between the count and the update. Map the collision back to
+    /// `.duplicate` and this goes red.
+    @Test("A twin arriving after the count is still reported as a twin")
+    func aTwinArrivingAfterTheCountIsStillATwin() throws {
+        let service = "app.openfactor.tests.key.\(UUID().uuidString)"
+        let plain = WrappedKeyStore(service: service)
+        defer { deleteBothFlags(of: plain) }
+        try plain.save(Data("this device's record".utf8))
+
+        let racing = WrappedKeyStore(
+            service: service,
+            beforeWrite: {
+                let theirs: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: service,
+                    kSecAttrAccount as String: "wrapped",
+                    kSecUseDataProtectionKeychain as String: true,
+                    kSecAttrSynchronizable as String: true,
+                    kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+                    kSecValueData as String: Data("the other vault's record".utf8),
+                ]
+                SecItemAdd(theirs as CFDictionary, nil)
+            })
+
+        #expect(throws: SecretStoreError.twinnedRecord) { _ = try racing.setSynchronizable(true) }
+    }
+
     /// **The refusal must not cost the repair.** A stranded record can be one of a twin pair, and
     /// the class repair is per record and correct under twins even though the move is not. It runs
     /// before the refusal, so the pair is left better than it was found even on the call that
