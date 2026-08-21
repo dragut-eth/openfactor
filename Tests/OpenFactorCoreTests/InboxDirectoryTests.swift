@@ -92,7 +92,9 @@ struct InboxDirectoryTests {
     }
 
     /// A second listing must see the directory again from the start. `fdopendir` consumes the
-    /// descriptor it is handed and `closedir` closes it, which is why it is given a duplicate.
+    /// descriptor it is handed and `closedir` closes it, so it is given a fresh opening rather
+    /// than this type's own; a `dup` would not do, because it shares the file offset and the
+    /// second listing would start where the first stopped.
     @Test("Listing twice gives the same answer twice")
     func listingIsRepeatable() throws {
         let directory = makeDirectory()
