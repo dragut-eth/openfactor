@@ -243,6 +243,17 @@ shared again" is customary rather than guaranteed: a one-time display, or an Air
 that has left, cannot be reproduced. The unrecoverable case is a pending import, never an account,
 and it is written down here rather than described as impossible.
 
+**Added afterwards: the dissent did not go away, and this section should not read as though it
+did.** ChatGPT restated the objection in round five and has restated it since, on the same ground
+each time: any app can supply the replacing URL, so visibility and destruction should not be one
+decision. `A4-round-five-scope4-results.md` carries that in its own words, alongside its
+acceptance that the behaviour is now honestly documented as a product trade rather than a false
+implementation claim. Grok declined to relitigate and Fable found no unrecoverable loss at all.
+
+**The rejection stands, and it stands as a decision rather than as a consensus.** One reviewer
+still disagrees with it, and a reader deciding how much weight to give this section deserves to
+know that from the section itself rather than from a later file.
+
 ### The rest of the class, fixed as one shape
 
 **`sweep` is now two operations because it was always two ideas.** `sweepStale` collects garbage

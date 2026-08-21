@@ -86,6 +86,26 @@ account re-encrypted under it, a new passphrase, and every other device re-provi
 1 does not implement that path.** It is stated here so that nobody offers a passphrase change as
 though it were one.
 
+#### Before a passphrase change ships, S1-33 must be revisited
+
+**This note is here rather than only in the audit folder, because this is where whoever builds
+that screen will be reading.** S1-33 is a waived finding: iCloud can replace the bytes of the
+wrapped record at the same primary key in the gap between `save` reading it and writing it.
+It was waived on one ground above all others, that `replacePassphrase(with:)` is called by
+nothing but tests, so the window it needs cannot be reached by anybody using the app.
+**Shipping an interface for it removes that ground**, and the waiver is void the day it does.
+
+A mechanism to close it exists and was measured: `docs/audits/E12-a-compare-and-swap-token.md`
+shows `kSecAttrGeneric` carrying a compare and swap token, matched and replaced by the same
+update. It rests on two things nobody has measured, whether iCloud carries the token between
+devices unchanged and whether every writer maintains it. The full reasoning, and what else would
+reopen the decision, is in `docs/audits/A4-verify-S1-31-results.md`.
+
+**A reopening condition kept only in an audit file is a condition nobody re-reads.** That has
+already happened once in this project, to the scheduling note in
+`docs/audits/E5-watchconnectivity-routing.md`, which named its own trigger and then stood
+through round after round with nobody noticing the trigger had fired.
+
 ### The vault key file
 
 `Application Support`, never `Caches` or `tmp`, which iOS purges under storage pressure with no

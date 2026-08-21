@@ -287,6 +287,19 @@ Sync is a request, not proof of delivery. Marking an item synchronizable offers 
 Keychain. There is no public API that tells the app whether iCloud Keychain is enabled or whether
 a particular item has reached another device, so the interface does not claim either.
 
+**Sync off is the smaller surface, and this document says so rather than leaving a reader to
+infer it.** Every finding this project waived rather than fixed in the vault review lives on the
+synchronized recovery record: a same slot substitution that iCloud can perform between a read and
+a write, and a conversion span during which the sync switch can overstate where accounts are.
+Both are recorded with what would reopen them, and both survive **on purpose** rather than
+unnoticed. Neither reaches the on device wrapping, which carries no such window.
+
+**So the least surface OpenFactor can offer is a single phone with sync off**, plus an encrypted
+export kept somewhere this app does not touch. Sync exists because for most people the likelier
+harm by a wide margin is losing every account with a lost phone, not an attacker landing inside a
+microsecond window. **That is a trade offered deliberately, not the safer of the two halves
+presented as if it were free.**
+
 ### The Watch is another device holding the vault key
 
 **Implemented in PR 16d, screens included, and exercised on hardware.** The successful path, a

@@ -171,6 +171,12 @@ account you cannot recover yet.**
 That warning stays until it stops being true. A security tool that presents model reviews as a
 professional audit would be worse than one that says nothing.
 
+**And do not make any authenticator your only copy, this one included.** OpenFactor ships an
+encrypted export for exactly this reason: generate one, **check that it imports**, and keep it
+somewhere this app does not touch. An untested backup is not a backup. Whatever its design, an
+authenticator that becomes the single holder of every second factor you own is a single point of
+failure, and none of the review gates below change that arithmetic.
+
 The project nevertheless reviews security decisions before and after implementation. Findings
 are published whether or not they are flattering, and hardware-dependent claims are measured on
 real devices where possible. These are engineering review gates, not substitutes for an audit.

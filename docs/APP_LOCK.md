@@ -17,6 +17,15 @@ the device Keychain whether the lock is on or off, and the scenario the lock def
 exactly one: someone holding the phone while it is unlocked. `SECURITY.md` words this
 carefully and nothing here implies more.
 
+**The default configuration is the weakest one, and the two halves of that belong in one
+sentence.** The lock is **off unless somebody turns it on**, and the app switcher can still show
+an issuer and an account name for roughly a sixth of a second on the zoom out from the home
+screen, measured in PR 15b and **accepted rather than fixed**. Neither is a defect alone: the
+lock is not the confidentiality boundary, and the cache is brief and carries no code. Together
+they mean the posture somebody gets without touching a setting is the one with the least in
+front of it. A person deciding whether to turn the lock on is entitled to read that as one
+thought instead of assembling it from two documents.
+
 ## The goal
 
 Stated by Xavier as the ideal, and adopted as requirements:
