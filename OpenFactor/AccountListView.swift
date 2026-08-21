@@ -23,6 +23,23 @@ struct AccountListView: View {
     }
     @State private var isShowingSettings = false
 
+    /// The one-time advice about locking, and the sheet it opens.
+    ///
+    /// **Fired when the first account lands, not at first launch.** With nothing stored the
+    /// sentence is abstract, there are no codes to protect, and a dialog at that moment is
+    /// dismissed without being read. See `docs/APP_LOCK.md`.
+    @AppStorage(PreferenceKey.hasOfferedLockAdvice) private var hasOfferedLockAdvice = false
+    @AppStorage(PreferenceKey.appLockEnabled) private var appLockEnabled = false
+    @State private var offeringLockAdvice = false
+    @State private var showingSystemLockSteps = false
+
+    /// Whether the instructions have been read during this offer, which changes what the
+    /// dialog's buttons say when it returns.
+    ///
+    /// **Offering "Show Me How" twice is the tell that nobody was listening.** Somebody who has
+    /// just read the steps needs a way to say they are finished, not the same invitation again.
+    @State private var hasReadLockSteps = false
+
     /// What arrived from outside the app, if anything.
     ///
     /// **Owned by the app, not by this view.** Collecting from the share extension's inbox is
@@ -149,6 +166,55 @@ struct AccountListView: View {
                 }
                 .toolbar { toolbar }
                 .onChange(of: arrival?.id) { arrivalChanged() }
+                // **Once, and only once there is something worth protecting.** `initial: true`
+                // so a device that already has accounts and has never been asked still is:
+                // the question is about what the app holds, not about when it was installed.
+                .onChange(of: model.rows.isEmpty, initial: true) { _, isEmpty in
+                    guard !isEmpty, !hasOfferedLockAdvice else { return }
+                    hasOfferedLockAdvice = true
+                    offeringLockAdvice = true
+                }
+                .alert("Protect your codes", isPresented: $offeringLockAdvice) {
+                    if hasReadLockSteps {
+                        // **Closes, and records nothing.** It is an acknowledgement rather than
+                        // a claim: the app cannot tell whether the iOS lock was turned on and
+                        // does not store an answer either way. It replaces "Not Now" rather
+                        // than joining it, because two buttons that do the same thing with
+                        // different words are two buttons.
+                        Button("I Did It", role: .cancel) {}
+                    } else {
+                        Button("Show Me How") { showingSystemLockSteps = true }
+                    }
+                    // **Only offered where it can be honoured.** A device with no passcode
+                    // cannot authenticate, so the settings toggle refuses there, and a button
+                    // here that opened Settings to a switch that will not move would be a
+                    // label promising something the app cannot do.
+                    if AppLockAvailability.canAuthenticate {
+                        Button("Turn On App Lock") { appLockEnabled = true }
+                    }
+                    if !hasReadLockSteps {
+                        // Nothing is recorded about which button was pressed. The app acts on
+                        // none of them, and the stored flag says only that the question was
+                        // asked.
+                        Button("Not Now", role: .cancel) {}
+                    }
+                } message: {
+                    Text(
+                        "Your accounts are encrypted, but anyone using your unlocked phone "
+                            + "can see your codes.\n\nFor stronger protection, iOS can lock "
+                            + "OpenFactor before it opens. Or you can use App Lock.")
+                }
+                // **The choice comes back when the instructions close.** Tapping "Show Me How"
+                // dismisses the alert, because every alert button does, so closing the sheet
+                // used to leave nothing behind: the person had asked for help, got it, and
+                // landed on the list with no way to tell whether anything had been turned on.
+                // Asking for help is not answering the question, so the question returns.
+                .sheet(isPresented: $showingSystemLockSteps) {
+                    hasReadLockSteps = true
+                    offeringLockAdvice = true
+                } content: {
+                    SystemLockAdvice()
+                }
                 .sheet(isPresented: isAdding) {
                     if let addSession {
                         AddAccountView(session: addSession) { model.load(at: Date()) }

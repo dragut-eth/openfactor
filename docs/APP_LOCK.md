@@ -461,12 +461,19 @@ without a design: three defects, a regressed snapshot, reverted the same day.
 
 #### What this changes, and what it does not
 
-**Nothing executable changes.** No key wrapping, no change to the vault, no change to what App Lock
-does when it is on, no change to when the snapshot cover is raised, and no change to what it looks
-like.
+**No security mechanism changes.** No key wrapping, no change to the vault, no change to what App
+Lock does when it is on, no change to when the snapshot cover is raised, and no change to what it
+looks like.
 
 **This pull request is four pieces of text**, and the whole of it is that somebody is told the
 choice exists rather than left to find it in Settings.
+
+**One piece of state, named because an earlier draft of this section claimed there was none.**
+Popup one fires once, which means remembering that it has fired. That is a stored flag and it
+should be called one. **It is a different kind of thing from the claim this design refused to
+store**: this app sets it, this app reads it, and it cannot quietly become false the way a
+self-reported iOS lock would. Nothing else is persisted, and nothing at all is recorded about which
+button anybody pressed.
 
 #### The finding this answers
 
@@ -553,12 +560,19 @@ worth the question, and once only.
 
 Buttons: **Show Me How**, **Turn On App Lock**, **Not Now**
 
+**"Turn On App Lock" turns App Lock on**, rather than opening Settings to a switch. A button that
+named an action and then delivered a screen would be the kind of label this project spends its
+effort avoiding. **It is offered only where it can be honoured**: a device with no passcode cannot
+authenticate, the settings toggle already refuses there, and on such a device this button is
+absent rather than dead.
+
 **The title says what the dialog is for rather than what is wrong.** An earlier draft opened with
 the exposure itself, which is accurate and reads as an alarm. The fact still appears, one line
 down, where it explains the choice instead of announcing a problem.
 
-**"Not Now" is a real answer and nothing is recorded.** Choosing it changes nothing about how the
-app behaves.
+**"Not Now" is a real answer and nothing is recorded about it.** Choosing it changes nothing about
+how the app behaves. The only thing stored is that this dialog has been shown at all, which is the
+same whichever button is pressed.
 
 #### 3. Popup two, every time App Lock is switched on in Settings
 
@@ -591,6 +605,27 @@ a dialog that only appears because they just did.
 Button: **Done**
 
 **No "I've done it".** The app records nothing and acts on nothing, so there is nothing to confirm.
+
+**Reached through the settings screen's existing single sheet, never a second `.sheet` modifier.**
+Two presentations on sibling sections of one `Form` tear each other down: the second takes the
+settings sheet with it and drops the person back on the account list. That is recorded at the top
+of `SettingsView` because it has happened before, and it happened again in the first build of this
+section, which is why it is repeated here where somebody adding a third dialog will meet it.
+
+**From popup one, closing this sheet brings the question back.** Every alert button dismisses its
+alert, so "Show Me How" ends the dialog, and without this the person had asked for help, received
+it, and landed on the list unable to tell whether anything had been switched on. **Asking for help
+is not answering the question.**
+
+**And the question comes back wearing different buttons**, because offering "Show Me How" to
+somebody who has just read it is the tell that nobody was listening:
+
+> Buttons on return: **I Did It**, **Turn On App Lock**
+
+**"I Did It" closes and records nothing.** It is an acknowledgement rather than a claim: this app
+cannot tell whether the iOS lock was turned on and stores no answer either way. **It replaces "Not
+Now" rather than joining it**, because two buttons that do the same thing in different words are
+two buttons.
 
 **One sheet, one button label.** Both popups reach this by a button reading **Show Me How**, because
 two labels for one destination is the kind of drift that took three passes to clean out of this

@@ -89,6 +89,16 @@ enum PreferenceKey {
     /// time away at all.
     static let appLockGraceSeconds = "appLockGraceSeconds"
 
+    /// Whether the "Protect your codes" dialog has been shown. It appears once, when the
+    /// first account lands, and never again.
+    ///
+    /// **The only thing PR 15c stores, and it records that a question was asked rather than
+    /// how it was answered.** Which button was pressed is deliberately not remembered: the
+    /// app acts on none of them, and a preference nothing reads is a preference that can
+    /// silently stop being true. `docs/APP_LOCK.md` argues that at length, because an
+    /// earlier version of this feature would have stored something no API can verify.
+    static let hasOfferedLockAdvice = "hasOfferedLockAdvice"
+
     #if DEBUG
         /// Every key above, so the Debug-only reset can put the app back to a first launch.
         ///
@@ -96,6 +106,7 @@ enum PreferenceKey {
         /// belonging to the system and to SwiftUI that this app has no business removing.
         private static let all = [
             sortOrder, appearance, syncEnabled, appIcon, appLockEnabled, appLockGraceSeconds,
+            hasOfferedLockAdvice,
         ]
 
         /// Forgets every preference. See `VaultGateView.forgetEverything()`; nothing else may

@@ -25,6 +25,13 @@ struct SettingsView: View {
     /// Set when the toggle was refused because the device cannot authenticate.
     @State private var appLockUnavailable = false
 
+    /// The recommendation shown every time App Lock is switched on, and the sheet it opens.
+    ///
+    /// **Every time, not the first time.** It is a recommendation attached to an action rather than
+    /// an onboarding step, and somebody turning the lock on is exactly somebody who cares about
+    /// this. See `docs/APP_LOCK.md`.
+    @State private var offeringSystemLock = false
+
     @State private var syncFailure: String?
 
     /// Where the accounts actually are, read from the Keychain rather than inferred from
@@ -57,6 +64,11 @@ struct SettingsView: View {
         case importing
         case exporting
         case erasing
+        /// The iOS per-app lock instructions. **Here rather than as its own `.sheet`**, which
+        /// is the failure the comment above describes: added as a second modifier it tore the
+        /// settings sheet down with it and dropped the user back to the account list, exactly
+        /// as recorded. The answer was already written; it was not read.
+        case systemLock
 
         var id: String { rawValue }
     }
@@ -116,6 +128,8 @@ struct SettingsView: View {
                         onAccountsChanged()
                         refreshSyncState()
                     }
+                case .systemLock:
+                    SystemLockAdvice()
                 }
             }
             .task { refreshSyncState() }
@@ -147,16 +161,26 @@ struct SettingsView: View {
             Text(
                 appLockUnavailable
                     ? """
-                    App Lock needs a device passcode, and this device has none. Set one in \
-                    iOS Settings first.
+                    App Lock requires a device passcode. Set one in iOS Settings first.
                     """
                     : """
-                    Requires Face ID, Touch ID, or your passcode before anything is shown. \
-                    Your secrets are protected by this device's Keychain either way; App \
-                    Lock keeps codes off the screen when someone else is holding your \
-                    unlocked phone.
+                    App Lock asks for Face ID, Touch ID, or your passcode before showing \
+                    codes. Your accounts are encrypted whether App Lock is on or off.
+
+                    For stronger protection, iOS can lock OpenFactor before it opens. Hold \
+                    the OpenFactor icon on the Home Screen and choose Require Face ID.
                     """
             )
+        }
+        .alert("For stronger protection", isPresented: $offeringSystemLock) {
+            Button("Show Me How") { sheet = .systemLock }
+            // Neither button changes anything: App Lock stays on down both paths, so the
+            // dismissal is "Done" rather than anything implying a choice.
+            Button("Done", role: .cancel) {}
+        } message: {
+            Text(
+                "App Lock protects your codes after OpenFactor opens. "
+                    + "iOS can also lock OpenFactor before it opens.")
         }
     }
 
@@ -173,6 +197,9 @@ struct SettingsView: View {
 
                 appLockUnavailable = false
                 appLockEnabled = wanted
+                // Only on the way on. Switching the lock off is not a moment to recommend a
+                // different lock, and a dialog on both edges would be noise.
+                if wanted { offeringSystemLock = true }
             }
         )
     }
@@ -386,6 +413,18 @@ struct SettingsView: View {
                             lockDevice()
                             dismiss()
                         }
+                    }
+
+                    // **One flag, and nothing else.** The advice dialog fires once when the
+                    // first account lands, which makes it awkward to look at twice while its
+                    // wording is being settled. Deliberately not folded into "Forget
+                    // everything" below: that one deletes every account and destroys the
+                    // vault, and reaching for it to re-read a sentence would be the worst
+                    // trade in this screen.
+                    Button("Show the lock advice again") {
+                        UserDefaults.standard.removeObject(
+                            forKey: PreferenceKey.hasOfferedLockAdvice)
+                        dismiss()
                     }
 
                     Button(role: .destructive) { isForgetting = true } label: {
