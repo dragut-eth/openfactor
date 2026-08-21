@@ -225,3 +225,49 @@ they need no gate, and nothing is lost: they run in the hosted job as they alway
 S1-37 is **withdrawn as a finding**. S1-39 is **withdrawn**: it described a state this work
 created. The commit message of `f75ce5b` and the CI comment it added both contain the false
 account; this section is the correction, and the code no longer carries the claim.
+
+## What was done: S1-34 and S4-45
+
+### S1-34: the waived behaviour is now executable
+
+`aSameSlotSubstitutionIsOverwritten` uses the seam to replace the observed record's bytes **in the
+same slot, under the same flag**, between `save` reading and writing, and asserts that the write
+lands on content it never examined.
+
+**It asserts the current behaviour, not the desired one.** That is the point: S1-33 was waived in
+prose, and prose does not fail when something changes. If this test ever goes red, the waived answer
+has moved and **the waiver needs revisiting rather than the test needing fixing**, which the comment
+says in as many words.
+
+### S4-45: four corrected, two left alone because they had come true
+
+**Each of the six was re-read against the code rather than against the list.** That mattered: two no
+longer needed changing.
+
+Corrected:
+
+- `InboxOpener` said a stale item is left for the stale sweep. It is superseded here, and the
+  paragraph below it already explained why: everything the call read is at least as old as the
+  newest, so if the newest is stale they all are.
+- `OpenFactorApp` and `AddAccountSession` both still described App Lock as swapping the root or
+  unmounting the view tree. **This is the third and fourth sentence of that family**, after two were
+  corrected in round four and a fifth was found later. Both now say what the design says: a locked
+  cold launch rebuilds the tree beneath, a warm lock is a window above a tree that survives, and
+  neither flips `isPresented`.
+- `agesAreReadPerFile` was named for a race it does not express, since nothing is written while its
+  sweep runs. It is now named for what it asserts, and its comment points at
+  `aShareLandingDuringASweepSurvives`, which is the test that does express it and did not exist when
+  the name was written.
+
+Left alone, with the reason recorded:
+
+- `InboxOpener`'s claim that `take` removes the item it refused **is true now**. It was false only
+  for a directory, and S4-42 stopped a directory from becoming a candidate.
+- `sweepLeavesWhatArrivedLater` is named "Superseding leaves what arrived after the caller looked",
+  and the test writes after `pending()` and before `sweep`. **That is exactly what the name says**,
+  so it was reported as overstating and is not.
+
+That is two of the round's items that resolved themselves through code changes made for other
+findings, which is worth noting: **a false claim can be retired by making it true.**
+
+457 package tests pass, the hosted suite passes, both targets build.

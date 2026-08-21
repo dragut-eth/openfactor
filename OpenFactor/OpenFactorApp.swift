@@ -39,9 +39,12 @@ struct OpenFactorApp: App {
     /// in the group container.
     ///
     /// **Owned here for the same reason the gate is.** Collecting is destructive, so a collection
-    /// that happens moments before App Lock swaps the root would take the image out of the
-    /// container and then be thrown away with the view that asked for it. Sharing would appear to
-    /// do nothing at all, which is what it did.
+    /// that happens moments before the tree beneath this is rebuilt would take the image out of
+    /// the container and then be thrown away with the view that asked for it, and sharing would
+    /// appear to do nothing at all, which is what it did. A locked cold launch is where that
+    /// rebuild happens: the lock is the root and everything below it is built fresh once it
+    /// clears. A warm lock is a window above a tree that survives, and would not have destroyed
+    /// it, but the rule is written for the case that does.
 
     /// What has arrived and is waiting to be dealt with.
     ///

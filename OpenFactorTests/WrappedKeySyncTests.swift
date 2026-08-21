@@ -514,6 +514,49 @@ struct WrappedKeySyncTests {
             "the record this call never examined still carries its own bytes")
     }
 
+    /// **What a same-slot substitution does, pinned rather than described.** This is the waived
+    /// finding S1-33 made executable: iCloud can replace the *bytes* of the observed record, at the
+    /// same primary key, between `save` reading it and writing. The write then lands on content it
+    /// never examined, at a slot it did examine.
+    ///
+    /// The window is not closed and the reasons are recorded with the waiver: reaching it needs a
+    /// cross-device erase and re-create inside one conversion span while a passphrase is being
+    /// changed, and passphrase replacement has no interface. `E12` measured that a compare and swap
+    /// token is possible, so the mechanism exists, but it rests on two unmeasured preconditions.
+    ///
+    /// **This test asserts the current behaviour, not the desired one.** If it ever goes red,
+    /// something has changed the waived answer and the waiver needs revisiting rather than the
+    /// test needing fixing.
+    @Test("A same-slot substitution is overwritten, which is the waived behaviour")
+    func aSameSlotSubstitutionIsOverwritten() throws {
+        let service = "app.openfactor.tests.key.\(UUID().uuidString)"
+        let plain = WrappedKeyStore(service: service)
+        defer { deleteBothFlags(of: plain) }
+        try plain.save(Data("the record this call observed".utf8))
+
+        let stranger = Data("what iCloud put there instead".utf8)
+        let racing = WrappedKeyStore(
+            service: service,
+            beforeWrite: {
+                // Same slot, same flag, different bytes: the substitution the waiver is about.
+                let slot: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: service,
+                    kSecAttrAccount as String: "wrapped",
+                    kSecUseDataProtectionKeychain as String: true,
+                    kSecAttrSynchronizable as String: false,
+                ]
+                SecItemUpdate(
+                    slot as CFDictionary, [kSecValueData as String: stranger] as CFDictionary)
+            })
+
+        try racing.save(Data("a replacement passphrase's wrap".utf8))
+
+        #expect(
+            try plain.load() == Data("a replacement passphrase's wrap".utf8),
+            "the write landed on bytes it never examined, which is the accepted floor")
+    }
+
     /// **The sync preference is a question asked at each write, not a launch-time snapshot.**
     /// Held as a `Bool`, the store wrote every wrap under the preference as it stood when the
     /// app started, so enabling sync and creating a vault in the same session wrote the wrap

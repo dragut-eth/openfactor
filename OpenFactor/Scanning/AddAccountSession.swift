@@ -16,9 +16,10 @@ import OpenFactorCore
 ///
 /// ## How a lock is told apart from a dismissal
 ///
-/// Nothing here inspects the lock, and nothing needs to. The lock unmounts the view tree
-/// **without flipping `isPresented`**, because the binding lives on this object and the object
-/// lives on the app. Cancel, a swipe down, and a completed add all flip it. So the app resets
+/// Nothing here inspects the lock, and nothing needs to. **No teardown the lock causes flips
+/// `isPresented`**, because the binding lives on this object and the object lives on the app: a
+/// locked cold launch rebuilds the tree beneath without touching it, and a warm lock is a window
+/// above a tree that is not torn down at all. Cancel, a swipe down, and a completed add all flip it. So the app resets
 /// this session whenever `isPresented` turns false, and a locked teardown, which never turns it
 /// false, re-presents the same screens with the same typed text when the tree returns.
 ///

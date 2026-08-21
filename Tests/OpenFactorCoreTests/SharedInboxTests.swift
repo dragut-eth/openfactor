@@ -442,10 +442,12 @@ struct SharedInboxCollectionTests {
             "nothing a moment old may be recorded as arriving before everything")
     }
 
-    /// **A sweep that reads one clock and then judges every file against it** measures a file
-    /// written during the pass against a moment before it existed. Each timestamp is read
-    /// immediately before its own removal.
-    @Test("An item written during a sweep is judged by its own timestamp")
+    /// A fresh item survives an ordinary sweep, which is the plain case the age rule exists for.
+    ///
+    /// **Named for what it does rather than for the race**, which it does not express: nothing is
+    /// written while the sweep runs. `aShareLandingDuringASweepSurvives` is the test for that, and
+    /// this one was carrying its description.
+    @Test("An item shared a moment ago survives a sweep")
     func agesAreReadPerFile() throws {
         let (inbox, directory) = makeInbox()
         defer { try? FileManager.default.removeItem(at: directory) }

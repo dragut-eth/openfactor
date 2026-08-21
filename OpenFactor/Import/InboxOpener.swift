@@ -37,9 +37,11 @@ enum InboxOpener {
     /// just tapped. So the app looks for itself instead.
     ///
     /// Takes the newest and supersedes the rest of what it read, so nothing accumulates. An item
-    /// older than `SharedInbox.freshness` is left for the stale sweep rather than presented,
-    /// because opening the app into an import sheet for something shared days ago would be a
-    /// strange thing to do to somebody who was reaching for a code.
+    /// older than `SharedInbox.freshness` is not presented, because opening the app into an import
+    /// sheet for something shared days ago would be a strange thing to do to somebody who was
+    /// reaching for a code. **It is superseded here rather than left for the stale sweep**, which
+    /// the paragraph below explains: everything this call read is at least as old as the newest,
+    /// so if the newest is stale they all are.
     ///
     /// **The supersede happens only after a take succeeds, and only over what this call read.**
     /// Both halves of that sentence were a defect. Sweeping in a `defer` ran the sweep on the
