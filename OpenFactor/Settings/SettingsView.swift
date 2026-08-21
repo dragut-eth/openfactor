@@ -251,6 +251,13 @@ struct SettingsView: View {
         if case SecretStoreError.deviceLocked = error {
             return "Unlock your device and try again."
         }
+        // **Some failures are not worth trying again**, and saying so is the difference between
+        // help and a loop. Two wrapped records is a state nothing in this app resolves, so the
+        // error's own sentence is the honest one and the generic advice is not.
+        if let store = error as? SecretStoreError, case .twinnedRecord = store {
+            return store.description
+        }
+
         return "Sync could not be changed. Some accounts may not have moved, so try again."
     }
 

@@ -347,6 +347,10 @@ public struct WrappedKeyStore: Sendable {
     /// pair actually disagrees, so an ordinary record is not rewritten on every foreground.
     ///
     /// - Returns: how many records were repaired.
+    ///
+    /// **Correct under twins**, unlike the conversion: each update is pinned to one record's own
+    /// flag and changes no primary-key attribute, so it can neither collide nor pick the wrong
+    /// record of a pair.
     @discardableResult
     public func repairProtectionClasses() throws(SecretStoreError) -> Int {
         var repaired = 0
@@ -381,6 +385,16 @@ public struct WrappedKeyStore: Sendable {
         return repaired
     }
 
+    /// Whether a conversion could proceed, without changing anything.
+    ///
+    /// **For a caller that must not begin work it may have to abandon.** Turning sync off converts
+    /// every account before it touches this record, so learning here that the record cannot move
+    /// would leave the accounts converted and the preference still claiming otherwise. This is one
+    /// read and it refuses for the same reason `setSynchronizable` does.
+    public func precheckConversion() throws(SecretStoreError) {
+        guard try countingBothFlags() <= 1 else { throw .twinnedRecord }
+    }
+
     /// Moves the record between iCloud and this device, following the account items.
     ///
     /// **Nothing did this before, which is the defect that loses every account.** The record was
@@ -398,6 +412,20 @@ public struct WrappedKeyStore: Sendable {
     ///   vault has nothing to move.
     @discardableResult
     public func setSynchronizable(_ shouldSync: Bool) throws(SecretStoreError) -> Bool {
+        // **Repaired first, because the repair is correct under twins even though the move is
+        // not.** It works one record at a time, pinned to that record's own flag, so a stranded
+        // record in a pair is corrected whether or not the conversion below can proceed. Putting
+        // the refusal above this would leave such a record wrong on every call that refuses,
+        // which is every call, forever.
+        try repairProtectionClasses()
+
+        // **A conversion that cannot succeed says so.** Moving the record on this side to the
+        // other flag collides with the record already there, and `SecItemUpdate` reports
+        // `errSecDuplicateItem`, which reaches a person as advice to try again. It fails the same
+        // way every time. `twinnedRecord` is the honest answer and it already existed; nothing
+        // threw it here.
+        guard try countingBothFlags() <= 1 else { throw .twinnedRecord }
+
         var find = query()
         find[kSecAttrSynchronizable as String] = !shouldSync
 
@@ -409,13 +437,6 @@ public struct WrappedKeyStore: Sendable {
         ]
 
         let status = SecItemUpdate(find as CFDictionary, changes as CFDictionary)
-
-        // **Whatever the move did, a record already on this side may still be malformed.** One
-        // written with the flag set and a device-only class is not what the query above looks
-        // for, so it survives every conversion and every reconcile untouched. Repaired here
-        // because this is the method that owns the pairing, and the reconcile already calls it on
-        // every foreground.
-        try repairProtectionClasses()
 
         // Nothing to convert: no vault on this device, or it is already on the right side.
         // Idempotent on purpose, so a partial failure can simply be run again.

@@ -102,3 +102,54 @@ disable-direction route the S1-35 fix added, and S1-30 is its test.
 **S1-37 is the one to think hardest about**, because it is not about this code at all. It says that
 a suite can exist, be written carefully, pass review, and assure nothing, which is the thing this
 gate discovered about itself a week ago and has now discovered again.
+
+## What was done: S1-28 with S1-30, and the rest of S1-37
+
+### S1-37: two suites now run, a third is named rather than hidden
+
+`KeychainSecretStoreTests` and `VaultTests` moved to the hosted target, where a simulator always has
+a real Keychain, and the run-time gate is gone rather than made conditional on something else.
+**All twenty six execute and pass on the first run**, so nothing was hiding behind the skip.
+
+CI refuses `enabled(if:)` in either test directory now, with the reasoning in the job: a suite that
+decides at run time whether to run can assure nothing and report success.
+
+**Moving them surfaced a third case.** `StoreUnderTest` used the same probe to choose which stores
+`SecretStoreTests` runs against, so its Keychain half has also never run while the suite reported
+success for fifteen cases. The probe is gone and the list is stated rather than decided, so the file
+now says plainly that only the in memory store is covered. Moving that suite needs helpers the
+package's own tests depend on, so it is recorded as the remaining half of S1-37 rather than done
+badly. **The new CI rule does not catch that shape**, which is worth knowing about the rule.
+
+### S1-28: the conversion refuses by name, and nothing moves before it can
+
+Three changes, each with its own test, each red first.
+
+**`setSynchronizable` refuses a twin pair with `twinnedRecord`** instead of colliding into
+`errSecDuplicateItem`. The collision reached a person as advice to try again, which failed the same
+way every time, and the honest error already existed forty lines away with nothing throwing it.
+
+**The refusal sits below the repair, deliberately.** The S1-31 verification established that the
+class repair runs even on a call that then fails, and that a stranded record in a pair is corrected
+either way. The repair is correct under twins because each update is pinned to one record's own flag
+and changes no primary-key attribute, so it can neither collide nor pick the wrong record. Putting
+the guard above it would have left such a record wrong on every call that refuses, which is every
+call, forever. **Moving the guard above the repair reddens
+`twinsAreRepairedEvenWhenConversionRefuses`.**
+
+**`SyncAwareKeychainStore` asks before it moves anything.** Turning sync off converts the accounts
+first and the record second, and that order is deliberate: the reverse leaves a window with accounts
+in iCloud and no key to read them. But it meant a record that cannot convert threw with every
+account already local while the preference, which flips only on success, still read on, so the
+switch claimed iCloud held accounts it did not. `precheckConversion()` is one read that refuses
+before anything is written. **Removing it reddens
+`accountsDoNotMoveWhenTheWrappedRecordCannot`.**
+
+**And the message stops advising a retry that cannot succeed.** `message(for:)` passes
+`twinnedRecord`'s own sentence through. Two records is a state nothing in this app resolves, so
+generic advice to try again is a loop rather than help.
+
+**This also closes the route the S1-35 fix added**, which was recorded at the time: a failed repair
+throwing after the accounts had already moved. The pre-flight stops the accounts moving at all.
+
+457 package tests pass, the hosted suite passes, both targets build.

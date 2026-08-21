@@ -116,6 +116,15 @@ struct SyncAwareKeychainStore: SynchronizableSecretStore {
     /// again rather than to reason about what got through.
     @discardableResult
     func setSynchronizable(_ shouldSync: Bool) throws(SecretStoreError) -> Int {
+        // **Nothing moves until the wrapped key is known to be able to move.** Turning sync off
+        // converts the accounts first and the record second, and that order is deliberate: the
+        // reverse leaves a window with accounts in iCloud and no key to read them. But it means a
+        // record that cannot convert throws with every account already local, while the
+        // preference, which flips only on success, still reads on, so the switch claims iCloud
+        // holds accounts it does not. A read that refuses before anything is written costs one
+        // query and removes that state.
+        try wrapped.precheckConversion()
+
         if shouldSync {
             try wrapped.setSynchronizable(true)
             return try store.setSynchronizable(true)

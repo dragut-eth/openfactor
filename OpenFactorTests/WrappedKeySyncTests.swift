@@ -374,6 +374,49 @@ struct WrappedKeySyncTests {
         #expect(store.syncReport()?.protectionMatchesFlag == true)
     }
 
+    // MARK: - The toggle under twins
+
+    /// **A conversion that cannot succeed says so, rather than colliding.** With two records, one
+    /// under each flag, moving the local one to the synchronizable side collides with the record
+    /// already there: `SecItemUpdate` returns `errSecDuplicateItem` and the store reported
+    /// `.duplicate`, which the Settings toggle rendered as "try again". Trying again failed the
+    /// same way forever, and the honest error existed forty lines from the code that should have
+    /// thrown it and never did.
+    ///
+    /// Remove the twin guard and this goes red with `.duplicate`.
+    @Test("Converting refuses a twin pair by name rather than colliding")
+    func convertingRefusesTwinsByName() throws {
+        let store = makeStore()
+        defer { deleteBothFlags(of: store) }
+
+        try store.save(Data("this device's record".utf8))
+        plantTwin(Data("the other vault's record".utf8), in: store)
+
+        #expect(throws: SecretStoreError.twinnedRecord) { _ = try store.setSynchronizable(true) }
+        #expect(try store.candidates().count == 2, "and neither record moved")
+    }
+
+    /// **The refusal must not cost the repair.** A stranded record can be one of a twin pair, and
+    /// the class repair is per record and correct under twins even though the move is not. It runs
+    /// before the refusal, so the pair is left better than it was found even on the call that
+    /// fails.
+    ///
+    /// Put the twin guard above the repair and this goes red.
+    @Test("A twin pair is still repaired on the call that refuses to convert")
+    func twinsAreRepairedEvenWhenConversionRefuses() throws {
+        let store = makeStore()
+        defer { deleteBothFlags(of: store) }
+
+        try store.save(Data("this device's record".utf8))
+        plantSplitPair(Data("the other vault's record".utf8), in: store)
+
+        #expect(store.syncReport()?.protectionMatchesFlag == false, "the premise")
+        #expect(throws: SecretStoreError.twinnedRecord) { _ = try store.setSynchronizable(true) }
+        #expect(
+            store.syncReport()?.protectionMatchesFlag == true,
+            "the class was corrected before the conversion refused")
+    }
+
     /// **The refusal counted the store and then asked it again.** `save` guarded on
     /// `countingBothFlags() <= 1` and then ran a separate `SecItemCopyMatching` under `Any` with
     /// `kSecMatchLimitOne`. Those are two reads of a store another device writes into, so a record

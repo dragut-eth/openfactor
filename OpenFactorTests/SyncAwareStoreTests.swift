@@ -147,6 +147,56 @@ struct SyncAwareStoreTests {
         #expect(try store.records().readable.count == 2)
     }
 
+    /// **Nothing moves until the wrapped key is known to be able to move.** Turning sync off
+    /// converts the accounts first and the wrapped record second, which is the safe order: the
+    /// reverse leaves a window with accounts in iCloud and no key to read them. But it means a
+    /// wrapped record that cannot convert throws after every account is already local, while the
+    /// preference, which flips only on success, still reads on. The switch then claims iCloud
+    /// holds accounts it does not.
+    ///
+    /// Remove the pre-flight and this goes red, with the accounts converted.
+    @Test("A wrapped record that cannot convert stops the accounts from moving")
+    func accountsDoNotMoveWhenTheWrappedRecordCannot() throws {
+        let service = "app.openfactor.tests.\(UUID().uuidString)"
+        let wrappedService = "app.openfactor.tests.key.\(UUID().uuidString)"
+        defer { cleanUp(service: service) }
+
+        let wrapped = WrappedKeyStore(service: wrappedService)
+        defer {
+            SecItemDelete(
+                [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: wrappedService,
+                    kSecUseDataProtectionKeychain as String: true,
+                    kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+                ] as CFDictionary)
+        }
+
+        let defaults = makeDefaults()
+        defaults.set(true, forKey: PreferenceKey.syncEnabled)
+        let store = SyncAwareKeychainStore(
+            defaults: defaults, service: service, vaultKeys: try makeVault(), wrapped: wrapped)
+        _ = try store.add(account(), color: .teal)
+
+        // Two wrapped records, so the conversion cannot succeed either way.
+        try wrapped.save(Data("this device's record".utf8))
+        let theirs: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: wrappedService,
+            kSecAttrAccount as String: "wrapped",
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: true,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+            kSecValueData as String: Data("the other vault's record".utf8),
+        ]
+        SecItemAdd(theirs as CFDictionary, nil)
+
+        #expect(throws: SecretStoreError.twinnedRecord) { _ = try store.setSynchronizable(false) }
+        #expect(
+            rawItem(service: service)?[kSecAttrSynchronizable as String] as? Bool == true,
+            "the accounts are where they were, so the switch is not left overstating protection")
+    }
+
     @Test("Turning sync on converts what is already stored")
     func convertsExistingAccounts() throws {
         let service = "app.openfactor.tests.\(UUID().uuidString)"
