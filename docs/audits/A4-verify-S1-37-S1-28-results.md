@@ -167,3 +167,61 @@ the platform's floor.
 
 **What would reopen it.** A Keychain transaction spanning two services, or a redesign that puts the
 wrapped record and the accounts under one primary key. Neither is contemplated.
+
+## Correction: S1-37 was not real, and the fix for it removed coverage
+
+**Measured, after the fact, and the measurement should have come first.**
+
+S1-37 said twenty six tests executed in no job and on no machine. **They executed in the hosted job
+all along.** The `OpenFactorTests` target's `fileSystemSynchronizedGroups` lists **both**
+`OpenFactorTests` and `Tests/OpenFactorCoreTests`, so every file in the package test directory
+compiles into the hosted bundle too. In a simulator the Keychain probe returns true, so both suites
+were enabled and ran.
+
+Run at `2196b97`, the commit before the fix: **26 executions of `VaultTests` and
+`KeychainSecretStoreTests`.** Not zero.
+
+### How the wrong conclusion was reached
+
+Two true facts and an unchecked inference. `swift test` skips them: verified. The hosted job passes
+`-only-testing:OpenFactorTests`: verified. **Target membership was never checked**, and the returns'
+phrasing, that the job "runs only the app target so they were never in it", was repeated rather than
+tested.
+
+**This is the same error E12 exists to warn about**, one layer down. There, a claim that a platform
+API could not do something was checked by running it, and it was false. Here, a claim about a build
+system was not checked, and it was false. The lesson did not transfer because it was filed as being
+about the Keychain rather than about claims in general.
+
+### What the fix cost
+
+`StoreUnderTest` used the same probe to decide which stores `SecretStoreTests` runs against. In the
+hosted target the probe returned true, so it ran **both**. Removing it narrowed the list to the in
+memory store and **silently dropped fifteen Keychain executions from the hosted run**:
+
+| | Before | After the fix | Now |
+| --- | --- | --- | --- |
+| `SecretStoreTests` executions | 30 | 15 | 30 |
+| `VaultTests` and `KeychainSecretStoreTests` | 26 | 26 | 26 |
+
+So **S1-39, filed as a finding, was created by that change rather than discovered.** Before it, the
+Keychain half ran.
+
+### What was put back, and what was kept
+
+**The probe is restored**, with its purpose stated: this file compiles into two targets, and the
+probe is what distinguishes an unsigned package run from a hosted one. That is the behaviour that
+was wanted all along.
+
+**The CI rule is removed.** Its justification was the false finding, and it banned one shape of
+conditionality while the same idea legitimately lives in another shape two directories away. A rule
+whose stated reason is untrue should not be kept because it sounds prudent.
+
+**The two suites stay where they were moved**, ungated. `swift test` no longer compiles them, so
+they need no gate, and nothing is lost: they run in the hosted job as they always did.
+
+### The record
+
+S1-37 is **withdrawn as a finding**. S1-39 is **withdrawn**: it described a state this work
+created. The commit message of `f75ce5b` and the CI comment it added both contain the false
+account; this section is the correction, and the code no longer carries the claim.
