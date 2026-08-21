@@ -18,7 +18,12 @@ jobs:
       - name: No em dashes
         run: |
           DASH=$(printf '\xe2\x80\x94')
-          if git grep -n -I -- "$DASH"; then
+          # **docs/audits is excluded, and the reason is not laziness.** That directory reproduces
+          # what three external reviewers actually wrote, verbatim, and they write em dashes. A
+          # house style rule cannot govern text this project did not write, and editing a quoted
+          # return to satisfy one would make the word "verbatim" false. The rule still governs
+          # every line this project writes, which is everywhere else.
+          if git grep -n -I -- "$DASH" -- ':!docs/audits'; then
             echo "Found an em dash. Use a comma, a colon, parentheses, or two sentences."
             exit 1
           fi

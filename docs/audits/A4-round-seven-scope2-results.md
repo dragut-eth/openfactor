@@ -203,3 +203,110 @@ left the watch waiting for a message that could never arrive.
 four to seven bought the knowledge that this scope was finished, which is worth something, and
 three rounds of prose correction, which is worth less than the reviewer time it took. The floor
 exists so the next scope does not pay for that lesson twice.
+
+---
+
+# The returns, as they came back
+
+**Reproduced verbatim.** `docs/ROADMAP.md` promises each pass is published whole, and for a stretch
+of this gate that promise was not kept: the analysis above was published and the returns behind it
+were not. This is the repair, restored from the session transcript rather than rewritten.
+
+**One edit, the same one made to every pass in this directory**: absolute paths from the reviewing
+machine are rewritten as repository-relative. Nothing is trimmed, softened or reordered, including
+the parts that turned out to be wrong.
+
+Here are the result for Scope 2 Round 7.
+
+
+Fabe:
+A4 round seven, scope 2: the two corrections, verified
+
+Commit reviewed: 51d34b1. I verified the change is what it claims: git show of the commit contains zero non-comment Swift lines — four files of documentation plus the round-six results file. Two other commits sit between 1f7e65f and 51d34b1 (scope 1's passphrase/wrap work in Vault.swift, WrappedKeyStore, WrappedRecordStore); I checked their reach rather than their content, and the watch exchange does not route through any of it — the watch and the provider touch VaultKeyStore and WatchProvisioning only. I did not build or run tests (per instruction), so the commit message's "465 core tests pass; both apps build" is its claim, not my verification.
+
+This is a thin answer for a thin change, with one exception, found where the round told me to read hardest.
+
+1. Is three the right number?
+
+Yes, under the bar as stated. I applied the bar — deletable, suite stays green, the protocol's behavior changes — to every candidate I could construct in both app files, not to the header's list:
+
+The three listed all qualify: the arming condition (deletable, auto-clearing dies, no wire message ever sent), the unnamed-refusal guard (its removal restores the unbound decline on the wire), the failed-release refusal (deleting the refuse call restores S2-15's silence).
+Candidates I excluded, and why: the watch's 25-second timeout arming — deletable and suite-green, but it sends nothing; it changes what the wearer sees, not what the protocol does, so it falls outside the bar (and inside the "asking cadence" bullet in any case). The isAsking mirrors — alert visibility, not wire behavior. The isFrontmost and hasVault input bindings — not deletable, only corruptible, and corruption of a required parameter is a different class the bar deliberately doesn't reach. The reply wrapper's [:] answer to a non-Data message — not deletable without breaking compilation.
+
+One non-finding wording note, offered as exactly that: the intro's "each of which would survive its own deletion" is muddled (it's the suite that survives), and decision two has no literal deletable line — removing it is a small revert rather than a deletion. The substance — all three are removable with the suite green — is true.
+
+2. Do the two headers agree with each other?
+
+With each other, yes. One of them now disagrees with itself, and that is this round's finding.
+
+The three phone-side entries appear in both headers in matching words, both carry the not-edited-alone rule, and the twin-divergence class — a sentence corrected in one file and not the other — is closed. But ProvisioningDesk's header kept, unchanged beneath the expanded list, the paragraph written in round five for the two-bullet list: "Those are decisions. They predate this extraction and none of them produced a finding in this gate, which is the reason they were not moved." That sentence is now false twice over for the two entries just inserted above it: both refusal rules postdate the extraction — they were created by round five's fixes in 9304d6c — and both exist because of findings, S2-14 and S2-15, one of which the third bullet cites by number five lines earlier. The header asserts and refutes the same fact within one screen. The stated reason-not-to-move also silently stops covering them (their actual reason is different and defensible: they wrap the WCSession send itself).
+
+Filed as a new low. It is the same class, fifth instance, now in its smallest possible form: not a twin left behind, but a neighboring sentence left behind by the edit made to close the twin problem.
+
+3. Are the four core comments true of every path?
+
+Yes — checked in code, path by path. A nonce-less decline arises exactly the two ways claimed: refuse(naming:) takes a non-optional nonce and is the only standalone-decline constructor in the project (grep-verified again at this commit), so a current build's standalone refusals always carry one; and received returns .declined only on a validate failure, producing the nonce-less direct reply. No third way exists. The separation claim holds structurally: shouldHonourDecline has one call site, in phoneSent, reachable only from the no-reply didReceiveMessage delegate method; a reply arrives only in the sendMessage reply closure, flows to phoneAnswered, classifies as .decline, fails the .answer guard, and terminates the token-bound attempt — it cannot reach shouldHonourDecline by any route. An old phone's reply to a malformed request is also nonce-less, which the Nonce.absent comment's "a current phone also replies…" phrasing doesn't name, but it arrives on the same reply handler with the same binding, so the comment's substance covers it. Message.decline and MessageKey.nonce now say what the code does.
+
+4. Did comments-only changes introduce anything?
+
+One thing: the falsified provenance paragraph described under question 2 — introduced not by what was written but by what the insertion made false around it. Nothing else: every added comment sits inside an existing doc block attached to the same declaration as before, so the doc-comment-placement build hazard doesn't arise (subject to the build claim I couldn't verify read-only).
+
+5. The exit condition, plainly
+
+I was the engine that made closing contingent on both files being corrected together. The contingency was met: the count is right, the same three entries stand in both headers, and both files now state the rule that neither list is edited alone.
+
+On fix completeness: S2-24's fix is complete — it did both things the finding asked, and the stale paragraph beneath it is collateral in an adjacent sentence, which I have filed as a new low rather than as incompleteness, consistent with how this gate scored the equivalent situation in rounds four and six. S2-25's fix is complete — all four comments verified true against the code's actual paths.
+
+So: nothing above low, no fix incomplete, one new low that is a one-paragraph documentation edit with no code, no wire, and no test behind it. By the rule as written, the scope closes. The stop rule's "substantial enough that shipping unreviewed would be the bet the gate refuses" test cannot be met by a paragraph correction; holding three engines for it would be the letter defeating the purpose, and I said the same last round about a smaller remainder.
+
+One structural recommendation on the way out, because the pattern deserves a response other than a sixth correction: this class has now recurred five times, and every instance was a history-narrating comment — who found what, when a rule was born, why it stayed. Code comments must track a moving codebase; append-only history already has a home in docs/audits/. Headers that state only what is true now ("three decisions stay here; deleting any leaves the suite green") and point at the audit record for how that came to be would remove the entire class rather than its latest instance. The security content of this scope stopped producing findings three rounds ago; the comments about its history are the only thing this gate can still catch.
+
+Grok:
+1. Is three the right number?
+
+Yes, under the header’s own bar.
+
+On the phone, the three things whose deletion leaves the package suite green and changes what goes on the wire are: arming the timer on .asking; not sending when desk.decline() returns nil; and refuse(naming:) on the load/respond failure in approve()’s .release path. I looked for a fourth in WatchKeyProvider and in the watch model. Mapping applicationState into isFrontmost is an input to a rule the desk already owns. Using only sendMessage is the sending they already list as plumbing. The watch cadence (refreshAndAsk, hasReplacedStaleKey) is named on the desk header as watch-side, not as a fourth phone decision. It does not belong in WatchKeyProvider’s three.
+
+2. Do the headers agree?
+
+In substance, yes. WatchKeyProvider lists those three. ProvisioningDesk lists the same three on the phone, plus the watch cadence. Item two is word-for-word identical. Items one and three are the same rules in slightly different prose. That is wording, not a split. The desk’s closing line that neither list is edited alone is what this round was for, and it is true of this diff.
+
+3. Are the four core comments true of every path that reaches them?
+
+Yes.
+
+A nonce-less {status: declined} is produced two ways. A current phone’s reply to a request that failed to parse: replyHandler with status only, no nonce. An older phone’s standalone sendMessage with status only.
+
+classify maps both to .decline(.absent). The current-phone reply is received in phoneAnswered, which is closed over that attempt’s token, guards flow.isCurrent(token), and on a non-.answer calls phoneAnswered(nil) — never shouldHonourDecline. The standalone message is received in phoneSent and is the only path that calls shouldHonourDecline.
+
+I did not find a third producer. refuse(naming:) always includes 16 bytes. decline() returns without sending when the desk names nothing. expireConsent only sends what expire returned. An empty [:] reply is .unrecognised, not a decline.
+
+4. Did comments-only changes introduce anything?
+
+No. Nothing executable moved. The new sentences describe paths that already existed. They do not invent a guarantee the code does not keep.
+
+5. Exit condition.
+
+Nothing above low. No fix called incomplete. S2-24 is complete in both files. S2-25 is complete on all four comments.
+
+Last round I said stop, with no incomplete-fix caveat. The two comment findings that round still produced are now fixed. Against the rule as written, this pass meets it. I would close the scope.
+
+GPT:
+Findings
+Low — S2-24 remains incomplete: the exhaustive headers omit a watch-side decision.
+[WatchVaultModel.phoneAnswered (line 176)](OpenFactorWatch Watch App/WatchVaultModel.swift:176) decides that every direct reply not classified as .answer becomes flow.phoneAnswered(nil), immediately terminating the attempt as .notSetUp. For example, "OFW1" || nonce(16) || 0xAA×65 produces a direct nonce-less .declined; changing lines 194–197 to ignore it leaves the package suite green while changing the protocol outcome to waiting until timeout. This satisfies the headers’ own testability bar but appears in neither [WatchKeyProvider’s three-decision list (line 38)](OpenFactor/Vault/WatchKeyProvider.swift:38) nor [ProvisioningDesk’s app-target enumeration (line 18)](Sources/OpenFactorCore/Vault/ProvisioningDesk.swift:18). Smallest fix: name this decision in both headers and adjust the count, or move the routing decision into tested core code.
+
+Low — S2-25’s routing distinction is correct, but its parsing rationale is still false.
+[WatchInbox.Nonce.absent (line 35)](Sources/OpenFactorCore/Vault/WatchInbox.swift:35) says an unparseable request has no nonce because “nothing was ever read out of it”; [MessageKey.nonce (line 120)](Sources/OpenFactorCore/Vault/WatchProvisioning.swift:120) similarly says there is nothing to echo. With the 85-byte request above, validate accepts the length and magic and [reads the 16-byte nonce (line 367)](Sources/OpenFactorCore/Vault/WatchProvisioning.swift:367) before rejecting the invalid public key. What is true is that no validated request or retained nonce returns to the caller. That is the smallest wording correction.
+
+The five answers
+Three is not exhaustive under the header’s stated bar; the direct-reply routing above is at least a fourth app-target decision.
+
+The two headers now agree in substance on the three entries they enumerate, so the “edit both files” contingency was met. They share the same omission rather than diverging from each other.
+
+The important routing claims are sound: supported code produces nonce-less declines in the two documented transport contexts, the only shouldHonourDecline call is in the standalone-message handler, and a direct reply is bound by its reply callback and flow token. No direct-reply path reaches shouldHonourDecline. The narrower “nothing was read” claim is nevertheless false.
+
+No executable or test line changed, and I found no misplaced-comment or formatting defect. The scoped Git diff is actually 49 additions and 16 removals across the four files, all comments. I did not build or run tests as instructed.
+
+Do not close Scope 2 yet. Nothing is above low and the code is not churning, but both fixes I called incomplete in round six remain narrowly incomplete: S2-24 still makes an exhaustive enumeration that misses a decision, and S2-25 replaces the old false claim with an overstatement about parsing. The exit rule’s second condition therefore does not clear.

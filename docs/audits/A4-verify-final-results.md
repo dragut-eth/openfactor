@@ -159,3 +159,88 @@ unanimously.
 
 What remains of A4 is the closing opinions: each engine reads its own published passes in a fresh
 conversation and writes a short opinion for `README.md`, unflattering parts included.
+
+---
+
+# The returns, as they came back
+
+**Reproduced verbatim.** `docs/ROADMAP.md` promises each pass is published whole, and for a stretch
+of this gate that promise was not kept: the analysis above was published and the returns behind it
+were not. This is the repair, restored from the session transcript rather than rewritten.
+
+**One edit, the same one made to every pass in this directory**: absolute paths from the reviewing
+machine are rewritten as repository-relative. Nothing is trimmed, softened or reordered, including
+the parts that turned out to be wrong.
+
+## ChatGPT
+
+Question 0: correction
+Yes. The correction is right, and my prior S1-37/S1-39 verdict was wrong.
+Before S1-37, the hosted target synchronized both test directories, so -only-testing:OpenFactorTests included the package tests. The hosted probe selected both stores. Removing it reduced SecretStoreTests from thirty executions to fifteen; restoring it returns the count to thirty. Withdrawing S1-37/S1-39 and removing their CI rule is correct.
+Item	Verdict
+S1-38	Fixed
+S1-34	Fixed
+S4-45	Not fixed
+New high or medium	No
+
+
+S1-38: At this update, the only changed primary-key attribute is the synchronization flag. Therefore errSecDuplicateItem means the opposite slot is occupied by another wrapped record, making .twinnedRecord exact. The seam fires in the intended count/update gap. Its accepting initializer is internal, every non-test construction uses the public initializer, and that initializer sets the closure to nil.
+S1-34: The test performs a same-slot byte substitution after save observes the record and verifies that the subsequent write overwrites those unobserved bytes. Pinning a consciously waived limitation is appropriate: a failure signals that the waiver must be reconsidered, as its comment states.
+S4-45: One of the two unchanged claims is still false. The sequence is:
+pending() admits a regular file → a sibling replaces it with a directory → take() refuses the directory → deferred unlinkat without AT_REMOVEDIR cannot remove it.
+Thus “take removes the item it refused” is not guaranteed. sweepLeavesWhatArrivedLater is accurately named.
+An App Lock statement also remains wrong: [VaultGateView.swift (line 23)](OpenFactor/Vault/VaultGateView.swift:23) still says App Lock replaces the whole root, whereas that is true only for a locked cold launch; warm locks use a window above the surviving tree. The repeated drift supports making [APP_LOCK.md (line 77)](docs/APP_LOCK.md:77) the single mechanism description and having dependent files point to it.
+No build or tests were run, and the worktree remains clean.
+
+## Fable
+
+Final verification — commit f7361bf
+Question 0: is the correction itself right?
+Yes, and I verified it from the bytes rather than accepting it a second time. The `OpenFactorCoreTests` synchronized group — `isa = PBXFileSystemSynchronizedRootGroup`, `path = Tests/OpenFactorCoreTests` — is listed in the `OpenFactorTests` target's `fileSystemSynchronizedGroups`, and `git log -S` on its identifier shows it has been there since `da0d4fb`, the commit that added the Xcode project at gate A1. It was present at the commit before the S1-37 "fix." So the package test directory has compiled into the hosted bundle for the project's entire Xcode history, and in a signed simulator host the probe returns true, which makes the twenty six executions the expected outcome of the measurement, not an anomaly. S1-39's genesis is likewise confirmed: `StoreUnderTest` shares that dual-target topology, so deleting the probe pinned `testable` to the in-memory store in both targets and dropped the fifteen hosted Keychain executions — created by the change, exactly as the correction says. Restoring the probe, withdrawing both findings, and removing the CI rule are all correct; on the rule specifically, removing it is right even though it "sounds prudent," because this project's CI files carry their reasons in writing, and a barrier standing on a false reason is the kind of claim this gate exists to delete.
+I owe this correction more than a verdict. I verified S1-37 as fixed: I checked the after-state (true — the tests do run hosted) and accepted the zero-executions premise without checking membership, even writing "membership by synchronized folder groups" in my own verdict while never asking which folders the test target synchronizes — the one grep that settles it, which I have now run two rounds late. Worse, the refuting evidence had passed through my hands twice: the HANDOFF's "Keychain tests run, about 25 seconds" line, which I read in round two, and my own earlier reasoning that leaned on hosted Keychain tests having executed (`savingDoesNotRelocateTheRecord` staying green was a premise of my round-two accessibility analysis). A premise that contradicted my own established facts arrived wearing a results table, and I checked the half that was checkable by reading and inherited the half that needed the build system. The E12 lesson as restated — it was about claims, not about the Keychain — lands on me as squarely as on anyone in this record.
+Question 1: the three verdicts
+S1-38 — fixed. The mapping's load-bearing claim — nothing else can collide at that update — is right, and here is the argument rather than the assertion: the update's change dictionary mutates exactly one primary-key attribute, the sync flag; `errSecDuplicateItem` at a `SecItemUpdate` signals exclusively a primary-key conflict; therefore a collision occurs if and only if the destination slot `{service, account, group, shouldSync}` is occupied, which with this store's single account name means a second record — a pair, by construction, whenever it arrived. A cross-group record cannot produce it (the access group is part of the key a collision must match, and nothing writes this service into another group). The race stays open, is said to stay open, and its failure now lands on the same honest name and Settings sentence as the steady-state refusal, with the retry landing safely in the S1-28 pre-flight. The test drives the third seam gap and asserts the named error.
+S1-34 — fixed. The test plants the substitution in the `save` gap and asserts the overwrite — the current behavior, explicitly framed as the waived answer, with the doc comment stating that red means the waiver needs revisiting, not the test. On the surface question: encoding an accepted limitation as an assertion is right here, and it is the opposite of entrenchment. Entrenchment would be asserting the behavior as desired; this asserts it as factual, so the waiver's premise is now executable and cannot silently drift — if Apple's semantics move or someone half-closes the window, the prose waiver is forced back onto the table by a failing test. The discomfort stays where it belongs, recorded in the waiver and E12; the test merely guarantees the record stays true.
+S4-45 — fixed, and both left-alone claims check out, which the brief made the specific test of the reasoning. `take` removes the item it refused: `defer { handle.remove(name) }` executes on every exit — success, `.tooLarge`, and the mapped `.notFound` — and the historical exception, a directory, can no longer become a candidate because `InboxDirectory` refuses non-regular entries since S4-42, so the claim is true for everything that can reach `take`. And `sweepLeavesWhatArrivedLater` does exactly what its sentence says: it snapshots the pending identifiers, writes a new item after the snapshot, sweeps the snapshot, and asserts the later arrival is the sole survivor while the seen item is gone. Leaving both alone was correct.
+Question 2: does any of it introduce a new high or medium?
+No. The surfaces:
+
+* The seam at three gaps: enumerated at HEAD — three fire sites in the store (`save`, the repair loop, between the toggle's count and update), `nil` set explicitly in the public initialiser, the internal initialiser is the only setter and is unreachable across the module boundary, and every non-nil closure in the tree is one of four test call sites. No shipping path reaches a non-nil closure.
+* The `duplicate` → `twinnedRecord` mapping: the claim is right, argued under S1-38 above.
+* Pinning waived behavior: right, argued under S1-34 above.
+* The App Lock sentences — three remain wrong, in exactly the shape this commit corrected in two other files: `VaultGateView.swift:23` ("App Lock replaces the whole root with the lock screen, which tears this view down"), `VAULT.md:514`, and `UI_SPEC.md:48` all still describe the warm lock as a root replacement that destroys state, while `APP_LOCK.md:90` correctly states the mechanism: a cold locked launch builds the lock as root and rebuilds the tree when it clears; a warm lock is a `UIWindow` above a tree that is not torn down. Under this round's scoring these are comment-and-document items — recorded, not scope-holding. But they answer the author's structural question emphatically: three correction passes have fixed six sentences and left three, including a pass that was itself about these sentences, which is as clean a demonstration as exists that the real defect is topological. The mechanism is described in every file that depends on it, so every correction is a partial sweep of an unenumerated set. The fix is the one the question proposes: APP_LOCK.md is already the correct single description; each dependent file should keep only its local consequence ("state owned here survives a warm lock; a locked cold launch rebuilds this tree") plus a pointer, and the six-sentence class collapses to one home — the same move, for the same reason, as `forSync`.
+
+Verdicts: the correction is right, and both withdrawn findings were rightly withdrawn; S1-38 fixed; S1-34 fixed; S4-45 fixed with both left-alone claims verified true; no new high or medium introduced.
+
+## Grok
+
+A4 verification: final
+
+Reviewed f7361bf. Did not build or run tests.
+
+Question 0
+
+Yes.
+
+At 2196b97 (the commit before f75ce5b), OpenFactorTests already lists both OpenFactorTests and Tests/OpenFactorCoreTests in fileSystemSynchronizedGroups. VaultTests (11) and KeychainSecretStoreTests (15) lived in that package directory, gated on KeychainAvailability.isUsable. The hosted job has used -only-testing:OpenFactorTests throughout; that names the target, so those files were already in the bundle it runs. swift test skipping them is true. The membership inference was the false step.
+
+StoreUnderTest there selected both stores when the probe succeeded. f75ce5b dropped the Keychain case, so fifteen SecretStoreTests cases ran in-memory only. 4e6253d restored the probe and removed the enabled(if:) CI rule. I did not re-run the hosted suite. The 26 / 30 / 15 / 30 counts follow from membership and parameterization. No part of the analysis is wrong.
+
+1. Is each item fixed?
+
+S1-38: Yes. setSynchronizable maps errSecDuplicateItem to .twinnedRecord before error(for:). Settings still special-cases only that error. The race is still two calls; the name is honest. The collision claim is right: the update’s only primary-key change is the flag, so a collision is the destination slot occupied — a pair.
+
+beforeWrite is nil in the public initialiser. Every shipping construction (OpenFactorApp, SyncAwareKeychainStore, Vault, SettingsView) uses that path. The internal initialiser is not visible to the app target. All three call sites no-op.
+
+S1-34: Yes. aSameSlotSubstitutionIsOverwritten updates the observed slot’s bytes in beforeWrite and asserts this call’s wrap lands. Pinning the waived answer as an assertion is right: the comment says a red test revisits the waiver, not the test. That is how a limitation stays checkable instead of rotting in prose.
+
+S4-45: Yes. Both left-alone claims are true.
+
+• take defers unlinkat, so a refused regular file is removed (theBoundCannotBeSkipped pins this). A directory was the only case it did not remove, and pending now requires isRegularFile, so collect never takes one.
+• sweepLeavesWhatArrivedLater writes after pending() and before sweep, and asserts the later id remains. The name is exact.
+
+One App Lock sentence remains wrong: VaultGateView still says the lock replaces the whole root, present tense, with no cold/warm split. UI_SPEC.md and VAULT.md say the same. OpenFactorApp, AddAccountSession, and AccountListView now distinguish a cold-root rebuild from a warm window. The drift is from restating the mechanism in every dependent file instead of pointing at AppLockPresentation / docs/APP_LOCK.md.
+
+2. New high or medium?
+
+No.

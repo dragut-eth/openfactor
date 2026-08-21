@@ -805,7 +805,18 @@ code has left.
 ##### Publication
 
 Each pass is published in `docs/audits/`, whole: what was asked, what came back, what was fixed,
-what was rejected and why. Including the passes that found nothing, and including the findings
+what was rejected and why.
+
+**That promise was broken for a stretch and has been repaired.** Round one's four passes were
+published verbatim as designed. From round two onward the analysis was published and the returns
+behind it were not, across thirteen review rounds and nine verification rounds, so a reader could
+check the maintainer's conclusions only against the maintainer's summary. Nobody noticed, including
+three reviewers who read those documents. The returns have been restored from the session
+transcript, verbatim, under an "as they came back" heading in each document, and the one edit made
+is the one made to every pass here: absolute paths rewritten as repository-relative.
+
+**The em dash rule does not reach `docs/audits/`**, for the same reason: it is a rule about what
+this project writes, and that directory reproduces what other people wrote. Including the passes that found nothing, and including the findings
 that dissolved on inspection. A review that came to nothing is evidence.
 
 ##### The closing opinion
