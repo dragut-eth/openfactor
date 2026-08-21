@@ -511,8 +511,8 @@ and a frightening and wrong one about somebody's accounts.
 
 **Nothing that holds the passphrase may be owned by a view that can be torn down.** Found by a
 tester: he copied it, went to another app to paste it, and came back past the App Lock grace
-period to a screen offering to create a vault. App Lock replaces the root view, which destroyed
-the object holding the only copy. He was then holding a passphrase that opened nothing, with
+period to a screen offering to create a vault. **A locked cold launch rebuilds the view tree**,
+which destroyed the object holding the only copy. `docs/APP_LOCK.md` describes the mechanism. He was then holding a passphrase that opened nothing, with
 nothing on screen to tell him so, which is worse than losing his place.
 
 The state lives on the app now, above the lock. **It is still never persisted**, and it still

@@ -57,12 +57,24 @@ writing half-typed secrets and passphrases to disk and this design will not. iOS
 same snapshot either way, so the person cannot be promised anything about what they will
 find; what they can be promised is that the app never *chose* to discard their work.
 
-## Why the shipped arrangement cannot deliver R3
+## Why the arrangement before this one could not deliver R3
 
-The shipped lock swaps the root view: `LockScreenView` replaces the whole interface. That
-was a deliberate fix for an older bug, a frame of the account list leaking at every locked
-launch, and it has a property that was invisible until the vault added screens people type
-into: **replacing the root destroys everything beneath it.**
+**Historical, and kept because the reason still constrains the design.** Before the design
+below, the lock swapped the root view: `LockScreenView` replaced the whole interface. That was a
+deliberate fix for an older bug, a frame of the account list leaking at every locked launch, and
+it had a property that was invisible until the vault added screens people type into: **replacing
+the root destroys everything beneath it.**
+
+## This file is the only description of the mechanism
+
+**Nine sentences across six files once described it, three correction passes fixed six of them,
+and three were still wrong afterwards**, including a pass that was about these sentences. Every
+correction had been a partial sweep of a set nobody had enumerated, which is what a description
+repeated in every dependent file guarantees.
+
+So the mechanism is described here and nowhere else. **A file that depends on it states its own
+local consequence and points here**, in the same shape the flag-and-class pairing rule was
+collapsed to one function after it drifted across five sites.
 
 Four casualties were found in the field, in one day, all the same bug:
 

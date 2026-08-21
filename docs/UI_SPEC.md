@@ -45,7 +45,8 @@ and unlocking triggers the check, so an image shared while the app sat locked ap
 you authenticate.
 
 **Leaving and coming back keeps the passphrase.** It is held by the app rather than by this
-screen, because App Lock replaces the root view and would otherwise take it with it. Somebody
+screen, because **state owned by a screen does not survive a locked cold launch**, which
+`docs/APP_LOCK.md` describes. Somebody
 copying it into a password manager is the expected behavior, not an edge case.
 
 **Nothing is stored until Continue.** The passphrase is generated, displayed, and only written

@@ -22,12 +22,10 @@ struct OpenFactorApp: App {
 
     /// The vault gate's state, which includes a generated passphrase when one is on screen.
     ///
-    /// **Held here so App Lock cannot destroy it.** On a locked cold launch the lock is the root
-    /// and everything below is built fresh once it clears, so anything owned down there is gone.
-    /// A generated passphrase lives only in this object, and owning it at the top is what lets
-    /// somebody copy it, go and paste it somewhere, and come back to the same screen. A warm lock
-    /// is a window above the tree and would not have destroyed it, but the rule is written for
-    /// the case that does.
+    /// **Held here so App Lock cannot destroy it.** State owned below this does not survive a
+    /// locked cold launch; `docs/APP_LOCK.md` describes why. A generated passphrase lives only in
+    /// this object, and owning it at the top is what lets somebody copy it, go and paste it
+    /// somewhere, and come back to the same screen.
     @State private var gate: VaultGateModel
 
     /// The add flow's state: the sheet's presence, the pushed manual screen, and every typed
@@ -42,9 +40,7 @@ struct OpenFactorApp: App {
     /// that happens moments before the tree beneath this is rebuilt would take the image out of
     /// the container and then be thrown away with the view that asked for it, and sharing would
     /// appear to do nothing at all, which is what it did. A locked cold launch is where that
-    /// rebuild happens: the lock is the root and everything below it is built fresh once it
-    /// clears. A warm lock is a window above a tree that survives, and would not have destroyed
-    /// it, but the rule is written for the case that does.
+    /// rebuild happens; `docs/APP_LOCK.md` describes it.
 
     /// What has arrived and is waiting to be dealt with.
     ///

@@ -20,8 +20,9 @@ struct VaultGateView<Content: View>: View {
 
     /// **Owned by the app, not by this view**, and that is a bug fix rather than a preference.
     ///
-    /// It used to be `@State` here. App Lock replaces the whole root with the lock screen, which
-    /// tears this view down and takes its state with it. Somebody who copied their passphrase,
+    /// It used to be `@State` here, and **a locked cold launch rebuilds this view**, which took
+    /// its state with it. See `docs/APP_LOCK.md` for the mechanism; what matters here is only
+    /// that state owned by this view does not survive it. Somebody who copied their passphrase,
     /// left to paste it somewhere, and came back past the grace period returned to a screen
     /// offering to create a vault. Worse than losing their place: they were holding a passphrase
     /// that opened nothing, with no way to tell.

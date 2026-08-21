@@ -1120,8 +1120,9 @@ second.
 **PR 16c is built, both halves, and is unpushed on `pr-16c-share-extension`.** Shipped to
 TestFlight as 1.0 (3), which is the first build carrying the vault.
 
-**Two bugs from real use, and they were the same bug twice.** App Lock replaces the root view
-with the lock screen rather than covering it, so anything owned below it is destroyed. First the
+**Two bugs from real use, and they were the same bug twice.** App Lock **then** replaced the root
+view with the lock screen rather than covering it, so anything owned below it was destroyed. That
+is no longer how a warm lock works; `docs/APP_LOCK.md` has the mechanism. First the
 generated vault passphrase: Emmanuel copied his, went to another app to paste it, came back past
 the grace period, and was offered a fresh vault, holding a passphrase that opened nothing and
 with no way to tell. Then the shared image: collecting it is destructive, so a collection that

@@ -50,8 +50,11 @@ enum InboxOpener {
     /// planting one is enough. And sweeping the whole directory rather than the identifiers read
     /// here deletes whatever arrived while the person was deciding.
     ///
-    /// Nothing is lost by leaving the rest on a failure. `take` removes the item it refused, so
-    /// the obstruction is gone; what remains is what somebody shared, and the next collection
+    /// Nothing is lost by leaving the rest on a failure. `take` removes the item it refused in
+    /// every case it can: the exception is an entry that was a regular file when `pending` looked
+    /// and a directory by the time `take` opened it, which `unlinkat` cannot remove. That one
+    /// accumulates, which is the cost S4-42 already accepted, and it cannot be collected either.
+    /// What remains is what somebody shared, and the next collection
     /// presents it.
     ///
     /// **Too stale to present is still a decision, and it supersedes.** Everything read here is
