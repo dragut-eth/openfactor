@@ -73,6 +73,15 @@ saying what they cannot see.
 **So the backup exclusion is asserted by test and the protection class is not.** The class was read
 back on hardware in E6, and that is the only place it has ever been observed.
 
+## Not a probe yet, and the next one worth running
+
+**Whether other authenticators leak the same app switcher window.** Two opposite claims are on
+the record with no evidence behind either: a reviewer says a peer that blanks its snapshot has no
+such window, and the maintainer says this is system wide and no peer does better. **Neither has
+measured a peer.** The method is the one PR 15b already used here, and it needs no second signed
+app and no second device, which puts it in a different class from everything in the table above.
+Written up in `docs/APP_LOCK.md`.
+
 ## What a reader is entitled to conclude
 
 **That two of these are checkable by anybody with this repository**, and the rest are not, for

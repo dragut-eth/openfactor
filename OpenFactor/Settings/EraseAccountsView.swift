@@ -30,13 +30,12 @@ struct EraseAccountsView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    /// The word that has to be typed. Deliberately not "delete", which muscle memory
-    /// supplies, and deliberately not localised into something ambiguous.
-    private static let confirmation = "ERASE"
+    /// **The word and the rule both live in `EraseGate` now**, so the confirmation is enforced
+    /// by something a test can reach rather than only by the button this view disables. This
+    /// view displays it; it does not define it.
+    private static let confirmation = EraseGate.confirmation
 
-    private var isConfirmed: Bool {
-        typed.trimmingCharacters(in: .whitespaces).uppercased() == Self.confirmation
-    }
+    private var isConfirmed: Bool { EraseGate.isConfirmed(typed) }
 
     var body: some View {
         NavigationStack {
@@ -107,30 +106,31 @@ struct EraseAccountsView: View {
             """
     }
 
-    /// Authenticates, then erases. Authentication comes first: an unlocked phone in the
-    /// wrong hands is exactly the case this is defending against, and App Lock may be off.
+    /// **The decision is `EraseGate`'s and the presentation is this view's.**
+    ///
+    /// Both gates and their order used to live here, where nothing could test them: a test
+    /// bundle cannot make a real Face ID prompt fail, so the refusal path was unreachable.
+    /// A reviewer scoring `docs/MASVS.md` found that MASVS-AUTH-3's cited test proved deletion
+    /// deletes and nothing about what guarded it. `EraseGateTests` covers it now.
     private func erase() async {
         isWorking = true
         defer { isWorking = false }
 
-        guard await AppLockAvailability.authenticate(reason: "Erase all accounts") else {
-            failure = "Not erased. Your identity could not be confirmed."
-            return
+        let outcome = await EraseGate.erase(typed: typed, from: store) {
+            await AppLockAvailability.authenticate(reason: "Erase all accounts")
         }
 
-        do {
-            let records = try store.records()
-
-            // Every account, including the ones this version cannot decode. Leaving those
-            // behind would be the worst outcome: an erase that reports success and leaves
-            // secrets on the device.
-            for id in records.readable.map(\.id) + records.unreadable {
-                try store.delete(id: id)
-            }
-
+        switch outcome {
+        case .erased:
             onErased()
             dismiss()
-        } catch {
+        case .notAuthenticated:
+            failure = "Not erased. Your identity could not be confirmed."
+        case .notConfirmed:
+            // Unreachable while the button stays disabled, and answered anyway rather than
+            // leaving the screen silent if that ever changes.
+            failure = "Not erased. Type \(Self.confirmation) to confirm."
+        case .failed:
             // Partial deletion is possible, so this does not claim nothing happened.
             failure = "Some accounts could not be erased. Open this screen again to retry."
         }

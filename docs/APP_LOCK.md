@@ -351,6 +351,31 @@ checklist.
 **The recording stays out of this repository.** It shows real accounts. It is evidence, not
 an artifact to publish, and no screen capture of a real vault belongs in a public repo.
 
+### Open measurement: do other authenticators leak this too?
+
+**Nobody has measured a peer, and two opposite claims are now on the record with no evidence
+behind either.** A reviewer scoring this project wrote that an authenticator which fully blanks
+its switcher snapshot has no such window, offering it as something OpenFactor does worse than its
+peers. **It named no peer, and it described the wrong artifact**: this app's switcher card does
+stay blank, as measured above. What leaks is a transient cache captured during the zoom out
+animation, which is drawn by the system from the live layer rather than from the snapshot an app
+controls. The maintainer's position is that this is system wide and that no peer does better.
+
+**Both positions are unmeasured, and that is the only honest statement available today.**
+
+**What would settle it**, and it is an afternoon rather than a day: install two or three other
+authenticators on a real phone, put a distinctive account in each, and record the zoom out from
+the home screen at high frame rate, the way PR 15b did here. Then say what was seen. **If peers
+leak the same way, this stops being a deficit and becomes a platform property that belongs in the
+threat model.** If they do not, there is a fix somebody has found and this project has not.
+
+**A second thing to check in the same pass.** iOS lets a person require Face ID for an individual
+app from the home screen. Whether that suppresses this cache is unknown, and if it does, it is a
+mitigation this app cannot enforce but can document.
+
+**Until that is run, nothing here claims peers do worse**, and no reviewer's claim that they do
+better should be accepted either.
+
 ## The manual checklist
 
 One pass on hardware when the implementation is complete, instead of live iteration. Every
