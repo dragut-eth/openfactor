@@ -351,7 +351,10 @@ struct WrappedKeySyncTests {
                 SecItemDelete(everything as CFDictionary)
             })
 
-        #expect(throws: (any Error).self) { _ = try racing.setSynchronizable(true) }
+        // Named rather than "any error": a test that accepts whatever is thrown would stay green
+        // if the repair started failing for an unrelated reason, which is the opposite of what it
+        // is here to notice. The record was removed, so the update matches nothing.
+        #expect(throws: SecretStoreError.notFound) { _ = try racing.setSynchronizable(true) }
     }
 
     /// The ordinary record must not be rewritten on every foreground just because the reconcile

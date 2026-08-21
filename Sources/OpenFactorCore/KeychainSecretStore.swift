@@ -235,7 +235,9 @@ public struct KeychainSecretStore: SynchronizableSecretStore {
             throw error(for: status)
         }
 
-        let target: SecretAccessibility = shouldSync ? .whenUnlocked : .whenUnlockedThisDeviceOnly
+        // The pairing rule, from the one place that owns it. Written out here as a ternary, this
+        // was its fifth home, and the rule having five homes is how two of them came to disagree.
+        let target = SecretAccessibility.forSync(shouldSync)
         var changed = 0
 
         for item in items {
