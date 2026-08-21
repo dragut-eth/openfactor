@@ -369,12 +369,26 @@ the home screen at high frame rate, the way PR 15b did here. Then say what was s
 leak the same way, this stops being a deficit and becomes a platform property that belongs in the
 threat model.** If they do not, there is a fix somebody has found and this project has not.
 
-**A second thing to check in the same pass.** iOS lets a person require Face ID for an individual
-app from the home screen. Whether that suppresses this cache is unknown, and if it does, it is a
-mitigation this app cannot enforce but can document.
-
 **Until that is run, nothing here claims peers do worse**, and no reviewer's claim that they do
 better should be accepted either.
+
+### The system lock half is now measured, and it goes against this app
+
+**iOS's per-app Face ID lock removes this exposure completely, and from the first frame.**
+Measured in `docs/audits/E/E14-the-system-lock-and-the-switcher.md` with this app's App Lock
+switched off: the card carries Apple's own "Face ID Required" placeholder from the moment it starts
+to expand, and no account content appears at any point. Sampled at sixty frames a second across the
+transition, because the exposure being looked for spans about ten frames at that rate.
+
+**So the honest statement is that the system does this job better than this app can**, and it does
+it by replacing the snapshot rather than covering it afterwards. **An app's cover is necessarily a
+reaction** to a lifecycle event, and the cache is captured on the system's schedule.
+
+**What follows for this app, and what does not.** The system lock is off until somebody turns it
+on, and **this app cannot enable it, prompt for it, or detect it**. The only thing available is to
+say it exists, which is a change to the interface rather than to the mechanism. And the lock is a
+gate on opening the app: it does nothing about the vault key, which is a separate question with its
+own record.
 
 ## The manual checklist
 

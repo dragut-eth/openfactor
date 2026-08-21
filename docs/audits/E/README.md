@@ -73,12 +73,20 @@ saying what they cannot see.
 **So the backup exclusion is asserted by test and the protection class is not.** The class was read
 back on hardware in E6, and that is the only place it has ever been observed.
 
+## The one anybody can reproduce
+
+**E14** needs no second app, no second device and no signing: turn on the system per-app lock, turn
+this app's App Lock off, record the launch, and step through the frames. It answers a question this
+project had asserted twice and measured zero times, and it answers it against this app rather than
+in its favour: **the system does that job better than the app can, and immediately.**
+
 ## Not a probe yet, and the next one worth running
 
 **Whether other authenticators leak the same app switcher window.** Two opposite claims are on
 the record with no evidence behind either: a reviewer says a peer that blanks its snapshot has no
 such window, and the maintainer says this is system wide and no peer does better. **Neither has
-measured a peer.** The method is the one PR 15b already used here, and it needs no second signed
+measured a peer.** E14 settled the other half of that argument and left this half exactly where it
+was. The method is the one PR 15b already used here, and it needs no second signed
 app and no second device, which puts it in a different class from everything in the table above.
 Written up in `docs/APP_LOCK.md`.
 
