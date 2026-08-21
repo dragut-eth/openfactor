@@ -79,9 +79,23 @@ jobs:
       - name: One window scene, which App Lock depends on
         run: |
           set -e
-          VALUE=$(plutil -extract UIApplicationSceneManifest.UIApplicationSupportsMultipleScenes \
-            raw OpenFactor-Info.plist 2>/dev/null || echo "missing")
+          # **Read with python3, not plutil, because this job runs on Linux.** The first version
+          # used `plutil`, which is macOS only, and folded its own "command not found" into
+          # `|| echo missing`. On the runner it therefore reported the setting as absent when
+          # what had happened was that it could not read the file at all. It passed on the
+          # author's machine every time and failed the first time it ran here, for a reason that
+          # had nothing to do with the project.
+          #
+          # **A check that cannot tell "this is wrong" from "I cannot look" is not a check.**
+          # Those two now produce different words and different messages.
+          READER='import plistlib;d=plistlib.load(open("OpenFactor-Info.plist","rb"));s=d.get("UIApplicationSceneManifest") or {};print(str(s.get("UIApplicationSupportsMultipleScenes","ABSENT")).lower())'
+          VALUE=$(python3 -c "$READER" 2>/dev/null || echo "unreadable")
           echo "UIApplicationSupportsMultipleScenes: $VALUE"
+          if [ "$VALUE" = "unreadable" ]; then
+            echo "OpenFactor-Info.plist could not be parsed, so this step proved nothing."
+            echo "Fix the reader or the file. This is not a passing build."
+            exit 1
+          fi
           if [ "$VALUE" != "false" ]; then
             echo "App Lock and the snapshot cover are single-scene. See PrivacyShield's"
             echo "foregroundScene and the comment in OpenFactor-Info.plist. To support multiple"
