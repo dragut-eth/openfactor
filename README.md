@@ -198,6 +198,14 @@ still needs a second writing device.
 implementation separately. The format carries public test vectors reproduced by independent
 implementations. Findings and fixes are recorded in [docs/audits](docs/audits).
 
+**Gate A4** ran from 2026-08-16 to 2026-08-21 against the vault at rest, the Watch key exchange,
+the parsers and the process boundaries. Three independent models, twenty rounds, eleven
+closed-question verification briefs, **133 findings and three highs**, all closed, with two waived
+and two withdrawn. The conclusion is [docs/audits/A4.md](docs/audits/A4.md) and every finding is
+listed in [docs/audits/A4-board.md](docs/audits/A4-board.md). **It also records the gate's own
+worst moment**, a day when eight of eleven newly open items were defects in that day's fixes, and
+a finding that all three models verified as fixed and that turned out never to have been real.
+
 **The vault design** was reviewed in two rounds before implementation. Those reviews found the
 incomplete Watch ECDH exchange, unspecified record layouts, ambiguous wrapped-key sync semantics,
 and missing-data detection that could silently report a destroyed vault as empty. The revised

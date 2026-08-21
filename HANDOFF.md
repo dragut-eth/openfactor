@@ -77,6 +77,23 @@ grounds that it sounds prudent.
 found false.** Two days later a claim about a build system was not checked and was false. The
 lesson had been filed as being about the Keychain rather than about claims.
 
+### Gate A4 is concluded
+
+**`docs/audits/A4.md` is the conclusion document**, published 2026-08-21. `README.md` and
+`SECURITY.md` both point at it, and `SECURITY.md`'s claim that gate A4 "has not happened" is
+corrected, having been stale since the gate started.
+
+**What it leaves open on purpose**, because a gate that stays open until every reviewer suggestion
+is built never closes: the unlocked-device posture, which all three reviewers reached by three
+different routes and whose remedy is costed in `docs/MASVS.md` under MASVS-CRYPTO-2; the
+WatchConnectivity prove-list item that shipped unproven; the two waivers; and one peer measurement
+that costs an afternoon. Those belong to the roadmap and to gate A5.
+
+**Still not published: the returns themselves.** The exit checks and the reply round are collected
+and adjudicated in a working file outside the repository. **The commitment stands that both rounds
+publish together, the first one included**, and A4.md describes what they concluded without
+reproducing them, so it can stand alone until that happens.
+
 ### The exit checks, and why they are not published yet
 
 All three items that gated A4 are done: S1-34 and S4-45 are closed, the final verification round

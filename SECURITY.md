@@ -46,9 +46,13 @@ the phone's request handling has no tests at all because it lives in the app tar
 CSPRNG failure path had none either. That is what a claim marked **tested** must never mean, and
 it is why the basis labels exist.
 
-**Neither is a professional audit.** Gate A4 in `docs/ROADMAP.md` is that, and it has not
-happened. A security design can be sound while the product implementing it is unfinished or
-wrong, which is the distinction this whole document turns on.
+**Neither is a professional audit, and neither is gate A4, which has now run.** Four scopes,
+three independent models, twenty rounds and eleven closed-question verification briefs produced
+133 findings, three of them high, and its conclusion is
+[docs/audits/A4.md](docs/audits/A4.md). **It is still three language models and one developer**,
+and that document describes the models agreeing confidently on something false. A security design
+can be sound while the product implementing it is unfinished or wrong, which is the distinction
+this whole document turns on.
 
 ### Where the five attackers are answered
 
