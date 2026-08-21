@@ -344,7 +344,12 @@ struct SettingsView: View {
             guard let report = WrappedKeyStore().syncReport() else { return "none on this device" }
 
             let place = report.isSynchronizable ? "in iCloud" : "this device only"
-            return report.records == 1 ? place : "\(place), \(report.records) records"
+            let counted = report.records == 1 ? place : "\(place), \(report.records) records"
+
+            // **The flag alone can say the wrong thing.** A record written with the flag set and a
+            // device-only protection class reads as "in iCloud" here while iCloud can never carry
+            // it. Saying so is what lets a device under test answer whether it is affected.
+            return report.protectionMatchesFlag ? counted : "\(counted), class does not match"
         }
 
         @ViewBuilder

@@ -295,19 +295,77 @@ public struct WrappedKeyStore: Sendable {
     ///   the number of records found under both flags. **A count above one is the twin case**,
     ///   S1-12. `load` still resolves it by picking one unspecified, which is why nothing that
     ///   matters reads through `load` alone; `unlock` reads `candidates()` and tries every one.
-    public func syncReport() -> (isSynchronizable: Bool, records: Int)? {
+    public func syncReport() -> (isSynchronizable: Bool, records: Int, protectionMatchesFlag: Bool)?
+    {
+        guard let items = try? attributesOfEveryRecord(), let first = items.first else {
+            return nil
+        }
+
+        let synchronizable = (first[kSecAttrSynchronizable as String] as? Bool) ?? false
+        return (synchronizable, items.count, items.allSatisfy(Self.protectionMatchesFlag))
+    }
+
+    /// Whether one record's protection class is the one its own sync flag requires.
+    ///
+    /// **Reported because the flag alone cannot say it.** A record written with the flag set and a
+    /// device-only class is flagged for iCloud and kept off it, and every readout that asks only
+    /// the flag calls that record synced. Two of this gate's findings were about a boolean nobody
+    /// could see; this is the second half of the same boolean.
+    private static func protectionMatchesFlag(_ item: [String: Any]) -> Bool {
+        let synchronizable = (item[kSecAttrSynchronizable as String] as? Bool) ?? false
+        let stored = item[kSecAttrAccessible as String] as? String
+        return stored == (SecretAccessibility.forSync(synchronizable).attribute as String)
+    }
+
+    private func attributesOfEveryRecord() throws(SecretStoreError) -> [[String: Any]] {
         var find = query()
         find[kSecMatchLimit as String] = kSecMatchLimitAll
         find[kSecReturnAttributes as String] = true
 
         var result: CFTypeRef?
-        guard SecItemCopyMatching(find as CFDictionary, &result) == errSecSuccess,
-            let items = result as? [[String: Any]],
-            let first = items.first
-        else { return nil }
+        let status = SecItemCopyMatching(find as CFDictionary, &result)
+        if status == errSecItemNotFound { return [] }
+        guard status == errSecSuccess, let items = result as? [[String: Any]] else {
+            throw error(for: status)
+        }
+        return items
+    }
 
-        let synchronizable = (first[kSecAttrSynchronizable as String] as? Bool) ?? false
-        return (synchronizable, items.count)
+    /// Brings a record's protection class back into agreement with its own sync flag.
+    ///
+    /// **Correcting the write did nothing for what was already written.** A record stored with the
+    /// flag set and a device-only class is not in `setSynchronizable`'s query, which looks for the
+    /// opposite flag, so the reconcile that runs on every foreground passes over it forever. The
+    /// flag says iCloud, the class says here, and nothing syncs while every account does.
+    ///
+    /// **This updates one attribute and nothing else.** It never deletes, never writes the wrap,
+    /// and never moves a record between flags: the flag is the record's own statement of where it
+    /// belongs, and the class is made to agree with it rather than the other way round. So the
+    /// worst this can do to a record it should have left alone is set the class it already had.
+    ///
+    /// Runs on both directions of the toggle and on the reconcile, and touches only records whose
+    /// pair actually disagrees, so an ordinary record is not rewritten on every foreground.
+    ///
+    /// - Returns: how many records were repaired.
+    @discardableResult
+    func repairProtectionClasses() throws(SecretStoreError) -> Int {
+        var repaired = 0
+
+        for item in try attributesOfEveryRecord() where !Self.protectionMatchesFlag(item) {
+            let synchronizable = (item[kSecAttrSynchronizable as String] as? Bool) ?? false
+
+            var slot = query()
+            slot[kSecAttrSynchronizable as String] = synchronizable
+
+            let changes: [String: Any] = [
+                kSecAttrAccessible as String: SecretAccessibility.forSync(synchronizable).attribute
+            ]
+            if SecItemUpdate(slot as CFDictionary, changes as CFDictionary) == errSecSuccess {
+                repaired += 1
+            }
+        }
+
+        return repaired
     }
 
     /// Moves the record between iCloud and this device, following the account items.
@@ -338,6 +396,13 @@ public struct WrappedKeyStore: Sendable {
         ]
 
         let status = SecItemUpdate(find as CFDictionary, changes as CFDictionary)
+
+        // **Whatever the move did, a record already on this side may still be malformed.** One
+        // written with the flag set and a device-only class is not what the query above looks
+        // for, so it survives every conversion and every reconcile untouched. Repaired here
+        // because this is the method that owns the pairing, and the reconcile already calls it on
+        // every foreground.
+        try repairProtectionClasses()
 
         // Nothing to convert: no vault on this device, or it is already on the right side.
         // Idempotent on purpose, so a partial failure can simply be run again.

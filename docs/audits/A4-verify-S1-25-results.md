@@ -109,3 +109,54 @@ or does it stay wrong?". The answer came back precise and unanimous on the facts
 That is the argument for naming uncertainties in the brief rather than only the parts that look
 finished. Question 2 did not produce either of this round's items; question 1 and the disclosed
 surface did.
+
+## What was done: S1-31
+
+**The class is made to agree with the flag, in place, and nothing else moves.**
+
+`repairProtectionClasses()` reads every record's flag and class, and where they disagree it updates
+**the class alone**, pinned to that record's own flag. It never deletes, never writes the wrap, and
+never moves a record between flags. **The flag is the record's own statement of where it belongs**,
+so the class is brought to it rather than the other way round, which means the worst this can do to
+a record it should have left alone is set the class it already had.
+
+That direction matters. Moving the *flag* instead would decide, on no evidence, that a record
+flagged for iCloud does not belong there. This gate has now filed a high and two mediums against
+exactly that habit.
+
+It runs inside `setSynchronizable`, on both directions of the toggle, which is what the foreground
+reconcile already calls. **Only records whose pair actually disagrees are touched**, so an ordinary
+record is not rewritten on every foreground.
+
+Fable's remedy, taken as filed.
+
+### The report can now say it
+
+`syncReport` gained `protectionMatchesFlag`, and the Debug row appends "class does not match" when
+it is false. **The flag alone could never say this**: a record written with the flag set and a
+device-only class reads as "in iCloud" while iCloud can never carry it. Two of this gate's findings
+were about a boolean nobody could see, and this is the second half of the same boolean.
+
+**This is what makes the question answerable on hardware.** Open Settings on either phone and the
+row says whether that device is affected.
+
+### The tests
+
+Three hosted, against the real Keychain, red before the fix. A record planted in the broken shape
+is repaired to `whenUnlocked` with its flag unmoved and its wrap byte-identical; the report names
+the mismatch before and its absence after; and a correctly paired record survives a conversion
+without its class changing, which is what keeps the repair idempotent.
+
+The planting is raw `SecItemAdd`, because **no code path in the app can produce this shape any
+more**, which is the point of the fix that came before it.
+
+Mutation verified applied: removing the repair call reddens the two tests that assert it and leaves
+the idempotence test green, which is the correct signature.
+
+### What this does not do
+
+It repairs a device that runs this build. **A device that never runs it keeps its record as it is**,
+and there is no route by which one phone repairs another: the mismatch is a property of a Keychain
+item that, in this state, is not syncing.
+
+482 core tests pass, the app suite passes, both targets build.

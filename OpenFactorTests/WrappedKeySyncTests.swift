@@ -263,6 +263,81 @@ struct WrappedKeySyncTests {
             "byte for byte")
     }
 
+    // MARK: - Repairing a record written with a split pair
+
+    /// Writes the shape the broken pairing produced: flagged for iCloud, protected as though it
+    /// never leaves. Raw, because no code path in the app can produce it any more.
+    private func plantSplitPair(_ record: Data, in store: WrappedKeyStore) {
+        let attributes: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: store.service,
+            kSecAttrAccount as String: "wrapped",
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: true,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecValueData as String: record,
+        ]
+        _ = SecItemAdd(attributes as CFDictionary, nil)
+    }
+
+    /// **Correcting the write does nothing for what was already written.** A record stored with
+    /// the sync flag set and a device-only class is not in `setSynchronizable(true)`'s query,
+    /// which looks for the opposite flag, so the foreground reconcile passes over it on every
+    /// launch forever. The flag says it is in iCloud, the class keeps it here, and `syncReport`
+    /// reads the flag, so the one readout that exists calls it synced.
+    ///
+    /// The repair is an update of the class alone, pinned to the record's own flag. Nothing is
+    /// deleted and the wrap itself is never touched.
+    @Test("A record whose class does not match its flag is repaired in place")
+    func aSplitPairIsRepaired() throws {
+        let store = makeStore()
+        defer { deleteBothFlags(of: store) }
+
+        let wrap = Data("a wrap written before the pairing was fixed".utf8)
+        plantSplitPair(wrap, in: store)
+        #expect(
+            accessibility(of: store) == (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String),
+            "the premise: the shape the defect produced")
+
+        _ = try store.setSynchronizable(true)
+
+        #expect(
+            accessibility(of: store) == (kSecAttrAccessibleWhenUnlocked as String),
+            "the class now matches the flag, so iCloud can carry it")
+        #expect(synchronizableFlag(of: store) == true, "and the flag was not moved to get there")
+        #expect(try store.load() == wrap, "and the wrap itself is untouched")
+    }
+
+    /// The readout has to be able to say it, or a device cannot be asked whether it is affected.
+    @Test("The report says when the class and the flag disagree")
+    func theReportNamesASplitPair() throws {
+        let store = makeStore()
+        defer { deleteBothFlags(of: store) }
+
+        plantSplitPair(Data("a wrap written before the pairing was fixed".utf8), in: store)
+        #expect(store.syncReport()?.protectionMatchesFlag == false)
+
+        _ = try store.setSynchronizable(true)
+        #expect(store.syncReport()?.protectionMatchesFlag == true, "and says so once repaired")
+    }
+
+    /// The ordinary record must not be rewritten on every foreground just because the reconcile
+    /// runs there. Repairing only what is wrong is what makes this idempotent.
+    @Test("A record that already matches is left alone")
+    func aMatchingRecordIsNotRewritten() throws {
+        let store = makeStore()
+        defer { deleteBothFlags(of: store) }
+
+        try store.save(Data("an ordinary local record".utf8))
+        #expect(store.syncReport()?.protectionMatchesFlag == true)
+
+        _ = try store.setSynchronizable(false)
+        #expect(synchronizableFlag(of: store) == false)
+        #expect(
+            accessibility(of: store) == (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String))
+        #expect(store.syncReport()?.protectionMatchesFlag == true)
+    }
+
     /// **The refusal counted the store and then asked it again.** `save` guarded on
     /// `countingBothFlags() <= 1` and then ran a separate `SecItemCopyMatching` under `Any` with
     /// `kSecMatchLimitOne`. Those are two reads of a store another device writes into, so a record
