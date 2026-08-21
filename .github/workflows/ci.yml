@@ -318,8 +318,16 @@ jobs:
       - name: The share extension cannot reach the Keychain
         run: |
           set -e
-          keys=$(plutil -convert json -o - OpenFactorShare/OpenFactorShare.entitlements \
-            | python3 -c 'import json,sys; print(" ".join(sorted(json.load(sys.stdin))))')
+          # **plistlib rather than plutil, because this job runs on Linux**, and the same
+          # mistake made this step fail on every run it has ever had. It was red on 18 August
+          # for exactly this reason, and a step that has never once completed has never once
+          # checked the thing it claims to enforce. See the scene manifest step above.
+          READER='import plistlib;print(" ".join(sorted(plistlib.load(open("OpenFactorShare/OpenFactorShare.entitlements","rb")))))'
+          keys=$(python3 -c "$READER" 2>/dev/null || echo "UNREADABLE")
+          if [ "$keys" = "UNREADABLE" ]; then
+            echo "The entitlements file could not be parsed, so this step proved nothing."
+            exit 1
+          fi
           echo "entitlement keys: $keys"
           if [ "$keys" != "com.apple.security.application-groups" ]; then
             echo "The share extension must declare the app group and nothing else."
@@ -367,8 +375,11 @@ jobs:
                   r"UserDefaults|@AppStorage",
           }
 
-          manifest = json.loads(subprocess.check_output(
-              ["plutil", "-convert", "json", "-o", "-", "OpenFactor/PrivacyInfo.xcprivacy"]))
+          # plistlib rather than plutil, for the reason the two steps above record: this job
+          # runs on Linux and plutil is macOS only.
+          import plistlib
+          with open("OpenFactor/PrivacyInfo.xcprivacy", "rb") as handle:
+              manifest = plistlib.load(handle)
           declared = {e["NSPrivacyAccessedAPIType"]
                       for e in manifest.get("NSPrivacyAccessedAPITypes", [])}
           print("declared:", " ".join(sorted(declared)) or "(none)")
