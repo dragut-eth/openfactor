@@ -33,7 +33,7 @@ if a verdict cannot name something a reader can execute or read, it does not get
 | **MASVS-STORAGE-1** The app securely stores sensitive data. | Pass | `docs/VAULT.md`; `KeychainSecretStoreTests` (protection class, access group, sync class); `VaultTests`; `VaultVectorTests`; `docs/audits/E1-keychain-access-groups.md` |
 | **MASVS-STORAGE-2** The app prevents leakage of sensitive data. | **Partial** | `docs/APP_LOCK.md`; `PrivacyShield`; `ScreenCaptureMonitor`; `CodeClipboard`; `SharedInbox` backup exclusion, refused on failure. **The known gap**: PR 15b measured the app switcher's zoom-from-home-screen cache showing issuer and name for about a sixth of a second, recorded as accepted rather than fixed. CI asserts no logging. |
 | **MASVS-CRYPTO-1** The app employs current strong cryptography and uses it according to industry best practices. | Pass | AES-256-GCM, HKDF-SHA256, P-256 ECDH via CryptoKit; PBKDF2-SHA256 at 600,000 iterations. Published RFC vector tables: `TOTPTests`, `HOTPTests`, `Base32Tests`, `BackupVectorTests`, `VaultVectorTests` |
-| **MASVS-CRYPTO-2** The app performs key management according to industry best practices. | **Partial, by decision** | `docs/VAULT.md` key hierarchy; `WrappedVaultKeyTests`; `WrappedKeySyncTests`; hardware measurements `E8`, `E9`, `E10`. **The decision**: the vault key is a `.complete`-protected file in the app's private container rather than Secure Enclave backed, because it must be derivable from a passphrase on a replacement device. That is a recovery requirement, not an oversight, and it is the trade `docs/VAULT.md` argues. |
+| **MASVS-CRYPTO-2** The app performs key management according to industry best practices. | **Partial, by decision** | `docs/VAULT.md` key hierarchy; `WrappedVaultKeyTests`; `WrappedKeySyncTests`; hardware measurements `E8`, `E9`, `E10`. **The decision**: the vault key is a `.complete`-protected file in the app's private container rather than held as a Secure Enclave key, because it must be recoverable from a passphrase on a replacement device. That is a recovery requirement, not an oversight, and it is the trade `docs/VAULT.md` argues. **What "a file in a container" does not convey, and should**: under Complete Protection, Apple states the class key "is protected with a key derived from the user passcode or password and the device UID", and the decrypted class key is discarded shortly after the device locks ([Apple Platform Security](https://support.apple.com/guide/security/data-protection-classes-secb010e978a/web)). So the file cannot be read while the device is locked and cannot be decrypted off the device at all. **What the Secure Enclave would add, stated honestly**: it holds P-256 keys, not arbitrary symmetric ones, so this would mean wrapping the vault key under an SE key as an extra layer. That would harden nothing against an attacker on an unlocked device, because the app can ask the SE to unwrap exactly as an attacker in the app's place could, and the at-rest case is what the device UID already covers. The verdict stays partial because the master key is not hardware bound in its own right, not because the file is unprotected. |
 | **MASVS-AUTH-1** The app uses secure authentication and authorization protocols and follows the relevant best practices. | **Not applicable** | There is no OpenFactor account, no server and no remote authorization. CI asserts the app makes no network requests. |
 | **MASVS-AUTH-2** The app performs local authentication securely according to the platform best practices. | Pass | App Lock via `LocalAuthentication`, off by default; `AppLockEngineTests`, `AppLockPresentationTests`; `docs/APP_LOCK.md` |
 | **MASVS-AUTH-3** The app secures sensitive operations with additional authentication. | Pass | Erase requires Face ID plus a typed word (`EraseAccountsTests`); releasing the vault key to a watch requires a human tap inside a bounded consent window (`ProvisioningDeskTests`, `WatchProvisioningTests`) |
@@ -43,7 +43,7 @@ if a verdict cannot name something a reader can execute or read, it does not get
 | **MASVS-PLATFORM-2** The app uses WebViews securely. | **Not applicable** | There are no WebViews. Verified: zero occurrences of `WKWebView`, `UIWebView` or `SFSafariViewController` in the tree. |
 | **MASVS-PLATFORM-3** The app uses the user interface securely. | **Partial** | `ScreenCaptureMonitor` hides codes while the screen is recorded, mirrored or shared; `PrivacyShield` covers the app switcher; two camera and Face ID usage strings are asserted present by CI. Same known gap as STORAGE-2. |
 | **MASVS-CODE-1** The app requires an up-to-date platform version. | Pass | iOS 18.0 and watchOS 11.0 minimums, asserted by the CI job "Project settings are what the documentation says" |
-| **MASVS-CODE-2** The app has a mechanism for enforcing app updates. | **Fail, and not planned** | There is none. The app has no server to learn of an update from and no mechanism to compel one; updates arrive through the App Store at the platform's pace. Building one would mean a network call, which the first principle refuses. **This is a genuine fail rather than a not-applicable**, and it is stated as one. |
+| **MASVS-CODE-2** The app has a mechanism for enforcing app updates. | **Fail, with the platform's part stated** | **The app has no mechanism of its own**, and will not get one: it has no server to learn a minimum version from and no way to notice it is out of date or refuse to run, and building either would mean a network call, which the first principle refuses. **What exists is Apple's rather than this project's, and it is not nothing.** App Store apps update automatically by default on iPhone and iPad, controlled by the person at Settings, then App Store, then Automatic Updates ([Apple Support](https://support.apple.com/en-us/102629)). A fix therefore reaches a default configured device with nobody doing anything, and reaches a device whose owner turned that off when they choose to. **This is still a genuine fail rather than a not-applicable**, because the control asks for a mechanism the app itself has, and it is stated as one. |
 | **MASVS-CODE-3** The app only uses software components without known vulnerabilities. | Pass, and enforced | **Zero third-party dependencies.** `Package.swift` declares none, and CI job "No third-party dependencies" fails the build if one appears. The supply chain is this repository, the Swift toolchain and Apple's frameworks, which is what `SECURITY.md` claims. |
 | **MASVS-CODE-4** The app validates and sanitizes all untrusted inputs. | Pass | Gate A4's scope 3, three rounds. `OTPAuthURI`, `Base32`, the three importers, `BackupArchive`, `JSONSniff`, `ImportLimits`, `BoundedFile`; `FuzzTests`; `OTPAuthURIRejectionTests`; `AccountLimits` enforced at every enrolment path |
 | **MASVS-RESILIENCE-1** The app validates the integrity of the platform. | **Out of scope, deliberately** | See below. |
@@ -70,6 +70,15 @@ owns is a way to lose access to every account they have.
 resistance beyond what iOS itself provides. `SECURITY.md` says the same in its own words, and
 nothing here should be read as claiming otherwise.
 
+**What iOS provides here is not nothing, and "compromised device" hides two different cases.**
+The vault key file is Complete Protection, so its class key is discarded shortly after the device
+locks and is derived from the passcode and the device UID. **A compromise that has the device
+locked does not yield the vault key**, and cannot take the file elsewhere to work on it. A
+compromise with the device unlocked, or one that also has the passcode, does. That distinction is
+the whole of what this control gives up, and it is smaller than "if your phone is owned, so are
+your codes" implies. `SECURITY.md` draws it correctly under the locked-device attacker; this
+paragraph previously did not.
+
 ## What this document does not establish
 
 **It is a self-assessment.** Nobody independent has checked the verdicts. The evidence pointers
@@ -81,7 +90,9 @@ future work, so a reader cannot yet verify that a build on the App Store came fr
 
 **Two controls are partial and one fails**, and none of the three is hidden in prose: the app
 switcher's brief cache, the vault key's storage location, and the absence of an update-enforcement
-mechanism.
+mechanism in the app itself. **That last one is the narrowest of the three**, because the platform
+delivers updates automatically unless somebody turns that off, and it should not be read as though
+a fix could not reach an installed device.
 
 ## Related standards this project does claim
 
