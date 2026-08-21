@@ -349,7 +349,14 @@ struct SettingsView: View {
             // **The flag alone can say the wrong thing.** A record written with the flag set and a
             // device-only protection class reads as "in iCloud" here while iCloud can never carry
             // it. Saying so is what lets a device under test answer whether it is affected.
-            return report.protectionMatchesFlag ? counted : "\(counted), class does not match"
+            let state = report.protectionMatchesFlag ? counted : "\(counted), class does not match"
+
+            // **And the current state alone cannot say what was repaired**, because the repair
+            // runs before anybody can open this screen. Without this, a phone that was stranded
+            // and a phone that never was read the same.
+            let repaired = UserDefaults.standard.integer(forKey: PreferenceKey.lastRepairedRecords)
+            guard repaired > 0 else { return state }
+            return "\(state), repaired \(repaired)"
         }
 
         @ViewBuilder

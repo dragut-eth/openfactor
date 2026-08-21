@@ -118,6 +118,21 @@ struct OpenFactorApp: App {
     private static func reconcileWrappedKeySync(_ wrapped: WrappedKeyStore) {
         let shouldSync = UserDefaults.standard.bool(forKey: PreferenceKey.syncEnabled)
         guard shouldSync else { return }
+
+        // **Repaired here rather than only inside the conversion, so the count can be seen.**
+        // `setSynchronizable` repairs too, and by the time anybody can open Settings it already
+        // has, so a readout that only describes the current state can never show the state it
+        // exists to reveal: a device that was stranded and a device that never was read
+        // identically. Asking first, and remembering how many records needed correcting, is what
+        // makes the difference observable on a real phone.
+        //
+        // The conversion's own repair then finds nothing, which is the idempotence the repair was
+        // written for. One extra query per foreground on a healthy device.
+        let repaired = (try? wrapped.repairProtectionClasses()) ?? 0
+        if repaired > 0 {
+            UserDefaults.standard.set(repaired, forKey: PreferenceKey.lastRepairedRecords)
+        }
+
         _ = try? wrapped.setSynchronizable(true)
     }
 

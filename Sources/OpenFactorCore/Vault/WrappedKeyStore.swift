@@ -348,7 +348,7 @@ public struct WrappedKeyStore: Sendable {
     ///
     /// - Returns: how many records were repaired.
     @discardableResult
-    func repairProtectionClasses() throws(SecretStoreError) -> Int {
+    public func repairProtectionClasses() throws(SecretStoreError) -> Int {
         var repaired = 0
 
         for item in try attributesOfEveryRecord() where !Self.protectionMatchesFlag(item) {

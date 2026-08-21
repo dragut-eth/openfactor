@@ -73,6 +73,14 @@ enum PreferenceKey {
     /// Which app icon the user chose. See ``AppIconPreference``.
     static let appIcon = "appIcon"
 
+    /// How many wrapped records the last launch had to repair, for the Debug readout.
+    ///
+    /// **Remembered because the repair erases its own evidence.** It runs on the first foreground,
+    /// so by the time Settings can be opened the record already matches, and a device that was
+    /// stranded reads identically to one that never was. This is the only way the difference can
+    /// be seen on a real phone.
+    static let lastRepairedRecords = "lastRepairedRecords"
+
     /// Whether the interface is behind Face ID, Touch ID, or the passcode. Off by default:
     /// everything in this app is opted into, not imposed.
     static let appLockEnabled = "appLockEnabled"
