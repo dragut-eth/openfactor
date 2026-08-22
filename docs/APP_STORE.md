@@ -393,6 +393,10 @@ telemetry of any kind. The app makes no network requests of its own. This is che
 automatically: continuous integration searches every source file for networking and logging
 code and fails the build if any appears.
 
+OpenFactor contains no crash reporting code. iOS can send crash logs to any app's developer if you
+have Share iPhone Analytics turned on. That is a setting in Privacy and Security, not something
+this app does, and not something it can turn off for you.
+
 ## What is stored, and where
 
 Your accounts and their secrets are stored on your devices, encrypted, in the iOS Keychain. The
