@@ -165,9 +165,24 @@ struct AccountListView: View {
         _model = State(initialValue: model)
     }
 
+    /// **Three properties rather than one chain, because one chain stopped compiling.**
+    ///
+    /// Twenty two modifiers on a single expression, five of them sheets with closures, put this
+    /// past what the Swift type checker will attempt. **It built on the author's machine and
+    /// failed on CI**, because the limit is a time budget rather than a fixed complexity, so a
+    /// slower or differently versioned toolchain gives up where a fast one does not. "It compiles
+    /// here" is not "it compiles".
+    ///
+    /// Each property below is its own type checking unit, which is the whole point of the split.
     var body: some View {
         NavigationStack {
-            content
+            presentations
+        }
+    }
+
+    /// The list itself, its chrome, and everything that reacts to a change.
+    private var configured: some View {
+        content
                 .navigationTitle("OpenFactor")
                 // Inline, so the name sits in the bar rather than taking a row of the
                 // screen away from the cards.
@@ -208,115 +223,89 @@ struct AccountListView: View {
                     // somebody answers, so an offer nobody saw is made again next launch.
                     offeringLockAdvice = true
                 }
-                .alert("Protect your codes", isPresented: $offeringLockAdvice) {
-                    if hasReadLockSteps {
-                        // **Closes, and records nothing.** It is an acknowledgement rather than
-                        // a claim: the app cannot tell whether the iOS lock was turned on and
-                        // does not store an answer either way. It replaces "Not Now" rather
-                        // than joining it, because two buttons that do the same thing with
-                        // different words are two buttons.
-                        Button("I Did It", role: .cancel) {}
-                    } else {
-                        Button("Show Me How") { showingSystemLockSteps = true }
-                    }
-                    // **Only offered where it can be honoured.** A device with no passcode
-                    // cannot authenticate, so the settings toggle refuses there, and a button
-                    // here that opened Settings to a switch that will not move would be a
-                    // label promising something the app cannot do.
-                    if AppLockAvailability.canAuthenticate {
-                        Button("Turn On App Lock") { appLockEnabled = true }
-                    }
-                    if !hasReadLockSteps {
-                        // Nothing is recorded about which button was pressed. The app acts on
-                        // none of them, and the stored flag says only that the question was
-                        // asked.
-                        Button("Not Now", role: .cancel) {}
-                    }
-                } message: {
-                    Text(
-                        "Your accounts are encrypted, but anyone using your unlocked phone "
-                            + "can see your codes.\n\nFor stronger protection, iOS can lock "
-                            + "OpenFactor before it opens. Or you can use App Lock.")
-                }
-                .modifier(lockAdvice)
-                .sheet(isPresented: isAdding) {
-                    if let addSession {
-                        AddAccountView(session: addSession) { model.load(at: Date()) }
-                            .onDisappear(perform: sheetDidClose)
-                    }
-                }
-                .sheet(isPresented: $isShowingSettings) {
-                    SettingsView(store: store) { model.load(at: Date()) }
+    }
+
+    /// Everything that presents over the list.
+    private var presentations: some View {
+        configured
+            .modifier(lockAdvice)
+            .sheet(isPresented: isAdding) {
+                if let addSession {
+                    AddAccountView(session: addSession) { model.load(at: Date()) }
                         .onDisappear(perform: sheetDidClose)
                 }
-                // Three kinds of arrival, three destinations, and the distinctions matter.
-                // An image and a code both hold a setup code and belong to the add flow, which
-                // decodes one and reads the other; a file is an export or a backup and belongs
-                // to the importer, which parses it. Nothing here is saved without a confirmation
-                // screen, which is what makes an incoming URL safe to accept at all.
-                .sheet(item: presentedArrival) { arrival in
-                    switch arrival.value {
-                    case let .image(data):
-                        AddAccountView(store: store, image: data) { model.load(at: Date()) }
-                    case let .code(payload):
-                        AddAccountView(store: store, code: payload) { model.load(at: Date()) }
-                    case let .file(url):
-                        ImportView(store: store, arrival: .file(url)) {
-                            model.load(at: Date())
-                        }
-                    }
-                }
-                .sheet(item: $editing) { row in
-                    EditAccountView(record: row.record) { issuer, name, colour in
-                        model.rename(row, issuer: issuer, name: name)
-                        if colour != row.record.metadata.color {
-                            model.setColor(colour, for: row)
-                        }
-                    }
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView(store: store) { model.load(at: Date()) }
                     .onDisappear(perform: sheetDidClose)
+            }
+            // Three kinds of arrival, three destinations, and the distinctions matter.
+            // An image and a code both hold a setup code and belong to the add flow, which
+            // decodes one and reads the other; a file is an export or a backup and belongs
+            // to the importer, which parses it. Nothing here is saved without a confirmation
+            // screen, which is what makes an incoming URL safe to accept at all.
+            .sheet(item: presentedArrival) { arrival in
+                switch arrival.value {
+                case let .image(data):
+                    AddAccountView(store: store, image: data) { model.load(at: Date()) }
+                case let .code(payload):
+                    AddAccountView(store: store, code: payload) { model.load(at: Date()) }
+                case let .file(url):
+                    ImportView(store: store, arrival: .file(url)) {
+                        model.load(at: Date())
+                    }
                 }
-                .sheet(item: $recolouring) { row in
-                    AccountColorPicker(selected: row.record.metadata.color) { colour in
+            }
+            .sheet(item: $editing) { row in
+                EditAccountView(record: row.record) { issuer, name, colour in
+                    model.rename(row, issuer: issuer, name: name)
+                    if colour != row.record.metadata.color {
                         model.setColor(colour, for: row)
                     }
-                    .onDisappear(perform: sheetDidClose)
                 }
-                .alert(
-                    "Remove \(pendingDeletion?.record.metadata.displayIssuer ?? "this account")?",
-                    isPresented: Binding(
-                        get: { pendingDeletion != nil },
-                        set: { if !$0 { pendingDeletion = nil } }
-                    ),
-                    presenting: pendingDeletion
-                ) { row in
-                    Button("Remove", role: .destructive) {
-                        model.delete(row)
-                        pendingDeletion = nil
-                    }
-                    Button("Cancel", role: .cancel) { pendingDeletion = nil }
-                } message: { _ in
-                    // The only irreversible thing in the app, so the consequence is named
-                    // rather than left to be inferred from the word "remove".
-                    //
-                    // The blast radius depends on whether the account is synced, and it
-                    // used to say "from this device" either way. Deleting a synchronizable
-                    // item removes it everywhere, so the person most likely to be misled
-                    // was the one keeping a second device precisely as their fallback.
-                    // Gate A2, F9.
-                    Text(
-                        pendingDeletionIsSynced
-                            ? """
-                            Its secret is deleted from this device and from your other \
-                            devices, and cannot be recovered. If this is your only way to \
-                            sign in, you will lose access to the account.
-                            """
-                            : """
-                            Its secret is deleted from this device and cannot be recovered. \
-                            If this is your only way to sign in, you will lose access to the account.
-                            """
-                    )
+                .onDisappear(perform: sheetDidClose)
+            }
+            .sheet(item: $recolouring) { row in
+                AccountColorPicker(selected: row.record.metadata.color) { colour in
+                    model.setColor(colour, for: row)
                 }
-        }
+                .onDisappear(perform: sheetDidClose)
+            }
+            .alert(
+                "Remove \(pendingDeletion?.record.metadata.displayIssuer ?? "this account")?",
+                isPresented: Binding(
+                    get: { pendingDeletion != nil },
+                    set: { if !$0 { pendingDeletion = nil } }
+                ),
+                presenting: pendingDeletion
+            ) { row in
+                Button("Remove", role: .destructive) {
+                    model.delete(row)
+                    pendingDeletion = nil
+                }
+                Button("Cancel", role: .cancel) { pendingDeletion = nil }
+            } message: { _ in
+                // The only irreversible thing in the app, so the consequence is named
+                // rather than left to be inferred from the word "remove".
+                //
+                // The blast radius depends on whether the account is synced, and it
+                // used to say "from this device" either way. Deleting a synchronizable
+                // item removes it everywhere, so the person most likely to be misled
+                // was the one keeping a second device precisely as their fallback.
+                // Gate A2, F9.
+                Text(
+                    pendingDeletionIsSynced
+                        ? """
+                        Its secret is deleted from this device and from your other \
+                        devices, and cannot be recovered. If this is your only way to \
+                        sign in, you will lose access to the account.
+                        """
+                        : """
+                        Its secret is deleted from this device and cannot be recovered. \
+                        If this is your only way to sign in, you will lose access to the account.
+                        """
+                )
+            }
     }
 
     /// Raises the delete confirmation, having first asked the Keychain where this
