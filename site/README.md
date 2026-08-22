@@ -215,14 +215,26 @@ one 1024px image resized by the browser for every use, plus **an SVG favicon wit
 fallback**. The SVG scales to any size; the PNG stays because Safari only gained SVG favicon support
 recently and older versions ignore the line entirely.
 
-**The social card is exempt from `Cross-Origin-Resource-Policy`, and that exemption is the whole
-point of it existing.** The security headers were applied to `/*`, which put
-`Cross-Origin-Resource-Policy: same-origin` on the card too, telling browsers to refuse it when
-loaded from another origin. **The card is the one file on this site whose entire purpose is being
-displayed on other people's domains.** The failure was quiet: server side scrapers fetched it fine,
-so a link scraped correctly and reported the right `og:image`, and then any preview drawn *by a
-browser* showed a broken picture. A diagnostic tool scored the page 92 out of 100 and displayed a
-broken image at the same time, which is what led to it.
+**`Cross-Origin-Resource-Policy` was added and then removed the same day**, and the reason is worth
+keeping. Applied to `/*`, it landed on `assets/card.png`, telling browsers to refuse the card when
+loaded from another origin. **That card is the one file here whose entire purpose is being displayed
+on other people's domains.** The failure was quiet: server side scrapers ignore CORP, so a link
+scraped correctly and reported the right `og:image`, and only previews drawn *by a browser* broke.
+A diagnostic scored the page 92 out of 100 and rendered a broken image at the same time.
+
+**Exempting only the card did not work**: Cloudflare Pages does not let a specific path rule
+override the same header coming from `/*`, and the `/*` value was still being served seven minutes
+after deploy. So the header is gone rather than narrowed.
+
+**And it was never protecting anything.** CORP defends resources that should not be read cross
+origin, and every file here is public by design. It came off a hardening list instead of from
+asking what it defended, which is the habit `_headers` opens by claiming not to have.
+
+**The title is longer than `og:title` on purpose.** `<title>` appears in search results, where a
+bare brand name nobody has heard of says nothing, so it reads
+*OpenFactor: open source 2FA for iPhone and Apple Watch*. `og:title` stays plain **OpenFactor**,
+because a social card reads better with a short title above the description. The two tags do
+different jobs and are allowed to differ.
 
 **`color-scheme: light` stated in markup**, because `style.css` decides it deliberately and a
 browser should not have to guess.

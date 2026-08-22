@@ -48,15 +48,25 @@
   # Nothing here uses a device API. Named rather than left to defaults, which change.
   Permissions-Policy: accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), screen-wake-lock=(), usb=(), xr-spatial-tracking=()
 
+  # Belt and braces, and it costs nothing on a site with no scripts and no popups.
   Cross-Origin-Opener-Policy: same-origin
-  # **Same origin by default, and one deliberate exception below.** This blocks other sites from
-  # loading these files, which is right for everything here except the social card.
-  Cross-Origin-Resource-Policy: same-origin
 
-# **The card is the one file that exists to be displayed on other people's domains.**
-# `Cross-Origin-Resource-Policy: same-origin` from the block above told browsers to refuse it
-# cross origin, so a link to this site scraped correctly, reported the right og:image, and then
-# rendered with a broken picture in any preview drawn by a browser. Server side scrapers were
-# unaffected, which is exactly why it scored well and still looked wrong.
-/assets/card.png
-  Cross-Origin-Resource-Policy: cross-origin
+# **`Cross-Origin-Resource-Policy` was here and has been removed, deliberately.**
+#
+# It told browsers to refuse these files when loaded from another origin, which put it on
+# `assets/card.png` too. That card is the one file here whose entire purpose is being displayed on
+# other people's domains. The failure was quiet: server side scrapers ignore CORP, so a link
+# scraped correctly and reported the right og:image, and only previews drawn *by a browser* showed
+# a broken picture. A diagnostic scored the page 92 out of 100 and rendered a broken image at the
+# same time.
+#
+# **Exempting just the card did not work.** Cloudflare Pages does not let a specific path rule
+# override the same header from `/*`; the value from `/*` was still served seven minutes after
+# deploy.
+#
+# **And the header was never earning anything here.** CORP defends resources that should not be
+# read cross origin. Every file on this site is public by design: two HTML pages, a stylesheet,
+# screenshots meant to be seen, and a card meant to be embedded. It was added from a hardening
+# list rather than from asking what it protected, which is the exact habit the top of this file
+# claims not to have. `Cross-Origin-Opener-Policy` stays because it costs nothing and broke
+# nothing; this one had a real cost.
