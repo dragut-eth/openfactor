@@ -637,6 +637,60 @@ notes gain another binary.
 - Phishing. HOTP and TOTP codes can be entered into a convincing fake site. OpenFactor does not
   make these protocols phishing-resistant.
 
+### Your part
+
+**This document has only ever been written from the app's side.** It says what OpenFactor defends
+and, above, what it does not. **Every line in that out-of-scope list has a person-shaped answer, and
+until now none of them was written down.** Security here is a shared effort, and this is the half
+that is not code.
+
+**Nothing below is general advice borrowed from somewhere.** Each item points at something this
+project measured or decided, and each names what it is answering.
+
+**Set a device passcode.** Two of this app's defences need one and neither says so out loud. The
+vault key file is Complete Protection, whose class key Apple derives from the passcode and the
+device UID, so **without a passcode there is nothing to derive it from**. And App Lock refuses to
+turn on at all, because a lock that cannot lock is a false claim with a switch on it.
+
+**Let iOS lock OpenFactor, which it does better than OpenFactor can.** Hold the app icon on the
+Home Screen and choose Require Face ID. `docs/audits/E/E14-the-system-lock-and-the-switcher.md`
+measured that this removes the app switcher exposure **completely and from the first frame**, which
+this app's own cover cannot do, because a cover is raised in reaction to a lifecycle event and the
+system replaces the snapshot outright. **The app cannot turn this on for you, prompt you at the
+right moment, or detect that you did it.** It can only say so, which it now does.
+
+**Keep transfer QR codes out of Photos.** A migration QR is every secret it carries, in one image.
+`SECURITY.md` records what the camera roll does with it: with iCloud Photos on, the image joins a
+synchronised library reachable from every device and from a browser, and deleting it leaves it in
+Recently Deleted for up to thirty days. **The share extension exists so that image never has to
+rest anywhere**, and it only helps if you use it rather than screenshotting the code first.
+
+**Never store the vault passphrase in plain text.** It is 120 generated bits, shown once, and it is
+the only thing that opens a recovery record on a replacement device. **A note, a screenshot of it,
+or a message to yourself puts it somewhere that syncs**, and anything that reaches it holds the
+whole vault. A password manager or paper are both fine; the camera roll and a notes app are not.
+
+**Keep a tested export somewhere this app does not touch.** Not a copy, a **tested** one: generate
+it, import it, confirm it restores. `README.md` says the same in fewer words. **An untested backup
+is not a backup**, and all three reviewers of gate A4 said independently that they would not make
+any authenticator their only holder.
+
+**Consider turning sync off.** Everything this project waived rather than fixed lives on the
+synchronised recovery record, and it says so under "What turning sync off does". A single phone
+with sync off, plus that tested export, is the smallest surface this app can offer. **Sync exists
+because losing every account with a lost phone is the likelier harm for most people**, which is a
+trade offered deliberately rather than the safer half presented as free.
+
+**Keep the device updated, which by default it does for you.** App Store apps update automatically
+unless somebody turns that off, at Settings, then Apps, then App Store, then App Updates. **This
+app has no way to compel an update and never will**, because it makes no network requests at all,
+and `docs/MASVS.md` publishes that as an outright fail rather than laundering it.
+
+**What this list is not.** It is not a promise that following it makes anything safe, and it is not
+a way to move blame. **Every item exists because this project measured a limit it could not code
+around**, and the honest thing was to say so rather than let the boundary sit unmentioned at the
+edge of a threat model.
+
 ## The privacy manifest
 
 `OpenFactor/PrivacyInfo.xcprivacy` is the machine-readable form of the privacy claims above. It
