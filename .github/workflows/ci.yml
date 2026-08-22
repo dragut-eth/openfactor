@@ -6,6 +6,61 @@ on:
   pull_request:
 
 jobs:
+  # **Which of the three expensive jobs need to run at all.**
+  #
+  # The three macOS jobs take twelve to fourteen minutes between them and most pushes to this
+  # repository touch only documentation. Fourteen minutes proving that a markdown edit did not
+  # break a Keychain test is time nobody gets back, and a slow pipeline is one people learn to
+  # ignore.
+  #
+  # **An allow list, never a deny list.** The safe paths are named, and anything not on the list
+  # runs everything. A deny list is wrong the first day somebody edits a script, a plist or a
+  # workflow and it is quietly treated as prose. If a path is unrecognised, the full suite runs:
+  # the failure mode is a wasted quarter of an hour rather than an untested change.
+  #
+  # **Style always runs**, on every push, because the em dash and trailing whitespace checks are
+  # exactly what documentation needs and it finishes in ten seconds.
+  scope:
+    name: What changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.decide.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether anything outside the documentation changed
+        id: decide
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          # A first push, a force push, or a missing base: run everything rather than guess.
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+            || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "No usable base commit. Running everything."
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}")
+          echo "Changed files:"; echo "$CHANGED" | sed 's/^/  /'
+
+          # **The allow list.** Prose and images only. Everything else, including scripts, the
+          # workflow itself, entitlements and project files, counts as code.
+          UNSAFE=$(printf '%s\n' "$CHANGED" | grep -vE '^(docs/.*\.md|assets/.*|site/.*|[A-Z_]+\.md)$' || true)
+
+          if [ -z "$UNSAFE" ]; then
+            echo "Documentation only. Skipping the macOS jobs."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Outside the documentation:"; printf '%s\n' "$UNSAFE" | sed 's/^/  /'
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          fi
+
   style:
     name: Style
     runs-on: ubuntu-latest
@@ -423,6 +478,8 @@ jobs:
 
   binary:
     name: No network in the binary
+    needs: scope
+    if: needs.scope.outputs.code == 'true'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -550,6 +607,8 @@ jobs:
 
   package:
     name: Package tests
+    needs: scope
+    if: needs.scope.outputs.code == 'true'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -575,6 +634,8 @@ jobs:
 
   hosted:
     name: Hosted tests, real Keychain
+    needs: scope
+    if: needs.scope.outputs.code == 'true'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
