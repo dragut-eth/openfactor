@@ -33,10 +33,10 @@
     <section>
       <h2>What it is</h2>
       <p>
-        OpenFactor generates two factor authentication codes on iPhone and Apple Watch. There is
-        no account to create, no server to trust, and no analytics. Your accounts stay on your
-        devices, encrypted before they are stored. If you turn on iCloud sync, encrypted records
-        travel through iCloud Keychain and the key that decrypts them stays on your devices.
+        OpenFactor generates two factor authentication codes on iPhone and Apple Watch. Your
+        accounts are encrypted before they are stored. If you turn on iCloud sync, encrypted
+        records travel through iCloud Keychain while the key that decrypts them stays on your
+        devices.
       </p>
     </section>
 
@@ -50,17 +50,18 @@
         </li>
         <li>
           <strong>Bring your accounts with you</strong>
-          <span>Imports from other authenticators, including Google Authenticator transfer codes
-          and Aegis vaults, and reads a setup code from the Camera app or a screenshot.</span>
+          <span>Import Google Authenticator transfer codes and Aegis vaults, scan with the Camera
+          app, or share an image straight into OpenFactor without saving it to Photos.</span>
         </li>
         <li>
           <strong>Backups you can take elsewhere</strong>
-          <span>Exports an encrypted backup whose format is public and documented, or a plain
-          file for moving to another app. The difference is stated on screen.</span>
+          <span>Export an encrypted backup in a public, documented format, or a plain file for
+          moving to another authenticator. The difference is stated on screen.</span>
         </li>
         <li>
-          <strong>Locked to you</strong>
-          <span>An optional lock behind Face ID, Touch ID, or your passcode.</span>
+          <strong>App Lock</strong>
+          <span>Optionally require Face ID, Touch ID, or your passcode before codes are
+          shown.</span>
         </li>
       </ul>
     </section>
@@ -76,10 +77,6 @@
         <li>
           <strong>No passwords and no autofill</strong>
           <span>This is an authenticator, not a password manager.</span>
-        </li>
-        <li>
-          <strong>No accounts, no telemetry, no crash reporting</strong>
-          <span>The app makes no network requests of its own.</span>
         </li>
       </ul>
     </section>
@@ -104,9 +101,8 @@
     <section>
       <h2>Built in the open</h2>
       <p>
-        The source is public from the first commit, including the design documents, the security
-        reviews, and the hardware experiments behind them, with the findings published whether or
-        not they were flattering.
+        OpenFactor has been public from the first commit. The source, the security design, the
+        test vectors, the review findings and the hardware experiments are all there to inspect.
         <a href="https://github.com/dragut-eth/openfactor">Read it on GitHub.</a>
       </p>
     </section>
