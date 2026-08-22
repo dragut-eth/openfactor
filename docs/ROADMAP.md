@@ -410,7 +410,10 @@ reached, not either MASVS partial, not either waiver. **It changes the odds that
 in a safer configuration and nothing else**, and the app cannot even tell whether they acted. The
 security work in this area is the Enclave wrap costed under MASVS-CRYPTO-2, and it is not this.
 
-Status: **specified, not built.**
+Status: **built and shipped**, in `388ad40`, on TestFlight in 1.0 (6). One manual checklist
+remains to be run on a phone. **This line read "specified, not built" until 22 August**, five days
+after the code landed, which is the same failure as the README calling the vault unreviewed after
+gate A4 had reviewed it: a status sentence written once and left behind by the thing it described.
 
 ### PR 16: Encrypted export and import
 

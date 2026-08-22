@@ -42,8 +42,10 @@ formats, recovery path, Watch provisioning protocol, and the limits that remain.
 
 The vault is implemented as of PR 16d, on both iPhone and Apple Watch. The Watch exchange has now
 been run between a real phone and a real watch: the successful path, a declined request, and a
-phone with no vault of its own. No implementation review has happened, so the specification
-remains a design claim rather than a claim about a finished release.
+phone with no vault of its own. **Gate A4 reviewed that implementation**, against the vault at
+rest, the Watch key exchange, the parsers and the process boundaries, and every finding is public.
+What has not happened is a professional independent audit, which the review status section below
+sets out in full.
 
 ## Principles
 
