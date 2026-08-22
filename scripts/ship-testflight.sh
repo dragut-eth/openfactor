@@ -195,6 +195,29 @@ RECORD="docs/releases/$SHORT_VERSION-$BUILD_VERSION.md"
     fi
   done
   echo '```'
+  echo
+  echo "## Canonical hashes"
+  echo
+  echo "The compiled code, per architecture slice, with the linker's UUID and the signature"
+  echo "excluded by construction. **Reproducible**: anybody who builds this commit with the"
+  echo "toolchain above can run \`scripts/canonical-hash.sh\` and get these values. See"
+  echo "\`docs/BUILD_PROVENANCE.md\` for what that does and does not establish, and for the"
+  echo "part no mechanism on this platform reaches."
+  echo
+  echo '```'
+  for binary in \
+    "OpenFactor.app/OpenFactor" \
+    "OpenFactor.app/PlugIns/OpenFactorShare.appex/OpenFactorShare" \
+    "OpenFactor.app/Watch/OpenFactorWatch.app/OpenFactorWatch" \
+    "OpenFactor.app/Watch/OpenFactorWatch.app/PlugIns/OpenFactorComplication.appex/OpenFactorComplication"
+  do
+    if [ -f "$APPS/$binary" ]; then
+      ./scripts/canonical-hash.sh "$APPS/$binary"
+    else
+      printf '%-64s  %s\n' "MISSING" "$binary"
+    fi
+  done
+  echo '```'
 } > "$RECORD"
 
 echo "Wrote $RECORD. Commit it: it is the only thing tying this build to a commit."

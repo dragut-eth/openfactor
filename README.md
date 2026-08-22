@@ -198,7 +198,7 @@ still needs a second writing device.
 implementation separately. The format carries public test vectors reproduced by independent
 implementations. Findings and fixes are recorded in [docs/audits](docs/audits).
 
-**Gate A4** ran from 2026-08-16 to 2026-08-21 against the vault at rest, the Watch key exchange,
+**Gate A4** ran from 2026-08-16 to 2026-08-21, tag `audit-a4`, against the vault at rest, the Watch key exchange,
 the parsers and the process boundaries. Three independent models, twenty rounds, eleven
 closed-question verification briefs, **133 findings and three highs**, all closed, with two waived
 and two withdrawn. The conclusion is [docs/audits/A4.md](docs/audits/A4.md) and every finding is
@@ -214,6 +214,18 @@ design, its remaining limits, and the hardware probes supporting it are all link
 
 The reviews so far are model-assisted adversarial reviews, not professional human audits, and
 they do not soften the warning above.
+
+**Which commit was last audited, and how to check what a build contains.** `audit-a4` is the tag,
+and every gate from here reviews the diff since it. **The compiled code of a build is checkable by
+anybody**: `scripts/canonical-hash.sh` hashes the instructions with the linker's build identifier
+and the signature excluded, and two independent Release builds of one commit produce identical
+values across every architecture slice. So a stranger can confirm that this source compiles to the
+code this project publishes.
+
+**What nobody can check is the binary Apple served to a phone.** It is re-signed, thinned per
+device, and encrypted on an App Store install. [docs/BUILD_PROVENANCE.md](docs/BUILD_PROVENANCE.md)
+measures that rather than working around it, and says plainly that the honest way past it is to
+build the tagged commit and run your own.
 
 ## Documentation
 

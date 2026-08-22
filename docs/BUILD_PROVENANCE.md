@@ -149,5 +149,45 @@ was recording it.
 **The second half is not closable by this project.** Apple's processing sits between the archive
 and the device, and no local hash reaches across it.
 
+## The canonical hash: what a stranger can check
+
+**The container is not deterministic and the compiled code is.** The measurement at the top of this
+document found where two builds differ, and it is small and known: the linker's `LC_UUID`, a little
+`__DATA`, and the signature that must change once anything above it does. **The instructions
+themselves did not move.**
+
+**So the code is hashable even though the binary is not.** `scripts/canonical-hash.sh` hashes the
+`__TEXT,__text` section, which is the instructions and nothing else. `LC_UUID` lives in the load
+commands rather than in that section, so it is excluded by construction rather than by subtracting
+an offset a toolchain update would move.
+
+**Verified rather than asserted.** Two independent Release builds of the same source, and **all six
+architecture slices across all four shipping binaries produced identical canonical hashes**, while
+every whole binary differed. That is the claim this mechanism rests on and it was run before it was
+written down.
+
+**One thing it got wrong first, recorded because it looked exactly like a real finding.** The first
+version read the first `__text` stanza and hashed from the start of the file. For the watch app and
+the complication, which are universal binaries carrying `arm64_32` and `arm64`, that ran past the
+first slice and into the next one's load commands. **The result was sixteen differing bytes between
+builds, which read as nondeterministic compiled code and were in fact the second slice's `LC_UUID`
+counted as instructions.** The phone app and the share extension are thin, so the fault was
+invisible on two binaries out of three. It now thins each slice and hashes them separately.
+
+### What it proves, and what it does not
+
+**Proves**: that the source at a tagged commit, built with the pinned toolchain, produces exactly
+the compiled code this project publishes. Anybody can run the script on their own build and
+compare. **That is checkable by a stranger with no access to anything of ours.**
+
+**Does not prove**: anything about the binary Apple served to a phone. Apple re-signs it, thins it
+per device, and encrypts the main binary of an App Store install, so there is nothing on a device to
+hash without a jailbreak. **No mechanism available on this platform closes that**, and this document
+will not pretend otherwise.
+
+**The honest way past it is not a hash at all.** Build the tagged commit yourself and run that,
+rather than trusting a binary you cannot inspect. The instructions above are the whole of what that
+takes.
+
 **This is the gap `docs/MASVS.md` and `SECURITY.md` already name, narrowed and measured rather
 than closed.**
