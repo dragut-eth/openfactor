@@ -10,6 +10,19 @@ commit `47e1682` with the first provenance record the script wrote by itself
 ([docs/releases/1.0-6.md](docs/releases/1.0-6.md)). The iPhone 15 Pro carries a development build
 of PR 15c installed by `devicectl`. **Everything is on `main` and pushed**, which it had not been
 for 134 commits: `a4-fixes` was fast forwarded into `main` and the branch deleted.
+
+**That said "deleted" and meant "deleted on this machine".** `a4-fixes` and four `pr-*` branches
+stayed on the remote, all fully merged and zero commits ahead, and GitHub will happily serve a
+README from any of them. `a4-fixes` was 106 commits behind and still opened with **"Status: beta,
+in testing"**, a line removed from `main` on 21 August, which is how it came to be read as current.
+All five are now deleted from the remote and **`origin/main` is the only branch that exists**. Both
+tags, `audit-a1` and `audit-a4`, were confirmed reachable from `main` first, and tags are what the
+audit documents reference, not branches.
+
+**The general shape is worth keeping.** A merged branch left on a public remote is a second,
+older, equally public copy of every claim the project makes, and nothing on GitHub's file view
+tells a reader they are 106 commits back. Delete the branch when the merge lands, not when
+somebody notices.
 **`openfactor.dev` is live**, served from `origin/main`, and now shows the light account list in
 Apple's iPhone 17 and Watch Ultra 3 bezels.
 
