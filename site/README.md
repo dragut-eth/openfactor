@@ -79,6 +79,13 @@ for it.
   The band is the Trail Loop in Green Neon. The row aligns to the top, so the three screens start
   on the same line rather than the watch floating up from a shared baseline.
 
+  **The list screenshot is the light one, and that was a capture decision rather than a taste
+  one.** The dark version is scrolled mid-card, so the toolbar sits over a partial card and the
+  first thing a viewer sees is a six digit number with its label hidden behind the translucent
+  nav bar, with the bottom card cut by the search field. The light one starts and ends on complete
+  cards. It also matches the add-account screen beside it, so the three read as one set rather
+  than as two appearances nobody chose. Both are in App Store Connect, so either was available.
+
   **The same images the store shows**, so the landing page and the shop window cannot drift apart.
   Explicit `width` and `height` so the page does not reflow while they load, and a caption says
   the accounts in them are invented, because a grid of plausible bank codes should say so.
