@@ -44,6 +44,12 @@ header.hero {
   padding: 4.5rem 0 3rem;
   border-bottom: 1px solid var(--line);
 }
+/* **The privacy page's shorter hero, as a class rather than a style attribute.** It was
+   `style="padding-bottom:2rem"` inline, which is the single thing that would have forced
+   'unsafe-inline' into the site's Content Security Policy. One attribute is a cheap price for a
+   policy that can say style-src 'self' and mean it. See site/_headers. */
+header.hero.hero-short { padding-bottom: 2rem; }
+
 header.hero img.icon {
   width: 96px; height: 96px;
   border-radius: 22px;

@@ -1,0 +1,47 @@
+# Response headers for openfactor.dev, served by Cloudflare Pages.
+#
+# **Why a security tool's brochure page gets a strict policy.** Nothing here handles secrets, and
+# a defaced or framed landing page is still the page that tells people what to trust. The cost of
+# these headers on a site with no scripts of its own is zero, so the only reason not to set them
+# is not having looked.
+#
+# **Every value below was checked against what the pages actually load**, not copied from a
+# hardening list. The site references no external host at all: no fonts, no analytics, no CDN,
+# no embeds. That is what lets the policy be this narrow.
+
+/*
+  # **`default-src 'none'` and then allow back only what exists.** A deny-by-default policy that
+  # has to be widened when something is added is the one that keeps meaning something.
+  #
+  # `script-src 'self'`: the pages ship no JavaScript. Cloudflare's email obfuscation injects one
+  # script from /cdn-cgi/, which is same origin, so 'self' covers it. Checked against the live
+  # page rather than assumed, because a policy that breaks the email link would hide the security
+  # contact address.
+  #
+  # `style-src 'self'` with no 'unsafe-inline': privacy.html carried one style attribute and it
+  # was moved into a class so this line could stay honest.
+  #
+  # `form-action 'none'` and `base-uri 'none'`: there are no forms and no base tag, so both are
+  # closed rather than left open for whatever gets added later.
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+
+  # **Two years, subdomains included, and deliberately not preloaded.** `www` does not resolve to
+  # anything yet, and putting the domain on the preload list is a commitment that is slow and
+  # awkward to reverse. Preload is worth doing once www is a working custom domain and not before.
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+
+  # Redundant with frame-ancestors above, kept for browsers that predate it.
+  X-Frame-Options: DENY
+
+  X-Content-Type-Options: nosniff
+
+  # **`no-referrer`, not the usual strict-origin-when-cross-origin.** This is a site whose whole
+  # claim is that it does not report on its visitors. Sending even the origin to GitHub when
+  # somebody follows a link is not a leak worth defending, and not sending it costs nothing.
+  Referrer-Policy: no-referrer
+
+  # Nothing here uses a device API. Named rather than left to defaults, which change.
+  Permissions-Policy: accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), screen-wake-lock=(), usb=(), xr-spatial-tracking=()
+
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin

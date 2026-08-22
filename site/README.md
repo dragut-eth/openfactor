@@ -117,7 +117,32 @@ direction: **if the site ever moves out of `site/`, deploys will stop silently**
 report an error. Whoever moves it changes the watch path in the same breath.
 
 **`www.openfactor.dev` currently returns 521** and needs adding as a second custom domain in
-Cloudflare Pages. The apex is fine. A person typing `www` gets an error page.
+Cloudflare Pages. The apex is fine. A person typing `www` gets an error page. **The TLS certificate
+covers the apex only**, which confirms this is an unconfigured hostname rather than a routing
+hiccup, and no file in this directory can fix it: the request never reaches Pages.
+
+## Headers and the 404, which are files rather than dashboard settings
+
+**`_headers` sets the response headers** and every value in it was checked against what these
+pages actually load. The site references no external host at all, no fonts, no analytics, no CDN,
+no embeds, which is what lets the Content Security Policy be `default-src 'none'` and widen only
+to `'self'`.
+
+**One inline style attribute was removed to make that honest.** `privacy.html` carried
+`style="padding-bottom:2rem"`, and a single style attribute is the difference between
+`style-src 'self'` and `style-src 'self' 'unsafe-inline'`. It is a class now.
+
+**Cloudflare's email obfuscation injects one script** from `/cdn-cgi/`, which is same origin and
+covered by `script-src 'self'`. Checked against the live page, because a policy that broke that
+script would hide the security contact address, which is the opposite of the point.
+
+**HSTS is set for two years with subdomains and deliberately not preloaded.** Preloading is slow
+and awkward to reverse, and `www` does not resolve yet. It is worth doing once `www` works.
+
+**`404.html` exists so that a wrong address stops returning the homepage with a 200.** It did,
+which meant every typo looked like a real page. Its links are absolute, because a 404 can be
+served at any path depth. **If wrong addresses still return 200 after this deploys**, the Pages
+project has single page application routing switched on and that setting has to go.
 
 ## The privacy page is not a template
 
