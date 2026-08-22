@@ -639,8 +639,26 @@ feature's documentation.
    The launch path carries Apple's placeholder only, so this app's cover never appears there. The
    switcher carries this app's cover, because the iOS lock does not re-arm on a peek. That result
    is what the section above is built on.
-2. **That the ten sequences in the manual checklist still pass**, unchanged. This pull request must
-   not regress PR 15b. **Only that**, because nothing else here is executable.
+2. **Four items from the manual checklist, not all of them, and the four are named.** This pull
+   request changes no lock behaviour, so most of that list cannot be affected by it. What it does
+   add is **two alerts and two sheet paths onto screens the lock sits above**, and this feature's
+   whole history is presentations interfering with each other.
+
+   **Item 3**, locking from an open Settings sheet, because Settings now carries an alert that can
+   be on screen when the lock arrives.
+
+   **Item 6**, force quit and relaunch, **and this is the one expected to fail**. The advice dialog
+   fires when the account list stops being empty, with `initial: true`. On a cold locked launch the
+   list loads behind the lock window, so the alert may fire underneath it, and if it does **the
+   one-time flag is spent on a dialog nobody saw**.
+
+   **Items 8 and 9**, an arrival presenting after unlock, because there is now another thing
+   competing to present at that moment.
+
+   **The list has twelve items, not ten.** An earlier version of this section said ten, copied from
+   PR 15b's entry, which was true when it was written and stopped being true when items 11 and 12
+   were added out of E11. A count in prose that no longer matches the thing it counts is the drift
+   this document exists to prevent, and it happened here.
 
 ### Out of scope, named rather than forgotten
 

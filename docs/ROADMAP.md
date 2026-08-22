@@ -897,6 +897,10 @@ go away. Not investigated, and it should be read from the design rationale rathe
   distributes, so a locally computed hash cannot match a device's. What the document does instead
   is pin the toolchain to its build number, measure where the difference actually is, and state
   plainly that a released binary still cannot be tied to a commit
+- **Finish the website.** `openfactor.dev` is live and serves the apex and `/privacy`, and it is
+  not finished. `SECURITY.md`'s "Your part" is the clearest example of something written for a
+  reader that the site does not carry. **The claims rule holds in one direction**: a claim changes
+  in `README.md` or `SECURITY.md` first and the site derives from them, never the reverse
 - Version tagging and changelog
 
 #### Gate A5: audit the diff, every release after this one
