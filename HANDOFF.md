@@ -172,6 +172,32 @@ container" in the sense a reader would take. And "compromised device" was hiding
 compromise holding the device locked does not yield the vault key at all. `docs/MASVS.md` now says
 all three, and the verdicts are unchanged.
 
+**VERIFYING.md restated three claims stronger than their sources, and the pattern is worth more
+than the three fixes.** An outside reader challenged two sentences; running the commands found a
+third. Every one drifted the same direction.
+
+- **"the strongest form of the no-network claim"** for `otool -L | grep Network`. The CI file says
+  in a comment, about the same check, that it is "nowhere near sufficient on its own" because
+  `URLSession` lives in Foundation, and that **the symbols below are the real check**. VERIFYING.md
+  published the weak half and labelled it the strong one. It now publishes CI's `nm -u` pattern too.
+- **"the share extension cannot reach the Keychain."** An extension with no access group still gets
+  the default group, and `SECURITY.md` already says a Keychain access group is not a
+  confidentiality boundary at all, which is why the vault exists. Now narrowed to what the command
+  shows, with the app's entitlements run beside it so the contrast is visible.
+- **"It should print one entitlement, the app group, and nothing else."** It prints five keys.
+  Nobody had run it.
+
+**The cause is the same in all three: VERIFYING.md was written after `BUILD_PROVENANCE.md`,
+`SECURITY.md` and `ci.yml`, and restated them from memory rather than from them.** Assume that
+recurs. A claim copied between documents drifts stronger, never weaker, because the stronger
+sentence is the one that sounds better while you are writing it.
+
+**The symbol check was measured before it was published**, against an Apple-distributed build of
+this app carrying `cryptid 1`: `nm` read 1,403 undefined symbols through the encryption and matched
+none of the networking pattern, while `/usr/bin/nscurl` matched thirty. **The limit is written into
+the page**: that copy's encrypted range was one page against a `__TEXT` of 1.1 MB, so a fully
+encrypted segment was not tested and the page says so rather than rounding it up.
+
 **Build provenance was already answered and the reviewers had not seen it.**
 `docs/BUILD_PROVENANCE.md` measured two Release builds of identical source minutes apart, found
 every shipping binary differed, and refuses the phrase reproducible build outright. What was
