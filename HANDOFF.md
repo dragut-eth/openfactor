@@ -231,7 +231,33 @@ fighting a header the edge adds afterwards would be the kind of fix that works b
 documented permanent opt-out is asking Cloudflare support to disable the `nel___enable` flag at
 account level. Re-check before assuming it is still true.
 
-Also open: DNSSEC is off, and there is no CAA record.
+**CAA is set, and it took one record rather than nine.** Cloudflare adds `issue` and `issuewild`
+entries for its own certificate authorities automatically as soon as any CAA record exists on the
+zone, and keeps that list current. So the only record added by hand is the report address:
+
+    0 iodef "mailto:security@openfactor.dev"
+
+That triggered the auto-add and produced eleven records covering five CAs: `pki.goog`,
+`letsencrypt.org`, `ssl.com`, `digicert.com` and `comodoca.com`, verified identical from two
+resolvers. **`pki.goog` issued the live certificate**, so renewal is not at risk, which was the one
+way this could have gone wrong. `iodef` means a CA that refuses an impersonation attempt now
+reports it to the security address instead of nowhere.
+
+**Check the site still has a valid certificate in mid October 2026.** The current one expires
+2026-11-16, so that is the first renewal under a CAA record and the only moment it could bite.
+
+**DNSSEC is deliberately deferred until after the registrar transfer.** The domain is moving from
+Gandi to Cloudflare and is currently inside ICANN's 60 day lock. Cloudflare's transfer
+documentation requires DNSSEC to be **disabled before transferring**, with DS records removed at
+the old registrar at least 24 hours beforehand. Enabling it now would buy about sixty days of
+protection and then force a mandatory unprotected window at the exact moment the domain is most
+sensitive to a mistake. **Turn it on once, after the transfer**, when the same company signs the
+zone and manages the DS record.
+
+**And do not touch the registrant name, organisation or email at Gandi meanwhile.** Changing any of
+those triggers a fresh 60 day transfer lock, which would restart the clock.
+
+Also open: NEL, above.
 
 **One thing that is not a security problem but affects the security contact.** With forwarding
 rather than a mailbox, a reply to a researcher arrives from a personal address rather than from

@@ -68,11 +68,17 @@ tell from the outside which one was accurate.
 **Three of them are also on the site now**, in Apple's iPhone 17 and Watch Ultra 3 bezels. They
 are the same images, so the shop window and the landing page show the same app.
 
-**One difference remains and it is deliberate on the site's side only.** The site leads with the
-light account list; the store's first screenshot is the dark one, which is scrolled mid-card so its
-hero element is a six digit code with its label behind the translucent nav bar. **The store's first
-frame is the one most people ever see**, and it is currently the weaker capture. Reordering the
-store to lead with the light one would settle it.
+**The site and the store lead with different account list screenshots, and that is settled rather
+than drift.** The site uses the light capture; **the store keeps the dark one, decided 2026-08-22.**
+
+The case for changing it was that the dark capture is scrolled mid-card, so its top card shows a
+six digit code with the label behind the translucent nav bar, and the store's first frame is the
+one most people ever see.
+
+**The case for keeping it won, and it rests on something a repository cannot check.** The dark
+frame matches the app icon, and at full resolution on a real device it shows the material effect
+that a downscaled comparison render flattens away. That was judged on the hardware the screenshot
+came from. **Recorded here so it is not re-raised as an inconsistency**: the two differ on purpose.
 
 The App Store frames are the one place people will look at this app before installing it, and the
 vault setup screen is a strange first impression: the list with real codes is what to show.
