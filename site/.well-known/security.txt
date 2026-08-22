@@ -7,9 +7,14 @@
 # without a GitHub login previously had no way to reach this project at all. Email is not
 # encrypted, so it is the right place to say you have found something and the wrong place to
 # describe it.
+#
+# **security@ rather than info@, which this file named until 2026-08-22.** RFC 2142 defines
+# security@ for exactly this, so it is the address a researcher guesses before reading anything.
+# A file whose purpose is to remove the guessing should not point away from it. Both forward to
+# the same place, so nothing about who reads it has changed.
 
 Contact: https://github.com/dragut-eth/openfactor/security/advisories/new
-Contact: mailto:info@openfactor.dev
+Contact: mailto:security@openfactor.dev
 Expires: 2027-08-21T00:00:00.000Z
 Preferred-Languages: en, fr
 Canonical: https://openfactor.dev/.well-known/security.txt

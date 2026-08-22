@@ -37,8 +37,10 @@ Apple asks for is a page where a person can actually get help.
 
 **But every route on that page needed a GitHub account, which is a real gap for an App Store
 app.** Somebody who installs this and has a question should not have to sign up for a developer
-platform to ask it. **`info@openfactor.dev` is on the site, on the privacy page, and in
-`security.txt`**, and it needs nothing of anybody. The issues page stays the better route for a
+platform to ask it. **`info@openfactor.dev` is on the site and on the privacy page**, and it needs
+nothing of anybody. **`security.txt` names `security@openfactor.dev` instead**, because RFC 2142
+defines that address for vulnerability reports and a researcher will guess it first; both forward
+to the same person. The issues page stays the better route for a
 bug, because the answer is then public and searchable, and the email is the route for everything
 and everyone else.
 

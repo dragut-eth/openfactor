@@ -9,8 +9,9 @@ Report privately through
 [GitHub Security Advisories](https://github.com/dragut-eth/openfactor/security/advisories/new).
 Please do not open a public issue for a vulnerability.
 
-**If you cannot use that, write to `info@openfactor.dev`.** It needs no account, and until it
-existed a researcher without a GitHub login had no way to reach this project at all. **Email is
+**If you cannot use that, write to `security@openfactor.dev`.** It needs no account, and until an
+address existed a researcher without a GitHub login had no way to reach this project at all.
+`info@openfactor.dev` reaches the same person and remains the address for everything else. **Email is
 not encrypted**, so it is the right place to say you have found something and the wrong place to
 describe it: the details belong in the private channel above.
 
