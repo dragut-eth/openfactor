@@ -56,8 +56,13 @@ document, extended to the surface that did not exist when that rule was written.
 
 ### Screenshots
 
-Seven iPhone screenshots were uploaded to App Store Connect on 2026-08-18. **Apple Watch
-screenshots are still outstanding and still gate a submission.**
+Seven iPhone screenshots were uploaded to App Store Connect on 2026-08-18, and **the two Apple
+Watch screenshots were taken the same day.** They no longer gate anything. The stale claim that
+they did survived in this document and in `HANDOFF.md` for three days after it stopped being true.
+
+**Three of them are also on the site now**, resized for the web, under a caption saying the
+accounts in them are invented. They are the same images, so the shop window and the landing page
+show the same app.
 
 The App Store frames are the one place people will look at this app before installing it, and the
 vault setup screen is a strange first impression: the list with real codes is what to show.

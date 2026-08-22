@@ -38,10 +38,12 @@ Re-adding a dark palette means revisiting the icon at the same time.
 
 ## Still needed
 
-- **Screenshots.** The "See it" section of `index.html` is commented out because
-  `assets/screenshots/list.png`, `watch.png` and `add.png` do not exist. Live, they would render
-  as broken images. They are the same images App Store Connect needs, so this waits on that work
-  either way. Uncomment the section once they are in place.
+- ~~Screenshots.~~ **Done.** `list.png`, `watch.png` and `add.png` are in
+  `assets/screenshots/`, resized to 720 pixels tall from the App Store originals, 58 to 150 KB
+  each rather than the 600 to 850 KB they started at. **The same images the store shows**, so the
+  landing page and the shop window cannot drift apart. Each carries explicit `width` and `height`
+  so the page does not reflow while they load, and a caption says the accounts in them are
+  invented, because a grid of plausible bank codes should say so.
 - **A copy pass**, which should begin by deciding who the page is for.
 
 ## security.txt

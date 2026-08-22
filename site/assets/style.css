@@ -97,9 +97,18 @@ ul.points li span { color: var(--muted); }
 }
 .shots img {
   width: 100%;
+  height: auto;
   border-radius: 16px;
   border: 1px solid var(--line);
   background: var(--card);
+}
+
+/* Under the screenshots: says the accounts in them are invented. Small, because it is a caption
+   rather than a claim, and present because a grid of plausible looking bank codes should say so. */
+.note {
+  font-size: .9rem;
+  opacity: .75;
+  margin-top: .75rem;
 }
 
 /* Footer */

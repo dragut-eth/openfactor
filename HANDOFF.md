@@ -325,8 +325,14 @@ never the reverse: a claim changes in `README.md` or `SECURITY.md` first. The fa
 prevented is somebody sharpening a sentence on a landing page and the landing page becoming the
 one surface that over-claims.
 
-**What still gates a submission:** Apple Watch screenshots, and the export compliance answer,
-which is a legal call. The privacy policy URL no longer gates anything.
+**Nothing gates a submission any more.** The Apple Watch screenshots were taken on 2026-08-18 and
+this line said otherwise for three days. The export compliance answer was decided on 2026-08-21,
+exempt, and lives in `OpenFactor-Info.plist` as `ITSAppUsesNonExemptEncryption` rather than being
+clicked on each upload. The privacy policy URL never gated anything after the site went up.
+
+**"Beta" is gone from all three surfaces**, because App Review does not accept an app presenting
+itself as one. What replaced it is the durable half of the same sentence: no independent audit
+yet.
 
 ### Findings from PR 18 worth keeping
 
