@@ -67,6 +67,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # **Shell scripts get linted, and the reason is a build that shipped.** The TestFlight
+      # script computed a variable inside a subshell and named it outside, where it does not
+      # exist. Under `set -u` the script died on the line announcing success, after the upload
+      # had already gone through. Nothing was lost that time, but the failure landed on the
+      # exact path meant to report that nothing had failed, which is the worst place for it.
+      # shellcheck calls this SC2031 and does say so in a second.
+      #
+      # **Info level, not warning.** The obvious setting is `-S warning`, and it would not have
+      # caught the bug that prompted this: SC2030 and SC2031 are both info. Checked by running
+      # the level against the broken version before choosing it, rather than assuming, because a
+      # gate added after an incident that would not have caught the incident is worse than none.
+      - name: Shell scripts
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y shellcheck
+          shellcheck --version
+          find scripts -name '*.sh' -print0 | xargs -0 shellcheck -S info
+          echo "Shell scripts are clean at info level and above."
+
       # The project style forbids em dashes everywhere, including code, comments,
       # documentation, and commit messages. The character is written here as an escape
       # so that this file does not fail its own check.

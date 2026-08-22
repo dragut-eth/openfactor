@@ -87,7 +87,14 @@ KEYS_DIR="$HOME/.appstoreconnect/private_keys"
 
 # The key identifier is part of the file name Apple gives the key, so it never has to be
 # stored separately or typed.
-KEY_FILE="$(ls "$KEYS_DIR"/AuthKey_*.p8 2>/dev/null | head -1)"
+#
+# **A glob rather than parsing `ls`.** When nothing matches, the pattern stays literal and the
+# `-f` test rejects it, so the "no key" message below still fires. Parsing `ls` was the earlier
+# version, and shellcheck is right that it is fragile even when the file names happen to be tame.
+KEY_FILE=""
+for candidate in "$KEYS_DIR"/AuthKey_*.p8; do
+  if [ -f "$candidate" ]; then KEY_FILE="$candidate"; break; fi
+done
 [ -n "$KEY_FILE" ] || { echo "No AuthKey_*.p8 in $KEYS_DIR. See the comment at the top."; exit 1; }
 
 KEY_ID="$(basename "$KEY_FILE" .p8)"
@@ -171,18 +178,33 @@ xcrun altool --upload-app -f "$WORK/export/OpenFactor.ipa" -t ios \
 # wanted to be finished. Recorded on a best effort, and loudly if it does not work.
 echo "==> Recording provenance"
 set +e
-(
+
+# **Where the record goes is decided out here, not inside the subshell below.** The first
+# version of this computed RECORD inside the parentheses and then named it in the messages
+# out here, where the variable does not exist. Under `set -u` that is fatal, so the script
+# died on the line announcing success, *after* a good upload, and the closing instructions
+# never printed. The record itself was written correctly; only the script's ending was
+# broken. Two lessons, both cheap: a subshell is a scope, and a failure path that only runs
+# on success is still a failure path. CI now runs shellcheck, which flags this as SC2031.
 ARCHIVE_PLIST="$WORK/app.xcarchive/Info.plist"
 SHORT_VERSION="$(plutil -extract ApplicationProperties.CFBundleShortVersionString raw -o - "$ARCHIVE_PLIST")"
 BUILD_VERSION="$(plutil -extract ApplicationProperties.CFBundleVersion raw -o - "$ARCHIVE_PLIST")"
+# **A fallback path rather than an empty one.** If either extraction above failed we still want
+# somewhere to write and something to name in the message, instead of a bare `docs/releases/-.md`.
+if [ -z "$SHORT_VERSION" ] || [ -z "$BUILD_VERSION" ]; then
+  RECORD="docs/releases/unknown-version.md"
+else
+  RECORD="docs/releases/$SHORT_VERSION-$BUILD_VERSION.md"
+fi
+mkdir -p docs/releases
+
+(
 COMMIT="$(git rev-parse HEAD)"
 # Clean by construction: the check at the top of this script refuses to build otherwise. Recorded
 # anyway, because a record that states its preconditions is readable years later by somebody who
 # does not have this script in front of them.
 TREE_STATE="clean, enforced before the build"
 
-mkdir -p docs/releases
-RECORD="docs/releases/$SHORT_VERSION-$BUILD_VERSION.md"
 {
   echo "# $SHORT_VERSION ($BUILD_VERSION)"
   echo
@@ -203,9 +225,14 @@ RECORD="docs/releases/$SHORT_VERSION-$BUILD_VERSION.md"
   echo '```'
   shasum -a 256 "$WORK/export/OpenFactor.ipa" | sed "s|$WORK/export/||"
   # **Named rather than discovered.** A find that walks the bundle looking for Mach-O files
-  # would quietly record four binaries instead of five the day a target stops being
+  # would quietly record three binaries instead of four the day a target stops being
   # embedded, which is the exact failure the watch check above exists for. These are the
-  # five docs/BUILD_PROVENANCE.md measured, and a missing one is said out loud.
+  # four docs/BUILD_PROVENANCE.md measured, and a missing one is said out loud.
+  #
+  # **Four, and this comment said five until it was checked against the loop below.** A reviewer
+  # had already caught the same wrong count in docs/BUILD_PROVENANCE.md, which fixed itself and
+  # left the copy here and in HANDOFF.md standing. A number repeated in three places is corrected
+  # in three places.
   APPS="$WORK/app.xcarchive/Products/Applications"
   for binary in \
     "OpenFactor.app/OpenFactor" \

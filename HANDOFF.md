@@ -5,11 +5,17 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-21, on TestFlight as `dev.openfactor.app`, 1.0 (5). The iPhone 15 Pro
-carries a development build of PR 15c installed by `devicectl`. **Everything is on `main` and
-pushed**, which it had not been for 134 commits: `a4-fixes` was fast forwarded into `main` and the
-branch deleted. **`openfactor.dev` is live**, served from `origin/main`, and this push added
-`/.well-known/security.txt` to it.
+**Last updated:** 2026-08-21, on TestFlight as `dev.openfactor.app`, **1.0 (6)**, uploaded from
+commit `47e1682` with the first provenance record the script wrote by itself
+([docs/releases/1.0-6.md](docs/releases/1.0-6.md)). The iPhone 15 Pro carries a development build
+of PR 15c installed by `devicectl`. **Everything is on `main` and pushed**, which it had not been
+for 134 commits: `a4-fixes` was fast forwarded into `main` and the branch deleted.
+**`openfactor.dev` is live**, served from `origin/main`, and now shows the light account list in
+Apple's iPhone 17 and Watch Ultra 3 bezels.
+
+**Build 6 is the last one before App Store submission.** It is the first upload under the
+dirty-tree guard, and the guard did its job silently, which is the only way it should ever be
+noticed.
 
 **Gate A4 is concluded and public**, including both halves of the closing round. **CI is green on
 `main` for the first time since at least 18 August**, which took fixing three checks that had never
@@ -174,9 +180,11 @@ the commit that produced it, which nothing was doing.** Gate A5 audits the diff 
 and had nothing saying which commit a release came from.
 `scripts/ship-testflight.sh` now writes a record on every successful upload, into `docs/releases/`:
 commit, working tree state, toolchain, and the SHA-256 of the exported archive and each shipping
-binary. The five binaries are **named rather than discovered**, because a Mach-O search would
-quietly record four the day a target stops being embedded, and a missing one is written as
-MISSING. Run against a fake archive rather than reasoned about.
+binary. The four binaries are **named rather than discovered**, because a Mach-O search would
+quietly record three the day a target stops being embedded, and a missing one is written as
+MISSING. Run against a fake archive rather than reasoned about. **Four, not five**: this paragraph
+and the script's comment both said five after a reviewer corrected the same count in
+`docs/BUILD_PROVENANCE.md`, which is what happens when a number lives in three files.
 
 **The hardware probes are prose because of topology, not effort, and that is now written down.**
 `docs/audits/E/README.md` says for each of the eleven exactly what re-running it
