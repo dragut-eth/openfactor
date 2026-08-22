@@ -271,6 +271,13 @@ jobs:
           check "Embed Watch Content"
           check "dstSubfolderSpec = 16;"
           check "IPHONEOS_DEPLOYMENT_TARGET = 18.0;"
+          # **Xcode defaults this to YES and it was instrumenting Release builds.** It appears
+          # nowhere in this project file until somebody writes it, so the default was shipping
+          # coverage tables in every binary Apple distributes: 1.2 MB in the app alone, and the
+          # only nondeterminism left in the artifact once the linker's UUID was accounted for.
+          # Found while measuring what varies between two Release builds, not by reading settings.
+          # Debug keeps coverage, so test coverage is unaffected.
+          check "ENABLE_CODE_COVERAGE = NO;"
           check "TEST_HOST = "
           check "relativePath = .;"
           # A missing usage string is not a warning, it is a crash the first time the app

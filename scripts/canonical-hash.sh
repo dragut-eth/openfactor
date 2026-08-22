@@ -27,34 +27,51 @@
 #
 set -euo pipefail
 
+# **Canonicalisation version 2.** Recorded because every ignored byte range is somewhere content
+# could hide, so which ranges are ignored has to be a versioned, checkable statement rather than
+# whatever the script happened to do that day. Version 1 hashed `__TEXT,__text` alone.
+CANON_VERSION=2
+
 BINARY="${1:?usage: canonical-hash.sh <mach-o binary>}"
 [ -f "$BINARY" ] || { echo "No such file: $BINARY"; exit 1; }
 
-# Section offset and size, read from the load commands rather than guessed. otool prints them in
-# hex for `size` and `offset`; both are needed and both are taken from the same stanza.
+echo "# canonicalisation v$CANON_VERSION  $(basename "$BINARY")"
+
 # **Every architecture, separately.** A universal binary holds one Mach-O per slice, each with its
-# own load commands and its own `__text`, and their file offsets are relative to the whole file.
+# own load commands and its own sections, and their file offsets are relative to the whole file.
 # The first version of this read the first `__text` stanza and hashed from the fat file's start,
-# which for the watch app ran past that slice and into the next one's load commands. It looked
-# exactly like nondeterministic compiled code: sixteen bytes differing between builds, which turned
-# out to be the second slice's `LC_UUID` being counted as instructions. **The phone app and the
-# extension are thin, so the fault was invisible on two binaries out of three.**
-for ARCH in $(lipo -archs "$BINARY" 2>/dev/null || echo ""); do
+# which for the watch app ran past that slice into the next one's load commands. It looked exactly
+# like nondeterministic compiled code: sixteen bytes differing between builds, which turned out to
+# be the second slice's `LC_UUID` counted as instructions. The phone app and the extension are
+# thin, so the fault was invisible on two binaries out of three.
+for ARCH in $(lipo -archs "$BINARY" 2>/dev/null || echo "-"); do
   SLICE=$(mktemp)
-  if ! lipo -thin "$ARCH" "$BINARY" -output "$SLICE" 2>/dev/null; then cp "$BINARY" "$SLICE"; fi
-
-  # `size` is printed in hex and `offset` in decimal, which is a trap worth naming: read them the
-  # way otool prints them rather than assuming one base for both.
-  STANZA=$(otool -l "$SLICE" | grep -A6 "sectname __text" | head -8)
-  SIZE_HEX=$(printf '%s\n' "$STANZA" | awk '/^ *size /{print $2; exit}')
-  OFFSET=$(printf '%s\n' "$STANZA" | awk '/^ *offset /{print $2; exit}')
-  SIZE=$((SIZE_HEX))
-
-  if [ -z "${OFFSET:-}" ] || [ -z "${SIZE:-}" ]; then
-    echo "Could not find __TEXT,__text in $BINARY ($ARCH)"; rm -f "$SLICE"; exit 1
+  if [ "$ARCH" = "-" ] || ! lipo -thin "$ARCH" "$BINARY" -output "$SLICE" 2>/dev/null; then
+    cp "$BINARY" "$SLICE"
   fi
 
-  HASH=$(dd if="$SLICE" bs=1 skip="$OFFSET" count="$SIZE" 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
-  printf '%s  %s (%s)  (__TEXT,__text, %s bytes)\n' "$HASH" "$(basename "$BINARY")" "$ARCH" "$SIZE"
+  echo "## $ARCH"
+
+  # **Per section, reported separately, never rolled into one opaque number.** A single digest
+  # hides which parts matched, and a reader who disagrees with the boundary cannot re-draw it.
+  # `size` prints in hex and `offset` in decimal, which is a trap worth naming.
+  otool -l "$SLICE" | awk '
+    /sectname /   { sect = $2 }
+    /segname /    { seg = $2 }
+    /^ *size /    { if (sect != "" && size == "") size = $2 }
+    /^ *offset /  { if (size != "") { print seg "," sect, size, $2; sect=""; seg=""; size="" } }
+  ' | while read -r NAME SIZE_HEX OFFSET; do
+    SIZE=$((SIZE_HEX))
+    # **Zero-fill sections occupy no file bytes.** `__bss` has offset 0 and would otherwise be
+    # "hashed" by reading the Mach-O header, which contains LC_UUID and varies every build. That
+    # produced a false nondeterminism finding before it was noticed.
+    if [ "$OFFSET" -eq 0 ] || [ "$SIZE" -eq 0 ]; then
+      printf '%-64s  %s  (no file bytes)\n' "-" "$NAME"
+      continue
+    fi
+    HASH=$(dd if="$SLICE" bs=1 skip="$OFFSET" count="$SIZE" 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
+    printf '%s  %s  (%s bytes)\n' "$HASH" "$NAME" "$SIZE"
+  done
+
   rm -f "$SLICE"
 done

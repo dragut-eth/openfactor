@@ -52,9 +52,27 @@ container is not.**
 neither directory name appears in either binary. Searching for the maintainer's home directory
 path in the shipped binary returns **zero** occurrences.
 
-**`__LLVM_COV` is present in a Release build and carries no readable source paths.** The project
-file sets no `ENABLE_CODE_COVERAGE`. Why the segment is emitted was not established, and is
-recorded here as an open question rather than explained away.
+**`__LLVM_COV` was present in a Release build, and that open question is now answered.** The
+project file set no `ENABLE_CODE_COVERAGE`, **because Xcode defaults it to `YES`** and the setting
+appears nowhere until somebody writes it. So every binary Apple distributed carried coverage and
+profiling tables.
+
+**It was found by measuring, not by reading settings.** Diffing two independent Release builds
+section by section showed the coverage and profiling tables were **the only content that varied**
+once the linker's `LC_UUID` was accounted for. Nobody would have found it by inspecting a project
+file, because the responsible setting was not in one.
+
+**Now `NO` for Release and `YES` for Debug**, so test coverage is untouched, and CI asserts it so it
+cannot drift back silently.
+
+**Two things came out of that one line.** Every section with file bytes is now **identical across
+two independent Release builds**, in all four shipping binaries and all six architecture slices. And
+the app is about **1.5 MB smaller**: 1,209 KB off the phone binary, 183 KB off the complication,
+145 KB off the watch app, 8 KB off the share extension.
+
+**A residue is recorded rather than claimed away.** Smaller coverage tables survive, presumably from
+the package target, which a project-level setting does not reach. They are deterministic, so they
+cost bytes rather than provenance.
 
 ## Why bit for bit will not be reached
 
