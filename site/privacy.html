@@ -5,8 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OpenFactor Privacy Policy</title>
   <meta name="description" content="OpenFactor collects no data. No account, no server, no analytics.">
-  <link rel="icon" href="assets/icon-light.png">
-  <link rel="stylesheet" href="assets/style.css">
+  <meta name="theme-color" content="#ffffff">
+  <!-- Stated in markup because style.css decides it deliberately: the app icon has a near white
+       background, so the site commits to light rather than following the visitor's system. -->
+  <meta name="color-scheme" content="light">
+  <meta name="author" content="ReVeNG System">
+  <link rel="icon" href="/assets/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="canonical" href="https://openfactor.dev/privacy">
+
+  <!-- **og:image must be absolute.** A relative one silently fails on most scrapers, which is the
+       usual reason a card renders as a grey rectangle. The dimensions are declared so the first
+       paste renders at the right shape instead of after a re-crawl. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OpenFactor">
+  <meta property="og:url" content="https://openfactor.dev/privacy">
+  <meta property="og:title" content="OpenFactor Privacy Policy">
+  <meta property="og:description" content="OpenFactor collects no data. No account, no server, no analytics.">
+  <meta property="og:image" content="https://openfactor.dev/assets/card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="OpenFactor, open source two factor codes for iPhone and Apple Watch.">
+  <meta property="og:locale" content="en_US">
+  <!-- Twitter still reads its own card type rather than inferring one from Open Graph. -->
+  <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
   <main>
@@ -14,7 +38,7 @@
       <h1>Privacy policy</h1>
       <p class="tagline">OpenFactor collects no data.</p>
       <div class="actions">
-        <a class="btn" href="index.html">Back to OpenFactor</a>
+        <a class="btn" href="/">Back to OpenFactor</a>
       </div>
     </header>
 
@@ -99,7 +123,7 @@
 
   <footer>
     <nav>
-      <a href="index.html">OpenFactor</a>
+      <a href="/">OpenFactor</a>
       <a href="https://github.com/dragut-eth/openfactor">Source</a>
       <a href="https://github.com/dragut-eth/openfactor/issues">Support</a>
     </nav>

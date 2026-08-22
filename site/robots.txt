@@ -1,0 +1,9 @@
+# openfactor.dev
+#
+# Everything here is meant to be read. Nothing is disallowed, and the sitemap is named so the
+# apex is the address crawlers are given, which reinforces the canonical tags on each page.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://openfactor.dev/sitemap.xml

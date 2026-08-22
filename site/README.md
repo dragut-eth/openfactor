@@ -170,6 +170,46 @@ which meant every typo looked like a real page. Its links are absolute, because 
 served at any path depth. **If wrong addresses still return 200 after this deploys**, the Pages
 project has single page application routing switched on and that setting has to go.
 
+## What the head carries, and why each line is there
+
+**A canonical on every page, absolute, pointing at the apex.** `www` resolves now, so without this
+two hostnames served identical content with nothing saying which was real.
+
+**Open Graph and a Twitter card type.** A link to this site pasted into a chat used to render as a
+grey rectangle. `og:image` is **absolute**, which is not optional: a relative one silently fails on
+most scrapers and is the usual reason a card looks broken. The dimensions are declared so the first
+paste renders at the right shape rather than after a re-crawl. `twitter:card` is separate because
+Twitter reads its own type instead of inferring one from Open Graph.
+
+**`assets/card.png`, 1200x630**, on the site's white, showing the account list in an iPhone bezel.
+The alternative was icon and words only; the screenshot was chosen because for an app nobody has
+heard of it does work a paragraph cannot.
+
+**Icons at the sizes actually requested**, a 32px favicon and a 180px apple-touch-icon, rather than
+one 1024px image resized by the browser for every use.
+
+**`color-scheme: light` stated in markup**, because `style.css` decides it deliberately and a
+browser should not have to guess.
+
+**`robots.txt` and `sitemap.xml`** name the apex, which reinforces the canonical rather than
+repeating it.
+
+**Internal links point at `/privacy`, not `/privacy.html`.** The latter 308s, so every internal
+click was taking a redirect hop to reach the URL the canonical already names.
+
+**Not added: a JSON-LD SoftwareApplication block.** Its useful fields are `aggregateRating` and
+`offers`, and this app has neither a rating nor a store link yet. Publishing the markup without
+them claims a listing that does not exist. Worth revisiting when the App Store link is real.
+
+## security.txt
+
+RFC 9116, at `/.well-known/security.txt`, served as `text/plain; charset=utf-8`. Verified from
+outside on 2026-08-22.
+
+**`/security.txt` at the document root returned the homepage with a 200**, because the Pages
+project had no 404 page. A scanner asking for a text file got HTML, which reads as no security
+contact at all. `_redirects` now sends that path to the real file.
+
 ## The privacy page is not a template
 
 `privacy.html` is a statement by ReVeNG System to the people who install the app it publishes. A

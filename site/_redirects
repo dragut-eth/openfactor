@@ -1,0 +1,13 @@
+# Cloudflare Pages redirects.
+#
+# **The legacy security.txt location.** RFC 9116 puts the file at /.well-known/security.txt, and
+# that is where it lives. Some researcher tooling still tries the document root first, and until
+# 404.html shipped that path returned the homepage with a 200: an HTML page where a scanner
+# expected a text file, which reads as "this project has no security contact". Sending them to the
+# real file costs one line.
+/security.txt  /.well-known/security.txt  301
+
+# **www is redirected at the edge, not here.** A Cloudflare Redirect Rule handles it, because a
+# _redirects file only runs once a request has already been routed to this project, and the point
+# is for www never to serve a second copy of the site. Recorded here so the absence looks
+# deliberate rather than forgotten. See site/README.md.
