@@ -121,6 +121,32 @@ Cloudflare Pages. The apex is fine. A person typing `www` gets an error page. **
 covers the apex only**, which confirms this is an unconfigured hostname rather than a routing
 hiccup, and no file in this directory can fix it: the request never reaches Pages.
 
+## The site was tracking its visitors, and said it was not
+
+**Found 2026-08-22, live in production.** Cloudflare Web Analytics was injecting a beacon from
+`static.cloudflareinsights.com` on every page load, sending real user measurements. Three lines
+above it in the same document, the page's own meta description read **"No account, no server, no
+tracking."**
+
+The setting was **"Enable, excluding visitor data in the EU"**, which does not inject for EU
+visitors and does for everyone else. It is now **Disable**, verified from outside: zero beacon
+references on `/`, `/privacy` and a 404 path, no `<script>` tag of any kind, and `github.com` as
+the only external host in the served page.
+
+**Why it went unnoticed, which is the part worth keeping.** Cloudflare injects that script only
+when the request carries a browser-like `Accept` header. A `curl` without one is served a clean
+page. The same URL, same user agent, differing only in `Accept`, returns HTML with and without the
+beacon. **Every check run against this site until now was the version that could not see it**, and
+the finding came from a browser network tab instead.
+
+**So a claim about a static site is not settled by reading the static file.** What the repository
+contains and what the edge serves are two different things, and only the second one is what
+visitors get. Check the served bytes, shaped like a browser.
+
+**`_headers` is now the backstop.** `script-src 'self'` does not permit
+`static.cloudflareinsights.com`, so the same injection would be blocked in the browser and show up
+as a console error rather than silently working.
+
 ## Headers and the 404, which are files rather than dashboard settings
 
 **`_headers` sets the response headers** and every value in it was checked against what these

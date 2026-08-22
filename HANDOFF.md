@@ -185,6 +185,26 @@ container" in the sense a reader would take. And "compromised device" was hiding
 compromise holding the device locked does not yield the vault key at all. `docs/MASVS.md` now says
 all three, and the verdicts are unchanged.
 
+**openfactor.dev was tracking its visitors while telling them it was not.** Cloudflare Web
+Analytics was injecting a beacon from `static.cloudflareinsights.com` on every non EU page load,
+three lines below a meta description reading "No account, no server, no tracking". The setting was
+"Enable, excluding visitor data in the EU"; it is now Disable, verified from outside. Details in
+`site/README.md`.
+
+**The reason it survived every check is the finding.** Cloudflare injects that script only when the
+request carries a browser-like `Accept` header, so `curl` is served a clean page. I checked this
+site for analytics twice, said there was none twice, and both checks were the version that cannot
+see it. **The maintainer found it by opening a browser network tab**, which is the check that
+should have been first.
+
+**Generalise it: a claim about what a page serves cannot be settled by reading the file in the
+repository.** The edge is a second author, it can be changed from a dashboard without a commit,
+and nothing in this repository would ever have reported it. When a claim is about what visitors
+receive, fetch the served bytes shaped like a browser.
+
+**`site/_headers` now backstops it.** `script-src 'self'` does not permit that host, so the same
+injection would fail visibly instead of working silently.
+
 **The vault recovery path ran on a genuinely fresh device for the first time, and it worked.**
 A spare iPhone XS on the same Apple Account had OpenFactor deleted and 1.0 (6) installed from
 TestFlight. The encrypted records arrived through iCloud Keychain; the vault key did not, because

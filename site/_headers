@@ -13,10 +13,15 @@
   # **`default-src 'none'` and then allow back only what exists.** A deny-by-default policy that
   # has to be widened when something is added is the one that keeps meaning something.
   #
-  # `script-src 'self'`: the pages ship no JavaScript. Cloudflare's email obfuscation injects one
-  # script from /cdn-cgi/, which is same origin, so 'self' covers it. Checked against the live
-  # page rather than assumed, because a policy that breaks the email link would hide the security
-  # contact address.
+  # `script-src 'self'`: the pages ship no JavaScript, and as of 2026-08-22 neither does the edge.
+  # 'self' is kept rather than 'none' so that Cloudflare's same origin email obfuscation still
+  # works if it is switched back on; that injects from /cdn-cgi/ and would otherwise be blocked.
+  #
+  # **This directive would have caught the thing that made this file urgent.** Cloudflare Web
+  # Analytics was injecting a beacon from static.cloudflareinsights.com on every non EU visit,
+  # while the page's own description said "no tracking". `script-src 'self'` does not permit that
+  # host. The setting is off now, and this line is the backstop for the next time something is
+  # switched on at the edge without the repository hearing about it.
   #
   # `style-src 'self'` with no 'unsafe-inline': privacy.html carried one style attribute and it
   # was moved into a class so this line could stay honest.
