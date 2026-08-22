@@ -35,6 +35,13 @@ end of this document is what `site/privacy.html` was built from.
 when the site went up and deliberately not changed: the site carries no support content, and what
 Apple asks for is a page where a person can actually get help.
 
+**But every route on that page needed a GitHub account, which is a real gap for an App Store
+app.** Somebody who installs this and has a question should not have to sign up for a developer
+platform to ask it. **`info@openfactor.dev` is on the site, on the privacy page, and in
+`security.txt`**, and it needs nothing of anybody. The issues page stays the better route for a
+bug, because the answer is then public and searchable, and the email is the route for everything
+and everyone else.
+
 ### The site derives from the repository, never the reverse
 
 There are now three surfaces carrying the same claims: `README.md`, the App Store listing, and
@@ -386,10 +393,16 @@ The app collects no data from anyone, including children.
 
 ## Contact
 
-Questions and reports: https://github.com/dragut-eth/openfactor/issues
+Questions, problems and anything else: info@openfactor.dev
+
+Bugs and feature requests are better as issues at
+https://github.com/dragut-eth/openfactor/issues, where the discussion is public and searchable,
+but the address needs no account and reaches a person.
 
 Security vulnerabilities: see SECURITY.md in the repository, which asks for private disclosure
-through GitHub Security Advisories.
+through GitHub Security Advisories. Email works if you cannot use that, though it is not
+encrypted, so say only that you have found something and let the details follow through the
+private channel.
 
 ## Changes
 

@@ -1,7 +1,15 @@
 # OpenFactor. RFC 9116.
-# Reports go to the private channel SECURITY.md names, which is the only one.
+#
+# In order of preference, which is what RFC 9116 says this ordering means.
+#
+# The advisory channel is first because it is private: a report there is not readable by anybody
+# until it is resolved. The address is second because it needs no account, and a researcher
+# without a GitHub login previously had no way to reach this project at all. Email is not
+# encrypted, so it is the right place to say you have found something and the wrong place to
+# describe it.
 
 Contact: https://github.com/dragut-eth/openfactor/security/advisories/new
+Contact: mailto:info@openfactor.dev
 Expires: 2027-08-21T00:00:00.000Z
 Preferred-Languages: en, fr
 Canonical: https://openfactor.dev/.well-known/security.txt

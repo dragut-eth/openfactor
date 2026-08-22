@@ -9,6 +9,11 @@ Report privately through
 [GitHub Security Advisories](https://github.com/dragut-eth/openfactor/security/advisories/new).
 Please do not open a public issue for a vulnerability.
 
+**If you cannot use that, write to `info@openfactor.dev`.** It needs no account, and until it
+existed a researcher without a GitHub login had no way to reach this project at all. **Email is
+not encrypted**, so it is the right place to say you have found something and the wrong place to
+describe it: the details belong in the private channel above.
+
 Include what you did, what happened, and what you expected. A proof of concept helps.
 
 You will get an acknowledgement within 7 days. There is no bug bounty. This is a small open-source
