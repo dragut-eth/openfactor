@@ -235,6 +235,28 @@ outside on 2026-08-22.
 project had no 404 page. A scanner asking for a text file got HTML, which reads as no security
 contact at all. `_redirects` now sends that path to the real file.
 
+## Google Search Console
+
+Verified 2026-08-22 as a **Domain property**, which covers the apex, `www`, and both protocols in
+one, and `sitemap.xml` is submitted.
+
+**Verified by DNS, deliberately.** Search Console offers three methods and the other two put
+something on the site: an HTML file at the document root, or a Google `<meta>` tag in the page
+head. Neither tracks anybody, but **DNS verification leaves what visitors receive completely
+untouched**, which is the only version of this consistent with the rest of these pages.
+
+**Do not delete the `google-site-verification=` TXT record at the apex.** Google re-checks it
+periodically and removing it un-verifies the property. It looks like clutter and it is not.
+
+**This is not analytics and the distinction is not a technicality.** Search Console reports
+Google's own data about how this site appears in Google's search results: which queries showed it,
+what was clicked, what failed to crawl. It ships no script and collects nothing from visitors. The
+beacon removed the same day did the opposite, and the two should never be filed together.
+
+**What makes a page indexable here is a three way agreement**, checked after setup: the URL in
+`sitemap.xml`, the canonical on the page, and the URL that returns 200 are identical with no
+redirect between them. If those ever disagree, that is the first thing to look at.
+
 ## The privacy page is not a template
 
 `privacy.html` is a statement by ReVeNG System to the people who install the app it publishes. A
