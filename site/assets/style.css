@@ -98,7 +98,7 @@ ul.points li span { color: var(--muted); }
 .shots {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: center;
   gap: clamp(1rem, 4vw, 3rem);
 }

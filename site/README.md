@@ -40,7 +40,7 @@ Re-adding a dark palette means revisiting the icon at the same time.
 
 - ~~Screenshots.~~ **Done, in Apple's own product bezels.** `list.png`, `watch.png` and
   `add.png` are the App Store originals composited into the iPhone 17 in Black and the Apple Watch
-  Ultra 3 with the neon green Ocean Band, taken from Apple's Design Resources.
+  Ultra 3 with the Green Neon Trail Loop, taken from Apple's Design Resources.
 
   **The devices are at their true relative size, which took work to get right.** An earlier
   version exported all three at the same height, so the Ultra rendered as tall as the iPhone and a
@@ -50,9 +50,14 @@ Re-adding a dark palette means revisiting the icon at the same time.
   is what the previous layout did.
 
   The screen holes were located by flood filling the transparent region of each bezel rather than
-  by hardcoding an offset a future bezel would move. The phone screenshot's aspect matches its
-  screen to within a rounding error; the watch is scaled to cover and centre cropped, because a
-  letterbox inside a device frame reads as a bug.
+  by hardcoding an offset a future bezel would move, and **the screenshot is masked to that
+  region's real shape**. An earlier version pasted into its bounding box instead, so the square
+  corners of the screenshot sat outside the rounded screen and poked past the bezel. The phone
+  screenshot's aspect matches its screen to within a rounding error; the watch is scaled to cover
+  and centre cropped, because a letterbox inside a device frame reads as a bug.
+
+  The band is the Trail Loop in Green Neon. The row aligns to the top, so the three screens start
+  on the same line rather than the watch floating up from a shared baseline.
 
   **The same images the store shows**, so the landing page and the shop window cannot drift apart.
   Explicit `width` and `height` so the page does not reflow while they load, and a caption says
