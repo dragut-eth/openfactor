@@ -566,6 +566,32 @@ effort avoiding. **It is offered only where it can be honoured**: a device with 
 authenticate, the settings toggle already refuses there, and on such a device this button is
 absent rather than dead.
 
+> **Open, found 2026-08-22 on hardware, deferred to the round after 1.0.** The rule above is
+> honoured for one case and not the other. **The dialog is offered without regard to whether App
+> Lock is already on**, because the guard reads
+> `!isEmpty, !hasOfferedLockAdvice, arrival == nil` and nothing else; `appLockEnabled` reaches
+> `LockAdvice` only so the button can set it. Found by setting the lock on a fresh install and
+> then adding an account.
+>
+> **The spec anticipated "cannot be turned on" and not "already on".** Same principle, one case
+> further along.
+>
+> **The dialog should still appear.** Its real advocacy is the iOS system lock, which gate E14
+> established is strictly stronger than App Lock because it removes switcher exposure from the
+> first frame, and somebody who has already switched App Lock on is exactly who would want that.
+> **What is wrong is the button and one sentence**: "Turn On App Lock" should be absent when it is
+> already on, the same treatment a passcode-less device gets, and "Or you can use App Lock" reads
+> as nonsense to somebody already using it.
+>
+> **Consequence today: a redundant button, not a dead one.** Tapping it writes a value that is
+> already true and closes the dialog. Nothing breaks and nothing looks stuck, which is why this
+> did not hold the 1.0 submission.
+>
+> **No checklist item covered it**, and that is the more useful half. The twelve items exercise
+> the lock's behaviour and the advice dialog's interaction with other presentations. None of them
+> asks whether the advice is *appropriate* given the settings it is advising about. A thirteenth
+> belongs here when this is fixed.
+
 **The title says what the dialog is for rather than what is wrong.** An earlier draft opened with
 the exposure itself, which is accurate and reads as an alarm. The fact still appears, one line
 down, where it explains the choice instead of announcing a problem.

@@ -293,6 +293,24 @@ the recovery path in `docs/VAULT.md` executing end to end on hardware that had n
 rather than on a device where some part of it was already present. It was not planned; it happened
 because a checklist run needed a clean install.
 
+**Open, minor, deferred to the round after 1.0: the lock advice is offered even when App Lock is
+already on.** Found on hardware 2026-08-22, during setup of a fresh vault for a day of real-key
+testing on build 6. The guard is `!isEmpty, !hasOfferedLockAdvice, arrival == nil`; App Lock's
+state is not consulted. `docs/APP_LOCK.md` states the rule this breaks, one case short: a button
+is offered "only where it can be honoured", which the spec applied to a device with no passcode
+and not to a lock already switched on.
+
+**The dialog should still appear; the button and one sentence should not.** Its real advocacy is
+the iOS system lock, stronger than App Lock per gate E14, and somebody who already turned App Lock
+on is who most wants to hear it. Consequence today is a redundant button rather than a dead one:
+it writes a value that is already true and closes. **Not a submission blocker**, and deliberately
+not fixed mid-test, since it cannot reach build 6 anyway and a build 7 would restart the day of
+testing.
+
+**No checklist item covered it.** The twelve exercise the lock's behaviour and the dialog's
+interaction with other presentations. None asks whether the advice is appropriate given the
+settings it advises about. A thirteenth belongs there when this is fixed.
+
 **All four checklist items PR 15c named are now closed.** Item 1 ran on 21 August and changed the
 design, item 8 ran and found a real defect that took three attempts to fix, item 3 ran on 22 August
 and passed, and item 6 ran the same day and passed: Face ID as root, then a fresh interface with the
