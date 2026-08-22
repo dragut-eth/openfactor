@@ -185,6 +185,35 @@ container" in the sense a reader would take. And "compromised device" was hiding
 compromise holding the device locked does not yield the vault key at all. `docs/MASVS.md` now says
 all three, and the verdicts are unchanged.
 
+**`info@openfactor.dev` could be spoofed by anyone, and it is published as the security contact.**
+SPF ended in `?all`, which is neutral and asks receivers to form no opinion, and there was no DMARC
+record at all. Fixed 2026-08-22 and verified from two independent resolvers:
+
+    SPF    v=spf1 include:_mailcust.gandi.net -all     (exactly one record)
+    DMARC  v=DMARC1; p=none; rua=...@dmarc-reports.cloudflare.net
+    MX     unchanged, receiving untouched
+
+**No DKIM, and that is the correct answer rather than a gap.** The plan started with "generate DKIM
+at Gandi", which was wrong. Gandi's own console shows **zero mailboxes and two forwarding
+addresses**: `info@openfactor.dev` receives and forwards, and nothing ever sends as this domain.
+DKIM signs outbound mail, so there is nothing to sign.
+
+**That fact made the policy stricter, not weaker.** The usual advice is `~all` and a month of
+observation, because normally you cannot know whether some forgotten service sends as your domain.
+Here you can: none does. So `-all` went in immediately, and `p=reject` is reachable in a week
+rather than a quarter. **The right framing is not "help receivers judge our mail". It is "this
+domain sends no mail, reject anything claiming to."**
+
+**Still open, deliberately:** DMARC is at `p=none`, observing. Move it to `p=reject` around
+2026-08-29 once Cloudflare's reports show a clean week. That is the step that actually stops the
+spoofing; everything before it is preparation. Also open: NEL still reports to Cloudflare from
+visitors' browsers, `www` serves rather than redirects, DNSSEC is off, and there is no CAA record.
+
+**One thing that is not a security problem but affects the security contact.** With forwarding
+rather than a mailbox, a reply to a researcher arrives from a personal address rather than from
+`info@openfactor.dev`. To somebody who has just reported a vulnerability, that can read as
+phishing. The fix is a real mailbox, and it is a separate decision.
+
 **openfactor.dev was tracking its visitors while telling them it was not.** Cloudflare Web
 Analytics was injecting a beacon from `static.cloudflareinsights.com` on every non EU page load,
 three lines below a meta description reading "No account, no server, no tracking". The setting was
