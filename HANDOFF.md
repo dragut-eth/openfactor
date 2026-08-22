@@ -194,8 +194,17 @@ the recovery path in `docs/VAULT.md` executing end to end on hardware that had n
 rather than on a device where some part of it was already present. It was not planned; it happened
 because a checklist run needed a clean install.
 
-**PR 15c's last open checklist item was closed by reading the code, after three wrong procedures
-tried to close it on hardware.** Item 6's predicted failure, the advice dialog spending its
+**All four checklist items PR 15c named are now closed.** Item 1 ran on 21 August and changed the
+design, item 8 ran and found a real defect that took three attempts to fix, item 3 ran on 22 August
+and passed, and item 6 ran the same day and passed: Face ID as root, then a fresh interface with the
+drafts gone.
+
+**Item 6's hardware run proves the lock half only.** The advice dialog did not appear and on that
+device could not have, because the flag was answered there weeks ago. That is worth stating rather
+than letting a pass stand for more than it covers.
+
+**The advice half was closed by reading the code, after three wrong procedures tried to close it on
+hardware.** Item 6's predicted failure, the advice dialog spending its
 one-time flag under the lock window, **cannot happen**: `hasOffered` is assigned only inside the
 three button handlers, so an unanswered dialog leaves it unspent. Details in `docs/APP_LOCK.md`.
 

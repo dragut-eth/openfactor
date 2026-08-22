@@ -653,6 +653,11 @@ feature's documentation.
    list loads behind the lock window, so the alert may fire underneath it, and if it did **the
    one-time flag would be spent on a dialog nobody saw**.
 
+   **Run on 22 August on an iPhone 15 Pro: passed.** Face ID as root, then a fresh interface with
+   the drafts gone. **The dialog did not appear, and on that device it could not have**, because the
+   flag was answered there weeks ago, so the run confirms the lock behaviour and says nothing about
+   the advice. The advice half is settled below instead.
+
    **Closed on 22 August, statically, and it did not need hardware.** `hasOffered` is assigned in
    exactly three places, all of them inside button handlers: "I Did It", "Turn On App Lock" and
    "Not Now". Presenting the dialog does not touch it, and neither does the arrival teardown that
