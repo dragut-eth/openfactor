@@ -1,3 +1,4 @@
+import QuartzCore
 import SwiftUI
 import UIKit
 
@@ -41,6 +42,9 @@ enum PrivacyShield {
     /// the ordering is an invariant and an invariant spread across call sites is how the
     /// first attempt at PR 15b shipped its frame leak.
     static func apply(_ controller: AppLockController) {
+        #if DEBUG
+            controller.debugTrace("apply IN", coverWindow: debugCoverState)
+        #endif
         if controller.lockWindowVisible {
             showLock(controller)
         }
@@ -48,7 +52,24 @@ enum PrivacyShield {
         if !controller.lockWindowVisible {
             lock?.isHidden = true
         }
+        #if DEBUG
+            controller.debugTrace("apply OUT", coverWindow: debugCoverState)
+        #endif
     }
+
+    #if DEBUG
+        /// What the cover window actually is at this instant, which no other type can see.
+        ///
+        /// **`none` on the first departure of a process is worth watching for**, because the
+        /// window and its hosting controller are built lazily here, and the sibling lock window's
+        /// comment records that a freshly built hosting controller's first frame can land after
+        /// the system has already taken its photograph.
+        static var debugCoverState: String {
+            guard let cover else { return "none" }
+            if cover.isHidden { return "hidden" }
+            return cover.alpha > 0 ? "shown" : "clear"
+        }
+    #endif
 
     /// Shows the lock window, creating it on first use.
     ///
@@ -98,22 +119,69 @@ enum PrivacyShield {
     /// frame gap during the swap where the interface showed through, which is exactly
     /// the flash this window exists to prevent. It is only ever shown by an app that
     /// was just active and settled, so it has no launch moment to get wrong.
+    /// Builds the cover window before it is first needed, and does nothing if it exists.
+    ///
+    /// **The first departure of a process used to pay for this**, and it is the one moment that
+    /// cannot afford it: a `UIWindow`, a `UIHostingController`, and a first layout pass, all
+    /// racing a photograph the system takes on its own schedule. The sibling lock window is
+    /// already built once and kept for exactly this reason, and its comment records that a fresh
+    /// hosting controller's first frame landed after the system had finished. The cover never
+    /// got the same treatment.
+    ///
+    /// Called when the scene settles at active, never at launch: a window created mid launch
+    /// transition was measured latching the wrong orientation.
+    static func prepareCover() {
+        guard cover == nil, let scene = foregroundScene else { return }
+
+        let shield = UIWindow(windowScene: scene)
+        shield.windowLevel = .alert + 1
+        shield.rootViewController = UIHostingController(rootView: CoverView())
+
+        // **Visible from the moment it is built, and transparent.** `isHidden = false` is not a
+        // free operation: it orders the window in and schedules a render, and the render is what
+        // has to have happened before the system photographs the screen. A window that is
+        // already in the hierarchy and already drawn needs only an opacity change, which the
+        // render server can do without laying anything out.
+        //
+        // **Sits below the lock window**, which is `.alert + 2`, so a locked app still shows the
+        // lock screen rather than this.
+        //
+        // Touches pass through, because a permanently visible window that swallowed them would
+        // be a far worse bug than the one this is fixing.
+        shield.alpha = 0
+        shield.isUserInteractionEnabled = false
+        shield.isHidden = false
+        cover = shield
+    }
+
     private static func setCovered(_ covered: Bool) {
         guard covered else {
-            cover?.isHidden = true
+            // **Lowered without forcing a commit, and that asymmetry is the point.** Raising has
+            // a deadline set by the system's photograph. Lowering has none, and flushing it
+            // committed the cover's removal on its own instead of in the same transaction as
+            // whatever replaces it. On a locked return that replacement is the lock window, and
+            // a measured sequence on 2026-08-22 had two and a half seconds between the app
+            // becoming active and the Face ID prompt appearing, with the codes on screen for it.
+            //
+            // A cover that leaves one frame late costs nothing. A cover that leaves one frame
+            // early costs the thing this file exists for.
+            cover?.alpha = 0
             return
         }
 
-        if cover == nil {
-            guard let scene = foregroundScene else { return }
+        // Still built here if it somehow does not exist, because a cover that is late is
+        // better than a cover that never comes. `prepareCover` is what makes that rare.
+        prepareCover()
+        cover?.alpha = 1
 
-            let shield = UIWindow(windowScene: scene)
-            shield.windowLevel = .alert + 1
-            shield.rootViewController = UIHostingController(rootView: CoverView())
-            cover = shield
-        }
-
-        cover?.isHidden = false
+        // **Committed now rather than at the end of the run loop.** Everything above only
+        // schedules work. The system takes its photograph on its own schedule, and a measured
+        // sequence on 2026-08-22 had the cover raised at `didEnterBackground` and the switcher
+        // still holding the interface, which is what an uncommitted change looks like.
+        //
+        // This is the one place in the app that forces a commit, and it is here because it is
+        // the one place where being one frame late is the whole failure.
+        CATransaction.flush()
     }
 
     /// **This assumes the app has exactly one window scene, and that assumption is enforced

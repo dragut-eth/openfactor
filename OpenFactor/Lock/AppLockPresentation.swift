@@ -29,18 +29,24 @@ struct AppLockPresentation: Equatable {
     /// window. A lock enabled mid run starts unlocked, so it is never cold either.
     private var coldLock: Bool
 
-    /// An unlock succeeded while the scene was not yet active, and the cover must not
-    /// fire in the gap. Face ID runs with the scene inactive, so the moment of success
-    /// satisfies the naive cover condition, and the first attempt flashed the cover,
-    /// black in dark mode, on every unlock.
+    /// **There used to be a `settling` flag here and its removal is the fix for the leak.**
     ///
-    /// **Cleared by every departure event**, not only by settling. The first attempt's
-    /// flag was cleared only by later phase events, and when it stuck, the next
-    /// backgrounding silently skipped the cover and the switcher photographed the real
-    /// interface. A stale flag here can cost one cosmetic frame; it can never cost the
-    /// photograph. Sequence B3 in `docs/APP_LOCK.md`, and the reason this PR was
-    /// specified before being rebuilt.
-    private var settling = false
+    /// It suppressed the cover between a successful unlock and the scene becoming active, to
+    /// avoid a brief flash of the cover on every unlock. That window is not brief. Measured on
+    /// an iPhone 15 Pro on 2026-08-22, the scene stays inactive for **two to three seconds**
+    /// after a Face ID unlock, with the account list on screen the whole time, and leaving
+    /// during it produces no resignation at all, because an app that was never active cannot
+    /// resign. The first signal is `didEnterBackground`, which is after the photograph.
+    ///
+    /// **Three attempts to cover later failed**, and they were the wrong shape. The window
+    /// cannot be won from behind. Google Authenticator does not try: it holds its own content
+    /// off screen for the same two to three seconds and reveals it when the app is genuinely
+    /// active, which is what made it robust in a side by side test.
+    ///
+    /// So the cover now holds from the unlock until `.active`, and the flash the flag existed to
+    /// prevent is the fix rather than the fault. The cover draws `Tokens.Surface.background`,
+    /// the app's own background, so what a person sees is the launch screen holding a moment
+    /// longer, not a black rectangle.
 
     /// Whether the unlock prompt has been offered for the current locked spell, so
     /// returning from the Face ID overlay does not immediately re-raise it. Reset when
@@ -81,7 +87,17 @@ struct AppLockPresentation: Equatable {
     /// while settling, see `settling`. Never at launch, because there is no interface
     /// to hide and no window scene to hang a cover on yet.
     var coverVisible: Bool {
-        !engine.isLocked && !settling && phase != .active && phase != .launching
+        // **One invariant: content is uncovered only when the app is active and unlocked.**
+        //
+        // The cover and the lock window used to be alternatives, so a locked return lowered the
+        // cover and raised the lock window in the same update. Whether anything showed depended
+        // on the lock window drawing in time, and on 2026-08-22 a device caught it not doing so.
+        // They are not alternatives: the lock window sits at `.alert + 2` and the cover at
+        // `.alert + 1`, so both up is visually the lock screen and costs nothing.
+        //
+        // Everything else here is a consequence rather than a case: locked, inactive,
+        // backgrounded, or mid Face ID are all "not active and unlocked", and all covered.
+        phase != .launching && !(phase == .active && !engine.isLocked)
     }
 
     /// Whether the prompt should be raised without a tap, once per locked spell.
@@ -92,7 +108,6 @@ struct AppLockPresentation: Equatable {
     /// The scene left `.active`. A departure, so any pending cover suppression ends now:
     /// whatever happens next, the switcher must get the cover, not the interface.
     mutating func willResignActive() {
-        settling = false
         phase = .inactive
     }
 
@@ -100,7 +115,6 @@ struct AppLockPresentation: Equatable {
     /// starts counting time away.
     mutating func didEnterBackground(at date: Date) {
         engine.appDidBackground(at: date)
-        settling = false
         hasPrompted = false
         phase = .background
     }
@@ -136,7 +150,6 @@ struct AppLockPresentation: Equatable {
     /// moment ago, so `coldLock` is already false.
     mutating func didBecomeActive(at date: Date, enabled: Bool, gracePeriod: TimeInterval) {
         engine.appWillForeground(at: date, enabled: enabled, gracePeriod: gracePeriod)
-        settling = false
         phase = .active
     }
 
@@ -166,9 +179,26 @@ struct AppLockPresentation: Equatable {
         guard engine.isLocked else { return }
         engine.unlock()
         coldLock = false
-        settling = phase == .inactive
     }
 
     /// Cancelled or failed. Locked is already the right state; nothing changes.
     mutating func unlockFailed() {}
+
+    #if DEBUG
+        /// The two pieces of state that decide whether the switcher gets a blank surface or a
+        /// photograph of the account list. Both are private because nothing in the app should
+        /// branch on them; `LockTrace` reads them so a sequence can be read back from a device
+        /// instead of reasoned about from the source.
+        var debugPhaseName: String {
+            switch phase {
+            case .launching: "launching"
+            case .active: "active"
+            case .inactive: "inactive"
+            case .background: "background"
+            }
+        }
+
+        /// Kept in the trace's shape so older traces stay comparable. Always false now.
+        var debugSettling: Bool { false }
+    #endif
 }

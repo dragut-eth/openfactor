@@ -293,6 +293,31 @@ the recovery path in `docs/VAULT.md` executing end to end on hardware that had n
 rather than on a device where some part of it was already present. It was not planned; it happened
 because a checklist run needed a clean install.
 
+**The app switcher leaked live codes after every Face ID unlock, and it is fixed.** Found on
+hardware 2026-08-22 during the day of real-key testing, held the 1.0 submission, and took four
+wrong fixes before the right one. Full diagnosis in `docs/APP_LOCK.md`.
+
+**The cause:** after a Face ID unlock the scene stays inactive for two to three seconds with the
+account list on screen, and leaving in that window produces no resignation at all, because an app
+that was never active cannot resign. The first signal is `didEnterBackground`, after the
+photograph. A `settling` flag suppressed the cover across exactly that window, to prevent a brief
+flash on every unlock. **The flash it prevented was the leak.**
+
+**The fix is one invariant**: content is uncovered only when the app is active and unlocked.
+`settling` is deleted, and the cover and the lock window are no longer alternatives.
+
+**What actually turned it around was the maintainer testing a peer.** Google Authenticator waits
+two to three seconds after an unlock before showing codes. It is not winning the race, it is
+refusing to run it, and four attempts here had all been trying to cover faster.
+
+**Two tests were asserting the defect as a requirement**, and a third was green while unreachable
+by the app. That is the second and third time in two days that a green suite covered a real
+failure, and in every case the test exercised the decision while the delivery was what broke.
+
+**A DEBUG-only event trace made it findable**, in `OpenFactor/Lock/LockTrace.swift`, kept rather
+than deleted. Three rounds of reasoning from the source gave three different wrong answers; the
+first trace gave the right one.
+
 **Open, minor, deferred to the round after 1.0: the lock advice is offered even when App Lock is
 already on.** Found on hardware 2026-08-22, during setup of a fresh vault for a day of real-key
 testing on build 6. The guard is `!isEmpty, !hasOfferedLockAdvice, arrival == nil`; App Lock's

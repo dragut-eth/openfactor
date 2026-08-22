@@ -404,6 +404,12 @@ struct SettingsView: View {
                     // on real devices, not something to explain to anybody.
                     LabeledContent("Wrapped key", value: Self.wrappedKeyReport())
 
+                    // **Reading the lock's state back from the device that produced it.**
+                    // The events that decide whether the app switcher photographs the account
+                    // list all happen while the app is leaving the foreground, so nobody is
+                    // looking at a console when they fire. Open after a sequence, not during.
+                    NavigationLink("Lock trace") { LockTraceView() }
+
                     if let lockDevice {
                         // Not destructive, and no confirmation, because nothing is lost: the
                         // accounts stay sealed and the passphrase still opens them. It exists

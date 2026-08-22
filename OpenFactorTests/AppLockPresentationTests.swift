@@ -42,18 +42,26 @@ struct AppLockPresentationTests {
     /// successful unlock lands before `.active`, and the naive cover condition holds in
     /// the gap. The cover must not fire there, and must reach the steady state once the
     /// scene settles.
-    @Test("An unlock landing while inactive never shows the cover in the gap")
-    func unlockDuringFaceIDGapSuppressesTheCover() {
+    /// **This test asserted the opposite until 2026-08-22, and the reversal is the fix.**
+    ///
+    /// It required the cover to stay down between a successful unlock and the scene becoming
+    /// active, so that no cover flashed on every unlock. On a device that window is two to
+    /// three seconds with the account list on screen, and a departure inside it produces no
+    /// resignation at all, because an app that was never active cannot resign. The first signal
+    /// is `didEnterBackground`, after the system has photographed the screen. **The flash this
+    /// assertion prevented was the leak.**
+    @Test("An unlock landing while inactive holds the cover until the scene is active")
+    func unlockDuringFaceIDGapHoldsTheCover() {
         var p = returned(after: 300)
         #expect(p.lockWindowVisible)
 
         p.promptRaised()
         p.willResignActive()  // Face ID takes the scene.
-        #expect(!p.coverVisible, "the lock is still the surface while the prompt is up")
+        #expect(p.coverVisible, "covered beneath the lock window, which is what is seen")
 
         p.unlockSucceeded()  // Lands while the scene is inactive.
         #expect(!p.lockWindowVisible)
-        #expect(!p.coverVisible, "the flash: unlocked and inactive, but settling")
+        #expect(p.coverVisible, "held: unlocked but not yet active, so nothing may be photographed")
 
         p.didBecomeActive(at: launch.addingTimeInterval(301), enabled: true, gracePeriod: grace)
         #expect(!p.coverVisible)
@@ -78,6 +86,38 @@ struct AppLockPresentationTests {
         #expect(p.coverVisible)
     }
 
+    /// **The defect this suite could not see, and why.**
+    ///
+    /// `departureAfterUnlockAlwaysCovers` above calls `willResignActive()` directly and has
+    /// always passed. The app could not reach it. SwiftUI reports scene phase *changes*, and
+    /// after a Face ID unlock the scene is already `.inactive`; when the return to `.active` is
+    /// not delivered, a real departure is not a change and **nothing arrives at all** until
+    /// `.background`, which is after the system has photographed the screen.
+    ///
+    /// Measured on an iPhone 15 Pro on 2026-08-22: an unlock at t=42.139, no `.active` for six
+    /// seconds, then `.background` as the first event. Two of three unlocks in that trace got
+    /// their `.active` back and one did not, which is why it looked intermittent.
+    ///
+    /// **So the presentation was right and the delivery was wrong**, and a suite that only ever
+    /// calls the presentation directly cannot tell the difference. This test pins the shape of
+    /// the gap so that nobody removes the system notification on the grounds that scene phase
+    /// already covers it.
+    @Test("A departure inside the post unlock window needs no signal at all")
+    func aDepartureNeedsNoSignalBecauseTheCoverNeverCameDown() {
+        var p = returned(after: 300)
+
+        // The Face ID dip, which puts the scene at inactive and keeps it there.
+        p.sceneBecameInactive()
+        p.promptRaised()
+        p.unlockSucceeded()
+
+        // The scene never returns to active, and the person leaves. What SwiftUI delivers is
+        // the same value again, which is correctly treated as nothing. **It no longer matters**:
+        // the cover has been up since the unlock, so there is no moment left to miss.
+        p.sceneBecameInactive()
+        #expect(p.coverVisible, "nothing to catch on the way out, because nothing was uncovered")
+    }
+
     /// Sequence 9: the settle window closes on departure even when the scene never
     /// reached active in between. Unlock, then leave immediately.
     @Test("An unlock followed by an immediate background still covers")
@@ -86,10 +126,10 @@ struct AppLockPresentationTests {
         p.promptRaised()
         p.willResignActive()
         p.unlockSucceeded()
-        #expect(!p.coverVisible, "settling")
+        #expect(p.coverVisible, "held from the unlock, so leaving cannot outrun it")
 
         p.didEnterBackground(at: launch.addingTimeInterval(301))
-        #expect(p.coverVisible, "the departure ends the settle window")
+        #expect(p.coverVisible, "and it is still up on the way out")
     }
 
     /// Sequence 10: an unlock that lands after the app has already reached the
@@ -115,8 +155,11 @@ struct AppLockPresentationTests {
         p.willEnterForeground()
         #expect(p.coverVisible, "and it holds through the return transit")
 
+        // A hundred seconds away against a sixty second grace, so the return re-locks. Under
+        // the one invariant that means still covered, beneath the lock window.
         p.didBecomeActive(at: launch.addingTimeInterval(400), enabled: true, gracePeriod: grace)
-        #expect(!p.coverVisible)
+        #expect(p.isLocked)
+        #expect(p.coverVisible, "re-locked on return, so covered under the lock window")
     }
 
     /// A second success may not move state. Two prompts can be in flight, the auto
@@ -176,12 +219,20 @@ struct AppLockPresentationTests {
 
     /// Sequence 5: a lock on return is a window over the untouched interface, and the
     /// cover is not also up, because the lock is what belongs in the photograph.
-    @Test("A locked return is a window, not the root, and not the cover")
+    /// **The "and not the cover" half was removed on 2026-08-22, and it was encoding a leak.**
+    ///
+    /// The cover and the lock window were treated as alternatives, so a locked return lowered
+    /// one and raised the other in the same update, and whether anything showed depended on the
+    /// lock window drawing in time. A device caught it not doing so: the codes were on screen
+    /// between the app becoming active and the Face ID prompt appearing, which in one measured
+    /// case was two and a half seconds. The lock window sits above the cover, so keeping both up
+    /// looks identical and removes the window entirely.
+    @Test("A locked return is a window rather than the root, and covered beneath it")
     func lockedReturnIsAWindow() {
         let p = returned(after: 300)
         #expect(p.lockWindowVisible)
         #expect(!p.presentsRootLock)
-        #expect(!p.coverVisible)
+        #expect(p.coverVisible, "beneath the lock window, so nothing can show if it draws late")
     }
 
     /// Once a cold lock is unlocked, the cold spell is over for the life of the
@@ -248,7 +299,7 @@ struct AppLockPresentationTests {
 
         #expect(p.isLocked)
         #expect(p.lockWindowVisible)
-        #expect(!p.coverVisible)
+        #expect(p.coverVisible, "the lock surface is what shows, with the cover behind it")
     }
 
     /// The lock disabled means no lock and an ordinary cover, whatever the timing.

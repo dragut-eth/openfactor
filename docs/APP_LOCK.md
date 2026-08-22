@@ -390,6 +390,88 @@ say it exists, which is a change to the interface rather than to the mechanism. 
 gate on opening the app: it does nothing about the vault key, which is a separate question with its
 own record.
 
+## The switcher leak, found on hardware 2026-08-22
+
+**The report was "the blackout is slow, and sometimes never comes".** It turned out to be two
+separate defects and four wrong fixes, and the shape of the wrongness is the useful part.
+
+### What it actually was
+
+**After a Face ID unlock the scene stays inactive for two to three seconds**, with the account list
+on screen, before `didBecomeActive` arrives. Leaving in that window produces **no resignation at
+all**, because an app that was never active cannot resign. The first signal the app receives is
+`didEnterBackground`, which is after the system has taken its photograph. Measured repeatedly: an
+unlock at t=42.139 with nothing until background at t=48.507.
+
+**And `settling` suppressed the cover across exactly that window.** It existed to stop a brief
+cover flash on every unlock. The window it covered was the window the leak lived in.
+
+### The four attempts that failed, and why each was the wrong shape
+
+1. **Pre-build the cover window.** It was created lazily on the first departure. Real defect, real
+   fix, wrong bug: the first departure was never the failing one.
+2. **Observe `willResignActiveNotification`.** Sound reasoning, wrong premise. There is no
+   resignation to observe when the app was never active.
+3. **Observe `didEnterBackgroundNotification`.** The earliest remaining signal, and still after the
+   photograph.
+4. **Force a synchronous commit with `CATransaction.flush()`.** Correct for raising the cover, and
+   **it introduced a second leak** by also forcing the lowering: on a locked return the cover came
+   down synchronously while the lock window was still drawing, so the codes showed for as much as
+   two and a half seconds before the Face ID prompt.
+
+**All four tried to cover faster. The window cannot be won from behind.**
+
+### What fixed it
+
+**The maintainer tested a peer.** Google Authenticator waits two to three seconds after a Face ID
+unlock before showing codes, and was robust where this was not. It is not winning the race. It is
+refusing to run it: the content is simply not on screen until the app is active.
+
+So the rule became one invariant, and everything else is a consequence of it:
+
+> **Content is uncovered only when the app is active and unlocked.**
+
+`settling` is deleted. The cover and the lock window are no longer alternatives; the lock window
+sits at `.alert + 2` above the cover at `.alert + 1`, so a locked return shows the lock screen with
+the cover behind it and nothing can appear if one draws late. `CATransaction.flush()` is kept on
+the raise, where there is a deadline, and removed from the lower, where there is not.
+
+### What is left, and what it settles about App Lock
+
+**A brief cover after every unlock, before the codes appear.** That is the two to three second
+inactive window, and it is now visible rather than leaked across. Compared side by side on the same
+device, **Google Authenticator behaves identically**, which is the useful measurement: a delay that
+a team of full time engineers also ships is the platform's, not this app's.
+
+**And that settles something this project had been careful about rather than certain of.** Gate E14
+measured that the iOS per-app lock removes switcher exposure **completely, from the first frame**,
+because the system draws it before the app is told anything. App Lock is an app racing a deadline
+it does not own. This week showed how that race ends even when it is run well: four attempts, a
+leak, a second leak introduced by one of the fixes, and a residual delay that the best funded peer
+also has.
+
+**So the advice dialog's recommendation is not a nicety.** "For stronger protection, iOS can lock
+OpenFactor before it opens" is the accurate ordering, and App Lock is the fallback for people who
+will not set the system one. `docs/MASVS.md` and `SECURITY.md` should say so in those terms.
+
+### Two tests were protecting the bug
+
+**`unlockDuringFaceIDGapSuppressesTheCover`** required the cover to stay down across the window,
+and **`lockedReturnIsAWindow`** was named *"a window, not the root, and not the cover"*. Both were
+green throughout. Both asserted the defect as a requirement.
+
+**A third was green and unreachable.** `departureAfterUnlockAlwaysCovers` calls `willResignActive()`
+directly, which is precisely the call the app could not make. The presentation was correct all
+along and the delivery was broken, and a suite that only exercises the presentation cannot see the
+difference.
+
+### What made it findable
+
+**A DEBUG-only trace of every lock event, readable on the device.** Three rounds of reasoning from
+the source produced three different wrong answers; the first trace produced the right one in a
+minute. It is in `OpenFactor/Lock/LockTrace.swift`, absent from Release builds, and verified absent
+by searching the built Release binary rather than by trusting the `#if DEBUG`.
+
 ## The manual checklist
 
 One pass on hardware when the implementation is complete, instead of live iteration. Every
@@ -403,7 +485,21 @@ item names its expected result; anything else is a finding.
    same screen, same passphrase, toggle still on.
 3. Same, from an open Settings sheet over the list. **Expected:** Settings still open.
 4. Unlock, then immediately background and open the app switcher. **Expected:** the card is
-   blank. Repeat several times; this is B3 and one leak is a failure.
+   blank. This is B3 and one leak is a failure.
+
+   **Run it with a realistic number of accounts, not three.** The leak found on 2026-08-22 was
+   reported only once the list held real ones.
+
+   **Do not wait between the unlock and the switch.** The failure window is the two to three
+   seconds after a Face ID unlock, before the scene becomes active. Waiting three seconds passes
+   this item while the defect is present, which is how it survived.
+
+   **Force quit between repeats.** "Repeat several times" hid a first-of-process fault once
+   already: four clean runs make the outlier read as a fluke rather than as the only honest
+   measurement.
+
+   **And repeat it on the locked return**, watching the moment between the app coming forward and
+   the Face ID prompt appearing. That is a separate exposure with a separate cause.
 5. Lock the phone itself while OpenFactor is foregrounded, unlock the phone. **Expected:**
    OpenFactor locked or not per grace, no leak, no flash.
 6. Force quit, relaunch. **Expected:** lock screen as root, then a fresh interface. Drafts

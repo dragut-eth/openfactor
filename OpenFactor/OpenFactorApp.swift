@@ -1,5 +1,6 @@
 import OpenFactorCore
 import SwiftUI
+import UIKit
 
 @main
 struct OpenFactorApp: App {
@@ -262,8 +263,52 @@ struct OpenFactorApp: App {
                 // forward is exactly the moment that stops being true. Only on coming forward:
                 // this handler also fires on the way to the background, which is a moment a
                 // Keychain write is likely to be refused for nothing.
-                if phase == .active { Self.reconcileWrappedKeySync(wrapped) }
+                if phase == .active {
+                    Self.reconcileWrappedKeySync(wrapped)
+                    // **Built before it is first needed.** It used to be created on the first
+                    // departure, which is the one moment there is no time for a fresh hosting
+                    // controller's first frame. The sibling lock window already avoids this and
+                    // its comment says why; the cover never got the same treatment. Here rather
+                    // than at launch, because a window created mid launch transition was measured
+                    // latching the wrong orientation.
+                    PrivacyShield.prepareCover()
+                }
                 collectWhatArrived()
+            }
+            // **The cover hangs on these two, not on `scenePhase`.** SwiftUI reports scene
+            // phase *changes*, and a departure from a scene it already believes is inactive is
+            // not a change, so nothing arrives until `.background`, which is after the system
+            // has photographed the screen. That state is reachable in ordinary use: the Face ID
+            // prompt drives the scene inactive and the return to active is not always delivered.
+            // Measured on a device, in `docs/APP_LOCK.md`.
+            //
+            // The UIKit notifications fire on every real transition regardless. Both signals run
+            // into the same idempotent state machine on purpose: whichever arrives first moves
+            // the state, and the other is a no-op.
+            .onReceive(
+                NotificationCenter.default.publisher(
+                    for: UIApplication.willResignActiveNotification)
+            ) { _ in
+                lock.systemWillResignActive()
+                PrivacyShield.apply(lock)
+            }
+            .onReceive(
+                NotificationCenter.default.publisher(
+                    for: UIApplication.didBecomeActiveNotification)
+            ) { _ in
+                lock.systemDidBecomeActive()
+                PrivacyShield.apply(lock)
+            }
+            // **The one that matters when the app was never active.** A Face ID unlock can leave
+            // the scene inactive, and an app that is not active cannot resign, so leaving
+            // produces no resignation: inactive straight to background. This is then the only
+            // signal before the photograph, and it arrives ahead of SwiftUI's `.background`.
+            .onReceive(
+                NotificationCenter.default.publisher(
+                    for: UIApplication.didEnterBackgroundNotification)
+            ) { _ in
+                lock.systemDidEnterBackground()
+                PrivacyShield.apply(lock)
             }
             .onChange(of: lock.isLocked) {
                 PrivacyShield.apply(lock)

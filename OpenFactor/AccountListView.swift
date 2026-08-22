@@ -734,9 +734,14 @@ private struct LockAdvice: ViewModifier {
                 } else {
                     Button("Show Me How") { showingSteps = true }
                 }
-                // Only offered where it can be honoured: a device with no passcode cannot
-                // authenticate, and the settings toggle already refuses there.
-                if AppLockAvailability.canAuthenticate {
+                // **Only offered where it can be honoured.** Two ways it cannot be. A device
+                // with no passcode cannot authenticate, and the settings toggle already refuses
+                // there. And a lock that is already on cannot be turned on: the button wrote a
+                // value that was already true and closed, which is a button that does nothing.
+                //
+                // The spec stated this rule and applied it to the first case only. Found on
+                // hardware 2026-08-22 by switching the lock on and then adding an account.
+                if AppLockAvailability.canAuthenticate, !appLockEnabled {
                     Button("Turn On App Lock") {
                         appLockEnabled = true
                         hasOffered = true
@@ -746,10 +751,22 @@ private struct LockAdvice: ViewModifier {
                     Button("Not Now", role: .cancel) { hasOffered = true }
                 }
             } message: {
+                // **The dialog still appears when App Lock is on, and that is deliberate.**
+                // What it actually advocates is the iOS system lock, which gate E14 measured as
+                // strictly stronger: it removes the app switcher exposure completely, from the
+                // first frame, because the system draws it rather than the app. Somebody who has
+                // already switched App Lock on is exactly who benefits from hearing that.
+                //
+                // What changes is the last sentence, which offers App Lock as an alternative and
+                // reads as nonsense to somebody already using it.
                 Text(
-                    "Your accounts are encrypted, but anyone using your unlocked phone "
-                        + "can see your codes.\n\nFor stronger protection, iOS can lock "
-                        + "OpenFactor before it opens. Or you can use App Lock.")
+                    appLockEnabled
+                        ? "Your accounts are encrypted, but anyone using your unlocked phone "
+                            + "can see your codes.\n\nApp Lock is on. For stronger protection "
+                            + "still, iOS can lock OpenFactor before it opens."
+                        : "Your accounts are encrypted, but anyone using your unlocked phone "
+                            + "can see your codes.\n\nFor stronger protection, iOS can lock "
+                            + "OpenFactor before it opens. Or you can use App Lock.")
             }
             // **The choice comes back when the instructions close.** Every alert button dismisses
             // its alert, so "Show Me How" ends the dialog, and without this somebody who asked for

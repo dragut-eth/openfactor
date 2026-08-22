@@ -49,7 +49,98 @@ final class AppLockController {
             lockEnabled: defaults.bool(forKey: PreferenceKey.appLockEnabled))
     }
 
+    #if DEBUG
+        /// Called by the trace after every event, so one line carries the decision inputs and
+        /// the decisions together. The window state is supplied by `PrivacyShield`, which is
+        /// the only thing that knows it.
+        func debugTrace(_ event: String, coverWindow: String) {
+            LockTrace.shared.record(
+                event,
+                phase: presentation.debugPhaseName,
+                settling: presentation.debugSettling,
+                locked: presentation.isLocked,
+                cover: presentation.coverVisible,
+                lockWindow: presentation.lockWindowVisible,
+                coverWindow: coverWindow)
+        }
+    #endif
+
+    /// The system says the app is resigning active. **This is the signal the cover hangs on**,
+    /// and `scenePhase` is not.
+    ///
+    /// SwiftUI reports scene phase *changes*. A departure from a scene it already believes is
+    /// inactive is not a change, so nothing is delivered. That state is reachable in ordinary
+    /// use: the Face ID prompt drives the scene inactive, and the return to active is not
+    /// always delivered afterwards. A trace taken on an iPhone 15 Pro on 2026-08-22 caught it:
+    /// an unlock at t=42.139 with no `.active` for the next six seconds, then the person left
+    /// and **the first event the app received was `.background`**, which is after the system has
+    /// already photographed the screen. Two of three unlocks in that trace got their `.active`
+    /// back and one did not, which is why the leak looked intermittent.
+    ///
+    /// `UIApplication.willResignActiveNotification` fires on every real resignation regardless
+    /// of what SwiftUI believes, so it cannot be swallowed the same way.
+    ///
+    /// **Kept alongside `scenePhase` rather than replacing it.** Both funnel into the same
+    /// idempotent state machine: `willResignActive` is a plain assignment, and a duplicate
+    /// `didBecomeActive` cannot re-lock because the engine clears `backgroundedAt` in a `defer`
+    /// and guards on it. Two independent signals for one event is the point, not an oversight.
+    func systemWillResignActive() {
+        presentation.willResignActive()
+        #if DEBUG
+            debugTrace("UIKit willResignActive", coverWindow: PrivacyShield.debugCoverState)
+        #endif
+    }
+
+    /// The system says the app became active. Clears the Face ID settling flag even when
+    /// SwiftUI never reports `.active`, which is the other half of the same defect: without
+    /// this the flag stays armed and suppresses the next cover.
+    func systemDidBecomeActive(at date: Date = Date()) {
+        presentation.didBecomeActive(
+            at: date,
+            enabled: defaults.bool(forKey: PreferenceKey.appLockEnabled),
+            gracePeriod: TimeInterval(defaults.integer(forKey: PreferenceKey.appLockGraceSeconds))
+        )
+        #if DEBUG
+            debugTrace("UIKit didBecomeActive", coverWindow: PrivacyShield.debugCoverState)
+        #endif
+    }
+
+    /// The system says the app entered the background. **The last signal before the photograph,
+    /// and in one measured sequence the only one.**
+    ///
+    /// `willResignActive` cannot fire for an app that was never active. After a Face ID unlock
+    /// the scene is sometimes left inactive and stays there while the person uses the app, so
+    /// leaving produces no resignation at all: inactive straight to background. A trace on an
+    /// iPhone 15 Pro on 2026-08-22 caught exactly that, with the unlock at t=12.106 and nothing
+    /// until background at t=13.985.
+    ///
+    /// **The cover cannot be raised earlier in that case**, because during that window the app
+    /// is inactive and showing a working interface the person is looking at. Covering it then
+    /// would black out the app in their hands. So background is the earliest honest moment, and
+    /// the UIKit notification reaches it before SwiftUI's `scenePhase` does.
+    func systemDidEnterBackground(at date: Date = Date()) {
+        presentation.didEnterBackground(at: date)
+        #if DEBUG
+            debugTrace("UIKit didEnterBackground", coverWindow: PrivacyShield.debugCoverState)
+        #endif
+    }
+
     func scenePhaseChanged(to phase: ScenePhase, at date: Date = Date()) {
+        #if DEBUG
+            let incoming =
+                switch phase {
+                case .background: "background"
+                case .inactive: "inactive"
+                case .active: "active"
+                @unknown default: "unknown"
+                }
+            debugTrace("scenePhase->\(incoming) IN", coverWindow: PrivacyShield.debugCoverState)
+        #endif
+        defer {
+            #if DEBUG
+                debugTrace("scenePhase->\(incoming) OUT", coverWindow: PrivacyShield.debugCoverState)
+            #endif
+        }
         switch phase {
         case .background:
             presentation.didEnterBackground(at: date)
@@ -109,7 +200,13 @@ final class AppLockController {
                 .deviceOwnerAuthentication,
                 localizedReason: String(localized: "Unlock your codes")
             ) {
+                #if DEBUG
+                    debugTrace("unlock OK IN", coverWindow: PrivacyShield.debugCoverState)
+                #endif
                 presentation.unlockSucceeded()
+                #if DEBUG
+                    debugTrace("unlock OK OUT", coverWindow: PrivacyShield.debugCoverState)
+                #endif
             } else {
                 presentation.unlockFailed()
             }
