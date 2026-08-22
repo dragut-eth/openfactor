@@ -11,17 +11,16 @@ The vault is designed so account data is encrypted before it reaches the Keychai
 sync is enabled, Keychain carries ciphertext; the vault key remains in each device's private app
 container and never syncs.
 
-> **Status: no independent audit yet.** The repository is built in public from the first commit.
-> The app works and is being tried on real devices. The encrypted vault is implemented on both
-> iPhone and Apple Watch, and the exchange that hands the key to a watch has been run between
-> real devices, on its successful path and on both of its refusals. The project has **not** had a
-> professional independent security audit. Do not
-> entrust it with an account you cannot recover yet. The reviews and hardware experiments so far
-> are recorded in [docs/audits](docs/audits). The threat model against the finished app is PR 17
-> and build provenance is PR 18: [docs/BUILD_PROVENANCE.md](docs/BUILD_PROVENANCE.md) measures how
-> far a binary can be tied to this source and states plainly that a released binary still cannot be
-> checked against it. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is planned and
-> [HANDOFF.md](HANDOFF.md) for where the work stands.
+> **Built so you don't have to take our word for it.** No network requests, no accounts, no
+> telemetry, and no third-party code. Account names and secrets are encrypted. The design,
+> reviews, hardware tests, and their findings are public, including the ones that weren't
+> flattering. OpenFactor has not had a professional independent security audit, so don't trust it
+> yet with an account you cannot recover. **That advice applies to any authenticator:** keep an
+> encrypted backup somewhere else, and test that you can restore it before you need it.
+>
+> The threat model against the finished app is PR 17 and build provenance is PR 18:
+> [docs/BUILD_PROVENANCE.md](docs/BUILD_PROVENANCE.md) measures how far a binary can be tied to
+> this source, and [VERIFYING.md](VERIFYING.md) is what you can check yourself.
 
 ## Why another authenticator
 

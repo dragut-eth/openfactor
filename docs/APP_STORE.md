@@ -227,12 +227,23 @@ property can change without warning and takes the sentence with it.
 status that changes.
 
 ```
-OpenFactor has not had an independent security audit. Do not trust it with an account you cannot
-recover yet. Source, reviews and findings on GitHub.
+No network, no accounts, no telemetry, no third-party code. Every review published. Not independently audited yet, so keep a tested backup, as with any authenticator.
 ```
 
-That is 149 characters. It is a strange thing to put in a store listing and it is the honest one,
-and it matches the warning at the top of `README.md` rather than softening it for the shop window.
+That is 166 characters, and it is the compressed form of the paragraph `README.md` and the site
+both open with. **It leads with what the app does rather than with what it lacks**, which is the
+same order and for the same reason.
+
+**Why that order, since an earlier draft had it the other way.** Opening with "no independent
+audit" is accurate and reads as a confession, and a reader who stops at the first line leaves with
+only the warning. **The audit gap is not a counterweight to the transparency, it is another
+instance of it**: the same paragraph that says the unflattering findings are published then
+publishes an unflattering fact. Written in that order it needs no "but", because the two halves are
+not in tension.
+
+**And the closing advice is deliberately about authenticators in general.** "Keep a tested backup"
+is true of every one of them, and framing it as a confession specific to this app would be both
+scarier and less useful than framing it as the thing anybody should do.
 
 **It used to open with "Beta, in testing" and that had to go.** App Review does not accept an app
 that presents itself as a beta, a trial or a demo, and the word would have been a rejection on
