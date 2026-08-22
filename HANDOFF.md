@@ -232,6 +232,24 @@ moved and not renamed, because fifty six of roughly ninety references are A4 fil
 by bare name and those keep resolving when the files travel together. Every reference was rewritten
 and then verified by resolving it against the filesystem.
 
+**E15, and the Secure Enclave is not a boundary either.** A second app of the same developer team
+found the first app's Enclave key and **decrypted a message sealed to it**. Requiring user presence
+changed only that the phone asked for a passcode first. **The Enclave protects the key material and
+does not protect the key**: the private half never left the hardware and did not need to, because
+the sibling asked the Enclave to do the work and it complied.
+
+**That decides the wrap the A4 reviewers recommended, and it decides it against them.** An Enclave
+key persists as a Keychain item, so wrapping the vault key under one would move its protection from
+the app container, measured as a real boundary in E4, onto the Keychain, measured as no boundary
+against this team in E1 and again in E15. **It would have made the app weaker against the attacker
+it actually names.** `MASVS-CRYPTO-2` now points at that measurement instead of at an argument about
+prompts and recovery paths.
+
+**The first version of that test was wrong and would have said the opposite.** The reader searched
+its own access group and carried no control, so "not found" meant nothing in either direction. E1's
+method is what caught it. **A negative with no positive control is not a result**, and it nearly
+went down as one.
+
 **PR 15c is built.** Four pieces of text and one stored flag, specified line by line before anything
 was written and revised again on the device. Two bugs were found on hardware: a second `.sheet` on a
 sibling section of one `Form`, which `SettingsView`'s own header comment predicts exactly, and an
@@ -269,9 +287,10 @@ back, and a round that asks a closed question returns an answer rather than work
 
 - **PR 15c's manual checklist**, the ten sequences from PR 15b, unchanged. It is the pull request's
   only prove-list item and it needs a phone. Until it runs, 15c is committed and unverified.
-- **The Enclave wrap with user presence**, costed under `MASVS-CRYPTO-2`. **The only remaining item
-  that closes a real finding**, the one all three A4 reviewers reached by three different routes.
-  Not designed, not built, and it needs a written spec with a prove list before a line of it.
+- ~~The Enclave wrap with user presence.~~ **Closed by E15, against it.** It would relocate the
+  vault key's protection onto a boundary this project has measured and rejected twice. The
+  unlocked-device finding the A4 reviewers raised **stays open with no remedy currently available on
+  this platform**, which is a worse answer than having one and an honest one.
 - **The peer recording.** Whether other iOS authenticators leak the same app switcher window. Two
   opposite claims are on the record with no evidence behind either, and settling it needs one phone
   and an afternoon. The cheapest open question this project has.
