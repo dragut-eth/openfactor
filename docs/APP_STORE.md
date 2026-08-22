@@ -215,13 +215,22 @@ property can change without warning and takes the sentence with it.
 status that changes.
 
 ```
-Beta, in testing. OpenFactor has not had an independent security audit. Do not trust it with an
-account you cannot recover yet. Source and findings on GitHub.
+OpenFactor has not had an independent security audit. Do not trust it with an account you cannot
+recover yet. Source, reviews and findings on GitHub.
 ```
 
-That is 158 characters. It is a strange thing to put in a store listing and it is the honest one,
-and it matches the warning at the top of `README.md` rather than softening it for the shop
-window.
+That is 149 characters. It is a strange thing to put in a store listing and it is the honest one,
+and it matches the warning at the top of `README.md` rather than softening it for the shop window.
+
+**It used to open with "Beta, in testing" and that had to go.** App Review does not accept an app
+that presents itself as a beta, a trial or a demo, and the word would have been a rejection on
+metadata rather than on anything the app does.
+
+**What is worth noticing is that removing it cost nothing.** "Beta" was a statement about a release
+phase, which stops being true the day this ships. **The sentence underneath it is about the audit
+gap, and that stays true until somebody outside this project looks at the code.** The same
+substitution was made in `README.md` and on the site, so all three surfaces now lead with the thing
+that will still be accurate next year.
 
 ## What's New, for 1.0
 
@@ -314,15 +323,20 @@ time. Writing it down once is most of the value.
 
 So the app **does** use encryption, and the "no encryption" answer is wrong.
 
-**Whether it qualifies for an exemption is a determination for Xavier, not for me.** The usual
+**Whether it qualifies for an exemption was a determination for Xavier, not for me.** The usual
 route for an app in this shape is the exemption for software using only encryption available in
-Apple's operating systems, with no proprietary or non standard implementation, but that is a
-legal classification with export consequences and it should not be settled by an assistant's
-confidence. What can be said without qualification is the list above, and that it is complete.
+Apple's operating systems, with no proprietary or non standard implementation, but that is a legal
+classification with export consequences and it should not be settled by an assistant's confidence.
+What can be said without qualification is the list above, and that it is complete.
 
-**Once decided, it belongs in the Info.plist** as `ITSAppUsesNonExemptEncryption` so App Store
-Connect stops asking on every upload and the answer is versioned with the source rather than
-re-entered by hand. That is a code change and is not made here.
+**Decided on 2026-08-21: exempt.** `ITSAppUsesNonExemptEncryption` is `false` in
+`OpenFactor-Info.plist`, with the facts it rests on repeated in a comment beside it. App Store
+Connect stops asking on every upload, and **the answer is versioned with the source rather than
+re-entered by hand**, which means it cannot quietly diverge from what was decided.
+
+**If the cryptography ever changes, that key is part of the change.** The comment in the plist says
+so, because a determination recorded once and never revisited is how a true answer becomes a false
+one.
 
 ## Draft privacy policy
 

@@ -150,5 +150,22 @@
 			</array>
 		</dict>
 	</array>
+	<!-- Export compliance, answered once here rather than clicked on every upload.
+
+	     The app uses AES-256-GCM, HKDF, HMAC, SHA-256 and P-256 ECDH from CryptoKit, and PBKDF2
+	     from CommonCrypto because CryptoKit has no password based derivation. Nothing
+	     cryptographic is implemented in this repository except RFC 4226 dynamic truncation,
+	     which is arithmetic on an HMAC output and is not encryption.
+
+	     So the app does use encryption, and Xavier's determination is that it qualifies for the
+	     exemption for software using only encryption available in Apple's operating systems,
+	     with no proprietary or non standard implementation. That is a legal classification and
+	     it is his, not this project's tooling's. The facts it rests on are listed in
+	     docs/APP_STORE.md and are complete.
+
+	     Recorded here so the answer is versioned with the source and cannot drift from what was
+	     decided. If the cryptography above ever changes, this key is part of that change. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

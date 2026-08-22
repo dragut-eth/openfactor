@@ -11,7 +11,7 @@ The vault is designed so account data is encrypted before it reaches the Keychai
 sync is enabled, Keychain carries ciphertext; the vault key remains in each device's private app
 container and never syncs.
 
-> **Status: beta, in testing.** The repository is built in public from the first commit.
+> **Status: no independent audit yet.** The repository is built in public from the first commit.
 > The app works and is being tried on real devices. The encrypted vault is implemented on both
 > iPhone and Apple Watch, and the exchange that hands the key to a watch has been run between
 > real devices, on its successful path and on both of its refusals. The project has **not** had a
