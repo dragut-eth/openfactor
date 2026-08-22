@@ -442,7 +442,14 @@ private channel.
 
 ## Changes
 
-This policy is versioned with the source. Its history is visible in the repository.
+This policy is versioned with the source. Its
+[history](https://github.com/dragut-eth/openfactor/commits/main/site/privacy.html) is visible in the
+repository.
+
+**A link rather than a date and a version number**, which is the conventional thing and the weaker
+one. A version number says a change happened. That page says what changed, when, and why, with the
+diff, and it cannot be back-dated without the history showing it. For a document whose credibility
+rests on being checkable, the checkable option wins.
 ```
 
 ## A claim removed after PR 15b measured it
