@@ -645,12 +645,34 @@ feature's documentation.
    whole history is presentations interfering with each other.
 
    **Item 3**, locking from an open Settings sheet, because Settings now carries an alert that can
-   be on screen when the lock arrives.
+   be on screen when the lock arrives. **Run on 22 August against the shipping build: passed.**
+   Settings came back open and intact after Face ID, with no flash.
 
-   **Item 6**, force quit and relaunch, **and this is the one expected to fail**. The advice dialog
+   **Item 6**, force quit and relaunch, **and this was the one expected to fail**. The advice dialog
    fires when the account list stops being empty, with `initial: true`. On a cold locked launch the
-   list loads behind the lock window, so the alert may fire underneath it, and if it does **the
-   one-time flag is spent on a dialog nobody saw**.
+   list loads behind the lock window, so the alert may fire underneath it, and if it did **the
+   one-time flag would be spent on a dialog nobody saw**.
+
+   **Closed on 22 August, statically, and it did not need hardware.** `hasOffered` is assigned in
+   exactly three places, all of them inside button handlers: "I Did It", "Turn On App Lock" and
+   "Not Now". Presenting the dialog does not touch it, and neither does the arrival teardown that
+   closes it. **So an alert that fires under the lock and is never answered leaves the flag unspent
+   and is offered again next launch.** That is what "the flag is spent when somebody answers, not
+   when the app asks" was for; the guarantee is structural and a grep proves it.
+
+   **An attempt was made to run it on hardware first, and the attempt is the more useful finding.**
+   The state this item describes, App Lock on with the flag unspent, **cannot be reached on a device
+   that syncs.** Turning App Lock on requires Settings; Settings is behind the account list; and on
+   a fresh install the list is either empty because the vault is locked, in which case
+   `VaultUnlockView` is a deliberate dead end with no route to Settings, or populated the instant
+   the passphrase is entered, in which case the advice dialog is modal and every one of its buttons
+   spends the flag. **The only door out of that dialog that does not spend it is force quitting.**
+
+   So the path requires turning App Lock on while the list is empty *and* Settings is reachable,
+   which happens only on a device with no vault to restore. That is a real path, a new user who
+   sets up their lock before importing anything, but it is **much narrower than the paragraph above
+   implied**, and the prediction was written without checking whether its own precondition was
+   reachable.
 
    **Items 8 and 9**, an arrival presenting after unlock, because there is now another thing
    competing to present at that moment.

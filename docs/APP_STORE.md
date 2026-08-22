@@ -56,13 +56,21 @@ document, extended to the surface that did not exist when that rule was written.
 
 ### Screenshots
 
-Seven iPhone screenshots were uploaded to App Store Connect on 2026-08-18, and **the two Apple
-Watch screenshots were taken the same day.** They no longer gate anything. The stale claim that
-they did survived in this document and in `HANDOFF.md` for three days after it stopped being true.
+Seven iPhone screenshots and **two Apple Watch screenshots are uploaded to App Store Connect**,
+confirmed in the listing on 2026-08-22. The stale claim that the watch shots gated a submission
+survived in this document and in `HANDOFF.md` for three days after it stopped being true, and then
+**this section said "taken" where the iPhone line said "uploaded"**, which left the question open
+for another four days. Two verbs in one sentence, meaning two different things, and nobody could
+tell from the outside which one was accurate.
 
-**Three of them are also on the site now**, resized for the web, under a caption saying the
-accounts in them are invented. They are the same images, so the shop window and the landing page
-show the same app.
+**Three of them are also on the site now**, in Apple's iPhone 17 and Watch Ultra 3 bezels. They
+are the same images, so the shop window and the landing page show the same app.
+
+**One difference remains and it is deliberate on the site's side only.** The site leads with the
+light account list; the store's first screenshot is the dark one, which is scrolled mid-card so its
+hero element is a six digit code with its label behind the translucent nav bar. **The store's first
+frame is the one most people ever see**, and it is currently the weaker capture. Reordering the
+store to lead with the light one would settle it.
 
 The App Store frames are the one place people will look at this app before installing it, and the
 vault setup screen is a strange first impression: the list with real codes is what to show.
@@ -457,10 +465,17 @@ document that is a value to paste is now in the form.
 submission. Attaching a build is the last step, once there is one worth shipping and the export
 compliance call has been made.
 
-**Two things gate a submission, and neither is drafting:**
+**Nothing in this document gates a submission any more.** Both things that once did are closed:
 
-- **Apple Watch screenshots**, which do not exist. The seven iPhone screenshots are uploaded.
-- **The export compliance answer**, which is Xavier's legal call, recorded under its own heading.
+- **Apple Watch screenshots** exist and are uploaded, two of them.
+- **The export compliance answer** was decided exempt on 2026-08-21 and is now carried by
+  `ITSAppUsesNonExemptEncryption` in the plist. **Build 6 came back from App Store Connect with
+  `usesNonExemptEncryption = False` already set**, so the question is not asked on upload at all.
+  Versioning the answer with the source rather than clicking it each time paid off on its first
+  build.
+- **App Privacy** was published on 2026-08-22 as "Data Not Collected", which matches
+  `OpenFactor/PrivacyInfo.xcprivacy`: no collected data types, tracking false, and two
+  required-reason API declarations that are not collection and correctly do not appear.
 
 **The privacy policy URL no longer gates anything.** It is `https://openfactor.dev/privacy`,
 live, and recorded above with the marketing URL.
@@ -495,6 +510,8 @@ should be deleted.
 
 ## What this document is not
 
-It is not the submission checklist. Gate A4 comes first, `SECURITY.md` still describes an
-unaudited app, and `README.md` says not to trust it with an account you cannot recover. Metadata
-being ready changes none of that.
+It is not the submission checklist. `SECURITY.md` still describes an app with no professional
+independent audit, and `README.md` says not to trust it with an account you cannot recover.
+Metadata being ready changes none of that. **This paragraph said "Gate A4 comes first" until
+2026-08-22**, five days after A4 concluded, which is the third status line in this repository found
+outliving its facts in two days.

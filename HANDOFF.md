@@ -185,6 +185,28 @@ container" in the sense a reader would take. And "compromised device" was hiding
 compromise holding the device locked does not yield the vault key at all. `docs/MASVS.md` now says
 all three, and the verdicts are unchanged.
 
+**The vault recovery path ran on a genuinely fresh device for the first time, and it worked.**
+A spare iPhone XS on the same Apple Account had OpenFactor deleted and 1.0 (6) installed from
+TestFlight. The encrypted records arrived through iCloud Keychain; the vault key did not, because
+it lives in each device's private app container and never syncs. The app asked for the vault
+passphrase, in the exact words `SecretStoreError.vaultLocked` carries, and opened on it. **That is
+the recovery path in `docs/VAULT.md` executing end to end on hardware that had never held the key**,
+rather than on a device where some part of it was already present. It was not planned; it happened
+because a checklist run needed a clean install.
+
+**PR 15c's last open checklist item was closed by reading the code, after three wrong procedures
+tried to close it on hardware.** Item 6's predicted failure, the advice dialog spending its
+one-time flag under the lock window, **cannot happen**: `hasOffered` is assigned only inside the
+three button handlers, so an unanswered dialog leaves it unspent. Details in `docs/APP_LOCK.md`.
+
+**The three wrong procedures are worth more than the item was.** Each failed for a reason the
+repository already recorded and I had not read: the alert is modal so Settings is unreachable while
+it is up; `VaultUnlockView` is a deliberate dead end with no route to Settings, which its own source
+comment says in full; and its only escape is a destructive "Start over" that erases the vault **from
+iCloud as well as the device**. I pointed the maintainer at that button. **The pattern is the same
+one that produced the VERIFYING.md drift below: acting on a remembered version of a document
+instead of the document.** Read the file before writing the procedure, not after it fails.
+
 **VERIFYING.md restated three claims stronger than their sources, and the pattern is worth more
 than the three fixes.** An outside reader challenged two sentences; running the commands found a
 third. Every one drifted the same direction.
