@@ -47,6 +47,26 @@
 
 set -euo pipefail
 
+# **A dirty tree fails the ship, before anything is built.**
+#
+# The provenance record's whole job is tying a build number to a commit. Built from uncommitted
+# work, there is no commit to tie it to, and the record can only say so after the fact: the upload
+# has already happened and the build number is already spent. **Recording the problem is not the
+# same as preventing it**, which a reviewer pointed out about the version of this that only wrote
+# it down.
+#
+# **No override flag**, deliberately. An escape hatch on a rule like this is how the rule becomes
+# advisory. Commit it or stash it.
+if [ -n "$(git status --porcelain)" ]; then
+  echo "The working tree is not clean, so this build would belong to no commit."
+  echo
+  git status --short
+  echo
+  echo "Commit or stash first. docs/releases/ exists to tie a build number to a commit,"
+  echo "and it cannot do that for a build made from uncommitted work."
+  exit 1
+fi
+
 SCHEME="OpenFactor"
 WORK="$(mktemp -d)"
 
@@ -150,11 +170,10 @@ ARCHIVE_PLIST="$WORK/app.xcarchive/Info.plist"
 SHORT_VERSION="$(plutil -extract ApplicationProperties.CFBundleShortVersionString raw -o - "$ARCHIVE_PLIST")"
 BUILD_VERSION="$(plutil -extract ApplicationProperties.CFBundleVersion raw -o - "$ARCHIVE_PLIST")"
 COMMIT="$(git rev-parse HEAD)"
-if [ -n "$(git status --porcelain)" ]; then
-  TREE_STATE="dirty, so this build is not any commit"
-else
-  TREE_STATE="clean"
-fi
+# Clean by construction: the check at the top of this script refuses to build otherwise. Recorded
+# anyway, because a record that states its preconditions is readable years later by somebody who
+# does not have this script in front of them.
+TREE_STATE="clean, enforced before the build"
 
 mkdir -p docs/releases
 RECORD="docs/releases/$SHORT_VERSION-$BUILD_VERSION.md"

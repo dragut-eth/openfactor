@@ -103,6 +103,12 @@ changes with it. That difference is measured and explained in `docs/BUILD_PROVEN
 **What this proves:** that the digests in step 3 are a property of the source rather than of one
 particular build on one particular afternoon.
 
+**And you are not the only one who can do this.** Every push runs the same Release build on
+GitHub's macOS runners and **prints the per-section digests into a public, dated log**. That runner
+is not our machine, so a reader who repeats step 4 for a simulator can compare against it without
+trusting anything of ours. **Those are simulator values**, so they cannot be compared to the device
+hashes in a release record.
+
 ---
 
 ## What none of this establishes

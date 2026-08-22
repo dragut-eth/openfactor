@@ -454,6 +454,37 @@ jobs:
             -derivedDataPath build/rel CODE_SIGNING_ALLOWED=NO > build.log 2>&1 \
             || { tail -40 build.log; exit 1; }
 
+      # **A second party's record of what a public commit compiles to.** This runner is not our
+      # machine and its log is public and dated, so anybody who builds the same commit for a
+      # simulator can compare against these without trusting us or installing anything.
+      #
+      # **These are simulator values and they are not the shipped hashes.** The job above builds
+      # for the simulator because it needs no signing and this runner holds no certificate, so
+      # the architecture and the target differ from the device binaries recorded in
+      # docs/releases/. **Do not compare the two.** An unsigned device build was tried and did
+      # not produce a bundle, so this is the honest ceiling for what CI can publish.
+      #
+      # **Printed, never asserted.** These change with every source change, which is the point.
+      # A check comparing them to a stored value would be red on every commit and would be
+      # deleted within a week. See docs/BUILD_PROVENANCE.md and VERIFYING.md.
+      - name: Canonical hashes of the compiled code
+        run: |
+          set -e
+          APP=$(find build/rel/Build/Products -name "OpenFactor.app" -maxdepth 3 | head -1)
+          [ -n "$APP" ] || { echo "No built app to hash."; exit 1; }
+          for binary in \
+            "OpenFactor" \
+            "PlugIns/OpenFactorShare.appex/OpenFactorShare" \
+            "Watch/OpenFactorWatch.app/OpenFactorWatch" \
+            "Watch/OpenFactorWatch.app/PlugIns/OpenFactorComplication.appex/OpenFactorComplication"
+          do
+            if [ -f "$APP/$binary" ]; then
+              ./scripts/canonical-hash.sh "$APP/$binary"
+            else
+              echo "# absent from this build: $binary"
+            fi
+          done
+
       - name: Nothing in the bundle can reach the network
         run: |
           set -e
