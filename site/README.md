@@ -211,7 +211,18 @@ The alternative was icon and words only; the screenshot was chosen because for a
 heard of it does work a paragraph cannot.
 
 **Icons at the sizes actually requested**, a 32px favicon and a 180px apple-touch-icon, rather than
-one 1024px image resized by the browser for every use.
+one 1024px image resized by the browser for every use, plus **an SVG favicon with the PNG kept as a
+fallback**. The SVG scales to any size; the PNG stays because Safari only gained SVG favicon support
+recently and older versions ignore the line entirely.
+
+**The social card is exempt from `Cross-Origin-Resource-Policy`, and that exemption is the whole
+point of it existing.** The security headers were applied to `/*`, which put
+`Cross-Origin-Resource-Policy: same-origin` on the card too, telling browsers to refuse it when
+loaded from another origin. **The card is the one file on this site whose entire purpose is being
+displayed on other people's domains.** The failure was quiet: server side scrapers fetched it fine,
+so a link scraped correctly and reported the right `og:image`, and then any preview drawn *by a
+browser* showed a broken picture. A diagnostic tool scored the page 92 out of 100 and displayed a
+broken image at the same time, which is what led to it.
 
 **`color-scheme: light` stated in markup**, because `style.css` decides it deliberately and a
 browser should not have to guess.

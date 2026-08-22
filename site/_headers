@@ -49,4 +49,14 @@
   Permissions-Policy: accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), screen-wake-lock=(), usb=(), xr-spatial-tracking=()
 
   Cross-Origin-Opener-Policy: same-origin
+  # **Same origin by default, and one deliberate exception below.** This blocks other sites from
+  # loading these files, which is right for everything here except the social card.
   Cross-Origin-Resource-Policy: same-origin
+
+# **The card is the one file that exists to be displayed on other people's domains.**
+# `Cross-Origin-Resource-Policy: same-origin` from the block above told browsers to refuse it
+# cross origin, so a link to this site scraped correctly, reported the right og:image, and then
+# rendered with a broken picture in any preview drawn by a browser. Server side scrapers were
+# unaffected, which is exactly why it scored well and still looked wrong.
+/assets/card.png
+  Cross-Origin-Resource-Policy: cross-origin
