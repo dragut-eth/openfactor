@@ -435,10 +435,18 @@ Bugs and feature requests are better as issues at
 https://github.com/dragut-eth/openfactor/issues, where the discussion is public and searchable,
 but the address needs no account and reaches a person.
 
-Security vulnerabilities: see SECURITY.md in the repository, which asks for private disclosure
-through GitHub Security Advisories. Email works if you cannot use that, though it is not
-encrypted, so say only that you have found something and let the details follow through the
-private channel.
+Security vulnerabilities: see
+[SECURITY.md](https://github.com/dragut-eth/openfactor/blob/main/SECURITY.md), which asks for
+private disclosure through GitHub Security Advisories. security@openfactor.dev works if you cannot
+use that, though it is not encrypted, so say only that you have found something and let the details
+follow through the private channel.
+
+**The address here is `security@`, not `info@`.** RFC 2142 defines `security@` for exactly this, so
+it is what a researcher guesses before reading anything, and `security.txt` names it. This
+paragraph said only "email", which resolved to the `info@` in the paragraph above and disagreed
+with `security.txt` from the moment that file changed. Both forward to the same person; the point
+is that the surfaces say the same thing. `info@` remains the address for everything that is not a
+vulnerability.
 
 ## Changes
 
