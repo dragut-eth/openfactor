@@ -90,17 +90,29 @@ ul.points li strong { display: block; }
 ul.points li span { color: var(--muted); }
 
 /* Screenshots */
+/* **Heights, not widths, and that is the whole point.** A grid stretching each image to a column
+   made the Ultra render as tall as the iPhone, so a 49 mm watch looked like a tablet. These are
+   Apple's own product bezels, so the devices are already at their true relative size: the phone
+   bezel spans about 152 mm and the watch about 75 mm, and the images are exported at heights in
+   that same ratio. Sizing by height and letting width follow keeps it. */
 .shots {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(1rem, 4vw, 3rem);
 }
 .shots img {
-  width: 100%;
-  height: auto;
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  background: var(--card);
+  height: clamp(260px, 42vw, 420px);
+  width: auto;
+  /* The bezels carry their own rounded corners and drop shadow, so a border or a background
+     behind them would draw a rectangle around a picture of a phone. */
+  border: 0;
+  background: none;
+}
+.shots img.watch {
+  /* 412/840, the exported ratio, which is 75 mm against 152 mm. */
+  height: clamp(128px, 20.6vw, 206px);
 }
 
 /* Under the screenshots: says the accounts in them are invented. Small, because it is a caption

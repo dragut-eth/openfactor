@@ -38,12 +38,25 @@ Re-adding a dark palette means revisiting the icon at the same time.
 
 ## Still needed
 
-- ~~Screenshots.~~ **Done.** `list.png`, `watch.png` and `add.png` are in
-  `assets/screenshots/`, resized to 720 pixels tall from the App Store originals, 58 to 150 KB
-  each rather than the 600 to 850 KB they started at. **The same images the store shows**, so the
-  landing page and the shop window cannot drift apart. Each carries explicit `width` and `height`
-  so the page does not reflow while they load, and a caption says the accounts in them are
-  invented, because a grid of plausible bank codes should say so.
+- ~~Screenshots.~~ **Done, in Apple's own product bezels.** `list.png`, `watch.png` and
+  `add.png` are the App Store originals composited into the iPhone 17 in Black and the Apple Watch
+  Ultra 3 with the neon green Ocean Band, taken from Apple's Design Resources.
+
+  **The devices are at their true relative size, which took work to get right.** An earlier
+  version exported all three at the same height, so the Ultra rendered as tall as the iPhone and a
+  49 mm watch looked like a tablet. The phone bezel spans about 152 mm and the watch about 75 mm,
+  so the images are exported in that ratio, 840 against 412, and the CSS sizes them **by height
+  with width following**. A grid that stretches each image to a column width destroys this, which
+  is what the previous layout did.
+
+  The screen holes were located by flood filling the transparent region of each bezel rather than
+  by hardcoding an offset a future bezel would move. The phone screenshot's aspect matches its
+  screen to within a rounding error; the watch is scaled to cover and centre cropped, because a
+  letterbox inside a device frame reads as a bug.
+
+  **The same images the store shows**, so the landing page and the shop window cannot drift apart.
+  Explicit `width` and `height` so the page does not reflow while they load, and a caption says
+  the accounts in them are invented, because a grid of plausible bank codes should say so.
 - **A copy pass**, which should begin by deciding who the page is for.
 
 ## security.txt
