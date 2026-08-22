@@ -116,10 +116,35 @@ redeploys the site, which is harmless and wasteful. The warning that matters is 
 direction: **if the site ever moves out of `site/`, deploys will stop silently** and nothing will
 report an error. Whoever moves it changes the watch path in the same breath.
 
-**`www.openfactor.dev` currently returns 521** and needs adding as a second custom domain in
-Cloudflare Pages. The apex is fine. A person typing `www` gets an error page. **The TLS certificate
-covers the apex only**, which confirms this is an unconfigured hostname rather than a routing
-hiccup, and no file in this directory can fix it: the request never reaches Pages.
+**`www.openfactor.dev` returns 301 to the apex**, as of 2026-08-22. It returned 521 until then,
+because the hostname was never added to the Pages project. Adding it made `www` *serve* the site,
+which left two hostnames returning 200 with identical content, so a **Cloudflare Page Rule** now
+redirects it.
+
+    www.openfactor.dev/*   ->   https://openfactor.dev/$1   (301)
+
+**The match pattern carries no scheme on purpose.** Written as `https://www.openfactor.dev/*` it
+would match only https, and plain http to `www` would fall through the rule entirely. Without a
+scheme it matches both, which is why Cloudflare's own example omits it.
+
+**`$1` belongs only in the destination.** In the match field it is four literal characters, not a
+wildcard. Without it in the destination, every `www` URL redirects to the homepage and the path is
+silently lost.
+
+**Verified across the cases that actually fail**, not just the bare hostname, which always works and
+proves nothing:
+
+    www/                           301 -> https://openfactor.dev/
+    www/privacy                    301 -> https://openfactor.dev/privacy
+    www/privacy?a=b&c=d            301 -> https://openfactor.dev/privacy?a=b&c=d
+    www/.well-known/security.txt   301 -> .../.well-known/security.txt
+    http://www/privacy             301 -> https://openfactor.dev/privacy
+    apex/privacy                   200, no redirect, so no loop
+
+**The point of this is not SEO.** The canonical tags already told crawlers which host was real.
+It is that every check of this domain was two checks, one per hostname, and the day somebody runs
+it once is the day the two have quietly diverged. The redirect removes a surface rather than fixing
+a fault.
 
 ## The site was tracking its visitors, and said it was not
 

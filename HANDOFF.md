@@ -219,8 +219,19 @@ treats generously, so a send from a non-Google account would be the stronger ver
 
 **Still open, deliberately:** DMARC is at `p=none`, observing. Move it to `p=reject` around
 2026-08-29 once Cloudflare's reports show a clean week. That is the step that actually stops the
-spoofing; everything before it is preparation. Also open: NEL still reports to Cloudflare from
-visitors' browsers, `www` serves rather than redirects, DNSSEC is off, and there is no CAA record.
+spoofing; everything before it is preparation. **`www` now 301s to the apex** via a Cloudflare Page Rule, verified on a bare
+hostname, a path, a path with a query string, a dotfile path, and plain http, with the apex itself
+confirmed not to redirect. Details in `site/README.md`.
+
+**NEL is still being sent with the zone toggle off.** Network Error Logging was switched off in
+the Cloudflare dashboard on 2026-08-22 and the `nel` and `report-to` headers were still served ten
+minutes later, on every path and both hostnames, with cache disabled. The setting saved; Cloudflare
+kept sending them. **Not resolved, and deliberately not worked around**: a `!` in `site/_headers`
+fighting a header the edge adds afterwards would be the kind of fix that works by accident. The
+documented permanent opt-out is asking Cloudflare support to disable the `nel___enable` flag at
+account level. Re-check before assuming it is still true.
+
+Also open: DNSSEC is off, and there is no CAA record.
 
 **One thing that is not a security problem but affects the security contact.** With forwarding
 rather than a mailbox, a reply to a researcher arrives from a personal address rather than from
