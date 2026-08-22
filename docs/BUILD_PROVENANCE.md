@@ -108,24 +108,9 @@ artifact rather than the source, which is the only version of that claim worth a
 
 ## Building it yourself
 
-The Release build any reader can reproduce, which is the one CI runs:
-
-```bash
-xcodebuild build -project OpenFactor.xcodeproj -scheme OpenFactor \
-  -configuration Release -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  -derivedDataPath build/rel CODE_SIGNING_ALLOWED=NO
-```
-
-Comparing two of your own builds, which is the experiment above:
-
-```bash
-for i in 1 2; do xcodebuild build -project OpenFactor.xcodeproj -scheme OpenFactor \
-  -configuration Release -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  -derivedDataPath "build/repro$i" CODE_SIGNING_ALLOWED=NO; done
-```
-
-The device archive additionally needs a distribution certificate, which is why
-`scripts/ship-testflight.sh` is the path for that and why it is a human's job.
+**Moved.** The instructions are in [VERIFYING.md](../VERIFYING.md) at the repository root, next to
+`SECURITY.md`, because somebody who wants to check a build looks there rather than three
+directories down. **This document is the argument and the boundary; that one is the commands.**
 
 ## What a reader may and may not conclude
 
@@ -135,8 +120,15 @@ reach the network, and that the local build path and the maintainer's home direc
 into the binary.
 
 **May not:** that the build on the App Store came from any particular commit. **Nothing here
-establishes that**, and until an artifact hash is published alongside a tagged commit and Apple's
-processing is accounted for, nobody should read this document as though it did.
+establishes that.**
+
+**And the precise form of that limit, because an earlier version of this document overstated it in
+the pessimistic direction.** It said the correspondence was unclosable without Apple. It is not, in
+an absolute sense: the executable exists decrypted in memory and an auditor with a sufficiently
+privileged research device can dump and compare it. **The correct statement is that it cannot be
+verified on stock iOS through public, supported interfaces.** That distinction was raised by a
+reviewer and it matters, because "impossible" is a claim about the world and "not available to you"
+is a claim about a platform.
 
 ## The half of that gap this project can close, and now does
 
@@ -199,9 +191,11 @@ the compiled code this project publishes. Anybody can run the script on their ow
 compare. **That is checkable by a stranger with no access to anything of ours.**
 
 **Does not prove**: anything about the binary Apple served to a phone. Apple re-signs it, thins it
-per device, and encrypts the main binary of an App Store install, so there is nothing on a device to
-hash without a jailbreak. **No mechanism available on this platform closes that**, and this document
-will not pretend otherwise.
+per device, and encrypts the main executable of an App Store install, so there is nothing on a stock
+device to hash. **The code signature appears to authenticate the stored ciphertext rather than the
+plaintext**, which is why the readable code directory is not the bridge it first looks like; that is
+an inference from Apple's open-source loader rather than a documented guarantee, and it is the one
+question here worth reopening if somebody can settle it.
 
 **The honest way past it is not a hash at all.** Build the tagged commit yourself and run that,
 rather than trusting a binary you cannot inspect. The instructions above are the whole of what that

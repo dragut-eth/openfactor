@@ -215,17 +215,17 @@ design, its remaining limits, and the hardware probes supporting it are all link
 The reviews so far are model-assisted adversarial reviews, not professional human audits, and
 they do not soften the warning above.
 
-**Which commit was last audited, and how to check what a build contains.** `audit-a4` is the tag,
-and every gate from here reviews the diff since it. **The compiled code of a build is checkable by
-anybody**: `scripts/canonical-hash.sh` hashes the instructions with the linker's build identifier
-and the signature excluded, and two independent Release builds of one commit produce identical
-values across every architecture slice. So a stranger can confirm that this source compiles to the
-code this project publishes.
+**Which commit was last audited, and how to check a build yourself.** `audit-a4` is the tag, and
+every gate from here reviews the diff since it. **[VERIFYING.md](VERIFYING.md) is the instructions**:
+four things you can check, in order of what they cost, from reading a release record to rebuilding
+the code and comparing per-section hashes. Two independent Release builds of one commit produce
+identical digests in every section that has file bytes.
 
-**What nobody can check is the binary Apple served to a phone.** It is re-signed, thinned per
-device, and encrypted on an App Store install. [docs/BUILD_PROVENANCE.md](docs/BUILD_PROVENANCE.md)
-measures that rather than working around it, and says plainly that the honest way past it is to
-build the tagged commit and run your own.
+**What you cannot check is the binary Apple served to your phone**, because its executable is
+encrypted on an App Store install. That correspondence **cannot be verified on stock iOS through
+public interfaces**, which is narrower than saying it is impossible.
+[docs/BUILD_PROVENANCE.md](docs/BUILD_PROVENANCE.md) measures the limit rather than working around
+it.
 
 ## Documentation
 
