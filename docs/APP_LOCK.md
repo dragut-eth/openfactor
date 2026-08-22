@@ -655,6 +655,35 @@ feature's documentation.
    **Items 8 and 9**, an arrival presenting after unlock, because there is now another thing
    competing to present at that moment.
 
+   **Item 8 was run and found a real defect, and it took three attempts to fix.** Recorded because
+   the two failed attempts were both worse than the bug.
+
+   **What it found.** A share arriving on the same launch as the advice dialog: the dialog flashed
+   and **the import never presented at all.** The cause was that PR 15c's alert and sheet were not
+   in `somethingElseIsPresented`, the register of presentations an arrival must close. Every other
+   presentation on that screen is in it.
+
+   **First attempt, worse.** Enrolling them made the arrival wait for them to close, but
+   `sheetDidClose()` is only called from sheet `onDisappear` handlers and **an alert has none**, so
+   the arrival would have waited forever and the import would never have presented.
+
+   **Second attempt, also worse.** With that wired, the dialog was opened and then torn down inside
+   one update. On hardware it still flashed, still lost the import, **and left SwiftUI's
+   presentation state wedged so that Settings would not open afterwards.**
+
+   **What actually works: do not open it, rather than open it and close it.** The dialog is never
+   offered while an arrival is pending. The teardown path stays for the reverse ordering, where a
+   share lands while the dialog is already up, and only touches those bindings when they are
+   actually set, because writing over a binding that is already false is what churns the state.
+
+   **And the flag is spent when somebody answers, not when the app asks**, so an offer that was
+   never shown is made again next launch rather than lost.
+
+   **One more thing fell out of it.** The body stopped type checking once it carried six sheets,
+   two alerts and a change handler, which fails with no error worth reading. The advice
+   presentations are a `LockAdvice` modifier at file scope now, which is better than what was
+   committed and happened only because the compiler refused.
+
    **The list has twelve items, not ten.** An earlier version of this section said ten, copied from
    PR 15b's entry, which was true when it was written and stopped being true when items 11 and 12
    were added out of E11. A count in prose that no longer matches the thing it counts is the drift

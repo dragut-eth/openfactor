@@ -67,6 +67,11 @@ struct AccountListView: View {
     /// Whether any sheet other than the arrival's is up. These are what an arrival closes.
     private var somethingElseIsPresented: Bool {
         isAdding.wrappedValue || isShowingSettings || editing != nil || recolouring != nil
+            // **PR 15c's two, enrolled here rather than left outside it.** They were not, and an
+            // arrival delivered at the same moment tore down both itself and the advice alert:
+            // the dialog flashed and the shared image never presented at all. Measured on
+            // hardware against checklist item 8.
+            || offeringLockAdvice || showingSystemLockSteps
     }
 
     /// An arrival takes precedence: whatever was open closes, and the import presents
@@ -95,6 +100,28 @@ struct AccountListView: View {
         editing = nil
         recolouring = nil
         pendingDeletion = nil
+        // Advice yields to something the person actually did. **Only touched if it is actually
+        // up**, because writing `false` over a binding that is already false is what churns
+        // SwiftUI's presentation state. The common case is prevented at the trigger instead: it
+        // is never offered while an arrival is pending.
+        if offeringLockAdvice { offeringLockAdvice = false }
+        if showingSystemLockSteps { showingSystemLockSteps = false }
+    }
+
+    /// The advice presentations, lifted out of `body`.
+    ///
+    /// **Not tidiness: the body stopped compiling.** An alert, a sheet and a change handler added
+    /// to a chain already carrying six sheets and two alerts put it past what the Swift type
+    /// checker will attempt, which fails with no error worth reading.
+    private var lockAdvice: LockAdvice {
+        LockAdvice(
+            offering: $offeringLockAdvice,
+            showingSteps: $showingSystemLockSteps,
+            hasRead: $hasReadLockSteps,
+            hasOffered: $hasOfferedLockAdvice,
+            appLockEnabled: $appLockEnabled,
+            arrivalIsPending: arrival != nil,
+            somethingClosed: sheetDidClose)
     }
 
     /// A closed sheet has finished leaving. If an arrival was waiting on that, let it in.
@@ -170,8 +197,15 @@ struct AccountListView: View {
                 // so a device that already has accounts and has never been asked still is:
                 // the question is about what the app holds, not about when it was installed.
                 .onChange(of: model.rows.isEmpty, initial: true) { _, isEmpty in
-                    guard !isEmpty, !hasOfferedLockAdvice else { return }
-                    hasOfferedLockAdvice = true
+                    // **Never offered while something the person actually did is waiting.**
+                    // An earlier version offered it anyway and let the arrival close it, which
+                    // presents and tears down a dialog inside one update. On hardware that
+                    // flashed the dialog, lost the import, and left SwiftUI's presentation state
+                    // wedged so that Settings would not open afterwards. **Do not open it, rather
+                    // than open it and close it.**
+                    guard !isEmpty, !hasOfferedLockAdvice, arrival == nil else { return }
+                    // **Asking is not showing, so the flag is not spent here.** It is spent when
+                    // somebody answers, so an offer nobody saw is made again next launch.
                     offeringLockAdvice = true
                 }
                 .alert("Protect your codes", isPresented: $offeringLockAdvice) {
@@ -204,17 +238,7 @@ struct AccountListView: View {
                             + "can see your codes.\n\nFor stronger protection, iOS can lock "
                             + "OpenFactor before it opens. Or you can use App Lock.")
                 }
-                // **The choice comes back when the instructions close.** Tapping "Show Me How"
-                // dismisses the alert, because every alert button does, so closing the sheet
-                // used to leave nothing behind: the person had asked for help, got it, and
-                // landed on the list with no way to tell whether anything had been turned on.
-                // Asking for help is not answering the question, so the question returns.
-                .sheet(isPresented: $showingSystemLockSteps) {
-                    hasReadLockSteps = true
-                    offeringLockAdvice = true
-                } content: {
-                    SystemLockAdvice()
-                }
+                .modifier(lockAdvice)
                 .sheet(isPresented: isAdding) {
                     if let addSession {
                         AddAccountView(session: addSession) { model.load(at: Date()) }
@@ -682,4 +706,74 @@ private func previewStore(accounts: [(String, String, AccountColor)]) -> InMemor
 
 #Preview("Empty") {
     AccountListView(store: InMemorySecretStore())
+}
+
+/// The "Protect your codes" dialog, its instructions sheet, and the wiring that keeps both out of
+/// an arrival's way.
+///
+/// **A modifier rather than lines in `body`**, because the body stopped type checking with them
+/// inline. See `docs/APP_LOCK.md` for what each string says and why.
+private struct LockAdvice: ViewModifier {
+    @Binding var offering: Bool
+    @Binding var showingSteps: Bool
+    @Binding var hasRead: Bool
+    @Binding var hasOffered: Bool
+    @Binding var appLockEnabled: Bool
+
+    /// Whether something the person actually did is waiting for the screen.
+    let arrivalIsPending: Bool
+
+    /// Reports that one of these has finished leaving, so an arrival held behind it can present.
+    let somethingClosed: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            // **An alert has no `onDisappear`, so its closing is reported here.** Without this an
+            // arrival closes the advice, nothing tells `canPresentArrival` that the way is clear,
+            // and the import never presents at all: a worse bug than the one being fixed, and the
+            // reason this is wired rather than assumed.
+            .onChange(of: offering) { _, showing in
+                if !showing { somethingClosed() }
+            }
+            .alert("Protect your codes", isPresented: $offering) {
+                if hasRead {
+                    // Closes, and records nothing. An acknowledgement rather than a claim: the
+                    // app cannot tell whether the iOS lock was turned on. It replaces "Not Now"
+                    // rather than joining it, because two buttons doing the same thing in
+                    // different words are two buttons.
+                    Button("I Did It", role: .cancel) { hasOffered = true }
+                } else {
+                    Button("Show Me How") { showingSteps = true }
+                }
+                // Only offered where it can be honoured: a device with no passcode cannot
+                // authenticate, and the settings toggle already refuses there.
+                if AppLockAvailability.canAuthenticate {
+                    Button("Turn On App Lock") {
+                        appLockEnabled = true
+                        hasOffered = true
+                    }
+                }
+                if !hasRead {
+                    Button("Not Now", role: .cancel) { hasOffered = true }
+                }
+            } message: {
+                Text(
+                    "Your accounts are encrypted, but anyone using your unlocked phone "
+                        + "can see your codes.\n\nFor stronger protection, iOS can lock "
+                        + "OpenFactor before it opens. Or you can use App Lock.")
+            }
+            // **The choice comes back when the instructions close.** Every alert button dismisses
+            // its alert, so "Show Me How" ends the dialog, and without this somebody who asked for
+            // help landed on the list unable to tell whether anything had been switched on.
+            .sheet(isPresented: $showingSteps) {
+                hasRead = true
+                // **Not over an arrival.** If these were closed because something was shared,
+                // bringing the question straight back would put it in front of the import all
+                // over again. Advice yields, and returns next launch.
+                if !arrivalIsPending { offering = true }
+                somethingClosed()
+            } content: {
+                SystemLockAdvice()
+            }
+    }
 }
