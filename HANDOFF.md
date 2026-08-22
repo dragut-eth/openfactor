@@ -204,6 +204,19 @@ Here you can: none does. So `-all` went in immediately, and `p=reject` is reacha
 rather than a quarter. **The right framing is not "help receivers judge our mail". It is "this
 domain sends no mail, reject anything claiming to."**
 
+**`security.txt` now names `security@openfactor.dev`** rather than `info@`. RFC 2142 defines that
+address for vulnerability reports, so it is what a researcher guesses before reading anything, and
+a file that exists to remove the guessing should not point away from it. `info@` stays on the site,
+the privacy page and the App Store listing. **`docs/APP_STORE.md` asserted that `info@` was in
+`security.txt`**, which the same commit made false, and it was fixed in that commit rather than
+found later.
+
+**Delivery was tested rather than assumed.** Mail to `security@openfactor.dev` from an outside
+account reached the Inbox, not spam, over TLS, with the original `signed-by: gmail.com` DKIM
+signature intact through Gandi's forwarding hop. That surviving signature is why forwarding does
+not sink a report into spam, and it is now observed. **The test was Gmail to Gmail**, which Gmail
+treats generously, so a send from a non-Google account would be the stronger version of it.
+
 **Still open, deliberately:** DMARC is at `p=none`, observing. Move it to `p=reject` around
 2026-08-29 once Cloudflare's reports show a clean week. That is the step that actually stops the
 spoofing; everything before it is preparation. Also open: NEL still reports to Cloudflare from
