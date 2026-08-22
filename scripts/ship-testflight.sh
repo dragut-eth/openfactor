@@ -165,7 +165,13 @@ xcrun altool --upload-app -f "$WORK/export/OpenFactor.ipa" -t ios \
 #
 # **After the upload rather than before it.** A record of a build that failed validation
 # and never shipped would be worse than no record.
+# **The record cannot fail the ship.** Everything below runs after a successful upload, so a
+# failure here loses no build, but under `set -euo pipefail` it would still exit non-zero and
+# read as a failed release. You would then be debugging a hash tool at the exact moment you
+# wanted to be finished. Recorded on a best effort, and loudly if it does not work.
 echo "==> Recording provenance"
+set +e
+(
 ARCHIVE_PLIST="$WORK/app.xcarchive/Info.plist"
 SHORT_VERSION="$(plutil -extract ApplicationProperties.CFBundleShortVersionString raw -o - "$ARCHIVE_PLIST")"
 BUILD_VERSION="$(plutil -extract ApplicationProperties.CFBundleVersion raw -o - "$ARCHIVE_PLIST")"
@@ -238,8 +244,19 @@ RECORD="docs/releases/$SHORT_VERSION-$BUILD_VERSION.md"
   done
   echo '```'
 } > "$RECORD"
+)
+PROVENANCE_STATUS=$?
+set -e
 
-echo "Wrote $RECORD. Commit it: it is the only thing tying this build to a commit."
+if [ "$PROVENANCE_STATUS" -ne 0 ]; then
+  echo
+  echo "The provenance record could not be written. THE UPLOAD SUCCEEDED ANYWAY."
+  echo "Nothing is lost except the record, and $RECORD may be incomplete."
+  echo "Fix it and write the record by hand before the next release: without it nothing"
+  echo "ties this build number to a commit, which is what docs/releases/ exists for."
+else
+  echo "Wrote $RECORD. Commit it: it is the only thing tying this build to a commit."
+fi
 
 echo
 echo "Uploaded. Processing takes five to fifteen minutes, then in App Store Connect:"
