@@ -36,6 +36,26 @@ a dark palette would put a bright tile on a dark ground. `color-scheme: light` i
 browser does not darken scrollbars and controls when the operating system is in dark mode.
 Re-adding a dark palette means revisiting the icon at the same time.
 
+## The order of the page, and why
+
+**What it is comes before the statement.** A reader who has just arrived needs to know what the
+thing does before being told how far to trust it. The statement then answers a question they are
+actually asking rather than one nobody had yet.
+
+**The statement is green, not amber.** It was styled as a warning when it opened with what the app
+lacked. It now opens with what the app is and closes with the audit caveat, and an alert palette
+contradicted its first sentence before anybody read it.
+
+**It is left aligned.** It sat inside the centred hero and inherited that, which turns a paragraph
+of prose into a centred block nobody finishes.
+
+**The screenshots have no heading and no caption.** "See it" labelled three pictures of an app as
+pictures of an app. The caption about the accounts being invented came out too: the App Store
+frames carry no such note and the demo data reads as demo data.
+
+**The hero has one button.** Privacy was there and is in the footer, which is where people look
+for it.
+
 ## Still needed
 
 - ~~Screenshots.~~ **Done, in Apple's own product bezels.** `list.png`, `watch.png` and

@@ -13,9 +13,12 @@
   --line: #e4e4e7;
   --accent: #2b6cb0;
   --card: #fafafa;
-  --warn-bg: #fff7e6;
-  --warn-line: #f0d38a;
-  --warn-fg: #6b4e00;
+  /* **Green, and it is not a warning any more.** This box used to be amber, because it used to
+     open with what the app lacked. It now opens with what the app is and closes with the audit
+     caveat, so an alert palette contradicted the first sentence before anybody read it. */
+  --note-bg: #f1f8f2;
+  --note-line: #bcdcc3;
+  --note-fg: #1f4429;
   --max: 46rem;
 }
 
@@ -62,16 +65,22 @@ header.hero p.tagline { font-size: 1.15rem; color: var(--muted); margin: 0 0 1.7
 .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 /* Status banner */
-.status {
-  background: var(--warn-bg);
-  border: 1px solid var(--warn-line);
-  color: var(--warn-fg);
+.statement {
+  background: var(--note-bg);
+  border: 1px solid var(--note-line);
+  color: var(--note-fg);
   border-radius: 10px;
-  padding: .9rem 1.1rem;
-  margin: 2.5rem 0 0;
+  padding: 1rem 1.15rem;
+  margin: 1.75rem 0 0;
   font-size: .95rem;
+  /* Left aligned. It sat inside the centred hero and inherited that, which turned a paragraph of
+     prose into a centred block nobody reads to the end of. */
+  text-align: left;
 }
-.status strong { font-weight: 700; }
+.statement strong { font-weight: 700; }
+
+/* The screenshots stand on their own: no heading, no caption, no rule under them. */
+.shots-section { padding: 2.75rem 0; border-bottom: 1px solid var(--line); }
 
 /* Sections */
 section { padding: 2.75rem 0; border-bottom: 1px solid var(--line); }
