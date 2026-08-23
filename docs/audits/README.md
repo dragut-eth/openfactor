@@ -29,6 +29,24 @@ the arc of the counts across twenty nine board redraws, and the standing panels 
 own recurring mistakes. It is kept at this level because it is a reference rather than a working
 file.
 
+## The unscoped reviews
+
+**A different instrument again from the gates.** The gates are commissioned and scoped: this
+project decides what is reviewed and hands over a brief. These are the opposite. Run cold on the
+whole repository, by a reader with no brief and no sight of the gates, told only where the
+repository is. **What an outsider finds without being told where to look.**
+
+**None of these is a gate**, and in particular none of them is A5, which is the diff since the last
+audited tag and is scoped to it. An unscoped pass is broader and does not do A5's job: a whole
+repository review can miss a regression precisely because it is not diffing.
+
+| | What it found |
+| --- | --- |
+| [X1](X/X1-codex-blind-audit.md) | Blind, whole repository, 2026-08-22. **No critical or high.** Two documentation defects, both the same failure: a claim that was true when written and stopped being true. One resource bound the report itself filed as unverified and which turned out to be its most actionable finding. **Where this project disagreed is recorded inside the entry**, including one recommended fix that was rejected because it would have been worse than the flaw |
+
+**Each entry records the prompt verbatim**, so it can be re-run against a later commit, and so
+anybody can do the same thing to this project without asking.
+
 ## The hardware measurements
 
 **[E/](E/) is evidence rather than paperwork**, which is why it is not filed under the gate that

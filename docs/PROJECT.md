@@ -131,29 +131,41 @@ It exists so those two are not written twice. The watch palette's values differ 
 phone's on purpose, since the color is text there rather than background, but the arithmetic
 that decides whether either is legible is the same arithmetic and there should be one of it.
 
-## The watch app is not embedded in the phone app yet
+## The watch app is embedded in the phone app
 
 An App Store build ships the watch app inside the phone app, through an `Embed Watch
-Content` copy phase and a target dependency. Both were written in PR 14 and then removed
-again, deliberately, and this records why so nobody re-adds them without knowing.
+Content` copy phase and a target dependency. Both are present, and CI asserts the copy
+phase along with `dstSubfolderSpec = 16;`.
 
-The moment the phone target depends on the watch target, building the phone app requires
-the full watchOS platform to be installed, not just its SDK. Xcode 26 downloads platforms
-separately, and without it every build of the iOS app fails at scheme resolution, including
-in CI, including for anyone cloning the repository to read it. That is a heavy prerequisite
-to impose on a project whose pitch is that it has no dependencies.
+**The cost this imposes, recorded because it was once a reason not to do it.** The moment
+the phone target depends on the watch target, building the phone app requires the full
+watchOS platform installed, not merely its SDK. Xcode downloads platforms separately, and
+without it every build of the iOS app fails at scheme resolution, including for anybody
+cloning the repository to read it. PR 14 wrote the embed and then removed it for exactly
+that reason. PR 18 put it back, because a submission cannot ship the watch app any other
+way and installing the platform stopped being optional.
 
-Until then the watch app is built and installed on its own, which
-`INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp` already supports and which is enough to
-answer the question PR 14 exists to answer. The embed phase returns in PR 18, where
-installing the platform is unavoidable anyway.
+## Capabilities and signing
 
-## Not configured yet
-
-- **No signing team in the project file.** Simulator builds do not need one, and leaving it
-  out keeps a personal team identifier out of a public repository.
-- **No capabilities.** No push, no background modes, no App Groups, and above all no
-  network entitlement to notice the absence of.
+- **A signing team is set**, on every target. It was once left out to keep a team
+  identifier out of a public repository, which stopped meaning anything the moment a signed
+  build shipped: the identifier is in the entitlements of any copy of the app.
+- **App Groups and Keychain access groups both exist**, and they are load bearing rather
+  than incidental. `OpenFactor.entitlements` carries an application group and a
+  Keychain access group. `OpenFactorShare.entitlements` carries **only** the application
+  group, which is the boundary `SECURITY.md` claims and a CI job enforces by reading the
+  file. `OpenFactorWatch.entitlements` carries the Keychain access group.
+- **Still absent:** no push, no background modes, and above all no network entitlement.
 - **No photo library usage string, deliberately.** Importing a picture of a QR code goes
   through `PhotosPicker`, which runs out of process and hands back only the one image the
   user chose. The app never gets access to the library, so it does not ask for any.
+
+> **Both sections above said the opposite until 2026-08-22**, and an external reviewer found
+> it rather than CI. The reason is worth keeping: CI asserted `Embed Watch Content` in the
+> project file and passed, because **the check only looks one way**. It catches the project
+> changing without the document. It cannot catch the document being wrong while the project
+> is right, and prose is where that hides.
+>
+> **So configuration facts belong in the settings table, where each row has a check behind
+> it, and prose must not assert current configuration.** "The watch app is not embedded yet"
+> was a fact dressed as narrative, in the one region of this document no check reaches.

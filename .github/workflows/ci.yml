@@ -85,6 +85,41 @@ jobs:
           find scripts -name '*.sh' -print0 | xargs -0 shellcheck -S info
           echo "Shell scripts are clean at info level and above."
 
+      # **The published surfaces must name the same security contact and the same policy.**
+      #
+      # This exists because the contact drifted twice in one day and a human caught it both
+      # times. security.txt moved from info@ to security@, SECURITY.md followed, and the
+      # privacy page was missed, so a researcher arriving from the website was sent one way
+      # and a researcher reading security.txt the other. Nothing was lost, since both forward
+      # to the same person, but two published surfaces disagreed about where to report a
+      # vulnerability.
+      #
+      # Greps rather than parsing, because the failure is a missing sweep rather than a subtle
+      # one: the address is either in all three or it is not.
+      - name: The published surfaces agree on where to report a vulnerability
+        run: |
+          set -e
+          ADDRESS="security@openfactor.dev"
+          POLICY="https://github.com/dragut-eth/openfactor/blob/main/SECURITY.md"
+
+          for f in site/.well-known/security.txt SECURITY.md site/privacy.html; do
+            if ! grep -q "$ADDRESS" "$f"; then
+              echo "FAIL: $f does not name $ADDRESS"
+              echo "Every surface telling somebody how to report a vulnerability must name the"
+              echo "same address. If it is changing, change it in all three."
+              exit 1
+            fi
+            echo "ok: $f names $ADDRESS"
+          done
+
+          for f in site/.well-known/security.txt site/privacy.html; do
+            if ! grep -q "$POLICY" "$f"; then
+              echo "FAIL: $f does not point at $POLICY"
+              exit 1
+            fi
+            echo "ok: $f points at the policy"
+          done
+
       # The project style forbids em dashes everywhere, including code, comments,
       # documentation, and commit messages. The character is written here as an escape
       # so that this file does not fail its own check.
@@ -342,6 +377,10 @@ jobs:
           # TestFlight, which reported "Apple Watch: No" on a build that had already gone
           # to a tester. A phase in a file nobody reads is exactly what this job is for.
           check "Embed Watch Content"
+          # **Added after an external review found docs/PROJECT.md still saying there was
+          # no signing team.** There were twelve entries. This value had no check behind
+          # it, which is why the sentence could go stale without anything failing.
+          check "DEVELOPMENT_TEAM = "
           check "dstSubfolderSpec = 16;"
           check "IPHONEOS_DEPLOYMENT_TARGET = 18.0;"
           # **Xcode defaults this to YES and it was instrumenting Release builds.** It appears

@@ -86,6 +86,14 @@ struct EraseAccountsView: View {
 
     /// Says what will actually happen, which depends on where the accounts currently are.
     ///
+    /// **It names what survives as well as what goes, since 2026-08-22.** An external review
+    /// found that `docs/MASVS.md` claimed this erase removed the vault's wrapped records, which
+    /// is the locked screen's Start over rather than this. The behaviour is right and was left
+    /// alone: destroying the vault here would push somebody who merely cleared their accounts
+    /// through setup again and issue them a **new passphrase**, silently invalidating the one
+    /// they wrote down. What was wrong is that neither the document nor this screen said the
+    /// vault is kept.
+    ///
     /// The synced case is not a hypothetical warning: gate A2's experiment showed a paired
     /// watch emptying fourteen minutes after sync was merely switched off. Erasing is more
     /// final than that.
@@ -94,6 +102,9 @@ struct EraseAccountsView: View {
             Every account and every secret is removed from this iPhone. Codes cannot be \
             recovered afterwards, and each service would have to be set up again from \
             scratch.
+
+            Your vault and its passphrase are kept, so the passphrase you saved still \
+            works and you can add accounts again without setting one up.
             """
 
         guard let syncState, !syncState.synced.isEmpty else { return base }
