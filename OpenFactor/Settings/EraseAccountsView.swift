@@ -86,35 +86,58 @@ struct EraseAccountsView: View {
 
     /// Says what will actually happen, which depends on where the accounts currently are.
     ///
-    /// **It names what survives as well as what goes, since 2026-08-22.** An external review
-    /// found that `docs/MASVS.md` claimed this erase removed the vault's wrapped records, which
-    /// is the locked screen's Start over rather than this. The behaviour is right and was left
-    /// alone: destroying the vault here would push somebody who merely cleared their accounts
-    /// through setup again and issue them a **new passphrase**, silently invalidating the one
-    /// they wrote down. What was wrong is that neither the document nor this screen said the
-    /// vault is kept.
+    /// **Rewritten 2026-08-22, clause by clause, because most of it was not true.**
+    ///
+    /// An external review found `docs/MASVS.md` claiming this erase removed the vault's wrapped
+    /// records, which is the locked screen's Start over rather than this. **The behaviour is
+    /// right and was left alone**: destroying the vault here would push somebody who merely
+    /// cleared their accounts through setup again and issue them a **new passphrase**, silently
+    /// invalidating the one they wrote down.
+    ///
+    /// What was wrong was the text, in three places, and each is worth naming because the errors
+    /// are different shapes.
+    ///
+    /// **"Codes cannot be recovered afterwards" was false.** An encrypted export restores them,
+    /// `VaultUnlockView` says so on its own screen, and `README.md` tells people to keep one and
+    /// test it. **The app told you to make a backup and then told you recovery was impossible.**
+    /// It says "this cannot be undone" now, which is the true and frightening half: the erase is
+    /// irreversible, and an export is a separate artefact made earlier. An intermediate draft
+    /// said "nothing in the app can bring them back", which is also false, since import is in
+    /// the app.
+    ///
+    /// **It never said the vault survives.** Somebody reading only this screen would reasonably
+    /// think their passphrase was now worthless and throw it away.
+    ///
+    /// **"Your accounts are in iCloud Keychain" overstated a mixed state.** `SyncState` carries
+    /// `synced` and `local`, so some accounts can sync while others do not. It names the synced
+    /// ones now.
+    ///
+    /// **And it implied the removal elsewhere is instant.** Gate A2 measured a paired watch
+    /// emptying **fourteen minutes** after a sync change. Without that clause somebody erases,
+    /// checks their watch, sees the accounts still there and concludes it failed.
     ///
     /// The synced case is not a hypothetical warning: gate A2's experiment showed a paired
     /// watch emptying fourteen minutes after sync was merely switched off. Erasing is more
     /// final than that.
     private var warning: String {
         let base = """
-            Every account and every secret is removed from this iPhone. Codes cannot be \
-            recovered afterwards, and each service would have to be set up again from \
-            scratch.
-
-            Your vault and its passphrase are kept, so the passphrase you saved still \
-            works and you can add accounts again without setting one up.
+            Every account and every secret is removed from this iPhone. This cannot be \
+            undone, and unless you have an encrypted export, each service would have to be \
+            set up again from scratch. Your vault and passphrase are kept, so you will not \
+            be asked to set one up again and the passphrase you saved is still the right one.
             """
 
         guard let syncState, !syncState.synced.isEmpty else { return base }
 
-        return base + """
-
-
-            Your accounts are in iCloud Keychain, so this also removes them from your \
-            other devices, including your Apple Watch.
+        // **Joined with a space rather than a newline: this is one paragraph.** A blank line
+        // here would make the iCloud sentence look like a separate notice, and it is a
+        // continuation of the same warning about what this button removes.
+        let elsewhere = """
+            Accounts that are in iCloud Keychain are also removed from your other devices, \
+            including your Apple Watch, though that does not happen immediately.
             """
+
+        return base + " " + elsewhere
     }
 
     /// **The decision is `EraseGate`'s and the presentation is this view's.**
