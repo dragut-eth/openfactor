@@ -230,6 +230,29 @@ here**: the rule at the top of this document forbids the listing claiming *more*
 repository, and saying less is not that. It does make the App Store page the quietest surface about
 it, which is worth knowing rather than rediscovering.
 
+## Where each claim lives, and why the surfaces differ
+
+**The three surfaces answer different questions.** The App Store page answers what the app is.
+`openfactor.dev` answers why anybody should believe it. The repository answers prove it. The
+audience narrows at each step, and so does the question.
+
+**That is why the audit caveat is not in the listing.** It is not an answer to "what is this", and
+a reader at that stage cannot act on it: they cannot evaluate what a professional audit would have
+found. It is on the site, in `README.md` and in `SECURITY.md`, where the question it answers is the
+one being asked.
+
+**The rule this does not break.** No surface may claim more than the repository claims. That is a
+ceiling, not a requirement that every surface say the same amount. Every drift found in this
+project has been a contradiction or an overclaim, never one surface saying less than another.
+
+**The URL fields already encode it.** Marketing URL goes to `openfactor.dev`, support URL to the
+GitHub issues, and the description text to the source. A browsing reader is sent to the site;
+somebody with a problem is sent to the repository.
+
+**The one caution.** Readers do not respect the order. Anybody reading adversarially starts at the
+App Store, because it is the most quotable and least contextualised page, so the ceiling matters
+most on the widest surface rather than least.
+
 ## Promotional text: deliberately empty
 
 **170 characters, editable without submitting a new build, and left blank on 2026-08-23.**
