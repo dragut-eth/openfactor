@@ -26,8 +26,7 @@ say so and we will agree on a disclosure date rather than let it sit.
 
 ## Auditing this project
 
-**A report that finds something real is published, flattering or not.** That is the only commitment
-worth making, because nobody needs a promise about publishing good news. And `docs/audits/` is the
+**A report that finds something real is published, flattering or not.** `docs/audits/` is the
 record rather than the promise: gate A4 published 133 findings, three of them high, along with the
 day eight of eleven newly open items turned out to be defects in that day's fixes.
 
