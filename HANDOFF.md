@@ -5,8 +5,12 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-21, on TestFlight as `dev.openfactor.app`, **1.0 (6)**, uploaded from
-commit `47e1682` with the first provenance record the script wrote by itself
+**Last updated:** 2026-08-22, on TestFlight as `dev.openfactor.app`, **1.0 (7)**, which is the
+submission candidate. **Build 6 must not be submitted**: it photographed live codes into the app
+switcher after every Face ID unlock, which was found on hardware during a day of real-key testing
+and fixed the same day. Build 7 is the first build carrying that fix, the corrected erase warning,
+and the advice dialog no longer offering a lock that is already on. The previous entry read 1.0 (6)
+from commit `47e1682` with the first provenance record the script wrote by itself
 ([docs/releases/1.0-6.md](docs/releases/1.0-6.md)). The iPhone 15 Pro carries a development build
 of PR 15c installed by `devicectl`. **Everything is on `main` and pushed**, which it had not been
 for 134 commits: `a4-fixes` was fast forwarded into `main` and the branch deleted.
