@@ -32,11 +32,9 @@ different security contacts, and shell scripts failing `shellcheck -S info`.
 
 ## If you are auditing rather than contributing
 
-The most useful review of this repository so far was run blind. **Its prompt is recorded verbatim**
-in `docs/audits/X/X1-codex-blind-audit.md`, so it can be re-run against a later commit or improved
-on. In outline it asked the reviewer to read the claimed security properties first, inspect the
-implementation, entitlements and tests against them, try to falsify them, and leave `docs/audits/`
-until their own findings were written down.
+`SECURITY.md` has the section on it: where to send a report, what makes one useful, and what gets
+published. The method that produced the most useful audit so far, prompt included, is recorded in
+`docs/audits/X/X1-codex-blind-audit.md`.
 
-**That is offered rather than asked.** This repository is the subject and is in no position to set
-the method of its own audit. Use it, change it, or ignore it.
+**Both are offered rather than asked.** This repository is the subject and is in no position to set
+the method of its own audit. Use them, change them, or ignore them.

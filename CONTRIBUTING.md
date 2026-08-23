@@ -3,6 +3,9 @@
 **Agents are pointed here by `AGENTS.md`**, which carries the mechanical setup and nothing else.
 The rules live in this file only, so there is one copy of each.
 
+**Auditing rather than contributing?** `SECURITY.md` has the section on that: where to send a
+report, what makes one useful, and what gets published.
+
 The point of this project is that a stranger can read the source and decide to trust it.
 Every rule below exists to keep that true.
 

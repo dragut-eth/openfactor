@@ -24,6 +24,38 @@ anonymous.
 Please allow a reasonable window to ship a fix before publishing. If a fix is taking too long,
 say so and we will agree on a disclosure date rather than let it sit.
 
+## Auditing this project
+
+**A report that finds something real is published, flattering or not.** That is the only commitment
+worth making, because nobody needs a promise about publishing good news. And `docs/audits/` is the
+record rather than the promise: gate A4 published 133 findings, three of them high, along with the
+day eight of eleven newly open items turned out to be defects in that day's fixes.
+
+**Including findings this project thinks are wrong.** X1 is published with the two places it was
+disagreed with, argued in the entry rather than left out of it. A finding you disagree with is
+answered in public, not omitted.
+
+**Reports that do not engage with the code are answered rather than published.** A summary of the
+README, a page of generic advice, or a scanner's output with nothing attached to a line of source
+is not an audit and there is nothing to record.
+
+**Send the raw result.** Do not reduce it to what you are confident about. The most actionable
+finding in the first external audit of this repository was filed by its own author under claims
+they could not verify, and it was real. **A finding you are unsure of is worth more here than a
+finding you deleted.**
+
+**What makes a report useful**, learned from the one that worked: separate what you verified from
+what you could not, and say which is which. That separation was more valuable than the findings.
+
+**Where to send it.** `security@openfactor.dev` if any of it might be a vulnerability. Email is not
+encrypted, so say that you have something and let the detail follow through the private advisory
+channel above. If none of it is sensitive, a public issue is welcome instead, where the discussion
+stays searchable.
+
+**There is no bounty.** The method that produced the most useful audit so far is recorded in
+[docs/audits/X/X1-codex-blind-audit.md](docs/audits/X/X1-codex-blind-audit.md), prompt included, if
+you want a starting point.
+
 ## Threat model
 
 **This is the PR 17 review.** Every claim below was checked against the code as it stands rather
