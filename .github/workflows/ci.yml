@@ -85,6 +85,27 @@ jobs:
           find scripts -name '*.sh' -print0 | xargs -0 shellcheck -S info
           echo "Shell scripts are clean at info level and above."
 
+      # **No absolute home directory paths in tracked files.**
+      #
+      # Four existed when this was written: three audit prompts recording the working directory
+      # they were run from, and a launch configuration that hard coded one. The launch config was
+      # the one that mattered, and not for privacy: it made the preview server work on exactly one
+      # machine, so anybody cloning the repository got a broken configuration.
+      #
+      # The prompts are recorded verbatim on purpose, so the path there is redacted visibly as
+      # /Users/<you>/ rather than rewritten silently. That form is allowed; a real one is not.
+      - name: No absolute home paths
+        run: |
+          if git grep -n -I -E "/(Users|home)/[A-Za-z0-9._-]+/" -- ':!.github/workflows/ci.yml' \
+            | grep -v "/Users/<you>/"; then
+            echo
+            echo "An absolute home directory path is committed."
+            echo "It leaks a username and, worse, only works on one machine."
+            echo "Use a path resolved from the working directory, or redact it as /Users/<you>/."
+            exit 1
+          fi
+          echo "No absolute home paths in tracked files."
+
       # **The published surfaces must name the same security contact and the same policy.**
       #
       # This exists because the contact drifted twice in one day and a human caught it both

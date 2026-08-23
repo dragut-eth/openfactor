@@ -13,7 +13,7 @@ does after the repository goes public, and because it found things.
 Recorded so it can be re-run against a later commit and so anybody can do the same thing to this
 project without asking.
 
-> checkout https://github.com/dragut-eth/openfactor.git, in this directory: /Users/xcany/tmp/Codex
+> checkout https://github.com/dragut-eth/openfactor.git, in this directory: /Users/<you>/tmp/Codex
 > readonly
 >
 > Perform an independent security audit of this repository. Start by reading the README and
@@ -24,6 +24,12 @@ project without asking.
 > affected code, reasoning, and a concrete attack or failure scenario where possible. Also report
 > important security claims you were able to verify and claims you could not verify. Do not modify
 > any files.
+
+**The checkout path above is redacted, visibly rather than silently**, and nothing else in
+the prompt is changed. It named a home directory on the machine that ran it. That path is
+local noise to anybody re-running this, and a repository does not need to publish one to be
+checkable. A verbatim record is worth keeping verbatim, so the substitution is marked
+instead of quietly applied.
 
 **The blinding instruction is the part that mattered**, and it was honoured: the findings were
 written before `docs/audits/` was opened.

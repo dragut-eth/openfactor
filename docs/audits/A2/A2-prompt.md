@@ -10,7 +10,7 @@ second opinion rather than a confirmation.
 ---
 
 You are auditing an open source iOS two factor authentication app, OpenFactor, at
-`/Users/xcany/Documents/Development/OpenFactor`, on branch `pr-13-sync`. You did not write
+`/Users/<you>/OpenFactor`, on branch `pr-13-sync` *(path redacted, visibly; nothing else changed)*. You did not write
 any of it. Read it as someone who has never seen it before and whose job is to find what is
 wrong.
 

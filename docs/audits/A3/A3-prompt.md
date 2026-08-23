@@ -14,8 +14,8 @@ Run the model review regardless.
 ---
 
 You are auditing a backup format specification for OpenFactor, an open source iOS and
-watchOS two factor authentication app, at `/Users/xcany/Documents/Development/OpenFactor`,
-on branch `pr-16-backup-format`. You did not write any of it.
+watchOS two factor authentication app, at `/Users/<you>/OpenFactor`,
+on branch `pr-16-backup-format` *(path redacted, visibly; nothing else changed)*. You did not write any of it.
 
 The artefact is `docs/BACKUP_FORMAT.md`. **There is no implementation yet, and that is
 deliberate.** The format is being audited before it is built, because an archive in a
