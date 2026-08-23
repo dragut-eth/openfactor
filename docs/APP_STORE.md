@@ -161,115 +161,95 @@ which are claims rather than search terms.
 
 ## Description
 
-Drawn from `README.md` so the two cannot drift into different claims.
+**Entered in App Store Connect on 2026-08-23, and this is the text that was pasted.** Drawn from
+`README.md` so the two cannot drift into different claims.
 
-**The block below is hard wrapped for this file and must not be pasted that way.** App Store
-Connect treats every newline literally, so pasting the wrapped form puts a break in the middle of
-most sentences. Paste it with each paragraph on one line and the blank lines between paragraphs
-kept. It is 2,042 characters of the 4,000 allowed.
+**Not hard wrapped.** App Store Connect treats every newline literally, so a wrapped block puts a
+break in the middle of most sentences. Each paragraph and each bullet is one line, with blank lines
+only between blocks. It is 1811 characters of the 4,000 allowed.
 
 ```
-OpenFactor is a minimal authenticator for people who want an open source app with no account,
-no backend, and nothing holding their accounts hostage.
+OpenFactor generates two-factor authentication codes on iPhone and Apple Watch. No account, no server, no analytics, no third-party code.
 
-It generates two factor authentication codes on iPhone and Apple Watch.
-
-It has no account to create, no server, no browser extension, and no analytics. Your accounts
-stay on your devices. If you turn on iCloud sync, encrypted account records travel through
-iCloud Keychain. The key that decrypts them stays on your devices.
-
-Accounts are encrypted before they are stored. The key that opens them stays in the app's
-private container on each device, is never synced, is never written to the Keychain, and is
-excluded from device backups.
+Your accounts are encrypted before they are stored. The key that opens them lives in the app's private container on each device, is never synced, is never written to the Keychain, and is excluded from device backups. If you turn on iCloud sync, the encrypted records travel through your own iCloud Keychain and the key does not go with them.
 
 DESIGN PRINCIPLES
-
-No account.
-
-No backend.
-
-No telemetry.
-
-Open source.
-
-Exports you can take elsewhere.
+· No backend to breach, subpoena, or shut down.
+· No telemetry.
+· Built in the open from the first commit.
+· Your accounts are yours to take elsewhere.
 
 WHAT IT DOES
-
-Generates TOTP and HOTP codes to the published standards, verified against the test vectors in
-those specifications.
-
-Shows one code at a time on Apple Watch, and keeps working with your iPhone off, absent, or out
-of range.
-
-Imports from other authenticators, including Google Authenticator transfer codes and Aegis
-vaults, and can read a setup code straight from the Camera app or a screenshot.
-
-Exports an encrypted backup whose format is public and documented, or a plain file for moving to
-another app. The difference is stated on screen, because portability should not require hiding
-the security cost.
-
-Locks behind Face ID, Touch ID, or your passcode.
+· Generates TOTP and HOTP codes to the published standards, verified against the test vectors in those specifications.
+· Shows one code at a time on Apple Watch, which keeps working with your iPhone off, absent, or out of range.
+· Imports from other authenticators, including Google Authenticator transfer codes and Aegis vaults. Scan a setup code with the Camera app, open one from an image, or share an image straight into OpenFactor without saving it to Photos first.
+· Exports an encrypted backup whose format is public and documented, or a plain file for moving to another app. The difference is stated on screen, because portability should not require hiding the security cost.
+· Locks behind Face ID, Touch ID, or your passcode.
 
 WHAT IT DELIBERATELY DOES NOT DO
-
-No Mac app and no browser extension. A second factor is worth less the moment it lives on the
-machine asking for it.
-
-No password storage and no autofill. This is an authenticator, not a password manager.
-
-No accounts, no telemetry, no crash reporting.
+· No Mac app and no browser extension. A second factor is worth less the moment it lives on the machine asking for it.
+· No password storage and no autofill. This is an authenticator, not a password manager.
 
 OPEN SOURCE
-
-The source is public and built in the open from the first commit, including the design
-documents, the security reviews, and the hardware experiments behind them, with the findings
-published whether or not they were flattering. Read it at github.com/dragut-eth/openfactor
+· The source is public, including the design documents, review findings, and hardware experiments behind them. Read it at github.com/dragut-eth/openfactor
 ```
 
-**A claim was removed here, and the reason generalizes.** The description said iCloud Keychain
-carries your accounts "where Apple cannot read them". That is defensible, being Apple's own
-description of the service and doubly true once the vault means only ciphertext syncs. It is
-still gone, because it is a claim about someone else's platform rather than about this app.
+### What changed on 2026-08-23, and why
 
-The replacement says what OpenFactor's own design guarantees: encrypted records travel, the key
-that decrypts them does not. That is provable from this repository alone. **Every important claim
-in a listing should be one the project can prove from its own design**, because a platform
-property can change without warning and takes the sentence with it.
+**The opening line stopped defining the app by its audience.** It read "an authenticator for people
+who want an open source app with no account, no backend, and nothing holding their accounts
+hostage", which is market positioning rather than description, and it spent the first line on three
+absences before ever saying the app makes codes. That did not arrive until the second paragraph,
+below the fold. It now says what the app is in the first eight words.
 
-## Promotional text
+**Two paragraphs went, because the new opening made them repeat.** "It generates two factor
+authentication codes on iPhone and Apple Watch" was saying the first line again one line later,
+and the old third and fourth paragraphs both claimed the key stays put, in different words. The
+storage explanation is said once now, with the sync explanation beside it.
 
-170 characters, editable without submitting a new build, which makes it the right place for a
-status that changes.
+**The bullets are real bullets.** They were blank-line separated lines, which App Store Connect
+renders as loose paragraphs rather than a list.
 
-```
-No network, no accounts, no telemetry, no third-party code. Every review published. Not independently audited yet, so keep a tested backup, as with any authenticator.
-```
+**Every factual claim was checked against the code rather than carried forward on trust**, which
+found nothing wrong but is the reason to say so: `AegisImport` and `AegisExport` both exist;
+`WatchAccountListView` shows names while `WatchCodeView` shows a single code, so "one code at a
+time" is accurate; `docs/VAULT.md` records that operation never needs the phone after provisioning;
+App Lock is `.deviceOwnerAuthentication`, which is biometrics with a passcode fallback; and the
+plaintext export sits behind an explicit "I understand this file is not encrypted" toggle.
 
-That is 166 characters, and it is the compressed form of the paragraph `README.md` and the site
-both open with. **It leads with what the app does rather than with what it lacks**, which is the
-same order and for the same reason.
+**The audit caveat is not in the listing, and that is a decision rather than an oversight.** It
+lived in the promotional text, which is now empty, and it was deliberately not moved into the
+description. `README.md`, `SECURITY.md` and the site all still carry it. **This breaks no rule
+here**: the rule at the top of this document forbids the listing claiming *more* than the
+repository, and saying less is not that. It does make the App Store page the quietest surface about
+it, which is worth knowing rather than rediscovering.
 
-**Why that order, since an earlier draft had it the other way.** Opening with "no independent
-audit" is accurate and reads as a confession, and a reader who stops at the first line leaves with
-only the warning. **The audit gap is not a counterweight to the transparency, it is another
-instance of it**: the same paragraph that says the unflattering findings are published then
-publishes an unflattering fact. Written in that order it needs no "but", because the two halves are
-not in tension.
+## Promotional text: deliberately empty
 
-**And the closing advice is deliberately about authenticators in general.** "Keep a tested backup"
-is true of every one of them, and framing it as a confession specific to this app would be both
-scarier and less useful than framing it as the thing anybody should do.
+**170 characters, editable without submitting a new build, and left blank on 2026-08-23.**
+
+**The reason is that it renders as one block with the description**, immediately above it, and
+nothing on the page marks the seam. A draft carried "No network, no accounts, no telemetry, no
+third-party code" and the description then opened with "No account, no server, no analytics, no
+third-party code": **the same list twice inside three hundred characters, with the reader not
+learning what the app is until the fourth sentence.**
+
+**Splitting the jobs was tried first and worked.** The promotional text would carry only what
+changes, the audit status, and the description only what does not. That is what the field is for:
+Apple's own guidance is "the latest news about your app", and it updates without a build.
+
+**It was dropped anyway, and the trade is worth recording.** One fewer surface to keep in step,
+against losing the one place the audit caveat appeared above the fold. The caveat is not in the
+description either, which makes the App Store listing the only surface that does not carry it.
+`README.md`, `SECURITY.md` and `openfactor.dev` all still do.
+
+**If it is ever filled in, it must not repeat the description's opening.** They are read as one
+paragraph, and the only way to know where one ends is that the writing stops making sense.
 
 **It used to open with "Beta, in testing" and that had to go.** App Review does not accept an app
 that presents itself as a beta, a trial or a demo, and the word would have been a rejection on
-metadata rather than on anything the app does.
-
-**What is worth noticing is that removing it cost nothing.** "Beta" was a statement about a release
-phase, which stops being true the day this ships. **The sentence underneath it is about the audit
-gap, and that stays true until somebody outside this project looks at the code.** The same
-substitution was made in `README.md` and on the site, so all three surfaces now lead with the thing
-that will still be accurate next year.
+metadata rather than on anything the app does. Removing it cost nothing: "beta" was a statement
+about a release phase, which stops being true the day this ships.
 
 ## What's New, for 1.0
 
@@ -530,10 +510,14 @@ the phrase in a store listing would claim a finished artifact that does not exis
 exactly what the rule at the top of this document forbids, and the fact that the suggestion came
 from a review does not exempt it.
 
-The wording used instead is concrete without the claim: the design documents, the security
-reviews, and the hardware experiments behind them, published whether or not they were flattering.
-When PR 17 lands and the threat model is complete, this sentence should change and this paragraph
-should be deleted.
+The wording used instead is concrete without the claim: the design documents, the review findings,
+and the hardware experiments behind them. When PR 17 lands and the threat model is complete, this
+sentence should change and this paragraph should be deleted.
+
+**"Published whether or not they were flattering" is no longer in the listing either.** It moved
+into the promotional text while that field was being drafted and did not come back when the field
+was abandoned. The claim is still made in `README.md` and on the site, and it is still true of
+`docs/audits/`; the App Store description simply does not make it.
 
 ## What this document is not
 
