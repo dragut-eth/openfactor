@@ -3,8 +3,14 @@
 Everything App Store Connect asks for, written down so it is reviewed here rather than typed
 into a web form at submission time and never seen again. Part of PR 18.
 
-**Nothing here is submitted yet.** The app is `1.0 (4)` on TestFlight and has not been through
-gate A4, so this is a draft to argue with, not a listing to paste.
+**Submitted for review on 2026-08-23, as `1.0 (7)`.** Gate A4 concluded on 2026-08-21 and X1, a
+blind unscoped external audit, ran on 2026-08-22. **This document stopped being a draft to argue
+with and became the record of what was entered**, so a change here now means a change in App Store
+Connect rather than instead of one.
+
+**It said "nothing here is submitted yet, the app is 1.0 (4) and has not been through gate A4"
+until the moment of submission**, which was three builds and one gate out of date. A status line at
+the top of a document is the last thing anybody rereads.
 
 **The rule this document exists to enforce.** A store listing is the one place where a project
 like this one quietly starts over-claiming, because the form invites a sales pitch and nobody
