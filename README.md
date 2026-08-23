@@ -2,6 +2,9 @@
 
 A deliberately focused authenticator for iPhone and Apple Watch.
 
+**[openfactor.dev](https://openfactor.dev)** is the short version, with screenshots. This file is
+the long one.
+
 OpenFactor stores verification codes without an OpenFactor account, server, browser extension,
 or analytics service. It keeps the authenticator physically separate from the computer asking
 for the code, while making it straightforward to import your accounts, back them up, and take
