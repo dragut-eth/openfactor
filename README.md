@@ -2,9 +2,6 @@
 
 A deliberately focused authenticator for iPhone and Apple Watch.
 
-**[openfactor.dev](https://openfactor.dev)** is the short version, with screenshots. This file is
-the long one.
-
 OpenFactor stores verification codes without an OpenFactor account, server, browser extension,
 or analytics service. It keeps the authenticator physically separate from the computer asking
 for the code, while making it straightforward to import your accounts, back them up, and take
@@ -244,8 +241,8 @@ it.
 - [docs/MASVS.md](docs/MASVS.md), a self-assessment against OWASP MASVS v2.1.0, published whole,
   including the two partials, the one fail, and what is deliberately out of scope
 - [CONTRIBUTING.md](CONTRIBUTING.md), how changes get reviewed
-- [site/README.md](site/README.md), the pages at [openfactor.dev](https://openfactor.dev) and the
-  rule they are written under
+- [site/README.md](site/README.md), the pages at openfactor.dev and the rule they are written
+  under
 
 **The website derives from this repository and never the reverse.** Every claim on
 `openfactor.dev` was copied out of this file and `docs/APP_STORE.md` rather than written fresh,
