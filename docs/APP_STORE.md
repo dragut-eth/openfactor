@@ -280,18 +280,25 @@ that presents itself as a beta, a trial or a demo, and the word would have been 
 metadata rather than on anything the app does. Removing it cost nothing: "beta" was a statement
 about a release phase, which stops being true the day this ships.
 
-## What's New, for 1.0
+## What's New: there is no such field for a first release
 
-```
-First release.
+**App Store Connect does not offer release notes on a first submission**, and there was nowhere to
+put the block this document carried until 2026-08-23. It had been drafted without anybody looking
+at the form.
 
-Two factor codes on iPhone and Apple Watch, with accounts encrypted before they are stored.
-Import from other authenticators, encrypted backups you can take elsewhere, and an app lock.
-```
+**It was raised and half acted on.** The same message that said "remove the mention of beta,
+App Store does not accept a beta application" also said release notes are not available on a first
+release. The beta half was fixed that day. This half was not, and survived until it was noticed
+again at submission.
 
-Release notes for later versions belong in a changelog rather than being invented at submission
-time. There is no `CHANGELOG.md` yet; PR 18 says there should be, and it should be written from
-the commit history rather than from memory.
+**The drafted text is deleted rather than saved for the first update.** It read "First release. Two
+factor codes on iPhone and Apple Watch, with accounts encrypted before they are stored", which
+describes the app rather than a change. Release notes for an update say what changed, so none of it
+would have survived anyway.
+
+**Release notes for later versions belong in a changelog** rather than being invented at submission
+time. There is no `CHANGELOG.md` yet; PR 18 says there should be, and it should be written from the
+commit history rather than from memory.
 
 ## App Privacy, the nutrition label
 
