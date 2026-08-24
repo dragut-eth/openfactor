@@ -218,9 +218,9 @@ legitimately mirroring the app still shows something coherent rather than readin
 That means the list of services an owner holds accounts with is still visible while captured, and
 unlike a code that does not expire. Accepted knowingly rather than overlooked.
 
-**Screenshots cannot be prevented on iOS**, by any app, and OpenFactor does not pretend
-otherwise. There is no public API for it. The one known technique, hosting content inside a
-secure text field's internal layer, was considered and rejected: it depends on the undocumented
+**Screenshots cannot be prevented on iOS through any supported interface**, and OpenFactor does
+not pretend otherwise. They can be prevented by one known technique, hosting content inside a
+secure text field's internal layer. It was considered and rejected: it depends on the undocumented
 internals of a system control, and when Apple changes those it fails silently, keeps claiming
 protection, and cannot be verified by any test this project can run. A security property that can
 quietly stop working is worse than one honestly absent.

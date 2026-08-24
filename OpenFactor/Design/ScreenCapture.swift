@@ -12,8 +12,9 @@ import UIKit
 /// exactly the shape of problem an automatic defense suits.
 ///
 /// It is **not** a defense against somebody who wants to capture the screen. Screenshots cannot
-/// be blocked on iOS at all, and a camera pointed at the phone defeats everything here. See
-/// `ScreenshotWarning` for the one useful thing that can be done about screenshots.
+/// be blocked through any supported interface, and a camera pointed at the phone defeats
+/// everything here. See `ScreenshotWarning` for the one useful thing that can be done about
+/// screenshots.
 ///
 /// ## What it hides, and why the two are different
 ///
