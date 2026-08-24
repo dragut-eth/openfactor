@@ -252,8 +252,8 @@ changes here or in `SECURITY.md` first, and the other two follow.
 ## Inspiration
 
 OpenFactor is inspired by [Step Two](https://steptwo.app/), whose focused, Apple-native design I
-used every day and still admire. It is an independent implementation built from public standards. Step
-Two's creator has not participated in or endorsed this project, and no Step Two source code,
+used every day and still admire. It is an independent implementation built from public standards.
+Step Two's creator has not participated in or endorsed this project, and no Step Two source code,
 assets, or artwork are used here.
 
 I built OpenFactor because if I am going to depend on something as consequential as an
