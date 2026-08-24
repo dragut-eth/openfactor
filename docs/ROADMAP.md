@@ -716,8 +716,9 @@ so "no accounts yet" keeps its old meaning.
 - Done: pasteboard, screenshot, and background snapshot behavior audited. The pasteboard
   audit is written up in `SECURITY.md` and changed one decision, codes may now travel through
   Universal Clipboard while passphrases may not, with all three behaviours measured on hardware
-  against a positive control. Screenshots cannot be prevented on iOS and are not detected here,
-  deliberately: detection buys nothing actionable once the image exists. Snapshots were settled
+  against a positive control. Screenshots cannot be prevented on iOS through any supported
+  interface, and are not detected on the code screens, deliberately: detection buys nothing
+  actionable there once the image exists. Snapshots were settled
   in PR 15b, including the limitation `docs/APP_LOCK.md` records. That deferred decision is now closed, and the
   reasoning changed while making it: the exposure is not only the code but the account list,
   which does not expire. Capture blanking is built for codes and passphrases, screenshots on the
