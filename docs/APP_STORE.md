@@ -146,16 +146,21 @@ authenticator`, `Offline two factor codes`.
 so repeating it wastes the budget.
 
 ```
-totp,otp,authenticator,two-factor,hotp,mfa,two-step,verification,offline,watch,backup,import,export
+2fa,totp,otp,authenticator,two-factor,mfa,two-step,verification,offline,open source,watch,backup
 ```
 
-That is 99 characters.
+That is 96 characters, entered in App Store Connect on 2026-08-29.
 
-**`2fa` and `open source` were removed from this list when they moved into the subtitle.** Apple
-indexes name, subtitle and keywords as one pool and weights them in that order, so a term in both
-the subtitle and the keywords is not indexed twice, it just spends 16 characters of the smaller
-budget saying something the higher weighted field already says. Removing them freed room for
-`mfa`, `two-step` and `verification`.
+**`2fa` and `open source` are back in this list, and the reason is a lesson.** They were removed
+when they moved into the subtitle, on the correct reasoning that Apple indexes name, subtitle and
+keywords as one pool, weighted in that order, so a term in both spends budget twice. Then the
+subtitle was decided against and left empty, and nobody put the terms back. For six days the two
+most differentiating words this app can claim were in neither field, and this document said the
+subtitle carried them. A field freed "because another field covers it" has to be revisited when
+that other field changes.
+
+`hotp`, `import` and `export` made the room: `hotp` is searched by almost nobody, and `backup`
+covers what people typing `import` or `export` are looking for.
 
 `two-step` and `verification` are separate entries rather than one phrase on purpose, because
 Apple combines keywords across the list into phrases. Two entries match "two-step verification"
