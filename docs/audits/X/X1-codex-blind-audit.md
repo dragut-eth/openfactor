@@ -115,10 +115,23 @@ few hundred kilobytes encoded and decodes to roughly 256 MB.
 **Their Mac shrugged, which is why they could not classify it.** This project has a name for that
 reasoning: *it compiles here is not it compiles*. A watch and an older phone are not that Mac.
 
-**Open, deliberately, for the update after 1.0.** The fix is to read `PixelWidth` and `PixelHeight`
-from `CGImageSourceCopyPropertiesAtIndex` and refuse before decoding rather than decoding and
-hoping. It touches the import path, which is where this project's only reproduced crash lived, and
-it was not worth adding untested code there on the eve of a submission.
+**Fixed on 2026-08-29, in build 8.** `QRDecoder.payloads(in data:)` now reads `PixelWidth` and
+`PixelHeight` from `CGImageSourceCopyPropertiesAtIndex`, which answers from the header without
+allocating the bitmap it is deciding about, refuses anything past `ImportLimits.maximumImagePixels`,
+and then asks ImageIO for a thumbnail bounded at `workingImageMaxDimension` rather than decoding
+the source whole. The reporter's 8000x8000 image now decodes at 4096x4096.
+
+**It downsamples rather than refusing, which is a deliberate departure from the recommendation.**
+Refusing on dimensions alone has to reject a full frame from the phone in the user's hand, because
+an iPhone shoots 48 megapixels, and "that image is too large" is a poor answer to somebody
+photographing a QR code with the camera Apple sold them. The pixel ceiling stays as a backstop
+against the absurd; the downsample is what actually bounds the memory, at roughly 67 MB whatever
+arrives.
+
+**The bound sits in the decoder, not at a call site.** The share extension carries image bytes
+without decoding them, so every decode in the project arrives through that one function. Two tests
+cover it, and both go through `payloads(in: Data)` rather than the `CIImage` overload, which is
+test-only and carries no bound.
 
 ## What the audit verified, and what it could not
 

@@ -18,6 +18,22 @@ private func qrImage(encoding text: String) -> CIImage {
     return filter.outputImage!.transformed(by: CGAffineTransform(scaleX: 10, y: 10))
 }
 
+/// The same QR code as bytes on disk would be, at a chosen size.
+///
+/// **Goes through `payloads(in: Data)` deliberately.** That is the only overload the app and the
+/// share extension ever reach, and the only one carrying the pixel bound. A test that hands over a
+/// ready made `CIImage` skips the code that decides how much of it to decode.
+private func qrPNG(encoding text: String, longEdge: CGFloat) -> Data {
+    let code = qrImage(encoding: text)
+    let scale = longEdge / max(code.extent.width, code.extent.height)
+    let scaled = code.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+
+    return CIContext().pngRepresentation(
+        of: scaled,
+        format: .RGBA8,
+        colorSpace: CGColorSpaceCreateDeviceRGB())!
+}
+
 @Suite("QR decoding")
 struct QRDecoderTests {
 
@@ -53,6 +69,22 @@ struct QRDecoderTests {
     @Test("A QR code holding anything else still decodes")
     func decodesNonOTPPayloads() {
         #expect(QRDecoder.payloads(in: qrImage(encoding: "https://example.com")) == ["https://example.com"])
+    }
+
+    /// **The bound must not cost a legitimate import.** An iPhone shoots 48 megapixels, so the
+    /// downsample has to keep a QR readable at sizes well past anything a screenshot produces.
+    /// This is the case a straight dimension refusal would have broken.
+    @Test("A QR code in a large image still decodes after the bound downsamples it")
+    func decodesThroughTheDownsample() {
+        let uri = "otpauth://totp/GitHub:octocat?secret=JBSWY3DPEHPK3PXP&issuer=GitHub"
+        #expect(QRDecoder.payloads(in: qrPNG(encoding: uri, longEdge: 5000)) == [uri])
+    }
+
+    /// The ordinary case, through the bounded overload rather than around it.
+    @Test("A QR code in a screenshot sized image decodes from bytes")
+    func decodesFromBytes() {
+        let uri = "otpauth://totp/AWS:root?secret=JBSWY3DPEHPK3PXP&issuer=AWS"
+        #expect(QRDecoder.payloads(in: qrPNG(encoding: uri, longEdge: 1170)) == [uri])
     }
 }
 

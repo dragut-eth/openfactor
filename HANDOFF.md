@@ -5,8 +5,9 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-08-22, on TestFlight as `dev.openfactor.app`, **1.0 (7)**, which is the
-submission candidate. **Build 6 must not be submitted**: it photographed live codes into the app
+**Last updated:** 2026-08-29, on TestFlight as `dev.openfactor.app`, **1.0 (8)**, which is the
+submission candidate and the first build carrying the OF-03 fix. Build 7 is superseded.
+**Build 6 must not be submitted**: it photographed live codes into the app
 switcher after every Face ID unlock, which was found on hardware during a day of real-key testing
 and fixed the same day. Build 7 is the first build carrying that fix, the corrected erase warning,
 and the advice dialog no longer offering a lock that is already on. The previous entry read 1.0 (6)
@@ -14,6 +15,26 @@ from commit `47e1682` with the first provenance record the script wrote by itsel
 ([docs/releases/1.0-6.md](docs/releases/1.0-6.md)). The iPhone 15 Pro carries a development build
 of PR 15c installed by `devicectl`. **Everything is on `main` and pushed**, which it had not been
 for 134 commits: `a4-fixes` was fast forwarded into `main` and the branch deleted.
+
+**OF-03 is closed, and it is the only code change in build 8.** An imported image was bounded in
+encoded bytes and never in pixels, so a mostly flat 8000x8000 PNG was a few hundred kilobytes on
+disk and roughly 256 MB decoded. `QRDecoder.payloads(in data:)` now reads the dimensions from the
+image header before anything is decoded, refuses past `ImportLimits.maximumImagePixels`, and
+downsamples the rest to `workingImageMaxDimension`. It downsamples rather than refusing because a
+dimension refusal has to reject a 48 megapixel frame from the phone in the user's hand. Full detail
+and the reasoning are in [docs/audits/X/X1-codex-blind-audit.md](docs/audits/X/X1-codex-blind-audit.md).
+
+**Two lessons from building it, neither about the fix.** `xcodebuild` piped into `tail` reports
+`tail`'s exit status, so a failed build looked like a clean one, which is the same masking that
+took down the ship script in August. And this repository lives inside iCloud-synced Documents: the
+file provider stamps `com.apple.FinderInfo` onto freshly written bundles, codesign refuses to sign
+anything carrying it, and clearing the attribute is a race you sometimes lose. Building with
+derived data outside the synced tree is the fix. `ship-testflight.sh` is unaffected, since it
+archives into `mktemp -d`.
+
+**The App Store screenshot set changed on 2026-08-29** and is now six iPhone frames and two watch
+frames, led by an account list in which every card is the default blue. `docs/APP_STORE.md` carries
+the detail. The previous set is kept in full, under its own filenames, so it can be restored.
 
 **That said "deleted" and meant "deleted on this machine".** `a4-fixes` and four `pr-*` branches
 stayed on the remote, all fully merged and zero commits ahead, and GitHub will happily serve a

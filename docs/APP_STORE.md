@@ -64,8 +64,11 @@ document, extended to the surface that did not exist when that rule was written.
 
 ### Screenshots
 
-Seven iPhone screenshots and **two Apple Watch screenshots are uploaded to App Store Connect**,
-confirmed in the listing on 2026-08-22. The stale claim that the watch shots gated a submission
+Six iPhone screenshots and **two Apple Watch screenshots are uploaded to App Store Connect**,
+confirmed in the listing on 2026-08-29. It was seven until the duplicate account list was dropped,
+so that the first two frames are different screens rather than the same one twice.
+
+The stale claim that the watch shots gated a submission
 survived in this document and in `HANDOFF.md` for three days after it stopped being true, and then
 **this section said "taken" where the iPhone line said "uploaded"**, which left the question open
 for another four days. Two verbs in one sentence, meaning two different things, and nobody could
@@ -74,17 +77,13 @@ tell from the outside which one was accurate.
 **Three of them are also on the site now**, in Apple's iPhone 17 and Watch Ultra 3 bezels. They
 are the same images, so the shop window and the landing page show the same app.
 
-**The site and the store lead with different account list screenshots, and that is settled rather
-than drift.** The site uses the light capture; **the store keeps the dark one, decided 2026-08-22.**
+**The site and the store lead with different account list screenshots, and that is deliberate
+rather than drift.** The site uses the capture with the full palette. **The store leads with a
+capture in which every card is the default blue, decided 2026-08-29.** The dark capture that used
+to open the store set has been withdrawn from it.
 
-The case for changing it was that the dark capture is scrolled mid-card, so its top card shows a
-six digit code with the label behind the translucent nav bar, and the store's first frame is the
-one most people ever see.
-
-**The case for keeping it won, and it rests on something a repository cannot check.** The dark
-frame matches the app icon, and at full resolution on a real device it shows the material effect
-that a downscaled comparison render flattens away. That was judged on the hardware the screenshot
-came from. **Recorded here so it is not re-raised as an inconsistency**: the two differ on purpose.
+**Recorded here so it is not re-raised as an inconsistency**: the two surfaces differ on purpose,
+and the store's frame is the one that changed.
 
 The App Store frames are the one place people will look at this app before installing it, and the
 vault setup screen is a strange first impression: the list with real codes is what to show.
@@ -99,7 +98,7 @@ successful provisioning handshake. That is not flakiness and no amount of retryi
 | Field | Value | Note |
 | --- | --- | --- |
 | Name | `OpenFactor` | 30 character limit, well under |
-| Subtitle | `Open source 2FA, no account` | 30 character limit, 27 used. See below |
+| Subtitle | none | Left empty on purpose. The field allows 30 characters |
 | Primary category | Utilities | Where authenticators sit |
 | Secondary category | Productivity | Optional, and low value; leaving it empty is defensible |
 | Age rating | 4+ | No objectionable content, no web views, no user generated content |

@@ -35,6 +35,29 @@ public enum ImportLimits {
     /// file format, and changing it breaks no promise to anybody.
     public static let policyBytes = 8 * 1024 * 1024
 
+    /// The most pixels this app will decode out of an imported image.
+    ///
+    /// **Encoded bytes do not predict decoded bytes, and only the first was ever bounded.** A
+    /// blind audit put a mostly flat 8000x8000 PNG through the import path: a few hundred
+    /// kilobytes on disk, comfortably inside `policyBytes`, and roughly 256 MB once decoded. The
+    /// reviewer's Mac shrugged, which is why they filed it as unverified rather than confirmed.
+    /// A watch and an older phone are not that Mac, and this project has a name for that
+    /// reasoning: it compiles here is not it compiles.
+    ///
+    /// **Generous on purpose.** The bound has to clear the largest picture a person could
+    /// legitimately be holding, and an iPhone shoots 48 megapixels. Anything under this ceiling
+    /// is then downsampled rather than decoded whole, so the number is a backstop against the
+    /// absurd rather than the thing doing the real work. See `workingImageMaxDimension`.
+    public static let maximumImagePixels = 100_000_000
+
+    /// The longest edge an imported image is decoded at, whatever it measures on disk.
+    ///
+    /// **This is what actually bounds the memory**, and it does it without refusing anybody's
+    /// photograph. Decoding is capped near 67 MB at four bytes a pixel no matter what arrives,
+    /// while a QR occupying even a tenth of a full frame still lands in the hundreds of pixels,
+    /// which is far more than a detector needs.
+    public static let workingImageMaxDimension = 4096
+
     /// The largest file worth copying into memory at all, whatever it turns out to be.
     ///
     /// The frozen ceiling, because an OpenFactor archive is the biggest thing this app accepts and
