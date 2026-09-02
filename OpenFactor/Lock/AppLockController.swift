@@ -237,8 +237,18 @@ enum AppLockAvailability {
     ///
     /// **On a device with no passcode there is nothing to verify, and this returns true.**
     /// Refusing would deny someone a backup, or the ability to wipe a phone they are
-    /// selling, on a device that is already wide open to anyone holding it. The caller
-    /// warns instead. Decided with Xavier during PR 16 planning.
+    /// selling, on a device that is already wide open to anyone holding it. Decided with
+    /// Xavier during PR 16 planning.
+    ///
+    /// **This used to end "The caller warns instead", and no caller warned.** Neither the
+    /// export flow nor the erase screen branches on this, mentions it, or records that
+    /// identity was skipped, so the sentence vouched for a mitigation that was never built
+    /// and had done so since PR 16. Audit X2 found it as OF-A4. The claim is removed rather
+    /// than the behaviour changed, because whether to warn on export, and whether the locked
+    /// screen's "Start over" should require a passcode outright given that it erases every
+    /// account from every device on the Apple Account, is an open decision recorded in
+    /// `docs/audits/X/X2-fable-blind-audit.md`. `docs/MASVS.md` was accurate throughout: it
+    /// downgrades MASVS-AUTH-3 to partial and never claimed a warning existed.
     @MainActor
     static func authenticate(reason: String) async -> Bool {
         let context = LAContext()

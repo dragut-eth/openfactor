@@ -154,6 +154,23 @@ built, and the comment has been vouching for it since.
 **The decision was real and only half of it was implemented.** That is the finding, and it is the
 repository testifying against itself.
 
+**What was changed: the false claim, and nothing else.** The comment no longer says a caller warns,
+and it records that the behaviour is unchanged and why the decision is still open. Removing a claim
+is not the same as fixing what it claimed, and doing only the first is deliberate here: the second
+is a policy question below.
+
+**Where the report is wrong, and it matters because it points at the wrong document.** It says a
+reader "of the comment, or of MASVS.md" believes the person is told. `docs/MASVS.md` never claimed
+that. It downgrades MASVS-AUTH-3 to partial precisely because a sensitive operation carries no
+additional authentication on such a device, and it says so in those words. The false claim lived in
+the source comment alone, and the document a reviewer would check was right all along.
+
+**One real defect was found while checking that, which the report did not see.** The MASVS row
+cited `OpenFactor/Lock/AppLockController.swift:141` for the reasoning. Line 141 is now a debug
+`defer` block; the reasoning moved to line 238 when the App Lock fix landed in August. A line number
+in a document is a claim with a short life, and this was the only one in `docs/`. It now cites
+`AppLockAvailability.authenticate` by name, which cannot drift.
+
 **Where this project disagrees with the recommendation.** The report frames the whole thing as one
 choice: build the warning, or delete the sentence and let `MASVS.md` carry the truth. That is right
 for **export**, where the original reasoning holds: refusing would deny somebody a backup, or the
