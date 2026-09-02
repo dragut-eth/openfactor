@@ -213,10 +213,27 @@ final class VaultGateModel {
 
         switch error {
         case .wrongPassphrase:
-            // Says only that it did not open. It cannot distinguish a wrong passphrase from
-            // an altered record, and guessing between them would put a wrong explanation in
-            // front of somebody at the worst possible moment.
-            failure = "That did not open your accounts. Check for a mistyped character."
+            // **Two situations reach here and they deserve different sentences.** This still
+            // cannot distinguish a wrong passphrase from an altered record, and still does not
+            // guess. What it uses is a fact it already has: whether this iPhone holds a vault
+            // key at all.
+            //
+            // No key is the ordinary case, a fresh install or a replacement phone, where a
+            // mistyped character genuinely is the likeliest cause and saying so helps.
+            //
+            // A key present is not that. This iPhone opened these accounts before, and now
+            // nothing it can see opens and the passphrase does not unwrap anything either, so
+            // what changed is the stored records rather than the typing. Audit X2 found the old
+            // sentence pointing the other way, and the only exit from this screen is "Start
+            // over", which erases every account from every device on the Apple Account. Telling
+            // somebody with a correct passphrase to check their typing, on the one screen whose
+            // way out is destruction, is how the app's own advice becomes the mechanism.
+            failure =
+                vault.state() == .open
+                ? "That did not open your accounts. This iPhone already holds a key, so this is "
+                    + "probably not a mistyped character: the stored records changed. If "
+                    + "another device still shows your accounts, look there before starting over."
+                : "That did not open your accounts. Check for a mistyped character."
         case .nothingToUnlock:
             failure = "There is nothing on this iPhone to unlock."
             stage = .introducing

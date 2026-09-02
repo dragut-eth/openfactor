@@ -85,8 +85,15 @@ enum PreferenceKey {
     /// everything in this app is opted into, not imposed.
     static let appLockEnabled = "appLockEnabled"
 
-    /// How long the app can be away before returning locks it, in seconds. Zero means any
-    /// time away at all.
+    /// How long the app can be away before returning locks it, in seconds.
+    ///
+    /// **Zero means any time the app was backgrounded, which is not the same as any time away.**
+    /// Control Centre, Notification Centre, the switcher without picking another app, a call
+    /// banner and the Face ID sheet all leave the scene inactive without ever backgrounding it,
+    /// and no lock decision is made on the way back from those however long they lasted. The
+    /// exposure is bounded rather than open: the cover hides the interface throughout, and the
+    /// device's own auto-lock backgrounds the app, so a phone that locks itself closes the gap.
+    /// `docs/APP_LOCK.md` states the same thing. Audit X2, OF-A6.
     static let appLockGraceSeconds = "appLockGraceSeconds"
 
     /// Whether the "Protect your codes" dialog has been shown. It appears once, when the

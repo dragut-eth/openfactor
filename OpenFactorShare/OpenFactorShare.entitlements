@@ -6,9 +6,14 @@
 	  One entitlement, and the absence of the other one is the security property.
 
 	  **There is deliberately no keychain-access-groups here.** The same rule the watch
-	  complication follows: the extension cannot read an account and cannot write one, and that
-	  is enforced by the system rather than promised in a comment. Anyone auditing this should
-	  check that this file still has exactly one key.
+	  complication follows: the extension cannot read or write the group the accounts live in,
+	  and that is enforced by the system rather than promised in a comment. Anyone auditing this
+	  should check that this file still has exactly one key.
+
+	  This does not mean the extension cannot use the Keychain at all. It still has the default
+	  group derived from its bundle identifier, and on iOS the app group above doubles as a
+	  Keychain access group. The app writes to neither, so nothing is exposed. See VERIFYING.md,
+	  which states this accurately, and audit X2, OF-A7.
 	-->
 	<key>com.apple.security.application-groups</key>
 	<array>

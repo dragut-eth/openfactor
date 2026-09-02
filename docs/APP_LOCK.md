@@ -41,6 +41,15 @@ Stated by Xavier as the ideal, and adopted as requirements:
 - **R3, resume exactly.** Leave the app at any point, come back past the grace period,
   unlock, and continue mid-sentence: same screen, same sheets, same navigation, same
   half-typed text. Like a native Apple app.
+  **"Leave" means backgrounded, and the grace period counts only that.** An excursion that
+  leaves the scene merely inactive, Control Centre, Notification Centre, the switcher without
+  choosing another app, a call banner, the Face ID sheet, makes no lock decision on return no
+  matter how long it lasted, so "Immediately" is immediate about backgrounding rather than about
+  time away. The cover hides the interface for the whole excursion, and the device's own
+  auto-lock backgrounds the app, which closes the gap on any phone that locks itself. Arming on
+  resignation as well was considered and not done: the lock's event ordering is the code where
+  three separately reasoned fixes were each wrong before a trace settled it, and the change
+  would add a Face ID prompt after every Face ID sheet. Audit X2, OF-A6.
 - **R4, clean transitions.** No frame of the screen that was left, no black flash, no
   visible swap. The sequence is: switcher, lock screen already in place, Face ID, the
   interface exactly as it was.

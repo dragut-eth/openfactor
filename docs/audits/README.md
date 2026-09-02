@@ -43,6 +43,7 @@ repository review can miss a regression precisely because it is not diffing.
 | | What it found |
 | --- | --- |
 | [X1](X/X1-codex-blind-audit.md) | Blind, whole repository, 2026-08-22. **No critical or high.** Two documentation defects, both the same failure: a claim that was true when written and stopped being true. One resource bound the report itself filed as unverified and which turned out to be its most actionable finding. **Where this project disagreed is recorded inside the entry**, including one recommended fix that was rejected because it would have been worse than the flaw |
+| [X2](X/X2-fable-blind-audit.md) | Blind, whole repository, 2026-08-29, by Claude Fable 5.1. **No critical or high**, the second cold pass to say so, and the second with no false positives: all eight findings confirmed at source. **Seven of the eight are one defect**, the code and the documents disagreeing in the direction that is worse for the user, including a comment promising a warning nobody built. Its best finding composes two separately accepted risks into an outcome neither document described: a substituted wrapped record makes the app's own recovery advice the deletion mechanism. **Where this project disagreed is recorded inside the entry**, as is the reason this reviewer is a weaker independence claim than X1 |
 
 **Each entry records the prompt verbatim**, so it can be re-run against a later commit, and so
 anybody can do the same thing to this project without asking.

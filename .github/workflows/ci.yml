@@ -455,7 +455,7 @@ jobs:
       # Structurally, not by grep. The first version of this check counted occurrences of
       # the string in the file and passed while lying, because the comment in that file
       # explains why the key is absent and therefore contains it.
-      - name: The share extension cannot reach the Keychain
+      - name: The share extension has no Keychain access group
         run: |
           set -e
           # **plistlib rather than plutil, because this job runs on Linux**, and the same

@@ -186,7 +186,12 @@ what carries the metadata now, so of course it is returned. Two reviewers found 
 round, in this page and in the source comment that repeated it. Sealing everything as one blob would end that, because
 drawing a list would decrypt every secret into memory to render a screen that needs none of
 them. Splitting the seal preserves it: **listing decrypts the metadata half only**, and the
-secret's plaintext appears when a code is generated and at no other time.
+secret's plaintext appears when a code is generated, and in the three places that need every
+secret at once: export, which writes them all to an archive; the passphrase change, which rewraps
+them; and **import preview, which compares the incoming accounts against the stored ones to say
+what would be added and what would be replaced**. The last of those runs before anybody has
+confirmed an import, on any file chosen or transfer code scanned. It is named here because this
+sentence used to say "at no other time", which was false, and audit X2 found it as OF-A5.
 
 AAD, which gives the halves domain separation so one cannot be substituted for the other:
 
@@ -250,8 +255,17 @@ Salt, iterations and wrapped key are **one record**. iCloud Keychain delivers on
 time and took half an hour for seven here; two records mean a device can hold one and not the
 other, and a correct passphrase then fails indistinguishably from a wrong one.
 
-**The iteration count is read from the record** and clamped to 100,000 to 10,000,000, the range
-the archive enforces. **A fresh salt and nonce on every rewrap.**
+**The iteration count is read from the record** and clamped to 100,000 to 2,000,000.
+**A fresh salt and nonce on every rewrap.**
+
+**That ceiling is deliberately lower than the archive's**, and it used to be the archive's number
+by copying rather than by reasoning. An archive is an interchange format whose bounds
+`BACKUP_FORMAT.md` freezes for version 1; this record is written only by this app, never leaves
+the Apple Account, and has never carried anything but 600,000. Since `unlock` tries every
+candidate record it can see, a wide ceiling let anything able to write this Keychain group plant
+a record demanding ten million rounds per attempt, on the recovery path, where the delay reads as
+a mistyped passphrase. The remaining headroom is there so a future build raising the write count
+does not produce records an older build refuses.
 
 ### Deriving the wrapping key
 

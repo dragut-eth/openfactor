@@ -34,10 +34,20 @@ public enum WrappedVaultKey {
     /// What a writer uses. The archive's number, and the same reasoning.
     public static let writeIterations = 600_000
 
-    /// The range a reader accepts, frozen exactly as `docs/BACKUP_FORMAT.md` freezes it. The
-    /// ceiling is the one that matters: an enormous count is a free denial of service on the
-    /// recovery path, which is where a worried person already is.
-    static let iterationRange = 100_000...10_000_000
+    /// The range a reader accepts. **Deliberately narrower than the archive's**, and the
+    /// difference is the point: an archive is an interchange format whose bounds
+    /// `docs/BACKUP_FORMAT.md` freezes for version 1, while this record is written only by this
+    /// app, never leaves the Apple Account, and has never carried anything but
+    /// `writeIterations`.
+    ///
+    /// **The ceiling is a denial of service bound, and it was set by copying a number that did
+    /// not apply.** `unlock` tries every candidate record it can see, so a record planted by
+    /// anything that can write this Keychain group could ask for ten million rounds each, on the
+    /// recovery path, where a worried person is already waiting and the failure reads as a
+    /// mistyped passphrase. Nothing legitimate needs more than a few times the write count, and
+    /// the headroom that is left exists so a future build raising `writeIterations` does not
+    /// produce records this build refuses. Found by audit X2 as OF-A2.
+    static let iterationRange = 100_000...2_000_000
 
     public enum WrapError: Error, Equatable {
         case notAWrappedKey

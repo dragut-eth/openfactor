@@ -131,16 +131,39 @@ struct WrappedVaultKeyTests {
         }
     }
 
-    @Test("An iteration count outside the frozen range is refused before any derivation")
+    @Test("An iteration count outside the accepted range is refused before any derivation")
     func iterationsAreClamped() throws {
         var record = try wrapped()
 
-        for bad in [UInt32(1), UInt32(99_999), UInt32(10_000_001), UInt32.max] {
+        for bad in [UInt32(1), UInt32(99_999), UInt32(2_000_001), UInt32.max] {
             let bytes = withUnsafeBytes(of: bad.bigEndian, Array.init)
             record.replaceSubrange(36..<40, with: bytes)
             #expect(throws: WrappedVaultKey.WrapError.iterationsOutOfRange(Int(bad))) {
                 try WrappedVaultKey.unwrap(record, passphrase: self.passphrase)
             }
+        }
+    }
+
+    /// **The ceiling is a denial of service bound, not a format bound**, which is why it is
+    /// lower here than in the archive and why it is worth a test of its own.
+    ///
+    /// `unlock` tries every candidate record it can see, so anything able to write this Keychain
+    /// group could plant a record demanding a huge count and make every recovery attempt grind,
+    /// on the one screen where the delay reads as a mistyped passphrase. The count this app
+    /// writes is 600,000 and always has been; the headroom above it exists only so a future
+    /// build raising that number does not produce records this one refuses. Audit X2, OF-A2.
+    @Test("The vault record's ceiling is far below the archive's, which stays frozen")
+    func vaultCeilingIsNarrowerThanTheArchives() throws {
+        #expect(WrappedVaultKey.iterationRange.upperBound == 2_000_000)
+        #expect(BackupArchive.iterationRange.upperBound == 10_000_000)
+        #expect(WrappedVaultKey.iterationRange.contains(WrappedVaultKey.writeIterations))
+
+        // The count the archive still accepts and this record no longer does.
+        var record = try wrapped()
+        record.replaceSubrange(
+            36..<40, with: withUnsafeBytes(of: UInt32(10_000_000).bigEndian, Array.init))
+        #expect(throws: WrappedVaultKey.WrapError.iterationsOutOfRange(10_000_000)) {
+            try WrappedVaultKey.unwrap(record, passphrase: self.passphrase)
         }
     }
 

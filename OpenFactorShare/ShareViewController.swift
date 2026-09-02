@@ -15,9 +15,16 @@ import UniformTypeIdentifiers
 ///
 /// ## What this is not allowed to do, which is most of the design
 ///
-/// **No Keychain entitlement.** The same rule the watch complication follows. This process cannot
-/// read an account and cannot write one, enforced by the system rather than promised here.
+/// **No Keychain access group.** The same rule the watch complication follows. This process
+/// cannot read or write anything in `<TEAMID>.dev.openfactor.shared`, where the accounts live,
+/// and that is enforced by the system rather than promised here.
 /// `OpenFactorShare.entitlements` has exactly one key, and it should stay that way.
+///
+/// **Not "cannot reach the Keychain", which is what this said and was too strong.** An extension
+/// with no `keychain-access-groups` still gets the default group derived from its own bundle
+/// identifier, and on iOS the declared app group works as a Keychain access group too. Neither
+/// is anywhere the app writes, so nothing is exposed; only the sentence was wrong.
+/// `VERIFYING.md` has carried the accurate version all along. Audit X2, OF-A7.
 ///
 /// **It does not parse.** It does not decode the QR, does not read protobuf, does not touch
 /// `otpauth-migration`. All of that stays in the app, in one place, already fuzzed. A second
