@@ -177,6 +177,7 @@ failed and does not retry it, and the hook fires on the transition only.
 **Validated on the same two phones.** The card now disappears at the boundary on its own, without
 the dashes appearing first.
 
-**What is still not done:** pull to refresh. It is a genuine feature rather than a fix and belongs
-to a decision of its own. With these two reloads in place the only case it covers is a change
-arriving while somebody sits looking at the screen between boundaries.
+**Pull to refresh was considered and declined.** With these two reloads in place, the only case it
+would cover is a change arriving while somebody sits looking at the screen between two code
+boundaries, and a gesture whose purpose is to fix a state that fixes itself within thirty seconds
+is a control that teaches people something is wrong when nothing is.
