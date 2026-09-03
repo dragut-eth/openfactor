@@ -51,6 +51,9 @@ public struct VaultKeyStore: Sendable {
         case noContainer
         case randomnessUnavailable
         case damaged
+        /// The file is there and could not be read this time. **Distinct from absent on
+        /// purpose**, and the distinction only matters on the watch. See `load`.
+        case unreadable
         /// The directory a key was about to be written into is not excluded from backup, and
         /// saying so could not be confirmed. Nothing is written: a key that cannot be kept out
         /// of a backup is not written at all rather than written and hoped about.
@@ -70,16 +73,20 @@ public struct VaultKeyStore: Sendable {
         return FileManager.default.fileExists(atPath: url.path)
     }
 
-    /// The key, or `nil` when this device has not been given one, **or holds one it cannot
-    /// read**.
+    /// The key, or `nil` when this device has not been given one.
     ///
     /// **Absent is not damaged.** A device that has ciphertext and no key is the ordinary state
     /// of a fresh install or a new phone, and the interface must offer the passphrase rather than
-    /// report a fault. A file that exists and cannot be opened or read is folded into the same
-    /// `nil` deliberately: the gate then reads `locked` when a wrapped record is present, and the
-    /// passphrase re-derives the same key and overwrites the unreadable file, so the state heals
-    /// on the path the interface offers anyway. A file that is the wrong size, or is not a
-    /// regular file at all, is a fault and throws.
+    /// report a fault. A file that is the wrong size, or is not a regular file at all, is a fault
+    /// and throws `damaged`.
+    ///
+    /// **A file that is there and cannot be read this time throws `unreadable`**, and used to be
+    /// folded into the same `nil` as absent. On the phone the fold was harmless and the reasoning
+    /// still holds: the gate reads `locked` when a wrapped record is present, the passphrase
+    /// re-derives the same key and overwrites the file, and the state heals on the path the
+    /// interface offers anyway. Every phone caller reads through `try?` and still sees `nil`, so
+    /// none of them changed. The watch is the one that could not afford the fold; `load`'s
+    /// `unreadable` branch says why.
     public func load() throws -> SymmetricKey? {
         let url = try fileURL()
         // **The same primitive as every other read in this project**, which matters less here
@@ -99,9 +106,20 @@ public struct VaultKeyStore: Sendable {
         } catch .tooLarge, .notARegularFile {
             throw KeyStoreError.damaged
         } catch .unreadable {
-            // Exhaustive rather than a catch-all, so a future `ReadError` case has to be
-            // classified here on purpose instead of silently becoming "no key".
-            return nil
+            // **Told apart from absent, because on the watch they mean opposite things.** This
+            // used to return nil, folded in with "no key", which is harmless on the phone: the
+            // passphrase path re-derives and overwrites, so a transient failure costs one
+            // retry. On the watch a nil key makes `WatchVaultModel.refreshAndAsk` send a
+            // provisioning request, and the phone puts "Set up your Apple Watch?" over whatever
+            // is on screen. So a moment when the `.complete` class key is not yet available
+            // after a wrist raise, or an `EACCES` while the container is moving, became a
+            // request to release the vault key that nobody made. The key would go to the
+            // genuine watch, so nothing leaks: it is a consent prompt raised for a question the
+            // design never asked, on the one exchange the documents call load bearing.
+            //
+            // Audit X2 found it as OF-A8. Callers that use `try?` are unaffected and still see
+            // nil, which is what the phone wants.
+            throw KeyStoreError.unreadable
         }
 
         guard data.count == Self.keySize else { throw KeyStoreError.damaged }

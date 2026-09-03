@@ -117,6 +117,32 @@ struct VaultKeyStoreTests {
         #expect(throws: VaultKeyStore.KeyStoreError.damaged) { try store.load() }
     }
 
+    /// **Absent and unreadable used to be the same answer**, and the watch could not afford
+    /// that: a nil key makes it ask its phone to release the vault key, so a moment when the
+    /// file could not be read became a "Set up your Apple Watch?" prompt for a request nobody
+    /// made. Audit X2, OF-A8. Permissions are the reachable way to make a real file unreadable
+    /// in a test; the class key not being available yet is the case that actually happens.
+    @Test("A key that exists and cannot be read is told apart from no key at all")
+    func unreadableIsNotAbsent() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+
+        let key = try store.create()
+        #expect(try store.load() == key)
+
+        let file = dir.appendingPathComponent(VaultKeyStore.fileName)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: file.path)
+
+        #expect(throws: VaultKeyStore.KeyStoreError.unreadable) { try store.load() }
+
+        // And a caller that does not care still sees nil, which is what every phone path wants.
+        #expect(((try? store.load()) ?? nil) == nil)
+    }
+
     @Test("No container is an error rather than a crash")
     func missingContainerIsHandled() {
         let store = VaultKeyStore(directory: { nil })

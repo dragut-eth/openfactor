@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import OpenFactorCore
 import SwiftUI
@@ -79,7 +80,27 @@ final class WatchVaultModel: NSObject {
     /// raise the wrist again. The button stays for when nothing changed and somebody wants to
     /// poke it.
     func refreshAndAsk() {
-        if ((try? keys.load()) ?? nil) != nil {
+        // **An unreadable key is not a missing one, and only here does the difference matter.**
+        // Both used to arrive as nil, so a moment when the `.complete` class key was not yet
+        // available after a wrist raise looked exactly like a watch that had never been set up,
+        // and this method asked the phone to release the vault key. That put "Set up your Apple
+        // Watch?" over whatever the owner was doing, for a question nobody asked. Audit X2 found
+        // it as OF-A8.
+        //
+        // Returning without asking is the whole fix. This runs on every wrist raise and on a
+        // button, so "try again later" costs nothing and arrives on its own.
+        let loaded: SymmetricKey?
+        do {
+            loaded = try keys.load()
+        } catch VaultKeyStore.KeyStoreError.unreadable {
+            return
+        } catch {
+            // Anything else is the fault it always was, and reads as no key, which is what the
+            // provisioning flow is for.
+            loaded = nil
+        }
+
+        if loaded != nil {
             guard keyOpensNothing else {
                 flow.foundWorkingKey()
                 return

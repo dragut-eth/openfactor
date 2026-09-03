@@ -292,7 +292,7 @@ the extension can and cannot reach.
 
 ## OF-A8, informational: an unreadable vault key file becomes "no key"
 
-**Confirmed. Open.**
+**Confirmed. Addressed, with the hardware half still unmeasured.**
 
 `VaultKeyStore` folds `BoundedFile.ReadError.unreadable` into `nil`, exhaustively and on purpose,
 so a future error case has to be classified rather than silently becoming "no key". The fold is
@@ -306,10 +306,28 @@ the owner is asked to release the vault key. The key goes to the genuine watch, 
 leak. It is a consent prompt raised for a request the design did not intend, on the one exchange
 the documents call load bearing.
 
-**Open.** The fix the report proposes, distinct results for missing and unreadable with the watch
-treating unreadable as "try again later", is right and small. It touches the provisioning path,
-which is the one thing in this project that cannot be tested end to end in a simulator, so it wants
-a hardware pass rather than a quick edit.
+**What was changed.** `VaultKeyStore.load` now throws `unreadable` instead of returning `nil` for
+a file that is present and cannot be read, and `WatchVaultModel.refreshAndAsk` returns without
+asking when it sees that. Everything else is untouched.
+
+**No phone path changed, and that is the point rather than an accident.** Every caller on the
+phone reads through `try?` and still sees `nil`, so the fold the report describes remains in force
+where it was reasoned for: the gate reads `locked`, the passphrase re-derives the same key and
+overwrites the file, and the state heals on the path the interface offers anyway. The single call
+site that could not afford the fold is the one that turns `nil` into a request for the vault key.
+
+**Returning without asking is the whole remedy.** `refreshAndAsk` runs on every wrist raise and on
+a button, so "try again later" arrives by itself and costs the owner nothing. The alternative,
+surfacing the failure on the watch, would report a fault for something that is usually a moment.
+
+**A test covers the distinction**, using file permissions, because that is the reachable way to
+make a real file unreadable in a test. The case that actually happens is the `.complete` class key
+not being available for a moment after a wrist raise, which no test on any host can produce.
+
+**Still true, and still recorded: the end to end path cannot be exercised in a simulator.** What is
+covered here is that `load` tells the two apart and that phone callers are unaffected. That a
+genuine transient read failure on a watch no longer raises a prompt on the phone is reasoned, not
+measured, and it joins the provisioning items this project already lists as unproven on hardware.
 
 ## What the audit verified
 
