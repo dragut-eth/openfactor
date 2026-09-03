@@ -314,7 +314,7 @@ asking when it sees that. Everything else is untouched.
 phone reads through `try?` and still sees `nil`, so the fold the report describes remains in force
 where it was reasoned for: the gate reads `locked`, the passphrase re-derives the same key and
 overwrites the file, and the state heals on the path the interface offers anyway. The single call
-site that could not afford the fold is the one that turns `nil` into a request for the vault key.
+site the fold was wrong for is the one that turns `nil` into a request for the vault key.
 
 **Returning without asking is the whole remedy.** `refreshAndAsk` runs on every wrist raise and on
 a button, so "try again later" arrives by itself and costs the owner nothing. The alternative,
