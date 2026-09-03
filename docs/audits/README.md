@@ -75,6 +75,7 @@ one device in one install.
 | [E13](E/E13-neither-phone-was-stranded.md) | Neither device held a record with a split pair |
 | [E14](E/E14-the-system-lock-and-the-switcher.md) | **Yes**, iOS's per-app Face ID lock removes the app switcher exposure completely, from the first frame. The only probe here anybody can reproduce in two minutes |
 | [E15](E/E15-the-enclave-and-a-sibling.md) | **Yes**, a same team sibling can find and use another app's Secure Enclave key and read the plaintext. User presence only adds a prompt. This is why the Enclave wrap was declined |
+| [E16](E/E16-two-writers-and-what-a-list-shows.md) | **Two writing iPhones, at last.** Additions merge, the same record edited on both resolves last writer wins, and nothing anywhere says a conflict happened. Closes the gap A2 opened and A4, X1 and X2 all named. It also found what nobody was looking for: the account list is read when its view is created and at no other time, so App Lock is what makes a phone look like it syncs live. The watch already keys its load on the scene phase and the phone does not. Deletion reached a second phone in about a minute, against A2's fourteen |
 
 **E2 and E3 do not exist, and nothing in this repository says why.** They were never committed and
 never mentioned; the series jumps from E1, added alongside the vault design on 16 August, straight
