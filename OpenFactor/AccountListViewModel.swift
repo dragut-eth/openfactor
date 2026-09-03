@@ -151,6 +151,11 @@ final class AccountListViewModel {
     /// nothing is readable moves the gate to the passphrase screen.
     var onCodeFailure: (() -> Void)?
 
+    /// Set inside `refreshCode` and consumed at the end of `tick`, never acted on in between.
+    /// `refreshCode` runs inside `tick`'s loop over `rows` by index, and reloading `rows` from
+    /// there would invalidate every index the loop has yet to visit.
+    private var reloadAfterTick = false
+
     var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -220,6 +225,17 @@ final class AccountListViewModel {
                 refreshCode(at: index, date: date, counter: counter)
             }
         }
+
+        // **A record deleted on another device is noticed here, at the next code boundary.**
+        // Its row is still in `rows`, its code has just failed to generate because the item is
+        // gone from the Keychain, and without this it would sit as a card with a name and no
+        // code until the app was next backgrounded. E16 watched exactly that. Reloading finds
+        // the record absent and the row goes. A row that failed for any other reason is kept as
+        // failed by `load` and not retried, so this cannot loop.
+        if reloadAfterTick {
+            reloadAfterTick = false
+            load(at: date)
+        }
     }
 
     /// Reads one secret, generates one code, and keeps neither.
@@ -238,7 +254,10 @@ final class AccountListViewModel {
             rows[index].codeFailure = error.description
             // On the transition only. A row that failed last tick stays failed without asking
             // again, so a single permanently broken account cannot re-run the gate every period.
-            if wasGenerating { onCodeFailure?() }
+            if wasGenerating {
+                onCodeFailure?()
+                reloadAfterTick = true
+            }
         }
     }
 

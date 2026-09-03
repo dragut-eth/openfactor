@@ -156,6 +156,27 @@ looked at once before being accepted.
 That is the third sub-minute propagation of the evening and it is now the pattern rather than the
 outlier. A2's fourteen minutes stands as something that happened, not as a figure to plan around.
 
+## A second finding from validating the first
+
+The reload made a new state reachable and the maintainer found it within minutes. The sequence:
+add a record on the XS, swap apps on the 15 Pro so it appears, delete it on the XS, then do nothing
+on the 15 Pro. At the next 30 second boundary the card turned to `--- ---` and stayed that way
+until the app was next backgrounded.
+
+**The row was still in memory; the item was gone.** `tick` regenerates a code at each boundary by
+reading the secret, the read found nothing in the Keychain, and the row fell to its failure state.
+A code failure already fires a hook that re-checks the vault key, because the same symptom can mean
+the key is wrong, but a record deleted elsewhere is a benign cause of it and the gate finds nothing.
+
+**What was changed.** The failure transition now also asks for a reload, and `tick` performs it
+after its loop rather than inside it, since `refreshCode` runs within a loop over `rows` by index
+and reloading from there would invalidate every index not yet visited. The reload finds the record
+absent and the row goes. It cannot loop: `load` keeps a row that failed for any other reason as
+failed and does not retry it, and the hook fires on the transition only.
+
+**Validated on the same two phones.** The card now disappears at the boundary on its own, without
+the dashes appearing first.
+
 **What is still not done:** pull to refresh. It is a genuine feature rather than a fix and belongs
-to a decision of its own. With this reload in place the only case it covers is a change arriving
-while somebody sits looking at the screen.
+to a decision of its own. With these two reloads in place the only case it covers is a change
+arriving while somebody sits looking at the screen between boundaries.
