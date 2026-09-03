@@ -167,7 +167,7 @@ so that decision has to be revisited and recorded before any such screen ships. 
 
 ## OF-A4, low: no-passcode devices skip identity confirmation and the promised warning does not exist
 
-**Confirmed. Open, and the project departs from the recommendation.**
+**Confirmed. Addressed, and the project departs from the recommendation in both directions.**
 
 `AppLockAvailability.authenticate` returns `true` when no passcode is set. Its own comment says
 **"The caller warns instead. Decided with Xavier during PR 16 planning."** Neither caller warns.
@@ -194,17 +194,35 @@ cited `OpenFactor/Lock/AppLockController.swift:141` for the reasoning. Line 141 
 in a document is a claim with a short life, and this was the only one in `docs/`. It now cites
 `AppLockAvailability.authenticate` by name, which cannot drift.
 
-**Where this project disagrees with the recommendation.** The report frames the whole thing as one
-choice: build the warning, or delete the sentence and let `MASVS.md` carry the truth. That is right
-for **export**, where the original reasoning holds: refusing would deny somebody a backup, or the
-ability to wipe a phone they are selling, on a device already open to anyone holding it.
+**Where this project disagrees with the recommendation, and what was decided.** The report frames
+the whole thing as one choice: build the warning, or delete the sentence. It is two questions, and
+they got opposite answers.
 
-**It is not right for the locked screen's "Start over".** That action erases every account from
-every device on the Apple Account, it is reachable before unlocking, and on a passcode-less phone
-it currently runs with no identity check at all. The proportionate answer there is a gate rather
-than a sentence, and the screen's own footer already says the action is irreversible across
-devices. Splitting A4 into an export half and a Start-over half is a policy change to a decision
-made in PR 16, so it waits on an explicit call rather than being folded into a wording fix.
+**Export and the Settings erase keep the current behaviour, with no warning added.** The original
+reasoning holds and the decision was reaffirmed: refusing would deny somebody a backup, or the
+ability to wipe a phone they are selling, on a device already open to anyone holding it. No
+sentence was added either. Somebody running an iPhone with no passcode has been told what that
+means by the operating system, and this app's job is not to repeat it.
+
+**"Start over" on the unlock screen is now refused outright when no passcode is set.** The button
+is disabled and the footer says to set one. That reverses the PR 16 decision for this one action.
+
+**The distinction that decided it is worth keeping, because it is not "destructive actions get
+more gates".** On export, the identity check guards data the holder can already read: they are in
+front of an unlocked phone with the app open, and the prompt delays them rather than stopping them.
+On this screen the device has no key, so whoever is holding it cannot read a single account, and
+the check is the only thing preventing an action they otherwise cannot perform at all. It is also
+the one action in the app that reaches devices that are not in the room, since it removes the
+accounts from iCloud and therefore from the other iPhone and the watch.
+
+**The cost was accepted with its eyes open.** Somebody with no passcode who has genuinely lost
+their vault passphrase cannot reset the app from inside it, and must set a passcode first. That is
+a real imposition on a small number of people, and the remedy is thirty seconds in Settings.
+
+**This branch cannot be tested on a simulator**, which is a limitation worth recording rather than
+discovering twice: simulators always report that device authentication is available, so
+`canEvaluatePolicy` returns true and the refusal never renders. It was reviewed by forcing the flag
+false in a throwaway build, and reaching it honestly needs a physical iPhone with no passcode.
 
 ## OF-A5, informational: import preview decrypts every stored secret
 

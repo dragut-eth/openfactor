@@ -135,22 +135,53 @@ struct VaultUnlockView: View {
     /// flow is reachable from here, with its own Face ID and typed word intact.
     private var wayOut: some View {
         Section {
+            // **Refused outright when the device has no passcode**, which is a departure from
+            // how every other identity check in this app behaves, and audit X2's OF-A4 is where
+            // the distinction was drawn.
+            //
+            // Elsewhere, `AppLockAvailability.authenticate` returning true on a passcode-less
+            // device is right: exporting reveals secrets to somebody already holding an unlocked
+            // phone with the app open, so the prompt guards data they can read off the screen
+            // anyway, and refusing would deny a backup to somebody who is entitled to one.
+            //
+            // **Here the check prevents something rather than delaying it.** This screen appears
+            // only when the device has no key, so whoever is holding it cannot read a single
+            // account, and this button is the one action in the app that reaches devices that are
+            // not in the room: it removes every account from iCloud, and therefore from the other
+            // iPhone and the watch. Without a passcode the only barrier left is a typed word, and
+            // a stranger gains a capability they otherwise do not have at all.
+            //
+            // Disabled rather than hidden, for the reason the manual secret field records: a
+            // control that vanishes reads as a bug, and one that does nothing reads as a bug
+            // twice. The way out is in the person's own hands and takes half a minute.
             Button(role: .destructive) { isErasing = true } label: {
                 Text("Start over")
             }
-            .disabled(model.isWorking)
+            .disabled(model.isWorking || !AppLockAvailability.canAuthenticate)
         } header: {
             Text("Lost your passphrase?")
         } footer: {
-            Text(
-                """
-                Without the vault passphrase, this vault cannot be recovered. Starting over \
-                removes it from this iPhone and iCloud, then creates a new vault with a new \
-                passphrase.
+            if AppLockAvailability.canAuthenticate {
+                Text(
+                    """
+                    Without the vault passphrase, this vault cannot be recovered. Starting over \
+                    removes it from this iPhone and iCloud, then creates a new vault with a new \
+                    passphrase.
 
-                If you have an exported backup, you can import it after starting over.
-                """
-            )
+                    If you have an exported backup, you can import it after starting over.
+                    """
+                )
+            } else {
+                Text(
+                    """
+                    **Set a passcode on this iPhone to start over.** Starting over removes your \
+                    accounts from iCloud as well, so they disappear from your other devices too, \
+                    and OpenFactor will not do that without confirming it is you.
+
+                    Set one in Settings, then come back.
+                    """
+                )
+            }
         }
     }
 }
