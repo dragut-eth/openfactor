@@ -136,6 +136,7 @@ struct AccountListView: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.isScreenCaptured) private var isScreenCaptured
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var editing: AccountListViewModel.Row?
     @State private var recolouring: AccountListViewModel.Row?
@@ -197,6 +198,30 @@ struct AccountListView: View {
                 }
                 .onChange(of: sortOrder) { _, raw in
                     model.sortOrder = AccountSortOrder(rawValue: raw) ?? .manual
+                }
+                // **Records can change while this app is not looking, and nothing tells it.**
+                // iCloud Keychain has no change notification, so an item arriving from another
+                // device is invisible until something re-reads the store. `onAppear` does not
+                // fire again after a background and return, because the view never left the
+                // hierarchy, and the one second timer recomputes digits without re-reading. So
+                // a phone could sit stale indefinitely while a second phone showed the truth.
+                //
+                // Measured rather than reasoned: E16 watched two iPhones hold different lists
+                // for ten minutes, and found that App Lock was the only thing making a phone
+                // look like it synced, because releasing the lock recreates this view.
+                //
+                // **`.active` only, not every phase.** The watch keys its load on the whole
+                // scene phase and that is fine there. Here `.inactive` is the Face ID window
+                // and the cover window, which is the machinery three separately reasoned fixes
+                // got wrong before a device trace settled it. One reload, at the one moment new
+                // data could have arrived.
+                //
+                // **Not gated on the sync preference.** Accounts synced before it was turned
+                // off still change, which is the mixed state the settings screen already has
+                // copy for, and a refresh that is unreliable in the hardest state to reason
+                // about is worse than one that costs a Keychain read.
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { model.load(at: Date()) }
                 }
                 .onReceive(tick) { model.tick(at: $0) }
                 // A tap on a card produces no visible change except a badge that fades,

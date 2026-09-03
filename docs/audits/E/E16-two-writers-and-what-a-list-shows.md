@@ -130,3 +130,32 @@ masked field with a reveal while both passphrase screens were plain, and now thi
 cover window and the Face ID gap, which is the machinery where three separately reasoned fixes were
 each wrong before a device trace settled it, and where a flush on the wrong side introduced a second
 leak. The pattern is proven; the place it has to go is not forgiving.
+
+## What was changed, and validated on the same hardware
+
+`AccountListView` now reloads when the scene becomes active. **`.active` only, rather than the
+watch's whole scene phase**, for the reason above: `.inactive` is the Face ID window and the cover
+window, and this change had no business being anywhere near them.
+
+**Not gated on the sync preference**, deliberately. Records synced before it was turned off still
+change, which is the mixed state the settings screen already has copy for, and a refresh that is
+unreliable in the hardest state to reason about is worse than one that costs a Keychain read.
+
+**Two things made this smaller than it looked.** `load` was already written to be called on a live
+list: it matches existing rows by identifier so a reload does not blank every code, which somebody
+had anticipated long before tonight. And drag to reorder sits behind an explicit edit mode, so
+nothing in the list competes with a refresh.
+
+**Validated on the 15 Pro against the XS**, with a record added on one phone and then deleted from
+it, returning to the other inside the App Lock grace window so no lock screen intervened. That is
+the exact path that showed a stale list all evening. It now shows the truth, including removing a
+record from the screen while it is being watched, which is new behaviour for this app and was
+looked at once before being accepted.
+
+**The record crossed between the two phones in under a minute**, both appearing and disappearing.
+That is the third sub-minute propagation of the evening and it is now the pattern rather than the
+outlier. A2's fourteen minutes stands as something that happened, not as a figure to plan around.
+
+**What is still not done:** pull to refresh. It is a genuine feature rather than a fix and belongs
+to a decision of its own. With this reload in place the only case it covers is a change arriving
+while somebody sits looking at the screen.
