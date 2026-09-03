@@ -15,19 +15,54 @@ struct VaultUnlockView: View {
     let store: any SecretStore
 
     @State private var isErasing = false
+    @State private var isPassphraseRevealed = false
+
+    @Environment(\.isScreenCaptured) private var isScreenCaptured
     @FocusState private var isTyping: Bool
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Vault passphrase", text: $model.typedPassphrase, axis: .vertical)
+                    // **Secured, with a reveal**, matching the import screen and the manual
+                    // secret field. Audit X2 raised this as OF-A1: a visible field is ordinary
+                    // text to iOS, so the keyboard can learn from it, and `.textContentType`
+                    // `.password` additionally offered to save this string into iCloud Keychain,
+                    // which is where the wrapped record it opens already lives. That content type
+                    // is gone; `.oneTimeCode` suppresses the AutoFill offer without claiming the
+                    // field is a one time code to anything that matters.
+                    //
+                    // **Never revealed while the screen is captured**, and disabled rather than
+                    // hidden so the reason is visible.
+                    HStack {
+                        Group {
+                            if isPassphraseRevealed && !isScreenCaptured {
+                                TextField("Vault passphrase", text: $model.typedPassphrase)
+                            } else {
+                                SecureField("Vault passphrase", text: $model.typedPassphrase)
+                            }
+                        }
                         .font(.body.monospaced())
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
-                        .textContentType(.password)
+                        .textContentType(.oneTimeCode)
                         .focused($isTyping)
                         .disabled(model.isWorking)
+
+                        Button {
+                            isPassphraseRevealed.toggle()
+                        } label: {
+                            Image(systemName: isPassphraseRevealed ? "eye.slash" : "eye")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .disabled(isScreenCaptured || model.isWorking)
+                        .accessibilityLabel(
+                            isScreenCaptured
+                                ? "Showing the passphrase is unavailable while the screen is shared"
+                                : (isPassphraseRevealed
+                                    ? "Hide the passphrase" : "Show the passphrase"))
+                    }
                 } footer: {
                     // `docs/VAULT.md` requires the two passphrases be distinguishable where they
                     // are asked for as well as where they are shown. Somebody who exported a

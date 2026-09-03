@@ -62,21 +62,44 @@ in one pass.
 
 ## OF-A1, low: passphrase fields are plain text with password AutoFill
 
-**Confirmed. Open.**
+**Confirmed. Addressed.**
 
-`VaultUnlockView` and `ImportView` take the two credentials that outrank everything else, the vault
-passphrase and the backup passphrase, in a `TextField`. `ManualSetupView` takes the per-account
-secret in a `SecureField` behind a reveal toggle, and its comment gives the reason: a plain field
+`VaultUnlockView` and `ImportView` took the two credentials that outrank everything else, the vault
+passphrase and the backup passphrase, in a `TextField`. `ManualSetupView` took the per-account
+secret in a `SecureField` behind a reveal toggle, and its comment gave the reason: a plain field
 "can reach the keyboard's learning, which is a copy of the secret in a place nobody audits". The
 argument was applied to the smaller secret and not the larger ones. `.textContentType(.password)`
-additionally offers to save the vault passphrase into iCloud Keychain, beside the wrapped record
+additionally offered to save the vault passphrase into iCloud Keychain, beside the wrapped record
 it opens.
 
-**Open because the fix is user facing and has a layout question inside it.** The reveal pattern
-already exists and is better than the report knew: it is capture aware, so nothing reveals while
-the screen is being recorded, and it already uses `.oneTimeCode`. But `VaultUnlockView`'s field is
-`axis: .vertical` and a `SecureField` has no vertical axis, so a 24 character grouped passphrase
-that currently wraps as it is typed would not. That is a design decision, not a swap.
+**What was changed.** Both fields are now `SecureField` behind the same reveal the manual secret
+field uses, capture aware, so neither will show its contents while the screen is being recorded and
+the eye is disabled rather than hidden so the reason is visible. `.textContentType(.password)` is
+gone in favour of `.oneTimeCode`, which suppresses the AutoFill offer that put the passphrase
+next to the record it opens.
+
+**The old reasoning was not wrong, and the reveal is what retires it.** Both fields carried a
+comment arguing that these are 24 machine generated characters copied off a card, that hiding them
+means a mistyped character cannot be seen, and that this is the one string where the app has
+already admitted it cannot tell a typo from a wrong passphrase. That argument stands on its own.
+What it did not account for is that the same screen can offer both, exactly as the manual secret
+field had been doing since round two of an earlier gate. The defect was never the visibility. It
+was that one screen had solved this and two had not.
+
+**The class is closed rather than the two instances.** Every secret bearing input in the app is now
+masked with a reveal, `.textContentType(.password)` appears nowhere, and the plain fields that
+remain are issuer names, account names, the HOTP counter and the typed erase confirmation, none of
+which is a secret.
+
+**One consequence, seen on hardware before it was accepted.** A `SecureField` has no vertical axis,
+so the hidden state is a single scrolling line where the old field wrapped to two, and the box
+changes height when the eye is tapped. Judged on a simulator against the real screens and accepted.
+
+**What has no test.** The toggle is view state, and this project's rule is that anything a screen
+owes belongs in a view model test. The security relevant half is not the toggle but the refusal to
+reveal while the screen is captured, and that is guaranteed by the code reading correctly and by
+nothing else. `ManualSetupView` has carried the same gap since it was written, so this is not new,
+but it is now three screens rather than one.
 
 ## OF-A2, low: a Keychain writer can steer the owner into destroying their own vault
 

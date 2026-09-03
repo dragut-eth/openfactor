@@ -12,6 +12,9 @@ struct ImportView: View {
     @State private var isPickingFile = false
     @State private var includeConflicts = false
     @State private var passphrase = ""
+    @State private var isPassphraseRevealed = false
+
+    @Environment(\.isScreenCaptured) private var isScreenCaptured
 
     /// Called when accounts have been written, so whatever is behind can reload. **Not a
     /// signal to close.** Conflating the two is what hid the finish screen on the transfer
@@ -150,18 +153,46 @@ struct ImportView: View {
                 // machine generated rather than a person invented: this one, the vault
                 // passphrase, and the secret key in manual setup.
                 //
-                // **Visible, not secured**, and the vault's unlock field matches. Both take 24
-                // generated characters copied off a card or out of a password manager, and
-                // hiding them means a mistyped character cannot be seen in the one string where
-                // the app has already admitted it cannot tell a typo from a wrong passphrase.
-                // Shoulder surfing is the cost, and it is a smaller one for something done once
-                // per device on a screen that faces its owner.
-                TextField("Backup passphrase", text: $passphrase, axis: .vertical)
+                // **Secured, with the same reveal the manual secret field uses.** Audit X2
+                // raised this as OF-A1: a visible field is ordinary text to iOS, so the keyboard
+                // can learn from it. Hiding it alone would be worse than the problem, because this
+                // is a string the app has already admitted it cannot tell a typo from a wrong
+                // passphrase, so the eye is what makes the masking affordable.
+                //
+                // **Never revealed while the screen is captured**, for the reason the manual
+                // secret field records: a passphrase read off a shared screen opens every secret
+                // in the archive. Disabled rather than hidden, so the reason is visible.
+                //
+                // The vault's unlock field is deliberately not changed with this, and the two
+                // now differ.
+                HStack {
+                    Group {
+                        if isPassphraseRevealed && !isScreenCaptured {
+                            TextField("Backup passphrase", text: $passphrase)
+                        } else {
+                            SecureField("Backup passphrase", text: $passphrase)
+                        }
+                    }
                     .font(.body.monospaced())
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.go)
                     .onSubmit { open() }
+
+                    Button {
+                        isPassphraseRevealed.toggle()
+                    } label: {
+                        Image(systemName: isPassphraseRevealed ? "eye.slash" : "eye")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .disabled(isScreenCaptured)
+                    .accessibilityLabel(
+                        isScreenCaptured
+                            ? "Showing the passphrase is unavailable while the screen is shared"
+                            : (isPassphraseRevealed
+                                ? "Hide the passphrase" : "Show the passphrase"))
+                }
 
                 Button("Open backup") { open() }
                     .disabled(passphrase.isEmpty)
