@@ -1,6 +1,6 @@
 # E16: two writing iPhones, and when a list shows what arrived
 
-**Date:** 2026-09-02, 19:48 to 20:25. **Measured on:** an iPhone 15 Pro on iOS 27 and an iPhone XS
+**Date:** 2026-09-02, 19:48 to 20:25, and the race on 2026-09-03. **Measured on:** an iPhone 15 Pro on iOS 27 and an iPhone XS
 on iOS 18.7.9, one Apple Account, iCloud Keychain on, plus an Apple Watch Ultra reading the same
 records. OpenFactor 1.0 (8) on all three. Throwaway records only, an encrypted backup taken first.
 
@@ -105,9 +105,20 @@ another, and nothing in the app influences either.
 **Closed:** two writing devices merge additions, resolve same-record edits last writer wins, and
 report nothing. The oldest open measurement in the project, named by A2, A4, X1 and X2.
 
-**Not closed, and deliberately not attempted:** the delete-versus-edit race, where one device
-removes a record while the other edits it. It needs a third offline window and the evening had
-gone on long enough. It is the one case where a resurrected record is plausible.
+**The delete-versus-edit race, run the following morning, 2026-09-03.** One record, `RACE-TEST`,
+created on the 15 Pro and allowed to reach the XS. Both phones offline. The 15 Pro deleted it; the
+XS renamed it to `RACE-RENAMED`. Both reconnected.
+
+**The deletion won.** On the 15 Pro, which had deleted it and carries the foreground reload, the
+record never came back. On the XS, still on build 8, the renamed row stayed on screen and fell to
+`--- ---` at its next code boundary, which is the state the boundary reload below now removes: its
+row was in memory with a new name and its Keychain item was gone. A force quit and relaunch
+on the XS cleared it, and all three devices then agreed: no such record.
+
+**So the one case where a resurrected record was plausible does not produce one.** An edit made
+against a record that another device has deleted is lost, silently, like every other losing write
+tonight, and the deletion holds everywhere. That is the outcome a person would want, and it is
+now measured rather than assumed. Every two-writer case A2 was written to cover is closed.
 
 **Not measured:** whether anything is lost when both devices write the *same* field within the
 sync window rather than while offline. The airplane mode method forces a clean divergence, which is
