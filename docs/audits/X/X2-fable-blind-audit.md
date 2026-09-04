@@ -103,7 +103,7 @@ but it is now three screens rather than one.
 
 ## OF-A2, low: a Keychain writer can steer the owner into destroying their own vault
 
-**Confirmed, and the best finding in the report. Partly addressed.**
+**Confirmed, and the best finding in the report. Addressed as far as it is going to be, with the rest recorded.**
 
 `SECURITY.md` and `docs/VAULT.md` already concede that a same-team sibling can delete or replay
 Keychain items and that the container tripwire is unbuilt. What no document described is that the
@@ -145,25 +145,56 @@ must inform rather than accuse, and the anchor must update on every successful u
 warns once and then heals. Otherwise it becomes a warning people learn to dismiss, which this
 project already reasoned about for the screenshot alert.
 
+**Decided, 2026-09-03: the anchor is not being built, and the reason is recorded rather than the
+task being left open.** It cannot help the report's headline scenario, a replacement phone, which
+has no anchor and can make no claim; that case is covered by the ceiling and the message above, and
+by nothing else. What it would detect is a substituted record on a device that lost its key file
+but kept its container, a state nobody could name a realistic path to. Against that, it is a new
+persistent file, a write inside `unlock`, a decision table and three messages, for a finding the
+report rated Low. That is the second decimal place, and the design is written into
+`docs/VAULT.md`'s tripwire section with its reopening condition: a device ever showing a vanished or
+substituted record on hardware, or a passphrase change screen shipping, which forces the S1-33 and
+E12 work regardless.
+
 ## OF-A3, low: losing the wrapped record on a working device is silent
 
-**Confirmed. Open, and joined to OF-A2.**
+**Confirmed. Addressed by detection alone, and the anchor turned out not to be needed for it.**
 
 `Vault.state()` answers `.open` as soon as a key file exists and never asks whether a wrapped
 record still exists. No caller checks, on a provisioned device, that `candidates()` is non-empty.
 So a device can keep generating codes for months while the record that would let its owner recover
 is gone, and the person is holding a passphrase that opens nothing.
 
-**The reviewer's own follow-up observation is adopted: this is the same fix as OF-A2.** One anchor
-answers both questions, because a device that knows a record used to exist can notice that it does
-not any more.
+**The anchor the report proposed is not needed to detect this, and finding that out is what
+closed it.** On an iPhone a vault key can only have come from `create`, which writes a record, or
+from `unlock`, which opened one. So a key with no wrapped record under either sync flag is not
+ambiguous: the record existed and is gone. The key file is the anchor. `Vault.recoveryRecordIsMissing`
+asks exactly that, in two calls that already existed, and a read that fails answers `false`, for the
+same reason `State.unavailable` refuses to guess: a warning that fires on a transient Keychain error
+is one people learn to ignore.
 
-**The detection is shared; the remediation is not**, which is why they stay separate entries. A2
-needs a sentence and a non-destructive exit. A3 needs a persistent warning and a way to write a
-fresh record, and `prepareReplacementPassphrase` and `replacePassphrase(with:)` are built and
-tested but deliberately have no interface. Giving them one voids the premise of the S1-33 waiver,
-so that decision has to be revisited and recorded before any such screen ships. The mechanism
-`docs/VAULT.md` names for it is the compare and swap token measured in E12.
+**What was changed: detect and point, nothing more.** Settings asks the question whenever it
+refreshes and, when the answer is yes, shows one line in the Sync section, in the slot the sync
+failure already uses:
+
+> The recovery record for your vault is missing from the Keychain. This iPhone keeps working, but
+> your passphrase would not open your accounts on a new device. Make an encrypted export now, and
+> check your other devices.
+
+It offers no button. The moment it offered one it would be the passphrase replacement screen,
+`prepareReplacementPassphrase` and `replacePassphrase(with:)` are built and tested but deliberately
+have no interface, and giving them one voids the premise of the S1-33 waiver. That decision is left
+exactly where `docs/VAULT.md` keeps it, with E12's compare and swap token as the named mechanism if
+it is ever reopened. The export is two rows down on the same screen, which is why the line can
+point rather than act.
+
+**A test pins all four states** without a Keychain: no key, key and record, key and no record, and
+a failed read. Only the third is `true`.
+
+**Not shown on hardware.** A simulator's Keychain cannot be edited from outside, so the line was
+reviewed with the flag forced in a throwaway build, reverted before commit, the same way the OF-A4
+refusal was. Reaching it honestly needs a device whose wrapped record has actually gone, which is
+the event this exists to catch and not one worth manufacturing on a real vault.
 
 ## OF-A4, low: no-passcode devices skip identity confirmation and the promised warning does not exist
 

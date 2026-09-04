@@ -484,6 +484,25 @@ cry wolf. A per-account revision in the anchor would also detect replay, which i
 undetectable. Reconciling that with legitimate multi-device churn is **not solved in this
 document** and must be designed before the tripwire is built.
 
+**Two anchors, not one, and only the cheap one is needed so far.** Audit X2 proposed a second
+anchor: a fingerprint of the last wrapped record this device wrote or opened, so a substituted
+record could be told apart from a mistyped passphrase. It is a far easier object than the account
+anchor above, because the wrapped record changes on creation, on a passphrase change, and never
+otherwise. It is also not built, for reasons recorded in `docs/audits/X/X2-fable-blind-audit.md`
+under OF-A2: it cannot help a replacement phone, which has no container to hold it, and the state it
+would detect has no realistic path. If it is ever built it lives beside `vault.key`, updates only
+when a record opens, so the sibling cannot poison it without the passphrase, and is worded to inform
+rather than accuse, because a passphrase change on another device makes every other device's note
+stale for a good reason.
+
+**Its reopening condition:** a device showing a vanished or substituted record on hardware, or a
+passphrase change screen shipping.
+
+**And one half of what the anchor was for needs no anchor at all.** A device that holds a key and
+no wrapped record has lost its record, because a key can only have come from writing or opening
+one. `Vault.recoveryRecordIsMissing` asks that, and Settings says so, with no button, since a
+button here is the passphrase change screen and the S1-33 note above.
+
 ## Sync
 
 `kSecAttrSynchronizable` on the account items and on the wrapped key record, both following the

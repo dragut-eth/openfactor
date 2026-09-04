@@ -79,6 +79,7 @@ struct OpenFactorApp: App {
         let wrapped = WrappedKeyStore(
             synchronizable: { UserDefaults.standard.bool(forKey: PreferenceKey.syncEnabled) })
         self.wrapped = wrapped
+        recoveryRecordMissing = { Vault(keys: keys, wrapped: wrapped).recoveryRecordIsMissing() }
         _gate = State(
             initialValue: VaultGateModel(
                 vault: Vault(keys: keys, wrapped: wrapped), store: store))
@@ -87,6 +88,11 @@ struct OpenFactorApp: App {
 
     /// Kept so the reconcile below can reach it. See `reconcileWrappedKeySync`.
     private let wrapped: WrappedKeyStore
+
+    /// Asked by Settings whenever it refreshes. Built here because this is where the key store
+    /// and the sync-aware wrapped store live; a `Vault` is two references and costs nothing to
+    /// construct per call.
+    private let recoveryRecordMissing: () -> Bool
 
     /// Brings an already-written wrapped key into iCloud whenever the app comes forward, if the
     /// preference says it belongs there.
@@ -181,7 +187,8 @@ struct OpenFactorApp: App {
                         // records, so one broken account among working ones changes nothing.
                         AccountListView(
                             store: store, arrival: $arrival, addSession: addSession,
-                            onCodeFailure: { gate.refresh() })
+                            onCodeFailure: { gate.refresh() },
+                            recoveryRecordMissing: recoveryRecordMissing)
                         // Accounts saved before the shared access group was declared are
                         // still in the app's bundle group. The phone reads them either
                         // way, so nothing looks wrong here; the watch cannot see them at

@@ -41,6 +41,13 @@ struct SettingsView: View {
 
     let store: any SecretStore
 
+    /// Whether this device holds a vault key and no wrapped record. Injected rather than
+    /// computed here, because the stores that can answer it live in the app, and a default of
+    /// `false` keeps every preview and test silent, which is the safe direction.
+    var recoveryRecordMissing: () -> Bool = { false }
+
+    @State private var recoveryRecordIsMissing = false
+
     #if DEBUG
         @Environment(\.debugForgetEverything) private var forgetEverything
         @Environment(\.debugLockDevice) private var lockDevice
@@ -211,6 +218,24 @@ struct SettingsView: View {
             if let syncFailure {
                 Text(syncFailure).foregroundStyle(.red)
             }
+
+            // **Detect and point, and nothing else.** Audit X2, OF-A3: a working device whose
+            // wrapped record has gone keeps generating codes and never says so, and its owner
+            // finds out on the day they set up a new phone. This says so. It offers no button,
+            // because a button here is the passphrase replacement screen, and that voids the
+            // S1-33 waiver the day it ships. The export is two rows down.
+            //
+            // The wording was approved verbatim and is not to be tidied.
+            if recoveryRecordIsMissing {
+                Text(
+                    """
+                    The recovery record for your vault is missing from the Keychain. This iPhone \
+                    keeps working, but your passphrase would not open your accounts on a new \
+                    device. Make an encrypted export now, and check your other devices.
+                    """
+                )
+                .foregroundStyle(.red)
+            }
         } header: {
             Text("Sync")
         } footer: {
@@ -269,6 +294,7 @@ struct SettingsView: View {
         }
 
         syncState = try? store.syncState()
+        recoveryRecordIsMissing = recoveryRecordMissing()
     }
 
     /// Conversion runs account by account, so a failure part way through leaves some

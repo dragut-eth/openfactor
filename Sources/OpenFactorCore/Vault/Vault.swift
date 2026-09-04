@@ -85,6 +85,27 @@ public struct Vault: Sendable {
         }
     }
 
+    /// Whether this device holds a key and no wrapped record at all.
+    ///
+    /// **On an iPhone a key can only have come from `create`, which writes a record, or from
+    /// `unlock`, which opened one.** So a key with no record under either sync flag is not
+    /// ambiguous: the record existed and is gone. The device keeps generating codes, because it
+    /// never needs the record again, and its owner would find out what was lost on the day they
+    /// set up a new phone. Audit X2 filed that as OF-A3, and the anchor it proposed turned out to
+    /// be unnecessary for this half: the key file is the anchor.
+    ///
+    /// **A read that fails is `false`, not `true`.** The same refusal to guess as
+    /// `State.unavailable`: a warning that fires because the Keychain was briefly unreadable is a
+    /// warning people learn to ignore. Silence is the safe direction here.
+    ///
+    /// Not scoped to the watch, which receives its key by provisioning and never held the record.
+    /// The watch app does not call this.
+    public func recoveryRecordIsMissing() -> Bool {
+        guard (try? keys.load()) ?? nil != nil else { return false }
+        guard let candidates = try? wrapped.candidates() else { return false }
+        return candidates.isEmpty
+    }
+
     // MARK: - Creating
 
     /// Creates a vault and returns the passphrase that recovers it, **once**.

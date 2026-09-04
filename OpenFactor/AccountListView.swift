@@ -152,15 +152,20 @@ struct AccountListView: View {
     /// The single timer for the whole screen. Ten accounts do not get ten timers.
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
+    /// Passed through to Settings untouched. See `Vault.recoveryRecordIsMissing`.
+    private let recoveryRecordMissing: () -> Bool
+
     init(
         store: any SecretStore,
         arrival: Binding<IdentifiedArrival?> = .constant(nil),
         addSession: AddAccountSession? = nil,
-        onCodeFailure: (() -> Void)? = nil
+        onCodeFailure: (() -> Void)? = nil,
+        recoveryRecordMissing: @escaping () -> Bool = { false }
     ) {
         _arrival = arrival
         self.addSession = addSession
         self.store = store
+        self.recoveryRecordMissing = recoveryRecordMissing
         let model = AccountListViewModel(store: store)
         model.onCodeFailure = onCodeFailure
         _model = State(initialValue: model)
@@ -261,7 +266,9 @@ struct AccountListView: View {
                 }
             }
             .sheet(isPresented: $isShowingSettings) {
-                SettingsView(store: store) { model.load(at: Date()) }
+                SettingsView(store: store, recoveryRecordMissing: recoveryRecordMissing) {
+                    model.load(at: Date())
+                }
                     .onDisappear(perform: sheetDidClose)
             }
             // Three kinds of arrival, three destinations, and the distinctions matter.

@@ -27,6 +27,32 @@ struct VaultDecisionTests {
         return (Vault(keys: keys, wrapped: wrapped), keys, wrapped)
     }
 
+    /// **A key with no record is unambiguous on an iPhone**: the key came from creating or
+    /// opening a record, so the record existed and is gone. Audit X2, OF-A3. The device keeps
+    /// generating codes, and without this its owner finds out on the day they set up a new phone.
+    /// Every other state is `false`, including the one where the read failed, because a warning
+    /// that fires on a transient Keychain error is a warning people learn to ignore.
+    @Test("A missing recovery record is reported only when a key is here and no record is")
+    func missingRecoveryRecordIsDetected() throws {
+        let (vault, keys, wrapped) = makeVault()
+        defer { try? keys.discard() }
+
+        #expect(!vault.recoveryRecordIsMissing(), "nothing here yet, no claim")
+
+        _ = try vault.create()
+        #expect(!vault.recoveryRecordIsMissing(), "key and record, the ordinary working state")
+
+        try wrapped.delete()
+        #expect(vault.recoveryRecordIsMissing(), "key present, record gone: the case this exists for")
+
+        wrapped.readFailure = .keychain(status: -1)
+        #expect(!vault.recoveryRecordIsMissing(), "a read that fails is not a record that is gone")
+        wrapped.readFailure = nil
+
+        try keys.discard()
+        #expect(!vault.recoveryRecordIsMissing(), "no key means no claim, whatever the store holds")
+    }
+
     /// **The destructive tap.** `save` replaces the record it finds, so creating a vault on a
     /// device that already has one strands every stored account under a passphrase nobody was
     /// given. Two reviews found this independently; it is dormant only while the wrapped key
