@@ -59,6 +59,7 @@ mistaken for either a broken search or a corrupted item.
 | **E11** | A link arriving over a shared image | **The share extension and the app as separate processes**, with a real share sheet delivering a real attachment |
 | **E13** | Whether either device held a record with a split pair | **Two devices**, and a question about their existing contents rather than about anything a test could set up |
 | **E15** | Whether a same team sibling can use another app's Enclave key | **A second signed app** declaring the victim's access group, plus a control. Built and run on 21 August; the apps were throwaway and are gone |
+| **E16** | Two iPhones writing the same records: additions merge, a record edited on both resolves last writer wins, a deletion beats an edit, and nothing anywhere reports a conflict. It also found that the list was read only when its view was created | **Two iPhones on one Apple Account, both writing**, plus a watch reading, and an offline window on each to force the divergence. A test bundle is one device and cannot disagree with itself. The gap A2 opened and A4, X1 and X2 all named, closed on 2 and 3 September |
 
 ## The one that is measured as unconvertible
 
