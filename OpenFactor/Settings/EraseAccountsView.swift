@@ -19,6 +19,11 @@ struct EraseAccountsView: View {
 
     let store: any SecretStore
 
+    /// Whether this erase refuses on a device with no passcode. False from Settings, true from
+    /// the unlock screen's "Start over". The policy and its reasoning live on `EraseGate.erase`;
+    /// this only says which caller this is.
+    var requiresPasscode = false
+
     /// Called after a successful erase, so the list behind can reload rather than showing
     /// rows for accounts that no longer exist.
     let onErased: () -> Void
@@ -150,7 +155,14 @@ struct EraseAccountsView: View {
         isWorking = true
         defer { isWorking = false }
 
-        let outcome = await EraseGate.erase(typed: typed, from: store) {
+        // Read on the main actor here, because `erase` runs off it and the availability check
+        // is main-actor state. The view's disabled button is the same fact shown early; the gate
+        // is where it is enforced, and the gate is what the tests hold.
+        let passcodeIsSet = AppLockAvailability.canAuthenticate
+        let outcome = await EraseGate.erase(
+            typed: typed, from: store,
+            requiresPasscode: requiresPasscode, passcodeIsSet: { passcodeIsSet }
+        ) {
             await AppLockAvailability.authenticate(reason: "Erase all accounts")
         }
 
@@ -160,6 +172,10 @@ struct EraseAccountsView: View {
             dismiss()
         case .notAuthenticated:
             failure = "Not erased. Your identity could not be confirmed."
+        case .passcodeRequired:
+            // Unreachable from the unlock screen while its button stays disabled without a
+            // passcode, and answered anyway for the same reason `.notConfirmed` is.
+            failure = "Not erased. Set a passcode on this iPhone to start over."
         case .notConfirmed:
             // Unreachable while the button stays disabled, and answered anyway rather than
             // leaving the screen silent if that ever changes.

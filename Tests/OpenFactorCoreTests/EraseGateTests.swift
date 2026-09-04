@@ -66,6 +66,57 @@ struct EraseGateTests {
         #expect(try store.records().readable.count == 3, "every account must still be there")
     }
 
+    /// **The refusal lives here, not in the button that displays it.** The unlock screen's
+    /// "Start over" reaches every device on the Apple Account from a screen whose holder can read
+    /// nothing, so on a device with no passcode it is refused outright. Audit X2, OF-A4, and the
+    /// verification round that found the rule at the top of this file being broken by its fix.
+    @Test("A caller that requires a passcode is refused on a device without one, and nothing is read")
+    func passcodeRequiredRefusesWithoutOne() async throws {
+        let store = try storeWithAccounts(2)
+        var identityWasAsked = false
+
+        let outcome = await EraseGate.erase(
+            typed: "ERASE", from: store,
+            requiresPasscode: true, passcodeIsSet: { false }
+        ) {
+            identityWasAsked = true
+            return true
+        }
+
+        #expect(outcome == .passcodeRequired)
+        #expect(!identityWasAsked, "refused before identity is even asked for")
+        #expect(try store.records().readable.count == 2, "every account must still be there")
+    }
+
+    /// The Settings erase keeps the original decision: no passcode means nothing to verify, and
+    /// the erase proceeds. A policy that applied to both callers would deny a backup-and-wipe to
+    /// somebody selling a phone that is already open to anyone holding it.
+    @Test("A caller that does not require a passcode still erases on a device without one")
+    func passcodeNotRequiredStillErases() async throws {
+        let store = try storeWithAccounts(2)
+
+        let outcome = await EraseGate.erase(
+            typed: "ERASE", from: store,
+            requiresPasscode: false, passcodeIsSet: { false }
+        ) { true }
+
+        #expect(outcome == .erased(2))
+    }
+
+    @Test("The word is still checked before the passcode policy")
+    func wordBeforePasscodePolicy() async throws {
+        let store = try storeWithAccounts(1)
+        var policyWasAsked = false
+
+        let outcome = await EraseGate.erase(
+            typed: "nope", from: store,
+            requiresPasscode: true, passcodeIsSet: { policyWasAsked = true; return false }
+        ) { true }
+
+        #expect(outcome == .notConfirmed)
+        #expect(!policyWasAsked)
+    }
+
     /// **Authentication must not run before the word is typed.** Prompting for Face ID and then
     /// refusing on the word would train somebody to authenticate their way into a screen that
     /// was never going to act, which is how a confirmation stops being read.

@@ -230,8 +230,15 @@ final class AccountListViewModel {
         // Its row is still in `rows`, its code has just failed to generate because the item is
         // gone from the Keychain, and without this it would sit as a card with a name and no
         // code until the app was next backgrounded. E16 watched exactly that. Reloading finds
-        // the record absent and the row goes. A row that failed for any other reason is kept as
-        // failed by `load` and not retried, so this cannot loop.
+        // the record absent and the row goes.
+        //
+        // **This cannot loop, and the reason is the transition, not a retry ban.** A failed row
+        // *is* retried: its `generatedCounter` is nil after a failure, so every tick regenerates
+        // it against the Keychain, one read per second, which is harmless and predates all of
+        // this. What is suppressed on a row that stays failed is the gate call and this flag,
+        // because `refreshCode` raises them only on the transition from generating to failed,
+        // and `load` preserves a failed row's failure. X2's verification round corrected the
+        // earlier wording here, which claimed no retry at all.
         if reloadAfterTick {
             reloadAfterTick = false
             load(at: date)

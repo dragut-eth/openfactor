@@ -104,7 +104,7 @@ struct VaultUnlockView: View {
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .top) { explanation }
             .sheet(isPresented: $isErasing) {
-                EraseAccountsView(store: store) {
+                EraseAccountsView(store: store, requiresPasscode: true) {
                     // The vault goes only after the accounts have. The other order would leave
                     // ciphertext with no key anywhere and no way to remove it from this screen,
                     // which is the dead end this whole section exists to prevent.

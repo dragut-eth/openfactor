@@ -24,6 +24,20 @@ downsamples the rest to `workingImageMaxDimension`. It downsamples rather than r
 dimension refusal has to reject a 48 megapixel frame from the phone in the user's hand. Full detail
 and the reasoning are in [docs/audits/X/X1-codex-blind-audit.md](docs/audits/X/X1-codex-blind-audit.md).
 
+**Audit X2 is closed, E16 is measured, and both are on `main`.** X2, a second blind pass by
+Claude Fable 5.1 at `c1c0e7b`, found eight, all confirmed, none critical. Seven are fixed and the
+anchor is deferred with its design and reopening condition written into `docs/VAULT.md`'s tripwire
+section. The finder then verified the diff and accepted every departure, corrected one false
+sentence in the record, and found three small defects, all fixed in the same pass. The full record
+is [docs/audits/X/X2-fable-blind-audit.md](docs/audits/X/X2-fable-blind-audit.md). E16 closed the
+oldest open measurement in the project with two iPhones and a watch, and found that the account
+list was read only when its view was created; the phone now reloads on foreground and drops a row
+whose record was deleted elsewhere at the next code boundary. Every two-writer case A2 was written
+to cover is measured: [docs/audits/E/E16-two-writers-and-what-a-list-shows.md](docs/audits/E/E16-two-writers-and-what-a-list-shows.md).
+Pull to refresh was considered and declined. None of this is in build 8, which is what is in
+review; all of it is 1.0.1 material, and `docs/APP_STORE.md` is where its release notes will be
+drafted when there is a version to attach them to.
+
 **Two lessons from building it, neither about the fix.** `xcodebuild` piped into `tail` reports
 `tail`'s exit status, so a failed build looked like a clean one, which is the same masking that
 took down the ship script in August. And this repository lives inside iCloud-synced Documents: the

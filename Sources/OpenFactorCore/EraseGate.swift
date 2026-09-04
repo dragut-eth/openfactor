@@ -38,6 +38,9 @@ public enum EraseGate {
         case notConfirmed
         /// Identity was not confirmed. Nothing was removed.
         case notAuthenticated
+        /// The caller requires a passcode on the device and there is none. Nothing was read and
+        /// nothing was removed. See `erase`'s `requiresPasscode`.
+        case passcodeRequired
         /// The store refused part way. Some accounts may already be gone.
         case failed(SecretStoreError)
     }
@@ -50,12 +53,28 @@ public enum EraseGate {
     ///
     /// **Unreadable records are erased too.** Leaving them would be the worst outcome available
     /// here: an erase that reports success and leaves secrets on the device.
+    ///
+    /// **`requiresPasscode` is the caller's policy, and the two callers differ on purpose.** On a
+    /// device with no passcode `authenticate` answers true, because there is nothing to verify.
+    /// The Settings erase accepts that: it removes accounts from a phone whose holder can already
+    /// read them, and refusing would deny somebody wiping a phone they are selling. The unlock
+    /// screen's "Start over" does not accept it: that screen appears when the device has no key,
+    /// so its holder can read nothing, and the action removes every account from every device on
+    /// the Apple Account. There the check prevents something rather than delaying it. Audit X2,
+    /// OF-A4, and the verification round that found the refusal living only in a view, against
+    /// the rule at the top of this file.
+    ///
+    /// `passcodeIsSet` is a parameter for the same reason `authenticate` is: a test bundle cannot
+    /// remove the passcode from the machine it runs on.
     public static func erase(
         typed: String,
         from store: any SecretStore,
+        requiresPasscode: Bool = false,
+        passcodeIsSet: () -> Bool = { true },
         authenticate: () async -> Bool
     ) async -> Outcome {
         guard isConfirmed(typed) else { return .notConfirmed }
+        if requiresPasscode, !passcodeIsSet() { return .passcodeRequired }
         guard await authenticate() else { return .notAuthenticated }
 
         do {

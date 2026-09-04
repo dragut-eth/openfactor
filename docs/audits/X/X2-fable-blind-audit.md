@@ -148,8 +148,12 @@ project already reasoned about for the screenshot alert.
 **Decided, 2026-09-03: the anchor is not being built, and the reason is recorded rather than the
 task being left open.** It cannot help the report's headline scenario, a replacement phone, which
 has no anchor and can make no claim; that case is covered by the ceiling and the message above, and
-by nothing else. What it would detect is a substituted record on a device that lost its key file
-but kept its container, a state nobody could name a realistic path to. Against that, it is a new
+by nothing else. What it would detect is a working device whose record is no longer its own, and
+the realistic path to that is the twin case `unlock`'s own comment describes: two phones creating
+vaults inside the sync arrival window, iCloud resolving the synchronizable pair, and the loser left
+holding its own key beside the other phone's record. That is real and unmeasured, and the
+verification round below corrected an earlier draft of this paragraph that claimed no such path
+could be named. Against that, it is a new
 persistent file, a write inside `unlock`, a decision table and three messages, for a finding the
 report rated Low. That is the second decimal place, and the design is written into
 `docs/VAULT.md`'s tripwire section with its reopening condition: a device ever showing a vanished or
@@ -187,6 +191,11 @@ have no interface, and giving them one voids the premise of the S1-33 waiver. Th
 exactly where `docs/VAULT.md` keeps it, with E12's compare and swap token as the named mechanism if
 it is ever reopened. The export is two rows down on the same screen, which is why the line can
 point rather than act.
+
+**The line lives only in Settings**, so a person who never opens Settings never sees it. Accepted
+for a Low, and said here so it is not mistaken for an oversight. What is detected is the record
+being gone; a record replaced by a twin's, the other half of this finding, is not detected, and is
+the reopening condition recorded under OF-A2.
 
 **A test pins all four states** without a Keychain: no key, key and record, key and no record, and
 a failed read. Only the third is `true`.
@@ -423,3 +432,61 @@ two silent failure modes on the paths people reach only when something has alrea
 
 **The two-writer case is now named by three consecutive reviews as unmeasured**, and the hardware
 to close it exists: two iPhones and a watch. It has outlived its excuse.
+
+## Verification round, 2026-09-03
+
+**The reviewer was handed the diff `c1c0e7b..a79c69e` and the section above, and asked to say
+whether each remedy was responsive, to argue with the recorded departures, to try to falsify two
+specific claims, and to report new defects in the diff only.** The same shape as A4's verify
+rounds: the finder checks the fix.
+
+**Verdicts:** A1, A4, A5, A6, A7 and A8 responsive. A2 and A3 partly responsive, for the reason
+now corrected in their entries above: the deferred anchor's stated justification was wrong, and the
+twin case is the realistic path to a replaced record. The reviewer accepted every departure,
+including the two it had recommended against, and adopted the Start-over distinction as better
+than its own recommendation. It also withdrew its claim that `MASVS.md` had misled anyone.
+
+**Both falsification targets held.** A key on an iPhone can only come from `create` or `unlock`;
+the reviewer found every `install` caller and no false positive. Two caveats it added, neither a
+falsification: device to device migration is unmeasured, and a container carried across with the
+key while device-only items are not would fire the line on a new phone, which would still be
+literally true. And the inference proves absence, not identity. The boundary reload's recursion is
+bounded by the row count, because the flag is set only on the generating-to-failed transition and
+`load` preserves a failed row's failure.
+
+**Three new defects, all in the diff, each verified here before being accepted:**
+
+- **The watch draws black forever on a persistent read failure.** A regression from OF-A8's fix.
+  `activate` calls `refreshAndAsk` before any stage is set, `.checking` renders nothing but black,
+  and the early return on `unreadable` leaves it there. A transient failure now heals; a persistent
+  one now has no exit where it used to at least ask. **Low, fixed**: a regression this project
+  introduced does not wait for the next gate. The model now counts consecutive unreadable reads,
+  treats the first as a moment and the second as the state it always was, no usable key, and asks.
+  The old exit is back one wrist raise later than it used to be, the spurious prompt is still gone,
+  and no new screen was added on the one path that cannot be tested end to end in a simulator.
+- **The Start-over refusal is enforced only by the view.** `EraseGate.swift` states this project's
+  rule in its own words, that a rule enforced only by the thing that displays it has no test behind
+  it, and the refusal is a `.disabled` on a button while `EraseGate.erase` still receives an
+  `authenticate` closure that answers `true` on a passcode-less device. **Low, fixed.**
+  `EraseGate.erase` takes the caller's policy, `requiresPasscode`, and a `passcodeIsSet` closure
+  for the same reason it takes `authenticate`, and answers `.passcodeRequired` before identity is
+  asked for. Settings passes false and keeps the original decision; the unlock screen passes true.
+  Three tests hold it: refused without a passcode with nothing read, still erased when the caller
+  does not require one, and the word checked before the policy. The view's disabled button stays,
+  as the same fact shown early.
+- **A comment in `AccountListViewModel.tick` says a failed row is "not retried".** It is:
+  `generatedCounter` is `nil` after a failure, so the row is regenerated against the Keychain every
+  tick, one read per second per failed row. Harmless, pre-existing, and the sentence should not
+  claim otherwise. **Trivial, fixed**: the comment now says what is suppressed on a failed row and
+  what is not.
+
+**One nit accepted without a verdict:** `.textContentType(.oneTimeCode)` redirects AutoFill to
+the SMS suggestion rather than suppressing it, and `.textContentType(nil)` would say what is meant.
+Plausible, not verifiable by reading, harmless either way, and the manual secret field has carried
+`.oneTimeCode` since it was written.
+
+**What this round was for.** Four of the eight were closed by departing from the reviewer's
+recommendations. Having the finder accept each departure on the record, and correct the one place
+the record justified a departure with a false statement, is worth more than the three small
+defects. The defects are the ordinary cost of a change set; the corrected paragraph under OF-A2 is
+the thing that would otherwise have misled the next reader.

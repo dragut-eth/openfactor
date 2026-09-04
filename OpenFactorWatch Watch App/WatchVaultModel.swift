@@ -32,6 +32,9 @@ final class WatchVaultModel: NSObject {
 
     private let keys: VaultKeyStore
 
+    /// See `refreshAndAsk`. Reset by any read that does not throw `unreadable`.
+    private var consecutiveUnreadableReads = 0
+
     /// The half-finished exchange, holding the ephemeral private key the phone's answer is
     /// sealed to.
     ///
@@ -89,11 +92,23 @@ final class WatchVaultModel: NSObject {
         //
         // Returning without asking is the whole fix. This runs on every wrist raise and on a
         // button, so "try again later" costs nothing and arrives on its own.
+        //
+        // **Once, not forever.** The first version of this returned on every unreadable read,
+        // which fixed the transient case and created a persistent one: `activate` calls this
+        // before any stage exists, `.checking` draws nothing but black, and a key file that
+        // stays unreadable left the wearer looking at a black screen with no button, on every
+        // wrist raise, where it used to at least ask. X2's verification round found it. So the
+        // first unreadable read is treated as a moment and the second consecutive one as the
+        // state it always was: no usable key, ask the phone. The old exit is back one raise
+        // later than it used to be, and the spurious prompt is still gone.
         let loaded: SymmetricKey?
         do {
             loaded = try keys.load()
+            consecutiveUnreadableReads = 0
         } catch VaultKeyStore.KeyStoreError.unreadable {
-            return
+            consecutiveUnreadableReads += 1
+            guard consecutiveUnreadableReads >= 2 else { return }
+            loaded = nil
         } catch {
             // Anything else is the fault it always was, and reads as no key, which is what the
             // provisioning flow is for.
