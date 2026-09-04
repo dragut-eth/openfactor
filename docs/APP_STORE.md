@@ -284,7 +284,7 @@ that presents itself as a beta, a trial or a demo, and the word would have been 
 metadata rather than on anything the app does. Removing it cost nothing: "beta" was a statement
 about a release phase, which stops being true the day this ships.
 
-## What's New: there is no such field for a first release
+## What's New: no field on a first release, and a draft waiting for the second
 
 **App Store Connect does not offer release notes on a first submission**, and there was nowhere to
 put the block this document carried until 2026-08-23. It had been drafted without anybody looking
@@ -303,6 +303,37 @@ would have survived anyway.
 **Release notes for later versions belong in a changelog** rather than being invented at submission
 time. There is no `CHANGELOG.md` yet; PR 18 says there should be, and it should be written from the
 commit history rather than from memory.
+
+### The draft for whenever a second version ships
+
+**The trigger is a version change, not a build.** The field appears for an *update*. A rejected
+first release resubmitted as another build of 1.0 still has nowhere to put this, so the text below
+waits for 1.0.1 rather than for the next upload.
+
+**Written from the commits, and kept to what somebody using the app would notice.** The iteration
+ceiling, the unreadable key distinction and the wording corrections are all absent because they are
+invisible. So is every mention of an audit: this is the surface everybody reaches, and the reasoning
+behind a change belongs on the website and in `docs/audits/`, in that order.
+
+    Your accounts now keep up with your other devices. Add or remove an account on another
+    iPhone and the list catches up as soon as you come back to OpenFactor, instead of waiting
+    until the next time you open it fresh.
+
+    Passphrases are hidden while you type them now, with a button to show them when you want to
+    check a character.
+
+    OpenFactor tells you if your vault's recovery information goes missing, so you find out
+    while there is still time to make a backup rather than on the day you set up a new phone.
+
+    Starting over now needs a passcode on your iPhone. It removes your accounts from every
+    device, so it should not be one tap away on a phone with no lock at all.
+
+    Your Apple Watch no longer asks to be set up when it already is.
+
+**Five changes, five paragraphs, and the order is deliberate**: the one everybody notices first,
+then the one they see next time they type a passphrase, then the two warnings, then the annoyance
+that stopped happening. Nothing here says why, which is the whole difference between this surface
+and the other two.
 
 ## App Privacy, the nutrition label
 
