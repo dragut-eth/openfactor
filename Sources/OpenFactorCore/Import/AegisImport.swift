@@ -50,7 +50,12 @@ public enum AegisImport {
         var accounts: [ImportedAccount] = []
         var refusals: [ImportRefusal] = []
 
-        for (index, entry) in database.entries.enumerated() {
+        for (index, lenient) in database.entries.enumerated() {
+            guard let entry = lenient.entry else {
+                refusals.append(
+                    ImportRefusal(position: index + 1, label: lenient.label, reason: .malformedEntry))
+                continue
+            }
             let label = entry.issuer?.isEmpty == false ? entry.issuer : entry.name
 
             switch build(entry) {
@@ -154,22 +159,55 @@ public enum AegisImport {
 
         /// `db` is an object when the vault is unencrypted and a base64 string when it is
         /// not, so the difference is visible here rather than as a decoding failure.
+        ///
+        /// **Decided by the shape of `db`, and by nothing inside it.** This used to try the
+        /// plain decode and call any failure "encrypted", so one entry with a string where a
+        /// number belongs made a whole plaintext file report as encrypted, with advice to turn
+        /// encryption off that cannot help a file that has none. Audit X3, OF-X3-05. A string is
+        /// encrypted. An object is plain, and what its entries contain is each entry's own
+        /// problem, reported per entry below.
         enum Database: Decodable {
             case plain(Contents)
             case encrypted
 
             init(from decoder: any Decoder) throws {
                 let container = try decoder.singleValueContainer()
-                if let contents = try? container.decode(Contents.self) {
-                    self = .plain(contents)
-                } else {
+                if (try? container.decode(String.self)) != nil {
                     self = .encrypted
+                    return
                 }
+                self = .plain(try container.decode(Contents.self))
             }
         }
 
         struct Contents: Decodable {
-            let entries: [Entry]
+            let entries: [LenientEntry]
+        }
+    }
+
+    /// One entry, decoded on its own so a malformed one is a refusal and not a verdict on the
+    /// file. `ImportResult` promises that a file of ten where one is unusable yields nine, and
+    /// the per-entry loop in `read` kept that promise only for entries that decoded.
+    private struct LenientEntry: Decodable {
+        let entry: Entry?
+        /// Whatever name the malformed entry still carries, so its refusal can be labelled.
+        let label: String?
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let entry = try? container.decode(Entry.self) {
+                self.entry = entry
+                self.label = nil
+            } else {
+                self.entry = nil
+                let names = try? container.decode(Names.self)
+                self.label = names?.issuer?.isEmpty == false ? names?.issuer : names?.name
+            }
+        }
+
+        private struct Names: Decodable {
+            let name: String?
+            let issuer: String?
         }
     }
 

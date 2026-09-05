@@ -76,6 +76,25 @@ struct GoogleAuthenticatorImportTests {
 
     // MARK: - What it reads
 
+    /// **An identifier is not a count of QR codes.** `batch_id` only tells parts of one transfer
+    /// apart, Google writes it as an `int32`, and a valid transfer carrying a large one was refused
+    /// whole. It gets the wire type's range and nothing else. Audit X3, OF-X3-04.
+    @Test("A batch identifier is accepted across the int32 range and refused past it")
+    func identifierHasTheWireRange() throws {
+        let secret = Data("12345678901234567890".utf8)
+
+        for id in [UInt64(GoogleAuthenticatorImport.maximumBatchField) + 1, 1_234_567_890] {
+            let batch = try read(payload([parameters(secret: secret)], id: id))
+            #expect(batch.result.accounts.count == 1, "id \(id) is a valid identifier")
+        }
+
+        #expect(throws: GoogleAuthenticatorImport.FileError.malformed) {
+            _ = try read(payload(
+                [parameters(secret: secret)], id: GoogleAuthenticatorImport.maximumBatchIdentifier + 1))
+        }
+    }
+
+
     /// **The secret is raw bytes, not Base32.** Decoding it would produce an account that
     /// generates entirely plausible codes that no service accepts, which is the worst shape
     /// an import bug can take: nothing looks wrong until a login fails.
@@ -356,12 +375,12 @@ struct MigrationBatchBoundsTests {
         #expect(batch.position == batch.index + 1)
     }
 
-    /// A batch field one past the accepted range is malformed, not clamped. Checked for all
-    /// three fields, because two of them were clamped the same way and only one was reachable
-    /// from the reported crash.
-    @Test("Every batch field is refused above the bound")
-    func everyFieldIsBounded() {
-        for field: UInt8 in [0x18, 0x20, 0x28] {  // size, index, id
+    /// A batch field one past the accepted range is malformed, not clamped. Checked for the two
+    /// count-like fields; the identifier has its own range and its own test below, since audit
+    /// X3 found it bounded as though it were a count. OF-X3-04.
+    @Test("The count-like batch fields are refused above the bound")
+    func countFieldsAreBounded() {
+        for field: UInt8 in [0x18, 0x20] {  // size, index
             var bytes: [UInt8] = [0x0a, 0x00, field]
             bytes.append(contentsOf: varint(UInt64(GoogleAuthenticatorImport.maximumBatchField) + 1))
             let encoded = Data(bytes).base64EncodedString()
@@ -410,11 +429,11 @@ struct MigrationBatchBoundsTests {
     /// **The only reproduced crash in this project, and its bound had no test.** Round two of
     /// scope 4 found that: the reproducer above is pinned and the guard that refuses an oversized
     /// batch field is not. A reviewer can only check a bound that something exercises.
-    @Test("Each batch field is refused one past the maximum")
+    @Test("Each count-like batch field is refused one past the maximum")
     func oversizedBatchFieldIsRefused() {
         let over = UInt64(GoogleAuthenticatorImport.maximumBatchField) + 1
 
-        for field in [3, 4, 5] {
+        for field in [3, 4] {
             #expect(throws: GoogleAuthenticatorImport.FileError.malformed) {
                 _ = try GoogleAuthenticatorImport.read(payload(field: field, value: over))
             }

@@ -58,12 +58,22 @@ public enum GoogleAuthenticatorImport {
         }
     }
 
-    /// The largest value accepted for a batch's index, size, or identifier.
+    /// The largest value accepted for a batch's index or size.
     ///
     /// Deliberately small. A transfer split into more parts than this is not a transfer anybody
     /// is going to scan, so a larger number is a malformed message rather than an ambitious
     /// export, and refusing it here keeps every arithmetic on these fields trivially safe.
+    ///
+    /// **Not the identifier.** This bound used to apply to `batch_id` as well, on the reasoning
+    /// above, which is about how many codes a person could scan and says nothing about a number
+    /// that only tells parts of one transfer apart. Google writes that field as an `int32` and a
+    /// valid transfer carrying a large one was refused whole as malformed. Audit X3, OF-X3-04.
+    /// The identifier gets the wire type's range, `maximumBatchIdentifier`, and nothing here
+    /// does arithmetic on it.
     static let maximumBatchField = 10_000
+
+    /// The largest `batch_id` accepted: the `int32` the schema declares it as.
+    static let maximumBatchIdentifier = UInt64(Int32.max)
 
     /// One scanned code: the accounts it held, and where it sits in a set.
     ///
@@ -163,7 +173,7 @@ public enum GoogleAuthenticatorImport {
                 guard value <= UInt64(Self.maximumBatchField) else { throw .malformed }
                 index = Int(value)
             case let .varint(5, value):
-                guard value <= UInt64(Self.maximumBatchField) else { throw .malformed }
+                guard value <= Self.maximumBatchIdentifier else { throw .malformed }
                 id = Int(value)
 
             // Everything else, including `version`, is ignored the way an unknown field is.

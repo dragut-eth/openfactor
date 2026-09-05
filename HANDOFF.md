@@ -30,7 +30,9 @@ found three Medium and two Low at `b673142`, all five confirmed at source. Its p
 needs no adversary: a plaintext file opened into the app stays in `Documents/Inbox`, backed up,
 after import and after erase. Its second is a list crash on duplicate UUIDs that E16's foreground
 reload had made reachable on every return to the app; that one is fixed first, and the storage
-question behind it, which sync slot should win, is recorded as open rather than decided. The record
+question behind it, which sync slot should win, is recorded as open rather than decided. The
+HOTP ceiling, the Google batch identifier and the Aegis per-entry decode are fixed with tests.
+The plaintext-in-`Documents/Inbox` fix waits on a hardware pass of the import path. The record
 is [docs/audits/X/X3-astra-blind-audit.md](docs/audits/X/X3-astra-blind-audit.md), written as the
 fixes land.
 

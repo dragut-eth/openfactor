@@ -77,6 +77,10 @@ public struct ImportRefusal: Sendable, Equatable {
         case unsupportedDigits(Int)
         case unsupportedPeriod(Int)
         case unsupportedType(String)
+        /// The entry is not shaped like one: a field of the wrong kind, or a required one
+        /// missing, so nothing in it could be read. Distinct from the reasons above, which all
+        /// describe an entry that was read and found wanting.
+        case malformedEntry
 
         /// A field that changes the generated code is absent. Never defaulted: a document
         /// that normally writes every field is telling us the parse failed, not that the
@@ -108,6 +112,8 @@ public struct ImportRefusal: Sendable, Equatable {
                 "a \(seconds) second period is not supported"
             case let .unsupportedType(type):
                 "OpenFactor does not support \(type) accounts"
+            case .malformedEntry:
+                "This entry is not shaped like an Aegis entry, so nothing in it could be read."
             case let .missingSetting(setting):
                 switch setting {
                 case .algorithm: "the file does not say which algorithm this code uses"

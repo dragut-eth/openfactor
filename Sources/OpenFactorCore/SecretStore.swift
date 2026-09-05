@@ -90,6 +90,18 @@ extension SecretStore {
             throw SecretStoreError.counterExhausted
         }
 
+        // **The storage ceiling, not only the arithmetic one.** Enrolment refuses a counter past
+        // `AccountLimits.maximumCounter`, the largest integer the backup format can carry, and
+        // this used to check only for `UInt64` overflow. So an account enrolled at the ceiling
+        // advanced one past it, the encrypted export then refused the whole vault as holding an
+        // unstorable account, by design, and a plaintext export could not be read back. Audit
+        // X3 reproduced it as OF-X3-03: one crafted enrolment and one ordinary tap disabled
+        // backups of every unrelated account. The two limits were each tested and never
+        // connected. Same refusal as wrapping, because the remedy is the same: set it up again.
+        guard AccountLimits.isCounterStorable(next) else {
+            throw SecretStoreError.counterExhausted
+        }
+
         var advanced = record
         advanced.metadata.generator = .hotp(counter: next, digits: digits, algorithm: algorithm)
 

@@ -63,6 +63,25 @@ struct CounterAdvanceTests {
         #expect(result.record.id == record.id)
     }
 
+    /// **Enrolment's ceiling and advancing's ceiling were two different numbers**, and nothing
+    /// connected them. A counter accepted at `AccountLimits.maximumCounter` advanced to one past
+    /// the largest integer the backup format can carry, and the encrypted export then refused the
+    /// whole vault. Audit X3, OF-X3-03.
+    @Test("A counter at the storage ceiling refuses to advance past it, and changes nothing")
+    func refusesToLeaveTheStorableRange() throws {
+        let (store, record) = try store(startingAt: AccountLimits.maximumCounter)
+
+        #expect(throws: SecretStoreError.counterExhausted) {
+            try store.advancingCounter(for: record)
+        }
+
+        let stored = try #require(try store.records().readable.first)
+        #expect(
+            stored.metadata.generator
+                == .hotp(counter: AccountLimits.maximumCounter, digits: .six, algorithm: .sha1))
+        #expect(AccountLimits.isStorable(try store.account(for: record.id)), "still exportable")
+    }
+
     /// Wrapping would send the account back to counter zero and replay every code it has
     /// ever produced. Unreachable by a human, and the check costs nothing.
     @Test("A counter at its maximum refuses to wrap")

@@ -109,7 +109,7 @@ the surviving twin in `unlock`, it chose to keep both. The policy is open.
 
 ## OF-X3-03, medium: advancing an accepted HOTP counter makes the vault unexportable
 
-**Confirmed. Open.**
+**Confirmed. Addressed.**
 
 Enrolment accepts a counter up to `AccountLimits.maximumCounter`, `2^53 - 1`, the largest integer
 the backup format can hold. `advanceCounter` checks only for `UInt64` overflow, so one advance from
@@ -122,24 +122,42 @@ re-import refuses the account.
 useful part. A crafted enrolment, after one ordinary tap, disables backups of every unrelated
 account.
 
+**What was changed.** `advancingCounter` now refuses to leave the storable range, with the same
+`counterExhausted` the wrap check throws, because the remedy is the same: set the account up again.
+The sentence the person sees already existed and is true one step earlier than before. A test
+starts an account at `AccountLimits.maximumCounter`, advances, and checks that nothing changed and
+the account is still exportable. The two limits are connected now.
+
 ## OF-X3-04, low: Google Authenticator batch identifiers are incorrectly capped
 
-**Confirmed. Open.**
+**Confirmed. Addressed.**
 
 One bound, `maximumBatchField`, is applied to protobuf fields 3, 4 and 5: batch size, batch index
 and batch identifier. The comment beside it reasons about how many QR codes a person could scan,
 which is a bound on a count and not on an identifier. A valid transfer carrying a large identifier
 is refused whole as malformed, and the existing bounds test pins the wrong behaviour.
 
+**What was changed.** The identifier gets the `int32` range the schema declares and nothing else;
+the count-like fields keep their small bound, which is what keeps the arithmetic on them safe. The
+pinning test now covers the two count fields, and a new one reads the reviewer's identifiers,
+`10_001` and `1_234_567_890`, to one account each, and refuses one past `Int32.max`.
+
 ## OF-X3-05, low: one malformed Aegis entry rejects the whole file as encrypted
 
-**Confirmed. Open.**
+**Confirmed. Addressed.**
 
 `Database.init(from:)` tries to decode the whole `Contents` and falls back to `.encrypted` on any
 failure, so one entry with a string where a number belongs makes the entire plaintext file report
 as encrypted, with advice to disable encryption that cannot help a file that has none. It
 contradicts `ImportResult`'s own words, that a file of ten where one is unusable must still yield
 nine. The per-entry refusal loop exists and is reached only after the decode that defeats it.
+
+**What was changed.** Encrypted is decided by the shape of `db` alone: a string is encrypted, an
+object is plain. Each entry then decodes on its own, and one that will not is a refusal with a new
+reason, `malformedEntry`, carrying whatever name it still has, so a file of ten with one broken
+entry yields nine and says which. A test uses the reviewer's fixture exactly. A file whose `db` is
+an object with no readable `entries` now reads as not Aegis rather than as encrypted, which is the
+honest classification.
 
 ## What the audit verified
 

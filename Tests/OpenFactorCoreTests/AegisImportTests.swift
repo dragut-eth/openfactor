@@ -103,6 +103,23 @@ struct AegisImportTests {
         #expect(result.refusals.first?.position == 2)
     }
 
+    /// **The whole file used to be called encrypted because one entry would not decode.** The
+    /// reviewer's fixture: a good entry, then one with `"digits":"six"`. Audit X3, OF-X3-05.
+    @Test("A structurally malformed entry is one refusal, not an encrypted file")
+    func malformedEntryIsARefusal() throws {
+        let bad = """
+            {"type":"totp","name":"bad",
+             "info":{"secret":"GEZDGNBVGY3TQOJQ","digits":"six","period":30}}
+            """
+        let result = try AegisImport.read(vault(entries: "\(github), \(bad)"))
+
+        #expect(result.accounts.count == 1)
+        #expect(result.refusals.count == 1)
+        #expect(result.refusals.first?.reason == .malformedEntry)
+        #expect(result.refusals.first?.position == 2)
+        #expect(result.refusals.first?.label == "bad", "its name survives for the report")
+    }
+
     @Test("An empty vault is read as empty rather than as an error")
     func readsEmptyVault() throws {
         let result = try AegisImport.read(vault(entries: ""))
