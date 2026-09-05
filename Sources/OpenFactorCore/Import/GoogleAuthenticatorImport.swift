@@ -75,6 +75,15 @@ public enum GoogleAuthenticatorImport {
     /// The largest `batch_id` accepted: the `int32` the schema declares it as.
     static let maximumBatchIdentifier = UInt64(Int32.max)
 
+    /// Whether a varint is a valid `int32` on the wire, **including the negative half**. A
+    /// negative `int32` travels as a ten-byte sign-extended varint, so it arrives here as a value
+    /// near `UInt64.max`. The first version of this bound accepted only the non-negative half and
+    /// X3's verification round refused `-1` and `Int32.min` with it. Nothing reads the identifier
+    /// after parsing, so it is stored by truncation and never compared.
+    static func isBatchIdentifier(_ value: UInt64) -> Bool {
+        value <= maximumBatchIdentifier || value >= UInt64(bitPattern: Int64(Int32.min))
+    }
+
     /// One scanned code: the accounts it held, and where it sits in a set.
     ///
     /// A large export does not fit in one QR code, so Google Authenticator splits it. Each
@@ -173,8 +182,8 @@ public enum GoogleAuthenticatorImport {
                 guard value <= UInt64(Self.maximumBatchField) else { throw .malformed }
                 index = Int(value)
             case let .varint(5, value):
-                guard value <= Self.maximumBatchIdentifier else { throw .malformed }
-                id = Int(value)
+                guard Self.isBatchIdentifier(value) else { throw .malformed }
+                id = Int(Int32(truncatingIfNeeded: value))
 
             // Everything else, including `version`, is ignored the way an unknown field is.
             default: continue

@@ -88,9 +88,18 @@ struct GoogleAuthenticatorImportTests {
             #expect(batch.result.accounts.count == 1, "id \(id) is a valid identifier")
         }
 
-        #expect(throws: GoogleAuthenticatorImport.FileError.malformed) {
-            _ = try read(payload(
-                [parameters(secret: secret)], id: GoogleAuthenticatorImport.maximumBatchIdentifier + 1))
+        // The negative half of the range travels as a ten-byte sign-extended varint. X3's
+        // verification round found the first version of this bound refusing it.
+        for id in [UInt64(bitPattern: -1), UInt64(bitPattern: Int64(Int32.min))] {
+            let batch = try read(payload([parameters(secret: secret)], id: id))
+            #expect(batch.result.accounts.count == 1, "a negative int32 is still an identifier")
+        }
+
+        // Past int32 in either direction is not an int32.
+        for id in [GoogleAuthenticatorImport.maximumBatchIdentifier + 1, UInt64(bitPattern: Int64(Int32.min) - 1)] {
+            #expect(throws: GoogleAuthenticatorImport.FileError.malformed) {
+                _ = try read(payload([parameters(secret: secret)], id: id))
+            }
         }
     }
 

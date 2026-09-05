@@ -136,9 +136,13 @@ every record twice and loads it three times; finishing is the assertion.
 **What was not changed, and why it is recorded rather than decided.** The reviewer asks for an
 explicit conflict policy at the storage boundary: which slot wins when both hold the same UUID.
 That is a real question and the display fix does not answer it, it only stops the answer from
-being a crash. Nothing here deletes either item. Choosing a winner means choosing which of two
-authenticating records to destroy, on inference, and the last time this project faced that shape,
-the surviving twin in `unlock`, it chose to keep both. The policy is open.
+being a crash. Nothing here deletes either item. **Two different questions were run together in an
+earlier draft of this paragraph**, and the verification round separated them: which record to
+*show* is decided, the first the listing returns, arbitrary but stable; which record to *keep* in
+storage is not, and reconciling two authenticating items on inference is the shape this project
+declined once already, for the surviving twin in `unlock`. A deterministic read winner does not
+require destroying anything, and explicit conflict reporting would preserve both. The storage
+policy is open; the display policy is not.
 
 ## OF-X3-03, medium: advancing an accepted HOTP counter makes the vault unexportable
 
@@ -210,3 +214,63 @@ or Quick Start; WatchConnectivity exclusivity against a rogue counterpart; multi
 and deletion propagation, which E16 has since measured on hardware; snapshot, capture and App Lock
 behaviour on a device; the account tripwire, which it correctly reports as absent; and secure
 zeroisation of secret bytes, which Swift object lifetimes do not provide.
+
+## Verification round, 2026-09-05
+
+**The reviewer was handed the diff `b673142..c5a6fbe` and this record, and asked to re-run its
+five probes, to say whether each remedy was responsive, to argue with the recorded decisions, to
+try to falsify two claims, and to report new defects in the diff only.** The finder checks the fix,
+the same shape as A4's verify rounds and X2's.
+
+**All five probes re-run against `c5a6fbe`, and none reproduces its original failure.** That is
+the line worth reading first, because a probe is not an opinion. Fifty targeted core tests passed
+in its environment.
+
+**Verdicts:** X3-02, X3-03 and X3-05 responsive, each judged to address the finding generally
+rather than the probe. X3-01 and X3-04 partly responsive, for the two defects below. Both recorded
+decisions accepted: the simulator validation of X3-01, with the accurate note that it establishes
+nothing about physical-device backup and restore; and leaving X3-02's storage policy open, with a
+correction this record now carries, that a deterministic read winner does not require destroying
+either item.
+
+**The two claims.** The deduplication claim held: across twenty shuffled listings of three copies
+each of 1,001 distinct identifiers, every identifier survived exactly once with no storage writes,
+and the filter compares identifiers, not labels. The ownership claim was **falsified, under a
+precondition the reviewer did not show to be reachable**: with `Documents/Inbox` itself replaced by
+a symlink to a sibling directory, `owns` accepted files in the sibling, because both sides of the
+comparison resolve symlinks and so the trusted root moved with the link. Outward file symlinks,
+`..` escapes and sibling names sharing the prefix were all refused as intended.
+
+**Three defects, each verified here before being accepted:**
+
+- **The foreground sweep is not wired to the foreground.** Medium by the reviewer, and accepted
+  at that. `DocumentInbox().sweep()` is attached through `.task`, which runs when the view appears,
+  while the foreground handler at `onChange(of: scenePhase)` calls `SharedInbox().sweepStale()` on
+  every phase change and never the document sweep. The comment beside the call says "whenever it
+  comes forward", which is what the code does not do. A copy left by a killed process, younger than
+  a minute at launch, survives every later foreground while the view stays resident. The read path
+  still deletes on every import, so the exposure is the orphan case only, but a comment claiming
+  what the code does not do is the exact drift this project exists to catch, and it was written
+  by the same hand that wrote the check for it. **Fixed**: the document sweep joins the
+  shared-inbox sweep in the scene phase handler, and the comment at the `.task` site now says what
+  that line does, which is run once at appearance.
+- **A redirected inbox root moves the ownership boundary.** Low, conditional, and accepted as
+  such: it needs write access inside the app's private container, which E4 measured to be beyond a
+  sibling's reach, and the reviewer did not show ordinary document delivery granting it. The
+  hardening is cheap and rides along: resolve the Documents root canonically, append the inbox
+  name without resolving it, and refuse ownership outright if the inbox path itself resolves
+  anywhere else. **Fixed**, with a test that plants exactly the redirect the reviewer used and
+  checks that neither `discard` nor `sweepAll` touches the file behind it.
+- **X3-04 accepts only the non-negative half of `int32`.** A protobuf `int32` carries negative
+  values as ten-byte sign-extended varints, the reader accepts ten bytes, and the new guard refuses
+  anything above `Int32.max`, so a negative identifier is still refused as malformed. The reviewer
+  measured nothing about how often Google emits one, and neither has this project, but there is no
+  reason to accept half of a declared range. The identifier is stored on the batch and read by
+  nothing afterwards. **Fixed**: the full wire range, stored by truncation to `Int32`; `-1` and
+  `Int32.min` import to one account each, and one past `Int32.max` or one below `Int32.min` is
+  refused.
+
+**What this round was for.** Five probes that no longer reproduce is the strongest statement
+this record can make about the fixes. The three defects are the cost of the change set, and the
+first of them is the one this project should weigh most: a comment that promised a behaviour the
+code did not have, one week after X2 closed six instances of exactly that.

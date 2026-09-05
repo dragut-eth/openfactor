@@ -48,12 +48,25 @@ public struct DocumentInbox: Sendable {
 
     /// Whether this URL is a copy this app owns: a file inside its own inbox.
     ///
-    /// Both sides are resolved, so a symlink or a `..` in either cannot make a foreign path look
+    /// The candidate is resolved, so a symlink or a `..` in it cannot make a foreign path look
     /// like an owned one. The inbox path itself is a prefix and a separator, so a sibling named
     /// `InboxArchive` does not match.
+    ///
+    /// **The inbox is anchored under the canonical Documents directory and must be a real
+    /// directory there.** The first version resolved both sides, which let the trusted root move:
+    /// replace `Documents/Inbox` itself with a link to a sibling and every file in the sibling was
+    /// owned, because the comparison followed the link. X3's verification round planted exactly
+    /// that. It needs write access inside the private container, which E4 measured to be beyond a
+    /// sibling's reach, so it is hardening rather than a hole, and it costs one comparison: if the
+    /// inbox path resolves anywhere other than itself, nothing is owned.
     public func owns(_ url: URL) -> Bool {
-        guard url.isFileURL, let directory else { return false }
-        let inbox = directory.standardizedFileURL.resolvingSymlinksInPath().path
+        guard url.isFileURL, let documents = documents() else { return false }
+        let root = documents.standardizedFileURL.resolvingSymlinksInPath()
+        let inbox = root.appendingPathComponent(Self.directoryName, isDirectory: true)
+            .standardizedFileURL.path
+        guard URL(fileURLWithPath: inbox).resolvingSymlinksInPath().path == inbox else {
+            return false
+        }
         let candidate = url.standardizedFileURL.resolvingSymlinksInPath().path
         return candidate.hasPrefix(inbox + "/") && candidate.count > inbox.count + 1
     }

@@ -248,7 +248,10 @@ struct OpenFactorApp: App {
             .task { SharedInbox().sweepStale() }
             // Copies iOS made of documents opened into the app, left by a killed process or by a
             // build before `DocumentInbox` existed. Settled ones only, so a delivery landing as
-            // the app comes forward is not deleted before the import reads it.
+            // the app opens is not deleted before the import reads it. **This runs once, when the
+            // view appears.** The call that runs on every return to the foreground is in the scene
+            // phase handler below, beside the shared inbox's; the first version of this comment
+            // claimed that this line did that, and X3's verification round found the claim.
             .task { DocumentInbox().sweep() }
             .task { ExportViewModel.discardOrphanedFiles() }
             .task { watchKeys.activate() }
@@ -269,6 +272,11 @@ struct OpenFactorApp: App {
                 lock.scenePhaseChanged(to: phase)
                 PrivacyShield.apply(lock)
                 SharedInbox().sweepStale()
+                // The document inbox's settled copies, on every phase change like the shared
+                // inbox's, so an orphan younger than a minute at launch does not outlive a resident
+                // app. Audit X3's verification round: the sweep was attached to `.task` alone, which
+                // runs at appearance, while its comment said "whenever it comes forward".
+                DocumentInbox().sweep()
                 // Retried here rather than only at launch: the failure this is most likely to
                 // meet is a Keychain refusing a locked device during a cold start, and coming
                 // forward is exactly the moment that stops being true. Only on coming forward:

@@ -50,6 +50,31 @@ struct DocumentInboxTests {
         #expect(!DocumentInbox(documents: { nil }).owns(owned), "no documents directory, no claim")
     }
 
+    /// **The trusted root must not be movable.** X3's verification round replaced the inbox
+    /// directory itself with a link to a sibling, and because both sides of the comparison
+    /// followed links, every file in the sibling was owned and deletable. The precondition is
+    /// write access inside the private container, out of scope by E4, and the hardening is still
+    /// worth one comparison.
+    @Test("An inbox that is a link elsewhere owns nothing")
+    func redirectedInboxOwnsNothing() throws {
+        let documents = FileManager.default.temporaryDirectory
+            .appendingPathComponent("document-inbox-\(UUID().uuidString)", isDirectory: true)
+        let outside = documents.appendingPathComponent("outside", isDirectory: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: documents) }
+
+        try FileManager.default.createSymbolicLink(
+            at: documents.appendingPathComponent(DocumentInbox.directoryName),
+            withDestinationURL: outside)
+        let file = try write("victim.json", in: outside)
+
+        let inbox = DocumentInbox(documents: { documents })
+        #expect(!inbox.owns(file), "a file reached through a redirected inbox is not ours")
+        inbox.discard(file)
+        inbox.sweepAll()
+        #expect(FileManager.default.fileExists(atPath: file.path), "and nothing deletes it")
+    }
+
     @Test("Discarding removes an owned copy and leaves everything else alone")
     func discardIsGatedOnOwnership() throws {
         let (inbox, documents, directory) = try makeInbox()

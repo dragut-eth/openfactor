@@ -41,7 +41,12 @@ question behind it, which sync slot should win, is recorded as open rather than 
 HOTP ceiling, the Google batch identifier and the Aegis per-entry decode are fixed with tests.
 The plaintext-in-`Documents/Inbox` fix, `DocumentInbox`, removes the app's own copies after every
 read, sweeps settled ones at launch and everything on erase, and was validated end to end on the
-simulator, where the container can be read from outside. **All five X3 findings are closed.** The record
+simulator, where the container can be read from outside. **All five X3 findings are closed**, and
+the finder's verification round re-ran its five probes against the fixes: none reproduces. It
+found three small defects in the fix set, all fixed with tests: the document sweep was attached
+to `.task` alone while its comment claimed the foreground, a symlinked inbox root moved the
+ownership boundary, and the Google batch identifier accepted only the non-negative half of
+`int32`. The full record is in the X3 entry. The record
 is [docs/audits/X/X3-astra-blind-audit.md](docs/audits/X/X3-astra-blind-audit.md), written as the
 fixes land.
 
