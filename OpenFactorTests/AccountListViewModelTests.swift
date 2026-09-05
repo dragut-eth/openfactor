@@ -45,6 +45,29 @@ struct AccountListViewModelTests {
         return store
     }
 
+    /// **Two records, one identifier, which the Keychain can genuinely produce.** The sync flag
+    /// is part of an item's primary key, so a valid item copied into the other slot with its UUID
+    /// and ciphertext intact is a second item that also authenticates, and `records()` returns
+    /// both. Audit X3 reproduced the second `load` trapping on the duplicate key, inside a `do`
+    /// that cannot catch a trap, and the foreground reload had made that second load happen on
+    /// every return to the app. OF-X3-02. The assertion here is that the test finishes.
+    @Test("A duplicated identifier is shown once and does not trap on reload")
+    func duplicateIdentifiersDoNotTrap() throws {
+        let doubled = DoublingStore(store([("GitHub", "octocat")]))
+        let model = AccountListViewModel(store: doubled)
+        let epoch = Date(timeIntervalSince1970: 0)
+
+        model.load(at: epoch)
+        #expect(model.rows.count == 1, "one card for one account, however many items carry it")
+        let code = model.rows.first?.code
+
+        model.load(at: epoch)
+        model.load(at: epoch)
+        #expect(model.rows.count == 1)
+        #expect(model.rows.first?.code == code, "the existing row is kept across the reload")
+        #expect(model.loadFailure == nil)
+    }
+
     // MARK: - Loading and generating
 
     @Test("Loading shows the stored accounts")
@@ -372,4 +395,22 @@ private struct SecretlessStore: SecretStore {
     func secret(for id: UUID) throws(SecretStoreError) -> Data { throw .deviceLocked }
     func update(_ record: AccountRecord) throws(SecretStoreError) {}
     func delete(id: UUID) throws(SecretStoreError) {}
+}
+
+/// A store whose listing returns every readable record twice, as two Keychain items sharing a
+/// UUID would. Everything else is forwarded.
+private final class DoublingStore: SecretStore, @unchecked Sendable {
+    private let inner: InMemorySecretStore
+    init(_ inner: InMemorySecretStore) { self.inner = inner }
+
+    func add(_ account: OTPAccount, color: AccountColor) throws(SecretStoreError) -> AccountRecord {
+        try inner.add(account, color: color)
+    }
+    func records() throws(SecretStoreError) -> StoredRecords {
+        let stored = try inner.records()
+        return StoredRecords(readable: stored.readable + stored.readable, unreadable: stored.unreadable)
+    }
+    func secret(for id: UUID) throws(SecretStoreError) -> Data { try inner.secret(for: id) }
+    func update(_ record: AccountRecord) throws(SecretStoreError) { try inner.update(record) }
+    func delete(id: UUID) throws(SecretStoreError) { try inner.delete(id: id) }
 }

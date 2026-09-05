@@ -175,8 +175,24 @@ final class AccountListViewModel {
 
             // Existing rows are matched by identifier so a reload does not blank every
             // code and make the list flash.
-            let existing = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
-            rows = stored.readable.map { record in
+            //
+            // **Two records can share one identifier, and this must not trap when they do.**
+            // `kSecAttrSynchronizable` is part of a Keychain item's primary key, so the same
+            // account can exist once in each sync slot: anything able to write the group can
+            // copy a valid item across with its UUID and ciphertext intact, and both halves
+            // still authenticate. `records()` returns both. The first load carried both rows
+            // and the second load, building this dictionary with `uniqueKeysWithValues`,
+            // trapped on the duplicate key, inside a `do` that cannot catch a trap. Audit X3
+            // reproduced it as OF-X3-02, and the foreground reload had made the second load
+            // happen on every return to the app.
+            //
+            // The list keeps the first record it sees for an identifier and drops the rest,
+            // which is a display decision and not a resolution: which slot should win is a
+            // storage question, recorded as open in the X3 entry. Nothing here deletes.
+            let existing = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            var seen = Set<UUID>()
+            let unique = stored.readable.filter { seen.insert($0.id).inserted }
+            rows = unique.map { record in
                 var row = existing[record.id] ?? Row(record: record)
                 row = Row(
                     record: record,

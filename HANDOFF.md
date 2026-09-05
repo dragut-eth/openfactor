@@ -24,6 +24,16 @@ downsamples the rest to `workingImageMaxDimension`. It downsamples rather than r
 dimension refusal has to reject a 48 megapixel frame from the phone in the user's hand. Full detail
 and the reasoning are in [docs/audits/X/X1-codex-blind-audit.md](docs/audits/X/X1-codex-blind-audit.md).
 
+**Audit X3 arrived on 2026-09-05 and is being worked through.** GPT 6-Astra, the first reviewer in
+the series from a lineage with no hand in this code and the first to run probes rather than read,
+found three Medium and two Low at `b673142`, all five confirmed at source. Its principal finding
+needs no adversary: a plaintext file opened into the app stays in `Documents/Inbox`, backed up,
+after import and after erase. Its second is a list crash on duplicate UUIDs that E16's foreground
+reload had made reachable on every return to the app; that one is fixed first, and the storage
+question behind it, which sync slot should win, is recorded as open rather than decided. The record
+is [docs/audits/X/X3-astra-blind-audit.md](docs/audits/X/X3-astra-blind-audit.md), written as the
+fixes land.
+
 **Audit X2 is closed, E16 is measured, and both are on `main`.** X2, a second blind pass by
 Claude Fable 5.1 at `c1c0e7b`, found eight, all confirmed, none critical. Seven are fixed and the
 anchor is deferred with its design and reopening condition written into `docs/VAULT.md`'s tripwire
