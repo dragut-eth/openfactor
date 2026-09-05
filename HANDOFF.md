@@ -32,7 +32,9 @@ after import and after erase. Its second is a list crash on duplicate UUIDs that
 reload had made reachable on every return to the app; that one is fixed first, and the storage
 question behind it, which sync slot should win, is recorded as open rather than decided. The
 HOTP ceiling, the Google batch identifier and the Aegis per-entry decode are fixed with tests.
-The plaintext-in-`Documents/Inbox` fix waits on a hardware pass of the import path. The record
+The plaintext-in-`Documents/Inbox` fix, `DocumentInbox`, removes the app's own copies after every
+read, sweeps settled ones at launch and everything on erase, and was validated end to end on the
+simulator, where the container can be read from outside. **All five X3 findings are closed.** The record
 is [docs/audits/X/X3-astra-blind-audit.md](docs/audits/X/X3-astra-blind-audit.md), written as the
 fixes land.
 

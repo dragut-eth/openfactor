@@ -45,6 +45,33 @@ struct ImportViewModelTests {
         return url
     }
 
+    /// **The copy iOS makes of an opened document is removed once read; a picked file is not.**
+    /// Audit X3, OF-X3-01. Both go through the same `read(_ url:)`; ownership decides.
+    @Test("Reading removes the app's own inbox copy and leaves a picked file alone")
+    @MainActor
+    func readingDiscardsOwnedCopiesOnly() throws {
+        let documents = FileManager.default.temporaryDirectory
+            .appendingPathComponent("import-documents-\(UUID().uuidString)", isDirectory: true)
+        let inboxDirectory = documents.appendingPathComponent(DocumentInbox.directoryName, isDirectory: true)
+        try FileManager.default.createDirectory(at: inboxDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: documents) }
+
+        let owned = inboxDirectory.appendingPathComponent("export.json")
+        try aegisVault(secret: "GEZDGNBVGY3TQOJQ").write(to: owned, atomically: true, encoding: .utf8)
+        let picked = try write(aegisVault(secret: "GEZDGNBVGY3TQOJQ"), extension: "json")
+        defer { try? FileManager.default.removeItem(at: picked) }
+
+        let model = ImportViewModel(
+            store: try makeStore(), documentInbox: DocumentInbox(documents: { documents }))
+
+        model.read(owned)
+        if case let .failed(reason) = model.stage { Issue.record("import failed: \(reason)") }
+        #expect(!FileManager.default.fileExists(atPath: owned.path), "the app's own copy is gone")
+
+        model.read(picked)
+        #expect(FileManager.default.fileExists(atPath: picked.path), "the person's file stays")
+    }
+
     private func aegisVault(secret: String, period: Int = 30, digits: Int = 6) -> String {
         """
         {"version":1,"header":{"slots":null,"params":null},"db":{"version":3,"entries":[

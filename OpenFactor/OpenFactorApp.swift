@@ -246,6 +246,10 @@ struct OpenFactorApp: App {
             // deadline. This is the same call, made every time the app comes forward, and it is
             // cheap: a directory listing.
             .task { SharedInbox().sweepStale() }
+            // Copies iOS made of documents opened into the app, left by a killed process or by a
+            // build before `DocumentInbox` existed. Settled ones only, so a delivery landing as
+            // the app comes forward is not deleted before the import reads it.
+            .task { DocumentInbox().sweep() }
             .task { ExportViewModel.discardOrphanedFiles() }
             .task { watchKeys.activate() }
             // Over whatever is on screen, because the watch may ask at any moment and the

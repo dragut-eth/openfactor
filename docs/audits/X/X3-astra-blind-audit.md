@@ -59,7 +59,7 @@ reviewer audited HEAD without the history and could not have known that.
 
 ## OF-X3-01, medium: imported plaintext files remain outside the encrypted vault
 
-**Confirmed. Open.**
+**Confirmed. Addressed, and validated end to end on the simulator.**
 
 `LSSupportsOpeningDocumentsInPlace` is false, so a document opened into the app arrives as a copy
 in `Documents/Inbox`, a location Apple documents as backed up. The import reads it and never
@@ -76,6 +76,39 @@ before they are stored. Here they are stored unencrypted somewhere the app never
 **The reviewer's limit stands as stated:** the retention was reproduced against the real import
 model; the iOS delivery and backup consequence follows from the configured behaviour and Apple's
 documentation and was not observed on a device.
+
+**What was changed.** A `DocumentInbox` type in the core knows which files are this app's own
+copies, by resolving the path against `Documents/Inbox` rather than comparing text, so a symlink,
+a `..`, or a sibling directory named like the inbox cannot make somebody else's file look owned.
+The import removes the copy on every way out of its read, success, refusal or failure, because by
+then the bytes are in memory or never will be. The app sweeps settled copies whenever it comes
+forward, which clears what a killed process or a build before this fix left behind, and leaves a
+file younger than a minute so a delivery landing as the app opens is not deleted before it is read.
+Erasing sweeps everything, whatever its age. A document picker URL is never touched: that is the
+person's own file on their own disk, and deleting it would turn a fix for keeping secrets into a
+way of destroying them.
+
+**Five tests cover ownership, discard, the aged sweep, the full sweep and a missing directory.**
+What no test on any host can show is iOS actually delivering an opened document into that
+directory and backing it up, which is the half the reviewer also left as inferred.
+
+**Validated on the simulator, where the container can be read from outside.** Two things were
+observed on a real iOS process. First, the launch sweep against the real container: a settled copy
+planted in `Documents/Inbox` was gone after the app came forward, and a fresh one beside it was
+kept. Second, the reviewer's scenario itself: a plaintext text export in Files, sent to OpenFactor
+through the share sheet's app row, which is the document-open path for a type this app declares
+as an alternate viewer. iOS delivered a copy, the import preview showed it read, and
+`Documents/Inbox` was already empty before the import had been confirmed. Cancelling the import
+left it empty. The document picker was covered by the hosted test, which is where a picked file
+must survive.
+
+**Why the maintainer's phone could not show this, and why that is correct.** The app does not
+declare `UIFileSharingEnabled`, so Files never shows an OpenFactor folder and `Documents/Inbox`
+is invisible to the person, fixed or not. That setting is right and stays: an OpenFactor folder
+in Files would expose the container to anyone who can browse it. It is also why three careful
+readers, and a phone in the maintainer's own hand, could not see a retained plaintext file that a
+probe reading the container found in minutes. The same choice that hides the directory from a
+person hides it from a reader of the source.
 
 ## OF-X3-02, medium: duplicate account UUIDs crash the account list on reload
 

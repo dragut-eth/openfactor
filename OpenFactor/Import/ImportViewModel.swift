@@ -64,7 +64,11 @@ final class ImportViewModel {
 
     private let store: any SecretStore
 
-    init(store: any SecretStore) {
+    /// See `DocumentInbox`. Injected so a test can point it at a temporary directory.
+    private let documentInbox: DocumentInbox
+
+    init(store: any SecretStore, documentInbox: DocumentInbox = DocumentInbox()) {
+        self.documentInbox = documentInbox
         self.store = store
     }
 
@@ -90,6 +94,14 @@ final class ImportViewModel {
     func read(_ url: URL) {
         let needsRelease = url.startAccessingSecurityScopedResource()
         defer { if needsRelease { url.stopAccessingSecurityScopedResource() } }
+
+        // **The copy is removed on every way out of this method**, success, refusal, or a read
+        // that failed, because by the time any of those is decided the bytes are in memory or
+        // never will be, and the file has no further use. It is removed only if it is this app's
+        // own inbox copy; a document picker URL is somebody's file and is left alone. Audit X3,
+        // OF-X3-01: a plaintext export opened into the app used to stay in `Documents/Inbox`,
+        // backed up, after the import, after the original was deleted, and after erasing.
+        defer { documentInbox.discard(url) }
 
         // **One open and one bounded read**, rather than a size lookup followed by a separate
         // load. The lookup version was already an improvement on measuring after the allocation,

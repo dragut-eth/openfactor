@@ -330,9 +330,12 @@ behind a change belongs on the website and in `docs/audits/`, in that order.
 
     Your Apple Watch no longer asks to be set up when it already is.
 
-**Five changes, five paragraphs, and the order is deliberate**: the one everybody notices first,
+    A file you open into OpenFactor to import is removed as soon as it has been read, so a
+    plain export never lingers on your iPhone or in its backups.
+
+**Six changes, six paragraphs, and the order is deliberate**: the one everybody notices first,
 then the one they see next time they type a passphrase, then the two warnings, then the annoyance
-that stopped happening. Nothing here says why, which is the whole difference between this surface
+that stopped happening, then the one nobody will notice and everybody benefits from. Nothing here says why, which is the whole difference between this surface
 and the other two.
 
 ## App Privacy, the nutrition label

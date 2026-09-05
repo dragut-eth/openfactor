@@ -168,6 +168,9 @@ struct EraseAccountsView: View {
 
         switch outcome {
         case .erased:
+            // The person just asked for their secrets to be gone. A plaintext export opened into
+            // the app minutes ago is exactly what must not survive that, whatever its age.
+            DocumentInbox().sweepAll()
             onErased()
             dismiss()
         case .notAuthenticated:
