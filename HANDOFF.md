@@ -24,6 +24,13 @@ downsamples the rest to `workingImageMaxDimension`. It downsamples rather than r
 dimension refusal has to reject a 48 megapixel frame from the phone in the user's hand. Full detail
 and the reasoning are in [docs/audits/X/X1-codex-blind-audit.md](docs/audits/X/X1-codex-blind-audit.md).
 
+**The phishing limit is now stated where the model states its limits.** `README.md`'s Security
+model says that codes are not tied to the site that asked for them and that OpenFactor cannot tell
+where one is typed, and `SECURITY.md`'s "Your part" carries the person-shaped answer: a separate
+device, a code typed on purpose, and a password manager that fills only on the site a password was
+saved for. Passkeys are deliberately not recommended: they collapse the two-device separation the
+model rests on, and this project does not recommend what it has not verified.
+
 **Audit X3 arrived on 2026-09-05 and is being worked through.** GPT 6-Astra, the first reviewer in
 the series from a lineage with no hand in this code and the first to run probes rather than read,
 found three Medium and two Low at `b673142`, all five confirmed at source. Its principal finding

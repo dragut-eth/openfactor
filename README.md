@@ -40,6 +40,13 @@ against a malicious OpenFactor update, a compromised operating system, or somebo
 already unlocked device. [docs/VAULT.md](docs/VAULT.md) specifies the key hierarchy, record
 formats, recovery path, Watch provisioning protocol, and the limits that remain.
 
+**It also does not defend against phishing.** A code is not tied to the site that asked for it,
+and a fake login page can use one on the real site within the same thirty seconds; the app never
+knows where a code is typed. OpenFactor's part is to keep the code on a separate device and never
+fill it for you, so typing it is a decision you make on purpose each time. The check against a
+fake site belongs to your password manager, which fills a password only on the site it was saved
+for. [SECURITY.md](SECURITY.md) has the full statement.
+
 The vault is implemented as of PR 16d, on both iPhone and Apple Watch. The Watch exchange has now
 been run between a real phone and a real watch: the successful path, a declined request, and a
 phone with no vault of its own. **Gate A4 reviewed that implementation**, against the vault at

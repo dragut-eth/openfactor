@@ -723,6 +723,18 @@ unless somebody turns that off, at Settings, then Apps, then App Store, then App
 app has no way to compel an update and never will**, because it makes no network requests at all,
 and `docs/MASVS.md` publishes that as an outright fail rather than laundering it.
 
+**Let your password manager be the check against a fake site, and type the code yourself.** The
+out-of-scope list above says codes can be entered into a convincing fake site, and this is the
+person-shaped half of that. A code is not tied to the site that asked for it, and a fake login page
+can use one on the real site within the same thirty seconds; OpenFactor cannot tell, because the app
+never knows where a code is typed. That is a property of the standard, not of this app. **What this
+app does about it is deliberate**: the code lives on a separate device from the one that is
+browsing, and the app never fills it for you, so typing it is a decision you make on purpose each
+time. **The check against the site itself belongs to a password manager**, which fills a password
+only on the site it was saved for. If it declines to fill, that is the signal, and it arrives before
+any code is asked for. It is a signal rather than a protection: somebody who types the password by
+hand into the page anyway has given up the tell, and the code follows.
+
 **What this list is not.** It is not a promise that following it makes anything safe, and it is not
 a way to move blame. **Every item exists because this project measured a limit it could not code
 around**, and the honest thing was to say so rather than let the boundary sit unmentioned at the
