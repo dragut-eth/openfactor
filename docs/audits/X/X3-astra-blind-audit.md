@@ -274,3 +274,24 @@ comparison resolve symlinks and so the trusted root moved with the link. Outward
 this record can make about the fixes. The three defects are the cost of the change set, and the
 first of them is the one this project should weigh most: a comment that promised a behaviour the
 code did not have, one week after X2 closed six instances of exactly that.
+
+## Closing check, 2026-09-05
+
+**The finder was asked three questions about `d10a1c8`, fenced to those three, and answered all
+of them.** The document sweep now runs from the scene phase handler alongside the shared inbox's,
+confirmed by reading the handler, which is the only verification a lifecycle change can have. The
+redirected inbox probe no longer reproduces: `owns` answers false for the sibling file and for its
+alias through the link, and the file survives `discard` and `sweepAll`. The identifier probe
+imports `-1` and `Int32.min` and refuses one past either end. Thirty three targeted tests passed in
+its environment. Nothing in the checkout was modified.
+
+**So the round's three defects are closed by the reviewer that found them**, which turns the
+wiring fix from "recorded as untestable" into "confirmed by the finder", and that is a better
+sentence to leave in this file.
+
+**Asked whether the app was better for the exercise, the reviewer answered, in its own words:**
+"Yes, meaningfully better. All five original failure scenarios are fixed, and the three follow-up
+defects now pass the requested checks. I'd now consider OpenFactor reasonable for ordinary
+authenticator use based on the code reviewed." That is one reviewer's judgement of one commit,
+bounded by its own last five words, and this record quotes it rather than adopting it. What it is
+not is the professional audit the README's review status section says has not happened.

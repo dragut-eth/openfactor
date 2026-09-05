@@ -46,7 +46,8 @@ the finder's verification round re-ran its five probes against the fixes: none r
 found three small defects in the fix set, all fixed with tests: the document sweep was attached
 to `.task` alone while its comment claimed the foreground, a symlinked inbox root moved the
 ownership boundary, and the Google batch identifier accepted only the non-negative half of
-`int32`. The full record is in the X3 entry. The record
+`int32`. A fenced closing check confirmed all three fixed at `d10a1c8`, including the wiring,
+which no test can hold. The full record is in the X3 entry. The record
 is [docs/audits/X/X3-astra-blind-audit.md](docs/audits/X/X3-astra-blind-audit.md), written as the
 fixes land.
 
