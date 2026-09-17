@@ -70,7 +70,7 @@ header.hero p.tagline { font-size: 1.15rem; color: var(--muted); margin: 0 0 1.7
 }
 .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 /* Apple's badge, unmodified, at 48px: above the 40px minimum, with the row gap as clear space. */
-.store img { display: block; height: 48px; width: auto; }
+.store img { display: block; height: 48px; width: auto; margin: .75rem auto; }
 
 /* Status banner */
 .statement {
