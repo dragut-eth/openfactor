@@ -2,6 +2,9 @@
 
 A deliberately focused authenticator for iPhone and Apple Watch.
 
+**On the App Store:** [apps.apple.com/app/id6801968570](https://apps.apple.com/app/id6801968570),
+version 1.0, for iPhone and Apple Watch.
+
 OpenFactor stores verification codes without an OpenFactor account, server, browser extension,
 or analytics service. It keeps the authenticator physically separate from the computer asking
 for the code, while making it straightforward to import your accounts, back them up, and take

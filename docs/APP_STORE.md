@@ -542,9 +542,11 @@ listing: subtitle, promotional text, keywords, description, categories, age rati
 rights, copyright, the support and marketing URLs, and the review notes. Everything in this
 document that is a value to paste is now in the form.
 
-**No build is attached and none should be yet.** This is metadata work, well ahead of a
-submission. Attaching a build is the last step, once there is one worth shipping and the export
-compliance call has been made.
+**Build 8 is attached, and 1.0 is on the App Store.** Approved and released by hand on
+2026-09-16, release type manual, at
+[apps.apple.com/app/id6801968570](https://apps.apple.com/app/id6801968570). The paragraph that
+stood here for a month said no build was attached and none should be yet; that was true of the
+metadata work and is not true any more.
 
 **Nothing in this document gates a submission any more.** Both things that once did are closed:
 
