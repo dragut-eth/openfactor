@@ -77,13 +77,12 @@ tell from the outside which one was accurate.
 **Three of them are also on the site now**, in Apple's iPhone 17 and Watch Ultra 3 bezels. They
 are the same images, so the shop window and the landing page show the same app.
 
-**The site and the store lead with different account list screenshots, and that is deliberate
-rather than drift.** The site uses the capture with the full palette. **The store leads with a
-capture in which every card is the default blue, decided 2026-08-29.** The dark capture that used
-to open the store set has been withdrawn from it.
-
-**Recorded here so it is not re-raised as an inconsistency**: the two surfaces differ on purpose,
-and the store's frame is the one that changed.
+**The site and the store lead with the same account list capture again, since 2026-09-18.** From
+2026-08-29 the store led with a capture in which every card was the default blue, and both watch
+frames matched it; the full-palette captures went back in with version 1.1, because the per-account
+colour is one of the few things a frame can show that other authenticators do not have, and the
+website had shown it throughout. The blue captures stay in `assets/screenshots/` as a record. The
+dark capture that once opened the set stays withdrawn: one look, consistently.
 
 The App Store frames are the one place people will look at this app before installing it, and the
 vault setup screen is a strange first impression: the list with real codes is what to show.
@@ -308,7 +307,8 @@ commit history rather than from memory.
 
 **The trigger is a version change, not a build.** The field appears for an *update*. A rejected
 first release resubmitted as another build of 1.0 still has nowhere to put this, so the text below
-waits for 1.0.1 rather than for the next upload.
+waited for the next version rather than for the next upload. **Entered for 1.1 on 2026-09-18**,
+the six paragraphs below, verbatim.
 
 **Written from the commits, and kept to what somebody using the app would notice.** The iteration
 ceiling, the unreadable key distinction and the wording corrections are all absent because they are

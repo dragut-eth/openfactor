@@ -5,11 +5,16 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-09-16. **1.0 (8) is on the App Store**, released by hand on 2026-09-16 at
+**Last updated:** 2026-09-18. **The project is at 1.1 (9), the first update**, not yet built.
+Version 1.1 exists in App Store Connect with the What's New text from `docs/APP_STORE.md` entered
+and the full-palette screenshots restored. It carries everything since build 8: audits X2 and X3,
+E16, the two list reloads, the masked passphrase fields, the passcode-gated Start over, the
+recovery record warning, the watch unreadable-key fix and the document inbox sweep. Next step is
+`ship-testflight.sh`, then a TestFlight pass on both iPhones and the watch before submission.
+**1.0 (8) is on the App Store**, released by hand on 2026-09-16 at
 [apps.apple.com/app/id6801968570](https://apps.apple.com/app/id6801968570), as `dev.openfactor.app`.
 It is the first build carrying the OF-03 fix. Build 7 is superseded. The README and the website
-now carry the store link. Everything since build 8 (audits X2 and X3, E16, the two list reloads,
-the document inbox sweep) is on `main` and waits for the next version.
+carry the store link.
 **Build 6 must not be submitted**: it photographed live codes into the app
 switcher after every Face ID unlock, which was found on hardware during a day of real-key testing
 and fixed the same day. Build 7 is the first build carrying that fix, the corrected erase warning,
