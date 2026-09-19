@@ -86,12 +86,15 @@ out, and be exact about which of the two a reader is checking.
 
 ## What this project pins
 
-**The toolchain, exactly.**
+**The toolchain, exactly.** This table names the toolchain current builds use. Each record in
+`docs/releases/` names the one that built it, and that is the value a reader reproducing a
+given build has to match: 1.0 (8) and earlier were built with Xcode 26.6 (17F113), Swift 6.3.3;
+1.1 (9) onward with the versions below.
 
 | | |
 | --- | --- |
-| Xcode | 26.6, build 17F113 |
-| Swift | 6.3.3, `swiftlang-6.3.3.1.3 clang-2100.1.1.101` |
+| Xcode | 27.0, build 27A266a |
+| Swift | 6.4, `swiftlang-6.4.0.34.1 clang-2100.3.34.1` |
 | iOS deployment target | 18.0 |
 | watchOS deployment target | 11.0 |
 | Bundle identifier | `dev.openfactor.app` |
