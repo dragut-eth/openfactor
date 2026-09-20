@@ -542,8 +542,8 @@ listing: subtitle, promotional text, keywords, description, categories, age rati
 rights, copyright, the support and marketing URLs, and the review notes. Everything in this
 document that is a value to paste is now in the form.
 
-**Build 8 is attached, and 1.0 is on the App Store.** Approved and released by hand on
-2026-09-16, release type manual, at
+**1.1 (9) is on the App Store, released by hand on 2026-09-19.** Before it, 1.0 (8) was approved
+and released by hand on 2026-09-16, release type manual, at
 [apps.apple.com/app/id6801968570](https://apps.apple.com/app/id6801968570). The paragraph that
 stood here for a month said no build was attached and none should be yet; that was true of the
 metadata work and is not true any more.

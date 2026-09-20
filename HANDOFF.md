@@ -5,8 +5,8 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-09-19. **1.1 (9), the first update, is submitted for review**, release
-manual. Built from `c1ec742` with Xcode 27.0, the first build not made with Xcode 26; the record is
+**Last updated:** 2026-09-19. **1.1 (9), the first update, is on the App Store**, released by
+hand on 2026-09-19. Built from `c1ec742` with Xcode 27.0, the first build not made with Xcode 26; the record is
 [docs/releases/1.1-9.md](docs/releases/1.1-9.md). It passed a TestFlight pass on the iPhone 15 Pro
 and the Apple Watch Ultra with real accounts on 2026-09-18. The iPhone XS is no longer available,
 so the two-writer cases stand on E16's measurements from the development builds, which the code
