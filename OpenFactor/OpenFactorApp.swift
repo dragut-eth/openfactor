@@ -362,8 +362,9 @@ struct OpenFactorApp: App {
             }
             .onOpenURL { url in
                 // The copy is already on disk when this runs, and the flag on the directory
-                // covers it at backup time, so marking here still counts; it is also applied
-                // at launch, before any delivery. Then the arrival reads an owned copy into
+                // covers it at backup time, so marking here still counts; the launch task
+                // above marks it too, which is what makes every delivery after the first land
+                // in a directory already marked. Then the arrival reads an owned copy into
                 // memory and removes it, so nothing waits in the directory while the app is
                 // locked. Audit X4, OF-X4-01, both halves.
                 if url.isFileURL { DocumentInbox().excludeFromBackup() }

@@ -64,7 +64,9 @@ verification round** on `9332881`, with two probes this project had not run, and
 in wording and test coverage. **Every Low from X4 is closed**, by the maintainer's choice: the
 backup format's 2^40 obligation now says what the estimator can and cannot see, the image
 dimension multiply is overflow-checked in the core, CI refuses Foundation's one-call loaders in
-app and core sources, and the two missing tests exist.
+app and core sources, and the two missing tests exist. **The finder's closing check on `67528c0`** reported every closure
+holding, both findings closed and no new defect, and caught one leftover sentence in the
+`.onOpenURL` comment, corrected the same day. X4 is closed end to end; the record is the X4 entry.
 
 **Audit X3 arrived on 2026-09-05 and is being worked through.** GPT 6-Astra, the first reviewer in
 the series from a lineage with no hand in this code and the first to run probes rather than read,

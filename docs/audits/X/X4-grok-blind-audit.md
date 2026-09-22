@@ -308,3 +308,27 @@ small items into the next release. All internal, no screen changed, no device pa
 
 Core suite 486 tests, hosted iOS suite on the simulator, both green.
 
+## Closing check, 2026-09-22
+
+The same reviewer, a fresh read-only checkout at `67528c0`, the five closures named to it and the
+record opened to it. Its checks, each reported as holding with the evidence: the four corrected
+texts now describe the code including the first delivery on a fresh install; the format document's
+obligation is one the estimator honours, "which is no longer 'refuse anything weaker than 2^40
+guesses'"; the overflow guard has no `width * height` left in the sources and its seven cases
+passed there without trapping; the loader rule matches four test lines and nothing in the app or
+the core, and no longer matches its own comment; the two tests assert what they claim, with
+`InboxOpener.arrival` and `ImportViewModel.read` unchanged since the verification commit. It did
+not re-run the hosted suite.
+
+**Its three answers, quoted and not adopted:** "OF-X4-01 is closed." "OF-X4-02 is closed." "No new
+security defect since 2523491."
+
+**One miss, its words:** the `.onOpenURL` comment still said the mark "is also applied at launch,
+before any delivery", a sentence the launch comment directly above had just stopped making. Wording
+only; the handler marks and then removes regardless. Corrected the same day to say what the launch
+task's mark buys, which is every delivery after the first landing in a directory already marked.
+
+That closes X4: two findings, a verification round, four Lows from it, two Lows from the unverified
+list, and one sentence from the closing check, all closed at one commit apart, and every fix
+confirmed by the reader who found the gap.
+
