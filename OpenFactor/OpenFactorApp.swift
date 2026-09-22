@@ -359,12 +359,13 @@ struct OpenFactorApp: App {
                 if id == nil { collectWhatArrived() }
             }
             .onOpenURL { url in
-                guard let value = InboxOpener.arrival(from: url) else { return }
                 // The copy is already on disk when this runs, and the flag on the directory
-                // covers it at backup time, so marking after arrival still counts. What it
-                // cannot cover is the time between now and the read while the app is locked;
-                // that is why the mark is also applied at launch, before any delivery.
+                // covers it at backup time, so marking here still counts; it is also applied
+                // at launch, before any delivery. Then the arrival reads an owned copy into
+                // memory and removes it, so nothing waits in the directory while the app is
+                // locked. Audit X4, OF-X4-01, both halves.
                 if url.isFileURL { DocumentInbox().excludeFromBackup() }
+                guard let value = InboxOpener.arrival(from: url) else { return }
 
                 // **This supersedes whatever was pending, and takes it off the device.** An
                 // uncollected share left in the inbox reappears later, whenever some unrelated

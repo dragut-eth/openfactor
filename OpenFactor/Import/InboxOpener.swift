@@ -20,8 +20,20 @@ enum InboxOpener {
     enum Arrival: Equatable {
         /// An image the share extension put in the group container. Already removed from it.
         case image(Data)
-        /// A file somewhere else on the system, which the importer reads itself.
+        /// A file somewhere else on the system, which the importer reads itself under the
+        /// security scope the picker granted. Never removed: it is the person's own file.
         case file(URL)
+        /// A copy iOS made in this app's own inbox for "Open in OpenFactor". Already read,
+        /// under the importer's bound, and already removed from the directory, or refused for
+        /// the reason carried here and removed all the same.
+        ///
+        /// **Read at arrival rather than at import, since audit X4.** The import screen is what
+        /// used to read it, and that screen is not in the tree while the app is locked on a
+        /// cold start, so the copy waited on disk, in a backed-up directory, for as long as the
+        /// lock did. Arrival is the one moment the app is certainly running with the copy
+        /// present. Carrying bytes rather than a path also means a superseded arrival leaves
+        /// nothing behind, because there is nothing left to supersede.
+        case document(Result<Data, BoundedFile.ReadError>)
         /// A setup or transfer code the system read out of a QR, verbatim.
         ///
         /// **Not parsed here.** The payload names its own format and the add screen already
@@ -105,8 +117,20 @@ enum InboxOpener {
     /// **Anything else is refused.** A declared scheme is an entry point every app on the device
     /// can use, so what is accepted is exactly the two schemes declared and file URLs, and
     /// nothing arriving this way is ever saved without somebody confirming it on screen.
-    static func arrival(from url: URL) -> Arrival? {
-        if url.isFileURL { return .file(url) }
+    static func arrival(
+        from url: URL, documentInbox: DocumentInbox = DocumentInbox()
+    ) -> Arrival? {
+        if url.isFileURL {
+            guard documentInbox.owns(url) else { return .file(url) }
+            // Removed on every way out: the bytes are in memory or never will be.
+            defer { documentInbox.discard(url) }
+            do {
+                return .document(.success(
+                    try BoundedFile.read(url, limit: ImportLimits.largestAcceptableBytes)))
+            } catch {
+                return .document(.failure(error))
+            }
+        }
 
         guard let scheme = url.scheme?.lowercased(), codeSchemes.contains(scheme) else {
             return nil

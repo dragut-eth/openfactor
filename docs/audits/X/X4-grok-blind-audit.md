@@ -54,9 +54,9 @@ X3 fix that a fourth reader, told nothing, went straight to the one path it left
 | OF-X4-01 | Medium | Medium: plaintext secrets in a backed-up directory, no attacker required, on a narrower path than X3-01 |
 | OF-X4-02 | Low | Low: a written obligation the estimator's own comment already says it cannot meet |
 
-**The Medium is being closed in two parts, and the first has landed.** By the rule agreed for X2's
-verification round only Medium and above is in scope this week; the Low and the two logged items
-wait.
+**The Medium is closed in two parts, both landed, the second awaiting the maintainer's device
+pass.** By the rule agreed for X2's verification round only Medium and above is in scope this
+week; the Low and the two logged items wait.
 
 ## OF-X4-01, medium: a plaintext export can sit in a backed-up directory until the next launch
 
@@ -120,9 +120,21 @@ were. The return value exists for the tests. Four tests: the mark reads back, a 
 is created already marked, a redirected inbox is left alone, and no Documents directory means no
 mark. Core suite 485 tests, hosted iOS suite on the simulator, both green.
 
-**Part two, taking the bytes out at arrival, is not yet done.** It is what removes the file from
-the directory during the locked window rather than keeping the directory out of backups while the
-file waits, and it is the part that closes the superseded-arrival case.
+**What was changed, part two: the bytes leave the directory at arrival.** `InboxOpener.arrival`
+now takes the document inbox, and for a file URL the inbox owns it reads the copy under the
+importer's own bound and removes it on every way out, success or refusal. The arrival carries
+`.document(Result<Data, BoundedFile.ReadError>)` rather than a path; a picked file, which the inbox
+does not own, is still `.file(url)` and is still never removed. `ImportViewModel` reads the result
+through the same `read(_ data:)` every other byte source uses, and shows a refusal from arrival
+with the same two sentences a refusal at read would have used; the two sentences now live in one
+place. `.onOpenURL` marks the directory first and then lets the arrival read and remove, so nothing
+waits on disk while the app is locked, and a superseded arrival has no file to leave behind. The
+second line, `discard` inside `read(_ url:)`, stays for any path that still hands a copy there.
+
+**Three hosted tests:** an owned copy comes back as bytes and is gone, a file elsewhere comes
+back as a path and stays, an oversized copy is refused as too large and is gone. Hosted suite 760
+tests, core suite 485, both green. **The "Open in" path on hardware is the maintainer's pass**,
+since the visible behaviour must be unchanged: the same preview, the same refusals.
 
 ## OF-X4-02, low: the custom-passphrase check does not enforce a 2^40 floor
 

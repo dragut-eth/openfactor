@@ -57,7 +57,11 @@ struct ImportView: View {
         onImported: @escaping () -> Void
     ) {
         let model = ImportViewModel(store: store)
-        if case let .file(url) = arrival { model.read(url) }
+        switch arrival {
+        case let .file(url): model.read(url)
+        case let .document(result): model.read(result)
+        case .image, .code: break
+        }
 
         _model = State(initialValue: model)
         self.onImported = onImported

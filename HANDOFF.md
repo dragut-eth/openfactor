@@ -56,8 +56,10 @@ Under the rule from X2's verification round, only the Medium is in scope this we
 its fix has landed:** `Documents/Inbox` is now excluded from backup, marked at launch, on every
 foreground and on every file arrival, created already marked if iOS has not made it yet, and
 refused through a redirect. Best effort by nature, since iOS writes the copy and the app cannot
-refuse a delivery. Part two, reading the bytes out at arrival so no file waits in the directory
-during a locked cold start, is next and is the part that needs a phone.
+refuse a delivery. **Part two has landed too:** an owned copy is read under the importer's bound
+and removed at arrival, in `.onOpenURL`, so the arrival carries bytes and nothing waits on disk
+while the app is locked; a picked file is still a path and is still never removed. Three hosted
+tests; the "Open in" path on the 15 Pro is the maintainer's pass before this is pushed.
 
 **Audit X3 arrived on 2026-09-05 and is being worked through.** GPT 6-Astra, the first reviewer in
 the series from a lineage with no hand in this code and the first to run probes rather than read,

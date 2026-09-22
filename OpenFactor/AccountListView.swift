@@ -286,6 +286,10 @@ struct AccountListView: View {
                     ImportView(store: store, arrival: .file(url)) {
                         model.load(at: Date())
                     }
+                case let .document(result):
+                    ImportView(store: store, arrival: .document(result)) {
+                        model.load(at: Date())
+                    }
                 }
             }
             .sheet(item: $editing) { row in

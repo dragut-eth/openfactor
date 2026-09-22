@@ -100,7 +100,9 @@ final class ImportViewModel {
         // never will be, and the file has no further use. It is removed only if it is this app's
         // own inbox copy; a document picker URL is somebody's file and is left alone. Audit X3,
         // OF-X3-01: a plaintext export opened into the app used to stay in `Documents/Inbox`,
-        // backed up, after the import, after the original was deleted, and after erasing.
+        // backed up, after the import, after the original was deleted, and after erasing. Since
+        // audit X4 an owned copy is normally read and removed at arrival and never reaches this
+        // method; this stays as the second line for any path that still hands a copy here.
         defer { documentInbox.discard(url) }
 
         // **One open and one bounded read**, rather than a size lookup followed by a separate
@@ -113,18 +115,31 @@ final class ImportViewModel {
         let data: Data
         do {
             data = try BoundedFile.read(url, limit: ImportLimits.largestAcceptableBytes)
-        } catch .tooLarge {
-            stage = .failed("That file is too large to be an authenticator export.")
-            return
         } catch {
-            // **Not "too large".** The refusal used to reuse that sentence for a file it could not
-            // measure, which claims something it did not know. A review pointed out that this
-            // project's own rule about untrustworthy messages argues against it.
-            stage = .failed("That file could not be opened.")
+            stage = .failed(Self.refusal(for: error))
             return
         }
 
         read(data)
+    }
+
+    /// A copy iOS made in this app's own inbox, read and removed at arrival. See
+    /// `InboxOpener.Arrival.document`. The bytes take the same path as a picked file's; a
+    /// refusal at arrival is shown the way the same refusal would have been shown here.
+    func read(_ document: Result<Data, BoundedFile.ReadError>) {
+        switch document {
+        case let .success(data): read(data)
+        case let .failure(error): stage = .failed(Self.refusal(for: error))
+        }
+    }
+
+    /// **Not "too large" for a file that could not be measured.** The refusal used to reuse
+    /// that sentence for every failure, which claims something it did not know. A review
+    /// pointed out that this project's own rule about untrustworthy messages argues against it.
+    private static func refusal(for error: BoundedFile.ReadError) -> String {
+        error == .tooLarge
+            ? "That file is too large to be an authenticator export."
+            : "That file could not be opened."
     }
 
     /// The same path for bytes that arrived without a file, which is what the share extension's

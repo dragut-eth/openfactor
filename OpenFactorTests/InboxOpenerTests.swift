@@ -238,4 +238,55 @@ struct InboxCollectionTests {
         #expect(InboxOpener.collect(from: inbox) == nil)
         #expect(inbox.pending().isEmpty, "and it must not be left behind")
     }
+
+    // MARK: - A copy in this app's own inbox, audit X4, OF-X4-01
+
+    private func makeDocuments() throws -> (DocumentInbox, documents: URL, inbox: URL) {
+        let documents = FileManager.default.temporaryDirectory
+            .appendingPathComponent("documents-\(UUID().uuidString)", isDirectory: true)
+        let inbox = documents.appendingPathComponent(DocumentInbox.directoryName, isDirectory: true)
+        try FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+        return (DocumentInbox(documents: { documents }), documents, inbox)
+    }
+
+    /// **The bytes leave the directory at arrival, not at read.** Arrival is the one moment the
+    /// app is certainly running with the copy present; the read used to wait for the import
+    /// screen, which is not in the tree during a locked cold start, and the copy waited with it.
+    @Test("A copy in the app's own inbox is read at arrival and removed")
+    func ownedCopyIsReadAtArrival() throws {
+        let (inbox, documents, directory) = try makeDocuments()
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let bytes = Data("{\"not\": \"parsed here\"}".utf8)
+        let url = directory.appendingPathComponent("export.json")
+        try bytes.write(to: url)
+
+        #expect(InboxOpener.arrival(from: url, documentInbox: inbox) == .document(.success(bytes)))
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    /// A file the person picked is theirs: handed on as a path, read later under its security
+    /// scope, and never removed.
+    @Test("A file elsewhere is handed on as a path and left where it is")
+    func pickedFileStaysAPath() throws {
+        let (inbox, documents, _) = try makeDocuments()
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let url = documents.appendingPathComponent("picked.json")
+        try Data("{}".utf8).write(to: url)
+
+        #expect(InboxOpener.arrival(from: url, documentInbox: inbox) == .file(url))
+        #expect(FileManager.default.fileExists(atPath: url.path))
+    }
+
+    /// The same bound the importer applies, applied here, and a refused copy is removed all the
+    /// same: the bytes are not wanted and the file has no further use.
+    @Test("An oversized copy is refused at arrival and still removed")
+    func oversizedCopyIsRefusedAndRemoved() throws {
+        let (inbox, documents, directory) = try makeDocuments()
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let url = directory.appendingPathComponent("huge.json")
+        try Data(count: ImportLimits.largestAcceptableBytes + 1).write(to: url)
+
+        #expect(InboxOpener.arrival(from: url, documentInbox: inbox) == .document(.failure(.tooLarge)))
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
 }
