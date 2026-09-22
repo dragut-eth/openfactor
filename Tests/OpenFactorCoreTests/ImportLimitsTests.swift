@@ -49,4 +49,18 @@ struct ImportLimitsTests {
         #expect(ImportLimits.isWithinBound(ImportLimits.policyBytes, isOpenFactorArchive: false))
         #expect(!ImportLimits.isWithinBound(ImportLimits.policyBytes + 1, isOpenFactorArchive: false))
     }
+
+    /// Audit X4, from its unverified list: `width * height` on two untrusted `Int`s traps in
+    /// Swift when it overflows. ImageIO happened to refuse the header first; nothing here relies
+    /// on that any more.
+    @Test("A claimed image size that overflows the multiply is refused, not trapped")
+    func overflowingImageSizeIsRefused() {
+        #expect(ImportLimits.isAcceptableImageSize(width: 4096, height: 4096))
+        #expect(ImportLimits.isAcceptableImageSize(width: 10_000, height: 10_000))
+        #expect(!ImportLimits.isAcceptableImageSize(width: 10_001, height: 10_000))
+        #expect(!ImportLimits.isAcceptableImageSize(width: 0, height: 10))
+        #expect(!ImportLimits.isAcceptableImageSize(width: 10, height: -1))
+        #expect(!ImportLimits.isAcceptableImageSize(width: Int.max, height: 2))
+        #expect(!ImportLimits.isAcceptableImageSize(width: 1 << 32, height: 1 << 32))
+    }
 }

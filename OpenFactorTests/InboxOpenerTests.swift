@@ -289,4 +289,24 @@ struct InboxCollectionTests {
         #expect(InboxOpener.arrival(from: url, documentInbox: inbox) == .document(.failure(.tooLarge)))
         #expect(!FileManager.default.fileExists(atPath: url.path))
     }
+
+    /// X4's verification round: a superseded arrival used to leave its copy for the sweep. With
+    /// the bytes read at arrival there is nothing left to supersede; this pins that.
+    @Test("A second open leaves no file behind from the first")
+    func secondOpenLeavesNothingBehind() throws {
+        let (inbox, documents, directory) = try makeDocuments()
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let first = directory.appendingPathComponent("first.json")
+        let second = directory.appendingPathComponent("second.json")
+        try Data("first".utf8).write(to: first)
+        try Data("second".utf8).write(to: second)
+
+        _ = InboxOpener.arrival(from: first, documentInbox: inbox)
+        let kept = InboxOpener.arrival(from: second, documentInbox: inbox)
+
+        #expect(kept == .document(.success(Data("second".utf8))))
+        #expect(!FileManager.default.fileExists(atPath: first.path))
+        #expect(!FileManager.default.fileExists(atPath: second.path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty)
+    }
 }

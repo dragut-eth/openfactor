@@ -444,4 +444,21 @@ struct ImportViewModelTests {
         #expect(preview.conflicts.count == 1)
         #expect(preview.duplicates.isEmpty)
     }
+
+    /// X4's verification round: nothing pinned the two sentences on the arrival path, and the
+    /// existing 9 MB test reaches the format bound rather than the arrival ceiling.
+    @Test("A refusal at arrival is shown with the same sentence a refusal at read would use")
+    @MainActor
+    func arrivalRefusalsAreWorded() throws {
+        let model = ImportViewModel(store: try makeStore())
+
+        model.read(.failure(.tooLarge))
+        #expect(model.stage == .failed("That file is too large to be an authenticator export."))
+
+        model.read(.failure(.unreadable))
+        #expect(model.stage == .failed("That file could not be opened."))
+
+        model.read(.failure(.notARegularFile))
+        #expect(model.stage == .failed("That file could not be opened."))
+    }
 }

@@ -67,9 +67,10 @@ enum QRDecoder {
         let width = properties?[kCGImagePropertyPixelWidth] as? Int ?? 0
         let height = properties?[kCGImagePropertyPixelHeight] as? Int ?? 0
 
-        // A header that will not say how big it is does not get to find out by being decoded.
-        guard width > 0, height > 0 else { return nil }
-        guard width * height <= ImportLimits.maximumImagePixels else { return nil }
+        // A header that will not say how big it is does not get to find out by being decoded,
+        // and one that claims more than the ceiling, or enough to overflow the multiply, is
+        // refused without decoding.
+        guard ImportLimits.isAcceptableImageSize(width: width, height: height) else { return nil }
 
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,

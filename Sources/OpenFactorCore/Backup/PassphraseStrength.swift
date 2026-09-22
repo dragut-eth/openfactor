@@ -3,9 +3,10 @@ import Foundation
 /// Whether a passphrase somebody chose themselves is strong enough to protect every secret
 /// they own, forever.
 ///
-/// `docs/BACKUP_FORMAT.md` requires a writer to refuse a custom passphrase weaker than 2^40
-/// guesses under an offline strength estimator, **or to not offer the custom path at all**.
-/// This is that estimator, and the honest description of it comes first:
+/// `docs/BACKUP_FORMAT.md` requires a writer to refuse a custom passphrase its offline strength
+/// estimator can show to be weaker than 2^40 guesses, **or to not offer the custom path at all**,
+/// and to say what that estimator cannot see. This is that estimator, and the honest description
+/// of it comes first, because since audit X4 the format document quotes it:
 ///
 /// **It is a floor, not a guarantee.** It is a few hundred lines of pattern matching against
 /// a short list, not zxcvbn and not a cracking rig. It will not recognise your dog's name,

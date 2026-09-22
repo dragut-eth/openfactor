@@ -286,13 +286,24 @@ zero was the kind of comfortable sentence this project exists to avoid.
 Two consequences, both binding on writers:
 
 - **The generator is the default and stays the default.** Necessary, and not sufficient.
-- **A writer must refuse a custom passphrase weaker than 2^40 guesses** under an offline
-  strength estimator, or must not offer the custom path at all. Stated as resistance rather
-  than as a length, because a length is not a strength: `"password1234"` is twelve
-  characters and finished in under a second. `"password"` would otherwise be a conforming
-  archive holding every secret its owner has, permanently, because version 1 is forever.
-  Where an implementation also imposes a length, that length counts **Unicode scalar
-  values**; OpenFactor requires at least 12 alongside the strength test.
+- **A writer must refuse a custom passphrase its offline strength estimator can show to be
+  weaker than 2^40 guesses**, or must not offer the custom path at all, **and must say what
+  its estimator cannot see.** Stated as resistance rather than as a length, because a length
+  is not a strength: `"password1234"` is twelve characters and finished in under a second.
+  `"password"` would otherwise be a conforming archive holding every secret its owner has,
+  permanently, because version 1 is forever. Where an implementation also imposes a length,
+  that length counts **Unicode scalar values**; OpenFactor requires at least 12 alongside the
+  strength test.
+
+  **What OpenFactor's estimator sees, and what it does not.** It refuses a short list of the
+  most guessed passwords with their substitutions undone, keyboard walks, repeated units,
+  and anything whose character classes over its unrepetitive length estimate below 2^40. It
+  does not carry a dictionary or a phrase list, so a season and a year, a name and a year, or
+  three ordinary words pass it while a guessing rig with a wordlist finds them in hours. That
+  is the reason the generator is the default and the custom path is behind a deliberate
+  choice: above the estimator's floor, a chosen passphrase is the person's own risk, and this
+  document does not pretend the floor is a ceiling. Audit X4, OF-X4-02, found the earlier
+  wording of this rule promising more than the estimator can deliver.
 
 ### The generated passphrase
 

@@ -54,9 +54,11 @@ X3 fix that a fourth reader, told nothing, went straight to the one path it left
 | OF-X4-01 | Medium | Medium: plaintext secrets in a backed-up directory, no attacker required, on a narrower path than X3-01 |
 | OF-X4-02 | Low | Low: a written obligation the estimator's own comment already says it cannot meet |
 
-**The Medium is closed in two parts, both landed, the second awaiting the maintainer's device
-pass.** By the rule agreed for X2's verification round only Medium and above is in scope this
-week; the Low and the two logged items wait.
+**Everything in this record is closed**: the Medium in two parts, validated on the maintainer's
+phone and confirmed by the finder in a verification round; the Low and the two items logged from
+the unverified list the same day, along with the round's own four Lows. The rule from X2's round
+put only the Medium in scope this week; the maintainer chose to close the rest rather than carry
+them.
 
 ## OF-X4-01, medium: a plaintext export can sit in a backed-up directory until the next launch
 
@@ -278,3 +280,31 @@ the two test gaps wait:**
 **Under the rule from X2's round, none of these is in scope this week.** The two wording
 corrections were applied the same day, since a record that overstates its own fix is the drift the
 series exists to catch; the two tests wait.
+
+## Closing the Lows, 2026-09-22
+
+The maintainer's call, made after the verification round: close everything rather than carry five
+small items into the next release. All internal, no screen changed, no device pass needed.
+
+- **OF-X4-02.** The format document's obligation now says what it can mean: a writer must refuse
+  what its estimator can show to be weak, or not offer the custom path, **and must say what the
+  estimator cannot see**. A new paragraph beside it states exactly that for OpenFactor's: the
+  blocklist with substitutions undone, keyboard walks, repeated units, and a character-class
+  estimate below 2^40; no dictionary and no phrase list, so a season and a year or three ordinary
+  words pass it. Above the floor a chosen passphrase is the person's own risk, and the document no
+  longer pretends the floor is a ceiling. The estimator was not extended: the generator is the
+  default, and a longer list is never finished. `PassphraseStrength`'s header now points at the
+  document that quotes it.
+- **The overflow multiply.** `ImportLimits.isAcceptableImageSize(width:height:)` in the core,
+  using `multipliedReportingOverflow`, replaces `width * height` in `QRDecoder`. Seven cases in
+  the core suite, including `Int.max` by two and `2^32` squared, refused rather than trapped.
+- **The CI grep.** A second rule in the network job refuses Foundation's one-call loaders,
+  `Data(contentsOf:)` and `String(contentsOf:)`, in app and core sources; tests are exempt since
+  three of them read local files that way. One comment in `ImportLimits` named the loader as the
+  thing not to do and was reworded so the rule stays literal.
+- **The two tests from the round.** A second open leaves no file behind from the first, on
+  `InboxOpener.arrival`; and the two refusal sentences are pinned on the arrival path through
+  `ImportViewModel.read(_ document:)`, for too large, unreadable and not a regular file.
+
+Core suite 486 tests, hosted iOS suite on the simulator, both green.
+

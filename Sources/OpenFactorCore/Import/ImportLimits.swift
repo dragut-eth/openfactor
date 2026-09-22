@@ -5,7 +5,7 @@ import Foundation
 /// ## The three failure sequences this exists to prevent
 ///
 /// **One: the bound ran after the allocation it claimed to prevent.** `ImportViewModel.read(_ url:)`
-/// called `Data(contentsOf:)` and only then looked at `data.count`. A four hundred megabyte
+/// called Foundation's one-call loader and only then looked at `data.count`. A four hundred megabyte
 /// attachment opened into this app was a four hundred megabyte allocation, which on a phone is a
 /// termination rather than a "too large" message. The comment above the check said "bounded before
 /// anything parses it", which was true about parsing and false about the copy.
@@ -57,6 +57,18 @@ public enum ImportLimits {
     /// while a QR occupying even a tenth of a full frame still lands in the hundreds of pixels,
     /// which is far more than a detector needs.
     public static let workingImageMaxDimension = 4096
+
+    /// Whether a header's claimed dimensions describe an image worth decoding.
+    ///
+    /// **The multiply cannot trap.** A header is untrusted, and a width and height that each
+    /// fit in an `Int` can still overflow when multiplied, which in Swift is a crash rather than
+    /// a wrong answer. Audit X4 built a TIFF to try it and ImageIO refused the header first; this
+    /// removes the dependence on that refusal.
+    public static func isAcceptableImageSize(width: Int, height: Int) -> Bool {
+        guard width > 0, height > 0 else { return false }
+        let (pixels, overflow) = width.multipliedReportingOverflow(by: height)
+        return !overflow && pixels <= maximumImagePixels
+    }
 
     /// The largest file worth copying into memory at all, whatever it turns out to be.
     ///
