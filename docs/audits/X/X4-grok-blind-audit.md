@@ -229,3 +229,49 @@ reproduced and no store binary was compared.
 **Its closing sentence, quoted and not adopted:** "The cryptography that is in the tree is careful
 and mostly matches its own spec. The gap that still puts every secret somewhere a backup can take
 them is the document inbox, not the Keychain."
+
+## Verification round, 2026-09-22
+
+The same reviewer, a fresh read-only checkout at `9332881`, the two-part fix described to it and
+the record opened to it, asked to falsify. **The fix holds on every path it was asked about**, and
+it ran two probes this project had not: two owned files opened in succession, both gone and the
+state holding the second payload; and a mode-000 file, refused as unreadable and removed. A picked
+file beside the inbox came back as a path and stayed. A symlinked inbox was left in place, its
+target unmarked, a file behind it untouched. Its own limit, stated: the hosted suite was not re-run,
+so the test count is this record's claim; and no "Open in" on a device, which was the maintainer's
+pass and was done.
+
+**Its closing observation is the right way to say what changed:** "The plaintext now lives in
+arrival until unlock, and a kill after the handler drops the import with it. That is memory, not a
+backed-up file."
+
+**Four things it found, none of them Medium, all accepted, none yet acted on:**
+
+- **Two sentences in this record overstate the code, Low, documentation.** "Marked at launch,
+  before any delivery can land" is true of every launch after the first and of nothing else: a
+  cold launch caused by an open finds the copy already on disk, written by iOS before the process
+  exists, and the directory carries no mark until the launch task or the handler reaches
+  `excludeFromBackup`. The first ever open on a fresh install is the case the sentence gets wrong,
+  and the mark is persistent thereafter unless iOS recreates the directory. The handler then
+  removes the file, so the locked window does not reopen; the sentence is still wrong. And "a
+  failure to mark leaves the read path and the sweep as they were" is only true if arrival never
+  runs: when it does, the file is removed whether or not the mark held. The same overstatement is
+  in the comment at the launch task in `OpenFactorApp`.
+- **`excludeFromBackup`'s own comment describes the bug in the present tense, Low, comment.** It
+  says a copy "is still here through a locked cold start, unread", which was true between part one
+  and part two and is not true after it: the copy is removed in the handler unless the process dies
+  before the handler runs. The comment should say what the mark now covers, which is exactly that
+  gap and the first-launch case above.
+- **No test that a second open leaves no file, and none that the handler sits outside the lock
+  root, Low, test coverage.** The first is a ten-line hosted test on `InboxOpener.arrival`. The
+  second is structural and was confirmed by reading `presentsRootLock`; a test would have to
+  build the scene, and reading is what this project has for it.
+- **No test asserts the refusal sentences for an arrival, Low, test coverage.** `refusesHugeFiles`
+  writes 9 MB through `read(_ url:)`, which is under the arrival ceiling and fails the later
+  format-bound check instead, so neither sentence is pinned on the arrival path. A test on
+  `ImportViewModel.read(_ document:)` with `.failure(.tooLarge)` and `.failure(.unreadable)` pins
+  both.
+
+**Under the rule from X2's round, none of these is in scope this week.** The two wording
+corrections are the kind this project applies on sight, since a record that overstates its own fix
+is the drift the series exists to catch; they wait for the maintainer's word all the same.
