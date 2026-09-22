@@ -84,11 +84,14 @@ public struct DocumentInbox: Sendable {
     /// iOS writes the copy, so there is no write here to refuse the way the shared inbox refuses
     /// its own. What can be done is to have the directory already marked when the copy lands,
     /// and to re-mark it at every launch, foreground and arrival, since the system may recreate
-    /// it. A backup honours the flag on the directory for everything inside it, so a copy that
-    /// is still here through a locked cold start, unread because the import screen is not in the
-    /// tree and unswept because it is younger than a minute, is outside any backup taken in the
-    /// meantime. Audit X4, OF-X4-01: that window existed and this directory had no flag, where
-    /// the shared inbox and the vault key directory both had one.
+    /// it. A backup honours the flag on the directory for everything inside it. Audit X4,
+    /// OF-X4-01: a copy used to wait here through a locked cold start, unread because the
+    /// import screen was not in the tree and unswept because it was younger than a minute, in a
+    /// directory with no flag, where the shared inbox and the vault key directory both had one.
+    /// Since the second half of that fix the copy is read and removed at arrival, so what the
+    /// mark covers now is what remains: a process that dies before the arrival handler runs, and
+    /// the very first delivery on a fresh install, which iOS writes before the launch task can
+    /// mark anything.
     ///
     /// **Best effort, and honest about it.** The return value says whether the mark reads back;
     /// callers in the app cannot do anything useful with a failure, since refusing the directory

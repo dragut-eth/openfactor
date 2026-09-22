@@ -253,11 +253,13 @@ struct OpenFactorApp: App {
             // phase handler below, beside the shared inbox's; the first version of this comment
             // claimed that this line did that, and X3's verification round found the claim.
             .task { DocumentInbox().sweep() }
-            // Marked before any delivery can land, and created if iOS has not made it yet, so
-            // the first copy ever dropped here is already outside every backup. Audit X4,
-            // OF-X4-01: a copy waiting through a locked cold start was in a directory with no
-            // flag. Re-marked on every foreground and arrival below, since the system may
-            // recreate the directory.
+            // Marked here, and created if iOS has not made it yet, so from this launch on a
+            // copy lands in a directory that is already outside every backup. Not before the
+            // very first delivery on a fresh install: iOS writes that copy before this process
+            // exists, and the handler below marks and then removes it. Audit X4, OF-X4-01: a
+            // copy waiting through a locked cold start was in a directory with no flag.
+            // Re-marked on every foreground and arrival, since the system may recreate the
+            // directory.
             .task { DocumentInbox().excludeFromBackup() }
             .task { ExportViewModel.discardOrphanedFiles() }
             .task { watchKeys.activate() }

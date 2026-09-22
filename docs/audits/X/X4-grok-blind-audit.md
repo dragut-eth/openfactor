@@ -110,13 +110,15 @@ enough on its own: a process killed without a background transition never runs i
 `excludeFromBackup`, the same shape as the shared inbox's mark: create the directory if iOS has not
 yet, set the attribute, read it back on a fresh URL, and report whether it held. It refuses the same
 redirect `owns` refuses, so an inbox that is a link elsewhere is neither created nor marked. The
-app calls it at launch, before any delivery can land, on every scene phase change beside the sweep,
-and on every file arrival. A backup honours the flag on the directory for everything inside it, so
-a copy waiting through a locked cold start is outside any backup taken while it waits.
+app calls it at launch, on every scene phase change beside the sweep, and on every file arrival.
+From the second launch on, a copy lands in a directory that is already marked; the very first
+delivery on a fresh install is written by iOS before the process exists, and the handler marks and
+then removes it. A backup honours the flag on the directory for everything inside it, so a copy
+that does wait there is outside any backup taken while it waits.
 
 **Best effort, stated as such.** iOS writes the copy, so there is no write the app can refuse the
-way the shared inbox refuses its own; a failure to mark leaves the read path and the sweep as they
-were. The return value exists for the tests. Four tests: the mark reads back, a missing directory
+way the shared inbox refuses its own; a failure to mark changes nothing else, and the arrival
+still reads and removes the copy. The return value exists for the tests. Four tests: the mark reads back, a missing directory
 is created already marked, a redirected inbox is left alone, and no Documents directory means no
 mark. Core suite 485 tests, hosted iOS suite on the simulator, both green.
 
@@ -245,7 +247,8 @@ pass and was done.
 arrival until unlock, and a kill after the handler drops the import with it. That is memory, not a
 backed-up file."
 
-**Four things it found, none of them Medium, all accepted, none yet acted on:**
+**Four things it found, none of them Medium, all accepted. The two wording items are corrected;
+the two test gaps wait:**
 
 - **Two sentences in this record overstate the code, Low, documentation.** "Marked at launch,
   before any delivery can land" is true of every launch after the first and of nothing else: a
@@ -273,5 +276,5 @@ backed-up file."
   both.
 
 **Under the rule from X2's round, none of these is in scope this week.** The two wording
-corrections are the kind this project applies on sight, since a record that overstates its own fix
-is the drift the series exists to catch; they wait for the maintainer's word all the same.
+corrections were applied the same day, since a record that overstates its own fix is the drift the
+series exists to catch; the two tests wait.
