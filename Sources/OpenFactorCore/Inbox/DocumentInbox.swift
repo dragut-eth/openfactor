@@ -16,6 +16,13 @@ import Foundation
 /// their own disk. So every removal here is gated on the path being inside the inbox directory,
 /// resolved rather than compared as text, and a URL that is not is left exactly where it is.
 ///
+/// **The directory is kept out of backups as well, since audit X4.** Removing on read and
+/// sweeping on foreground left one path open: a copy delivered during a locked cold start is
+/// neither read, because the import screen is not in the tree, nor swept, because it is younger
+/// than a minute, and a process killed in that state leaves it for the next backup.
+/// `excludeFromBackup` puts the flag on the directory the way the shared inbox and the vault key
+/// directory already carry theirs.
+///
 /// **Located through `FileManager` on every call, never remembered.** An update moves the
 /// container, measured in E6; a stored absolute path would point at a directory that is no longer
 /// there, and would do so by failing quietly.
@@ -69,6 +76,56 @@ public struct DocumentInbox: Sendable {
         }
         let candidate = url.standardizedFileURL.resolvingSymlinksInPath().path
         return candidate.hasPrefix(inbox + "/") && candidate.count > inbox.count + 1
+    }
+
+    /// Keeps the inbox directory, and so every copy iOS drops into it, out of device backups.
+    ///
+    /// **The directory carries the flag, because the app never sees a copy before it exists.**
+    /// iOS writes the copy, so there is no write here to refuse the way the shared inbox refuses
+    /// its own. What can be done is to have the directory already marked when the copy lands,
+    /// and to re-mark it at every launch, foreground and arrival, since the system may recreate
+    /// it. A backup honours the flag on the directory for everything inside it, so a copy that
+    /// is still here through a locked cold start, unread because the import screen is not in the
+    /// tree and unswept because it is younger than a minute, is outside any backup taken in the
+    /// meantime. Audit X4, OF-X4-01: that window existed and this directory had no flag, where
+    /// the shared inbox and the vault key directory both had one.
+    ///
+    /// **Best effort, and honest about it.** The return value says whether the mark reads back;
+    /// callers in the app cannot do anything useful with a failure, since refusing the directory
+    /// would mean deleting a delivery before it is read. The mark is the second line; the first
+    /// is removing the copy on read, and the next is taking the bytes out at arrival.
+    ///
+    /// **Not through a redirect.** The same check `owns` makes: if the inbox path resolves
+    /// anywhere other than itself, nothing is created and nothing is marked.
+    @discardableResult
+    public func excludeFromBackup() -> Bool {
+        guard let documents = documents() else { return false }
+        let root = documents.standardizedFileURL.resolvingSymlinksInPath()
+        let inbox = root.appendingPathComponent(Self.directoryName, isDirectory: true)
+            .standardizedFileURL
+        guard URL(fileURLWithPath: inbox.path).resolvingSymlinksInPath().path == inbox.path else {
+            return false
+        }
+
+        let manager = FileManager.default
+        var isDirectory: ObjCBool = false
+        if !manager.fileExists(atPath: inbox.path, isDirectory: &isDirectory) {
+            guard (try? manager.createDirectory(
+                at: inbox, withIntermediateDirectories: false)) != nil
+            else { return false }
+        } else if !isDirectory.boolValue {
+            return false
+        }
+
+        var marked = inbox
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        guard (try? marked.setResourceValues(values)) != nil else { return false }
+
+        // Read back on a fresh URL, because the one above has cached what it knew before the call.
+        let confirmation = URL(fileURLWithPath: inbox.path)
+        return (try? confirmation.resourceValues(forKeys: [.isExcludedFromBackupKey]))?
+            .isExcludedFromBackup == true
     }
 
     /// Removes an owned copy. A URL this app does not own is left where it is.

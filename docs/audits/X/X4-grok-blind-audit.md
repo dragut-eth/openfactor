@@ -54,8 +54,9 @@ X3 fix that a fourth reader, told nothing, went straight to the one path it left
 | OF-X4-01 | Medium | Medium: plaintext secrets in a backed-up directory, no attacker required, on a narrower path than X3-01 |
 | OF-X4-02 | Low | Low: a written obligation the estimator's own comment already says it cannot meet |
 
-**Nothing has been changed yet.** This record is the analysis; the fixes wait for a decision, and
-by the rule agreed for X2's verification round only Medium and above is in scope this week.
+**The Medium is being closed in two parts, and the first has landed.** By the rule agreed for X2's
+verification round only Medium and above is in scope this week; the Low and the two logged items
+wait.
 
 ## OF-X4-01, medium: a plaintext export can sit in a backed-up directory until the next launch
 
@@ -88,9 +89,10 @@ clear, in a place the app does not control.
 insufficient:
 
 - **Exclude `Documents/Inbox` from backup**, at launch and again at each arrival, the way the shared
-  inbox does, and refuse to treat the directory as safe if the attribute does not read back. iOS
-  may recreate the directory, so the attribute is re-applied rather than set once. This closes the
-  backup half regardless of when the file is read.
+  inbox does, reading the attribute back rather than trusting the write. There is nothing to refuse
+  on failure, since iOS writes the copy and not the app. iOS may recreate the directory, so the
+  attribute is re-applied rather than set once. This closes the backup half regardless of when the
+  file is read.
 - **Take the bytes out of the directory at arrival, not at read.** `.onOpenURL` is the one moment
   the app is guaranteed to be running with the copy present. Reading an owned copy into memory
   there, bounded as the import already bounds it, and discarding the file immediately means the
@@ -103,6 +105,24 @@ enough on its own: a process killed without a background transition never runs i
 **Affected code:** `Sources/OpenFactorCore/Inbox/DocumentInbox.swift`,
 `OpenFactor/OpenFactorApp.swift` at `.onOpenURL`, `OpenFactor/Import/ImportView.swift`,
 `OpenFactor/Import/ImportViewModel.swift`.
+
+**What was changed, part one: the directory is excluded from backup.** `DocumentInbox` gained
+`excludeFromBackup`, the same shape as the shared inbox's mark: create the directory if iOS has not
+yet, set the attribute, read it back on a fresh URL, and report whether it held. It refuses the same
+redirect `owns` refuses, so an inbox that is a link elsewhere is neither created nor marked. The
+app calls it at launch, before any delivery can land, on every scene phase change beside the sweep,
+and on every file arrival. A backup honours the flag on the directory for everything inside it, so
+a copy waiting through a locked cold start is outside any backup taken while it waits.
+
+**Best effort, stated as such.** iOS writes the copy, so there is no write the app can refuse the
+way the shared inbox refuses its own; a failure to mark leaves the read path and the sweep as they
+were. The return value exists for the tests. Four tests: the mark reads back, a missing directory
+is created already marked, a redirected inbox is left alone, and no Documents directory means no
+mark. Core suite 485 tests, hosted iOS suite on the simulator, both green.
+
+**Part two, taking the bytes out at arrival, is not yet done.** It is what removes the file from
+the directory during the locked window rather than keeping the directory out of backups while the
+file waits, and it is the part that closes the superseded-arrival case.
 
 ## OF-X4-02, low: the custom-passphrase check does not enforce a 2^40 floor
 

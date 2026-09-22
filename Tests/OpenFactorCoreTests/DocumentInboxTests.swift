@@ -127,4 +127,65 @@ struct DocumentInboxTests {
         inbox.sweep()
         inbox.sweepAll()
     }
+
+    // MARK: - Backup exclusion, audit X4, OF-X4-01
+
+    /// **The directory is what carries the flag**, as the shared inbox's does, because iOS writes
+    /// the copies and the app cannot mark a file it has not seen yet. A copy left waiting through
+    /// a locked cold start is then still outside any backup taken before the app next reads or
+    /// sweeps it.
+    @Test("Excluding marks the inbox directory and the mark reads back")
+    func excludingMarksTheDirectory() throws {
+        let (inbox, documents, directory) = try makeInbox()
+        defer { try? FileManager.default.removeItem(at: documents) }
+
+        #expect(inbox.excludeFromBackup())
+        let fresh = URL(fileURLWithPath: directory.path)
+        #expect(try fresh.resourceValues(forKeys: [.isExcludedFromBackupKey])
+            .isExcludedFromBackup == true)
+    }
+
+    /// At launch there may be no inbox yet: iOS creates it on the first delivery. Creating it
+    /// here, marked, means the first delivery lands in an excluded directory rather than in one
+    /// the system made a moment earlier with no flag.
+    @Test("Excluding creates a missing inbox, already marked")
+    func excludingCreatesTheDirectory() throws {
+        let documents = FileManager.default.temporaryDirectory
+            .appendingPathComponent("document-inbox-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let inbox = DocumentInbox(documents: { documents })
+        let directory = documents.appendingPathComponent(DocumentInbox.directoryName, isDirectory: true)
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
+
+        #expect(inbox.excludeFromBackup())
+
+        var isDirectory: ObjCBool = false
+        #expect(FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory))
+        #expect(isDirectory.boolValue)
+        #expect(try URL(fileURLWithPath: directory.path)
+            .resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+    }
+
+    /// The same redirect `owns` refuses: an inbox that is a link elsewhere is not this app's
+    /// directory, and marking whatever it points at is not this app's business either.
+    @Test("A redirected inbox is neither created nor marked")
+    func redirectedInboxIsNotMarked() throws {
+        let (inbox, documents, directory) = try makeInbox()
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let elsewhere = documents.appendingPathComponent("elsewhere", isDirectory: true)
+        try FileManager.default.createDirectory(at: elsewhere, withIntermediateDirectories: true)
+        try FileManager.default.removeItem(at: directory)
+        try FileManager.default.createSymbolicLink(at: directory, withDestinationURL: elsewhere)
+
+        #expect(!inbox.excludeFromBackup())
+        #expect(try URL(fileURLWithPath: elsewhere.path)
+            .resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup != true)
+    }
+
+    @Test("A missing documents directory cannot be excluded, and says so")
+    func noDocumentsMeansNotExcluded() {
+        let inbox = DocumentInbox(documents: { nil })
+        #expect(!inbox.excludeFromBackup())
+    }
 }

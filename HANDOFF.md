@@ -52,8 +52,12 @@ Low is the 2^40 obligation in `docs/BACKUP_FORMAT.md` against an estimator that 
 is a floor. Two more Lows are logged from the reviewer's unverified list: an overflow trap in the
 image dimension multiply and a CI grep that does not name `Data(contentsOf:)`. The record, with the
 shape a fix has to take, is [docs/audits/X/X4-grok-blind-audit.md](docs/audits/X/X4-grok-blind-audit.md).
-Under the rule from X2's verification round, only the Medium is in scope this week, and it waits
-for a decision.
+Under the rule from X2's verification round, only the Medium is in scope this week. **Part one of
+its fix has landed:** `Documents/Inbox` is now excluded from backup, marked at launch, on every
+foreground and on every file arrival, created already marked if iOS has not made it yet, and
+refused through a redirect. Best effort by nature, since iOS writes the copy and the app cannot
+refuse a delivery. Part two, reading the bytes out at arrival so no file waits in the directory
+during a locked cold start, is next and is the part that needs a phone.
 
 **Audit X3 arrived on 2026-09-05 and is being worked through.** GPT 6-Astra, the first reviewer in
 the series from a lineage with no hand in this code and the first to run probes rather than read,

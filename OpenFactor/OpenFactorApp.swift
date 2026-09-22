@@ -253,6 +253,12 @@ struct OpenFactorApp: App {
             // phase handler below, beside the shared inbox's; the first version of this comment
             // claimed that this line did that, and X3's verification round found the claim.
             .task { DocumentInbox().sweep() }
+            // Marked before any delivery can land, and created if iOS has not made it yet, so
+            // the first copy ever dropped here is already outside every backup. Audit X4,
+            // OF-X4-01: a copy waiting through a locked cold start was in a directory with no
+            // flag. Re-marked on every foreground and arrival below, since the system may
+            // recreate the directory.
+            .task { DocumentInbox().excludeFromBackup() }
             .task { ExportViewModel.discardOrphanedFiles() }
             .task { watchKeys.activate() }
             // Over whatever is on screen, because the watch may ask at any moment and the
@@ -277,6 +283,7 @@ struct OpenFactorApp: App {
                 // app. Audit X3's verification round: the sweep was attached to `.task` alone, which
                 // runs at appearance, while its comment said "whenever it comes forward".
                 DocumentInbox().sweep()
+                DocumentInbox().excludeFromBackup()
                 // Retried here rather than only at launch: the failure this is most likely to
                 // meet is a Keychain refusing a locked device during a cold start, and coming
                 // forward is exactly the moment that stops being true. Only on coming forward:
@@ -353,6 +360,11 @@ struct OpenFactorApp: App {
             }
             .onOpenURL { url in
                 guard let value = InboxOpener.arrival(from: url) else { return }
+                // The copy is already on disk when this runs, and the flag on the directory
+                // covers it at backup time, so marking after arrival still counts. What it
+                // cannot cover is the time between now and the read while the app is locked;
+                // that is why the mark is also applied at launch, before any delivery.
+                if url.isFileURL { DocumentInbox().excludeFromBackup() }
 
                 // **This supersedes whatever was pending, and takes it off the device.** An
                 // uncollected share left in the inbox reappears later, whenever some unrelated
