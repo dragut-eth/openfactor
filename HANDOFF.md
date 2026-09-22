@@ -42,6 +42,19 @@ device, a code typed on purpose, and a password manager that fills only on the s
 saved for. Passkeys are deliberately not recommended: they collapse the two-device separation the
 model rests on, and this project does not recommend what it has not verified.
 
+**Audit X4 arrived on 2026-09-22 and is analysed, not yet acted on.** Grok 4.7, a fourth lineage,
+over `2523491`, the 1.1 release commit: the first blind pass of shipped code. One Medium, one Low,
+both confirmed at source. The Medium is the residue of X3-01: a file opened into the app during a
+locked cold start is held unread, the foreground sweep keeps it for a minute, and `Documents/Inbox`
+carries no backup exclusion, so a process killed in that minute leaves the plaintext for the next
+backup. A second path into the same window, a superseded file arrival, is recorded beside it. The
+Low is the 2^40 obligation in `docs/BACKUP_FORMAT.md` against an estimator that says of itself it
+is a floor. Two more Lows are logged from the reviewer's unverified list: an overflow trap in the
+image dimension multiply and a CI grep that does not name `Data(contentsOf:)`. The record, with the
+shape a fix has to take, is [docs/audits/X/X4-grok-blind-audit.md](docs/audits/X/X4-grok-blind-audit.md).
+Under the rule from X2's verification round, only the Medium is in scope this week, and it waits
+for a decision.
+
 **Audit X3 arrived on 2026-09-05 and is being worked through.** GPT 6-Astra, the first reviewer in
 the series from a lineage with no hand in this code and the first to run probes rather than read,
 found three Medium and two Low at `b673142`, all five confirmed at source. Its principal finding
