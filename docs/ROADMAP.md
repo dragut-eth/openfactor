@@ -21,7 +21,8 @@ These are defaults chosen so work can start. Say the word and they change.
 
 - Docs (`README.md`, `HANDOFF.md`, and anything else affected) are updated in the same
   PR, never as a follow up.
-- No file grows past roughly 300 lines. Split instead.
+- No file becomes harder to read in one sitting. When one does, it is split in its own pull
+  request rather than inside another change.
 - Anything in `OpenFactorCore` ships with tests in the same PR.
 - Nothing is pushed until Xavier says so.
 

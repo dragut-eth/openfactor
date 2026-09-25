@@ -51,9 +51,9 @@ encrypted, so say that you have something and let the detail follow through the 
 channel above. If none of it is sensitive, a public issue is welcome instead, where the discussion
 stays searchable.
 
-**There is no bounty.** The method that produced the most useful audit so far is recorded in
-[docs/audits/X/X1-codex-blind-audit.md](docs/audits/X/X1-codex-blind-audit.md), prompt included, if
-you want a starting point.
+**There is no bounty.** The prompt used for the blind audits X1 to X4, unchanged across four
+reviewers, is recorded in [docs/audits/X/X1-codex-blind-audit.md](docs/audits/X/X1-codex-blind-audit.md)
+if you want a starting point.
 
 ## Threat model
 

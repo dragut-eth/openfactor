@@ -8,8 +8,9 @@ argument for any design decision. Those are in `README.md`, `SECURITY.md`, `docs
 
 ## Read first
 
-`HANDOFF.md` is the running state: what is in progress, what is open, and what was recently
-learned the hard way.
+`HANDOFF.md` is the running state. Read its first section, **Where things stand**, and its last,
+**Notes for whoever works on this next**. The sections between are dated history: consult one
+when a task touches it.
 
 ## The rules
 
@@ -25,16 +26,15 @@ than once ended up with two different rules.
 
 ## What CI will fail you on
 
-`.github/workflows/ci.yml` is the authority. In summary: em dashes anywhere outside
-`docs/audits/`, networking symbols in the built binary, project settings that disagree with
-`docs/PROJECT.md`, absolute home directory paths in tracked files, published surfaces naming
-different security contacts, and shell scripts failing `shellcheck -S info`.
+`.github/workflows/ci.yml` is the authority, and each step's name says what it refuses:
+
+    grep -E '^\s+- name:' .github/workflows/ci.yml
 
 ## If you are auditing rather than contributing
 
 `SECURITY.md` has the section on it: where to send a report, what makes one useful, and what gets
-published. The method that produced the most useful audit so far, prompt included, is recorded in
-`docs/audits/X/X1-codex-blind-audit.md`.
+published. The prompt used for the blind audits X1 to X4, unchanged across four reviewers, is
+recorded in `docs/audits/X/X1-codex-blind-audit.md`.
 
 **Both are offered rather than asked.** This repository is the subject and is in no position to set
 the method of its own audit. Use them, change them, or ignore them.

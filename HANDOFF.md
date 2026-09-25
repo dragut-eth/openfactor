@@ -5,7 +5,7 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-09-19. **1.1 (9), the first update, is on the App Store**, released by
+**Last updated:** 2026-09-22. **1.1 (9), the first update, is on the App Store**, released by
 hand on 2026-09-19. Built from `c1ec742` with Xcode 27.0, the first build not made with Xcode 26; the record is
 [docs/releases/1.1-9.md](docs/releases/1.1-9.md). It passed a TestFlight pass on the iPhone 15 Pro
 and the Apple Watch Ultra with real accounts on 2026-09-18. The iPhone XS is no longer available,
@@ -2121,9 +2121,9 @@ would be to weaken what they assert.
 
 ## Effort and model, by pull request
 
-Xavier sets the reasoning effort himself and can switch between Opus 5 and Fable 5. The
-recommendation for each pull request is stated before it starts, so the lever gets pulled
-deliberately rather than left where it happened to be.
+Xavier sets the reasoning effort and the model himself. The recommendation for each pull request
+is stated before it starts, so the lever gets pulled deliberately rather than left where it
+happened to be.
 
 | Pull request | Suggested effort | Note |
 | --- | --- | --- |

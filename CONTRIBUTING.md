@@ -22,7 +22,8 @@ than no code at all. If a change is getting long, split it.
 - [ ] Documentation affected by the change is updated in the same pull request, never as a
       follow up. That includes `README.md`, `HANDOFF.md`, and anything under `docs/`
 - [ ] No new third party dependency, see below
-- [ ] No file grew past roughly 300 lines. Split instead
+- [ ] No file became harder to read in one sitting. If one did, say so in the description, and
+      split it in its own pull request rather than inside this one
 
 ## Code style
 
