@@ -9,8 +9,9 @@ argument for any design decision. Those are in `README.md`, `SECURITY.md`, `docs
 ## Read first
 
 `HANDOFF.md` is the running state. Read its first section, **Where things stand**, and its last,
-**Notes for whoever works on this next**. The sections between are dated history: consult one
-when a task touches it.
+**Notes for whoever works on this next**. Working only on the website, read **The website:
+working on it cold**, the section after the first, which is self-contained. The other sections
+are dated history: consult one when a task touches it.
 
 ## The rules
 

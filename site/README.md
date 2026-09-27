@@ -87,8 +87,8 @@ for it.
   than as two appearances nobody chose. Both are in App Store Connect, so either was available.
 
   **The same images the store shows**, so the landing page and the shop window cannot drift apart.
-  Explicit `width` and `height` so the page does not reflow while they load, and a caption says
-  the accounts in them are invented, because a grid of plausible bank codes should say so.
+  Explicit `width` and `height` so the page does not reflow while they load. There is no caption;
+  see the order of the page, above.
 - **A copy pass**, which should begin by deciding who the page is for.
 
 ## security.txt
@@ -119,7 +119,9 @@ report an error. Whoever moves it changes the watch path in the same breath.
 **`www.openfactor.dev` returns 301 to the apex**, as of 2026-08-22. It returned 521 until then,
 because the hostname was never added to the Pages project. Adding it made `www` *serve* the site,
 which left two hostnames returning 200 with identical content, so a **Cloudflare Page Rule** now
-redirects it.
+redirects it. **Check the dashboard before editing it**: the comment in `_redirects` calls it a
+Redirect Rule, and Cloudflare has been moving Page Rules to Redirect Rules, so which one exists
+today was not re-verified.
 
     www.openfactor.dev/*   ->   https://openfactor.dev/$1   (301)
 
@@ -183,12 +185,14 @@ to `'self'`.
 `style="padding-bottom:2rem"`, and a single style attribute is the difference between
 `style-src 'self'` and `style-src 'self' 'unsafe-inline'`. It is a class now.
 
-**Cloudflare's email obfuscation injects one script** from `/cdn-cgi/`, which is same origin and
-covered by `script-src 'self'`. Checked against the live page, because a policy that broke that
-script would hide the security contact address, which is the opposite of the point.
+**Cloudflare's email obfuscation is off**: as of 2026-09-27 the served pages carry plain `mailto:`
+links and no script of any kind. It used to inject one script from `/cdn-cgi/`, same origin and
+covered by `script-src 'self'`, which is why that directive is `'self'` rather than `'none'`. If
+it is ever turned back on, check the security contact address still renders.
 
 **HSTS is set for two years with subdomains and deliberately not preloaded.** Preloading is slow
-and awkward to reverse, and `www` does not resolve yet. It is worth doing once `www` works.
+and awkward to reverse. `www` now resolves and redirects to the apex, which was the stated
+precondition, so preloading is an open decision rather than a blocked one.
 
 **`404.html` exists so that a wrong address stops returning the homepage with a 200.** It did,
 which meant every typo looked like a real page. Its links are absolute, because a 404 can be
@@ -246,8 +250,8 @@ repeating it.
 click was taking a redirect hop to reach the URL the canonical already names.
 
 **Not added: a JSON-LD SoftwareApplication block.** Its useful fields are `aggregateRating` and
-`offers`, and this app has neither a rating nor a store link yet. Publishing the markup without
-them claims a listing that does not exist. Worth revisiting when the App Store link is real.
+`offers`. It was held back while there was no store link; the link is live now, but there is
+still no rating, so the block would be mostly empty. Still open.
 
 ## security.txt
 

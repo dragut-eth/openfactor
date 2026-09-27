@@ -5,6 +5,9 @@ first when picking the work back up.
 
 ## Where things stand
 
+**Working only on the website?** Read **The website: working on it cold**, the section right
+after this one. It is self-contained and is all a session needs for a web fix.
+
 **Last updated:** 2026-09-27. **1.1.1 (10), a fix release, is submitted for review**, release
 manual. Built from `a733f75` with Xcode 27.0 on the new Mac; the record is
 [docs/releases/1.1.1-10.md](docs/releases/1.1.1-10.md). It passed a TestFlight "Open in" pass on the
@@ -146,6 +149,216 @@ noticed.
 **Gate A4 is concluded and public**, including both halves of the closing round. **CI is green on
 `main` for the first time since at least 18 August**, which took fixing three checks that had never
 completed. **PR 15c is built and committed**, with one manual checklist left to run on a phone.
+
+## The website: working on it cold
+
+**Everything here was checked against the live site on 2026-09-27.** It is newer than any older
+passage in this file; where they disagree, this section is right. The reasoning behind each
+decision is in `site/README.md`. This section is the operational part: what exists, how it
+deploys, and how to change it safely.
+
+**Scope.** A web fix touches `site/` and nothing else. Anything outside `site/` is the iOS and
+watchOS app, which has its own release process. A change outside `site/` also makes CI run the
+macOS build jobs.
+
+### What it is
+
+`openfactor.dev` is two pages, a 404 page and one stylesheet, plus `security.txt`, `robots.txt`
+and a sitemap. It is plain HTML with no framework, no build step, no JavaScript and no
+dependencies. **What is in `site/` is exactly what is served**, and nothing outside that folder is
+ever published.
+
+| File | What it is |
+| --- | --- |
+| `site/index.html` | The landing page. The App Store badge sits under the name, then the "View the source" button |
+| `site/privacy.html` | The privacy policy, served at `/privacy`. App Store Connect links to that URL. It is a statement by ReVeNG System |
+| `site/404.html` | The not-found page. Its links are absolute because it is served at any path depth |
+| `site/assets/style.css` | The only stylesheet. The site is light only, on purpose |
+| `site/assets/` | Icons, `card.png` (the 1200x630 link preview), the three screenshots, and `app-store-badge.svg`, Apple's badge unmodified |
+| `site/_headers` | Response headers, including the Content Security Policy. Each value is explained in the file |
+| `site/_redirects` | One rule: `/security.txt` goes to `/.well-known/security.txt` |
+| `site/.well-known/security.txt` | RFC 9116 security contact. It expires 2027-08-21 |
+| `site/robots.txt`, `site/sitemap.xml` | Both name the apex, `https://openfactor.dev` |
+| `site/README.md` | Why everything is the way it is. **It is inside the published folder, so it is also served, at `openfactor.dev/README.md`**, and editing it is a deploy |
+
+### How it deploys
+
+**Cloudflare Pages, connected to this GitHub repository.** The production branch is `main`, the
+output directory is `site`, and there is no build command. **A push to `main` that changes
+`site/` deploys**, and that is measured: on 2026-09-16 and 2026-09-22 a change to `site/` was live
+within 20 to 40 seconds of the push. Whether a push touching only other files also redeploys
+depends on the watch-path setting below, and it does not matter for a web fix.
+
+**CI does not gate the deploy.** GitHub Actions runs on the same push, but Cloudflare deploys
+regardless of its result, so a push that fails CI still goes live. Run the checks below before
+pushing, not after.
+
+**Pages reports nothing back to GitHub.** No status or check appears on the commit. A deploy is
+confirmed from the live site or the Cloudflare dashboard, never from GitHub.
+
+**Build watch paths were meant to be `site/*`.** Whether that was ever set was not recorded, and
+it cannot be read from the repository. If it is set and the site moves out of `site/`, deploys
+stop silently.
+
+### Running it locally
+
+There is no build. From the repository root:
+
+```bash
+python3 -m http.server 4173 --bind 127.0.0.1 --directory site
+```
+
+Then open `http://127.0.0.1:4173/`. The `site` entry in `.claude/launch.json` serves the same
+folder with Node. **A local server is not the live site, in three ways:**
+
+- **`/privacy` returns 404 locally.** Open `/privacy.html` instead. Cloudflare maps the short URL;
+  a plain server does not.
+- **`_headers` and `_redirects` are not applied.** A change that breaks under the Content
+  Security Policy looks fine locally and breaks live.
+- **Cloudflare can add to what it serves**, from dashboard settings that never appear in the
+  repository. Only the live check below sees that.
+
+### Rules that bite on the web
+
+- **The Content Security Policy is `default-src 'none'`, widened only to `'self'`.** So: no
+  inline `style=""` attributes, no inline scripts, and no external hosts for fonts, scripts,
+  images or analytics. Every asset goes in `site/assets/`. A violation fails silently in the
+  browser, with a console error and a missing style or image.
+- **The site never makes a claim the repository does not.** A claim changes in `README.md` or
+  `SECURITY.md` first, and the site follows.
+- **Link to `/privacy`, not `/privacy.html`.** The latter redirects.
+- **The security contact must agree in three places.** CI fails unless `security@openfactor.dev`
+  appears in `site/.well-known/security.txt`, `SECURITY.md` and `site/privacy.html`, and unless
+  the first and last point at the `SECURITY.md` URL on GitHub.
+- **No em dashes and no trailing whitespace**, anywhere. CI enforces both.
+- **A new page** goes into `sitemap.xml`, with a canonical tag pointing at the apex.
+- **Turn nothing on in Cloudflare that injects into pages**: Web Analytics, Rocket Loader, Zaraz,
+  or email obfuscation. Web Analytics was once found injecting a tracking beacon into a page that
+  says "no tracking". The policy would now block such scripts, which shows up as a broken page
+  rather than a warning.
+- **Nothing is pushed without Xavier's explicit go.** That applies to the site as much as to the
+  app.
+
+### An emergency fix, start to finish
+
+1. On the laptop you need git and push access to GitHub (`gh auth login` does it). That is
+   enough to fix, deploy, and roll back through git. **A browser signed in to Cloudflare** is
+   needed only for the dashboard: the instant rollback, DNS, and settings. Python 3 is for the
+   local preview. No API key or secret appears anywhere in the site or its deploy.
+2. `git pull`, then edit inside `site/`.
+3. Preview locally as above.
+4. Run CI's two text checks on the folder before committing. No output means clean:
+
+```bash
+git grep -n -I -- "$(printf '\xe2\x80\x94')" -- site
+```
+
+```bash
+git grep -n -I -- ' $' -- site
+```
+
+5. Commit as `fix(site): ...`. Push to `main` only with Xavier's go.
+6. **Confirm the deploy from the served bytes.** Wait a minute, then run the check below. No
+   diff output followed by "live" means the edge serves exactly the repository file. Use the
+   same check for `/privacy` against `site/privacy.html`. Both passed on 2026-09-27. The request
+   is shaped like a browser on purpose, because Cloudflare adds some things only for browsers.
+
+```bash
+curl -s -A 'Mozilla/5.0' -H 'Accept: text/html' https://openfactor.dev/ | diff - site/index.html && echo live
+```
+
+7. If `_headers` changed, read the served headers:
+
+```bash
+curl -sI https://openfactor.dev/
+```
+
+8. Check CI afterwards:
+
+```bash
+gh run list --limit 1
+```
+
+   **A red result at this point means the broken change is already live**, because CI did not
+   stop it. Roll back or push a fix; nothing else will catch it.
+
+**Safari on a phone caches hard.** To see a change straight away, use a Private tab. To clear it
+properly, go to Settings, Apps, Safari, Advanced, Website Data, and delete `openfactor.dev`.
+
+### Rolling back
+
+- **Fastest: the Cloudflare dashboard.** Open Workers and Pages, then the project, then
+  Deployments. Pick the last good deployment and roll back to it. That is instant and does not
+  touch git, so fix the repository afterwards, or the next push brings the problem back.
+- **Through git:** `git revert <commit>`, then push. The revert is live within a minute.
+
+### What lives outside the repository
+
+None of these are in git, and none of them hold a secret the repository needs.
+
+- **Cloudflare, Xavier's account.**
+  - The Pages project.
+  - The DNS zone.
+  - The rule that sends `www` to the apex. It is recorded as a Page Rule in `site/README.md`, and
+    the comment in `_redirects` calls it a Redirect Rule. Check which one it is before editing.
+  - Web Analytics, which is off.
+  - The NEL setting (Network Error Logging, a reporting header).
+- **Gandi.** The domain registrar, and email forwarding. `info@` and `security@` forward to a
+  personal address; there are no mailboxes.
+- **Google Search Console.** Verified by a DNS record, with the sitemap submitted.
+
+### DNS, email and TLS, as served on 2026-09-27
+
+| Record | Value |
+| --- | --- |
+| Name servers | Cloudflare |
+| Apex | Proxied through Cloudflare |
+| `www` | 301 to the apex with the path and query kept, for http and https |
+| MX | Gandi, `spool.mail.gandi.net` and `fb.mail.gandi.net` |
+| SPF | `v=spf1 include:_mailcust.gandi.net -all` |
+| DMARC | `p=reject`, reports to Cloudflare. The domain sends no mail at all |
+| CAA | `iodef` to `security@`, plus the five CAs Cloudflare maintains |
+| TXT | `google-site-verification=...`, which **must not be deleted**, or Search Console un-verifies |
+| DNSSEC | Off, on purpose until the registrar transfer |
+| Registrar | Gandi. Registered 2026-08-14, expires 2027-08-14 |
+| Certificate | Google Trust Services, expires 2026-11-16 |
+
+**Do not, in the meantime:**
+- **Change the registrant name, organisation or email at Gandi.** It restarts the 60-day
+  transfer lock.
+- **Turn on DNSSEC before the transfer.**
+- **Add any service that sends mail as the domain** without first updating SPF. DMARC is at
+  reject, so its mail would be refused.
+
+**Headers served on 2026-09-27:**
+- Content Security Policy, as in `_headers`.
+- Strict Transport Security for two years, with subdomains, not preloaded.
+- `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, a Permissions Policy that denies everything,
+  and `Cross-Origin-Opener-Policy`.
+- **Also `nel` and `report-to`**, which Cloudflare adds itself. See below.
+
+### Known issues and unfinished work
+
+- **NEL is still sent**, verified 2026-09-27, although it is switched off in the dashboard. The
+  documented fix is asking Cloudflare support to disable the `nel___enable` flag on the account.
+  Do not override it in `_headers`: fighting a header the edge adds afterwards only works by
+  accident.
+- **The certificate expires 2026-11-16.** Check in mid October that it renewed. It is the first
+  renewal under the CAA records, so it is the one moment they could bite.
+- **The registrar transfer from Gandi to Cloudflare is not done.** The 60-day lock from
+  registration ends around 2026-10-13. Transfer after that, then turn on DNSSEC.
+- **The landing page copy has never had a proper pass.** It reads like the README because it was
+  drawn from it.
+- **`security.txt` expires 2027-08-21.** Moving the date is a deliberate statement that the
+  channel is still watched.
+- **Replies to a researcher come from a personal address**, because mail is forwarded, not
+  hosted. A real mailbox would fix that, and it is a separate decision.
+- **`site/README.md` is publicly served** at `openfactor.dev/README.md`, found 2026-09-27. Nothing
+  in it is private, because the repository is public, but it was never meant to be a page. Keeping
+  it out would take moving it out of `site/`, or a rule in `_redirects`. That is a decision, not a
+  fix.
+- **There is no structured data block for the app.** It was left out while there was no store
+  link. There is one now, but still no rating, so it is still open.
 
 ## Gate A4: where it stands
 
