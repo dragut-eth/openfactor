@@ -338,6 +338,16 @@ then the one they see next time they type a passphrase, then the two warnings, t
 that stopped happening, then the one nobody will notice and everybody benefits from. Nothing here says why, which is the whole difference between this surface
 and the other two.
 
+### 1.1.1
+
+**Approved by the maintainer on 2026-09-27, to be entered verbatim.** A fix release carrying audit
+X4, so two paragraphs, both describing what a person could notice and neither naming the audit:
+
+    A file you open into OpenFactor to import is now read and removed the moment it arrives, even
+    while the app is locked, and is kept out of your iPhone's backups.
+
+    Imported images that claim impossible sizes are now refused cleanly.
+
 ## App Privacy, the nutrition label
 
 App Store Connect asks this separately from the privacy manifest and does not read the manifest
