@@ -5,14 +5,16 @@ first when picking the work back up.
 
 ## Where things stand
 
-**Last updated:** 2026-09-27. **The project is at 1.1.1 (10), a fix release**, not yet built. It
+**Last updated:** 2026-09-27. **1.1.1 (10), a fix release, is submitted for review**, release
+manual. Built from `a733f75` with Xcode 27.0 on the new Mac; the record is
+[docs/releases/1.1.1-10.md](docs/releases/1.1.1-10.md). It passed a TestFlight "Open in" pass on the
+15 Pro, and its What's New text is in `docs/APP_STORE.md` as approved. It
 ships audit X4's fixes to users: an opened document is read and removed at arrival, the document
 inbox is kept out of backups, and the image size check cannot trap. Nothing on screen changes. The
 X4 record describes a Medium in 1.1 as shipped, which is the reason not to hold this for a larger
 release. Gate A5 was not run for it; X4's whole-repository pass on the 1.1 commit, its
 verification round and its closing check cover every change since 1.1. The Apple Distribution
-certificate is on the new Mac. Next is `ship-testflight.sh`, then an "Open in" pass on the
-15 Pro before submission.
+certificate is on the new Mac.
 **1.1 (9), the first update, is on the App Store**, released by
 hand on 2026-09-19. Built from `c1ec742` with Xcode 27.0, the first build not made with Xcode 26; the record is
 [docs/releases/1.1-9.md](docs/releases/1.1-9.md). It passed a TestFlight pass on the iPhone 15 Pro
