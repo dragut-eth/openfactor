@@ -350,13 +350,15 @@ X4, so two paragraphs, both describing what a person could notice and neither na
 
 ### 1.1.2
 
-**Approved by the maintainer on 2026-10-03, to be entered verbatim.** A fix release for the add
-screen loop found on 2026-10-02:
+**Entered and submitted by the maintainer on 2026-10-03**, read back from App Store Connect. A fix
+release for the add screen loop found on 2026-10-02. He edited the approved draft before
+submitting: the first paragraph lost its closing clause, and "colour" became "color", since
+American English is the project's spelling from 2026-10-03 on:
 
     Cancelling the import of accounts from a shared Google Authenticator transfer code now works
-    as expected, instead of reopening the import.
+    as expected.
 
-    A colour chosen for a new account now stays chosen.
+    A color chosen for a new account now stays chosen.
 
 ## App Privacy, the nutrition label
 

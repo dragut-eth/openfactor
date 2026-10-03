@@ -8,7 +8,11 @@ first when picking the work back up.
 **Working only on the website?** Read **The website: working on it cold**, the section right
 after this one. It is self-contained and is all a session needs for a web fix.
 
-**Last updated:** 2026-10-02.
+**Last updated:** 2026-10-03. **1.1.2 (11) is submitted for review**, release manual, by the
+maintainer in App Store Connect at 15:06 UTC. Built from `075fddc`; the record is
+[docs/releases/1.1.2-11.md](docs/releases/1.1.2-11.md). It passed his TestFlight pass on the 15 Pro.
+It carries the add screen loop fix below. **From 2026-10-03, new text in this project is
+American English.**
 
 **A shared transfer code trapped the add screen in a loop, fixed on `main`, not yet shipped.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator
@@ -28,9 +32,7 @@ maintainer on the 15 Pro. Core suite 486 and hosted suite 1,232, both green. No 
 covers it: the defect is in how SwiftUI rebuilds a presented view, which the view model tests do
 not reach.
 
-**Shipping it as 1.1.2 (11), started 2026-10-03.** The project is bumped and the What's New text
-is approved and recorded in `docs/APP_STORE.md`. Then the ship script, a TestFlight pass on the
-15 Pro, and submission, which the maintainer does himself in App Store Connect, release manual.
+**Shipped as 1.1.2 (11)**, submitted 2026-10-03; see the top of this section.
 
 **Why it passed every test and audit, recorded so the gap is not mistaken for bad luck.**
 - **The four blind audits were security audits by brief.** A screen that will not close leaks
