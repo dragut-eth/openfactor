@@ -28,9 +28,9 @@ maintainer on the 15 Pro. Core suite 486 and hosted suite 1,232, both green. No 
 covers it: the defect is in how SwiftUI rebuilds a presented view, which the view model tests do
 not reach.
 
-**Next: ship it as 1.1.2**, planned for 2026-10-03, by the same path as 1.1.1: bump, ship script,
-TestFlight pass on the 15 Pro, What's New text approved by the maintainer, submit with release
-manual.
+**Shipping it as 1.1.2 (11), started 2026-10-03.** The project is bumped and the What's New text
+is approved and recorded in `docs/APP_STORE.md`. Then the ship script, a TestFlight pass on the
+15 Pro, and submission, which the maintainer does himself in App Store Connect, release manual.
 
 **Why it passed every test and audit, recorded so the gap is not mistaken for bad luck.**
 - **The four blind audits were security audits by brief.** A screen that will not close leaks

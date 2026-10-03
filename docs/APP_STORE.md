@@ -348,6 +348,16 @@ X4, so two paragraphs, both describing what a person could notice and neither na
 
     Imported images that claim impossible sizes are now refused cleanly.
 
+### 1.1.2
+
+**Approved by the maintainer on 2026-10-03, to be entered verbatim.** A fix release for the add
+screen loop found on 2026-10-02:
+
+    Cancelling the import of accounts from a shared Google Authenticator transfer code now works
+    as expected, instead of reopening the import.
+
+    A colour chosen for a new account now stays chosen.
+
 ## App Privacy, the nutrition label
 
 App Store Connect asks this separately from the privacy manifest and does not read the manifest
