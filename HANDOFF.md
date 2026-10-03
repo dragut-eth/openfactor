@@ -28,6 +28,31 @@ maintainer on the 15 Pro. Core suite 486 and hosted suite 1,232, both green. No 
 covers it: the defect is in how SwiftUI rebuilds a presented view, which the view model tests do
 not reach.
 
+**Next: ship it as 1.1.2**, planned for 2026-10-03, by the same path as 1.1.1: bump, ship script,
+TestFlight pass on the 15 Pro, What's New text approved by the maintainer, submit with release
+manual.
+
+**Why it passed every test and audit, recorded so the gap is not mistaken for bad luck.**
+- **The four blind audits were security audits by brief.** A screen that will not close leaks
+  nothing, so it sits outside what they were asked to falsify.
+- **The automated tests cannot see this class of defect.** They cover view models and the core;
+  the bug is in how SwiftUI rebuilds a presented view. `OpenFactorUITests` holds only Xcode's two
+  template stubs, and CI does not run it. This is the real gap.
+- **The hardware checks asked a different question**: whether a shared image arrives and
+  presents, including across a lock. None shared a transfer code and cancelled the preview.
+- **Code review missed a known SwiftUI mistake**: a view building its own state in its
+  initialiser and holding it as `@Bindable`. The other four `@Bindable` properties in the app
+  receive a model owned by a parent, which is correct, so the pattern is not repeated elsewhere.
+
+**Open, none started, the maintainer to choose:**
+- **UI tests for each arrival path**: deliver a shared image or a code, press each way out, and
+  assert where the screen ends up. The only kind of test that sees this bug. Needs real UI tests
+  set up and run in CI on a simulator.
+- **A CI rule** failing the build when a view assigns a newly built object to a `@Bindable`
+  property in its initialiser. A grep, imperfect, aimed at exactly this mistake.
+- **A behaviour audit brief** alongside the security one, asking a reviewer to walk every way in
+  and out of each screen, since reviewers do what the brief asks.
+
 **1.1.1 (10), a fix release, is on the App Store**, confirmed in App Store Connect on 2026-10-02;
 the exact release day was not recorded. Release manual. Built from `a733f75` with Xcode 27.0 on the new Mac; the record is
 [docs/releases/1.1.1-10.md](docs/releases/1.1.1-10.md). It passed a TestFlight "Open in" pass on the
