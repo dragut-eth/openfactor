@@ -8,8 +8,28 @@ first when picking the work back up.
 **Working only on the website?** Read **The website: working on it cold**, the section right
 after this one. It is self-contained and is all a session needs for a web fix.
 
-**Last updated:** 2026-09-27. **1.1.1 (10), a fix release, is submitted for review**, release
-manual. Built from `a733f75` with Xcode 27.0 on the new Mac; the record is
+**Last updated:** 2026-10-02.
+
+**A shared transfer code trapped the add screen in a loop, fixed on `main`, not yet shipped.**
+Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator
+transfer QR into OpenFactor, open the app, press Cancel on the Import accounts preview: the
+preview closed and reopened within a second, so adding the accounts or killing the app were the
+only ways out. Nothing was ever saved without confirmation. **The cause:** `AddAccountView` held
+its session as `@Bindable`, which is not storage. The account list behind the sheet redraws every
+second for its codes, every redraw rebuilt the add screen, and the one-shot openings (a shared
+image, a code from a URL) built a fresh session and decoded again each time. Cancelling sent the
+current session back to the camera; the next rebuild decoded the transfer code and reopened the
+preview. A single-account code escaped by luck, because its toolbar Cancel closes the whole
+sheet, but a colour picked on its confirm screen snapped back the same way. In the code since
+2026-08-18, so in 1.0, 1.1 and 1.1.1. **The fix:** the session is `@State`, and the shared image
+or code is decoded once in `onAppear`, guarded by a flag that survives rebuilds. Reproduced on
+the simulator with a throwaway transfer QR before the fix, gone after it, and validated by the
+maintainer on the 15 Pro. Core suite 486 and hosted suite 1,232, both green. No automated test
+covers it: the defect is in how SwiftUI rebuilds a presented view, which the view model tests do
+not reach.
+
+**1.1.1 (10), a fix release, is on the App Store**, confirmed in App Store Connect on 2026-10-02;
+the exact release day was not recorded. Release manual. Built from `a733f75` with Xcode 27.0 on the new Mac; the record is
 [docs/releases/1.1.1-10.md](docs/releases/1.1.1-10.md). It passed a TestFlight "Open in" pass on the
 15 Pro, and its What's New text is in `docs/APP_STORE.md` as approved. It
 ships audit X4's fixes to users: an opened document is read and removed at arrival, the document

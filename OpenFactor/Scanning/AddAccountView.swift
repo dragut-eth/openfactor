@@ -6,9 +6,32 @@ import SwiftUI
 /// The add flow: point the camera at a code, or import a picture of one, then confirm.
 struct AddAccountView: View {
 
-    /// Everything this flow must not lose, owned outside the view. The lock tears views down;
-    /// the session survives it. See `AddAccountSession` for the whole argument.
-    @Bindable private var session: AddAccountSession
+    /// Everything this flow must not lose. The lock tears views down; the session survives it.
+    /// See `AddAccountSession` for the whole argument.
+    ///
+    /// **`@State`, so SwiftUI keeps the session this screen was opened with.** It was
+    /// `@Bindable`, which is not storage: every rebuild of the view replaced it with whatever the
+    /// initialiser produced. The account list behind this sheet redraws every second for its
+    /// codes, and each redraw rebuilt this screen, so the one-shot openings below handed it a
+    /// brand-new session, decoded again, once a second. Cancelling a transfer preview opened from
+    /// a shared image returned the session to the camera, and the next rebuild decoded the image
+    /// and opened the preview again, so adding the accounts or killing the app were the only ways
+    /// out. Found by the maintainer on hardware, 2026-10-02. The app's own session was
+    /// unaffected, being the same object on every rebuild.
+    @State private var session: AddAccountSession
+
+    /// What a one-shot opening brought with it, handled once when the screen appears rather than
+    /// in the initialiser, which runs on every rebuild. See `handlePendingOnce`.
+    private let pending: Pending?
+
+    /// Whether `pending` has been handled. State, so it survives rebuilds the way the session
+    /// does, and so returning from the manual entry screen does not handle it a second time.
+    @State private var hasHandledPending = false
+
+    private enum Pending {
+        case image(Data)
+        case code(String)
+    }
 
     @State private var cameraStatus = CameraAccess.status
     @State private var photoItem: PhotosPickerItem?
@@ -23,7 +46,8 @@ struct AddAccountView: View {
     /// The ordinary opening, from the add button. The session is the app's, so a lock and
     /// unlock returns to this exact screen with everything still typed.
     init(session: AddAccountSession, onAdded: @escaping () -> Void) {
-        self.session = session
+        _session = State(initialValue: session)
+        pending = nil
         self.onAdded = onAdded
     }
 
@@ -35,9 +59,8 @@ struct AddAccountView: View {
     /// A one-shot session, not the app's: an arrival is re-collected and re-read after a lock
     /// by the arrival's own survival path, so its session has nothing it needs to keep.
     init(store: any SecretStore, code: String, onAdded: @escaping () -> Void) {
-        let session = AddAccountSession(store: store)
-        session.scan.handleScan(code)
-        self.session = session
+        _session = State(initialValue: AddAccountSession(store: store))
+        pending = .code(code)
         self.onAdded = onAdded
     }
 
@@ -48,10 +71,24 @@ struct AddAccountView: View {
     /// transfer carrying forty accounts. The share extension does not decode anything, which is
     /// why the bytes arrive here rather than as an account.
     init(store: any SecretStore, image: Data, onAdded: @escaping () -> Void) {
-        let session = AddAccountSession(store: store)
-        session.scan.handleImage(image)
-        self.session = session
+        _session = State(initialValue: AddAccountSession(store: store))
+        pending = .image(image)
         self.onAdded = onAdded
+    }
+
+    /// Reads what a one-shot opening brought, the first time the screen appears and never again.
+    ///
+    /// `onAppear` rather than `.task`, because it runs before the first frame is shown, so the
+    /// confirm screen or the transfer preview is what appears rather than a flash of the camera
+    /// first. A lock that tears this screen down rebuilds it with fresh state, and the arrival
+    /// is read again then, which is the arrival's own survival path and is intended.
+    private func handlePendingOnce() {
+        guard !hasHandledPending, let pending else { return }
+        hasHandledPending = true
+        switch pending {
+        case let .image(data): session.scan.handleImage(data)
+        case let .code(payload): session.scan.handleScan(payload)
+        }
     }
 
     var body: some View {
@@ -78,6 +115,7 @@ struct AddAccountView: View {
                         Button("Enter manually") { session.isEnteringManually = true }
                     }
                 }
+                .onAppear { handlePendingOnce() }
                 .task {
                     if cameraStatus == .notAsked {
                         _ = await CameraAccess.request()
