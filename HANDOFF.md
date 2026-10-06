@@ -8,13 +8,14 @@ first when picking the work back up.
 **Working only on the website?** Read **The website: working on it cold**, the section right
 after this one. It is self-contained and is all a session needs for a web fix.
 
-**Last updated:** 2026-10-03. **1.1.2 (11) is submitted for review**, release manual, by the
-maintainer in App Store Connect at 15:06 UTC. Built from `075fddc`; the record is
+**Last updated:** 2026-10-06. **1.1.2 (11) is on the App Store**, released 2026-10-03 at 16:38 UTC
+per the public store listing, after the maintainer submitted it at 15:06 UTC that day, release
+manual. Built from `075fddc`; the record is
 [docs/releases/1.1.2-11.md](docs/releases/1.1.2-11.md). It passed his TestFlight pass on the 15 Pro.
 It carries the add screen loop fix below. **From 2026-10-03, new text in this project is
 American English.**
 
-**A shared transfer code trapped the add screen in a loop, fixed on `main`, not yet shipped.**
+**A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator
 transfer QR into OpenFactor, open the app, press Cancel on the Import accounts preview: the
 preview closed and reopened within a second, so adding the accounts or killing the app were the
