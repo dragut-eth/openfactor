@@ -15,6 +15,20 @@ manual. Built from `075fddc`; the record is
 It carries the add screen loop fix below. **From 2026-10-03, new text in this project is
 American English.**
 
+**Audit X5 arrived on 2026-10-06 and is analyzed, not yet acted on.** Claude Mythos 5.1, X2's
+lineage, over `f35d7c0`, which is 1.1.2 as shipped. It is the first pass with a behavior brief
+beside the security one, the answer to the loop below passing four security audits. Thirty-three
+items, all confirmed at source: no Critical or High on the project's scale, five Medium, and a long
+tail. The Mediums: the camera stops reporting after its first payload until the add screen is
+closed and reopened (B1); App Lock is a dead end if the device passcode is removed and set again
+(S1); a provisioned watch never re-asks after the phone replaces the vault while the watch process
+is resident (S2); **the import screen has the loop's own pattern**, decrypting every stored secret
+once a second while its preview is open (S3); and reordering while searching writes the wrong
+order (S6). Among the documentation drift: the README still says "version 1.0" beside the store
+link. The record, with each item's basis and the shape of each fix, is
+[docs/audits/X/X5-mythos-blind-audit.md](docs/audits/X/X5-mythos-blind-audit.md). Under the rule
+from X2's round the five Mediums are in scope this week; they wait for a decision.
+
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator
 transfer QR into OpenFactor, open the app, press Cancel on the Import accounts preview: the
