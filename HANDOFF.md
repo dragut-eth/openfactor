@@ -41,9 +41,10 @@ unchanged, the two S2 tests failed, then the fix made them pass. Not hardware te
 would mean replacing the vault on the only iPhone. **All five Mediums are fixed and none is
 shipped.** **The verification round, the same day, confirmed B1, S3, S6 and S2, and found N1,
 Medium:** on a cold lock the snapshot cover sits over the root lock screen, so a cancelled prompt
-leaves a blank screen with no button. In every version since 2026-08-22. The fix is two lines in
-`AppLockPresentation.coverVisible` plus tests, not yet applied, and it needs a phone check with a
-force quit and a cancelled prompt. The export Low is widened to "in generated mode, require the
+leaves a blank screen with no button. In every version since 2026-08-22. **Reproduced by the
+maintainer on the 15 Pro**: force quit, open, cancel Face ID, blank screen. The fix is two lines in
+`AppLockPresentation.coverVisible` plus tests, not yet applied, and it needs the same phone check
+afterwards. The export Low is widened to "in generated mode, require the
 generated length". Next: fix N1, then the fix release.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**

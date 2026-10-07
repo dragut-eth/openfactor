@@ -373,6 +373,10 @@ daily use never showed it. Cancel the prompt and the app is a blank screen with 
 message; leaving and returning does not change it; only a force quit and a successful prompt get out.
 **The cold half of S1 is this dead end**, worse than X5 described: no reason text, no button.
 
+**Reproduced on hardware by the maintainer, the same day**, on the 15 Pro with the build of
+`546d230`: App Lock on, the app swiped away in the switcher, opened again, Face ID made to fail and
+cancelled. The blank screen, with no button. In his words, the difference is a cold boot of the app.
+
 **Fix shape, from the reviewer, not yet applied:** leave the cover down while the lock screen is the
 root view, since the root lock is itself opaque, safe to photograph, and has its button, which was
 the documented stance before `4b183ff`. Two lines in `coverVisible`, the cold launch test extended
