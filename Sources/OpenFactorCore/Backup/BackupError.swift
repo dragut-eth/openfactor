@@ -56,6 +56,11 @@ public enum BackupError: Sendable, Equatable, Error {
     /// anything about the file.
     case derivationFailed
 
+    /// A passphrase offered as generated that is not the shape a generated one has: the full
+    /// generated length in the generated alphabet once canonicalised. The writer used to take the
+    /// mode's word for it, so an empty string sealed an archive. Audit X5's verification round.
+    case notAGeneratedPassphrase
+
     /// A custom passphrase an offline guessing attack finishes too quickly. Refused by the
     /// writer, because version 1 is forever and so is an archive sealed with one.
     case passphraseTooWeak
@@ -98,6 +103,11 @@ public enum BackupError: Sendable, Equatable, Error {
         case .passphraseTooWeak:
             """
             That passphrase is too easy to guess to protect every account you have. \
+            OpenFactor did not write an archive.
+            """
+        case .notAGeneratedPassphrase:
+            """
+            That is not a passphrase OpenFactor generated, so it cannot be used as one. \
             OpenFactor did not write an archive.
             """
         }

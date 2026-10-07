@@ -432,3 +432,29 @@ own rules: real accounts, no wait between the unlock and the switcher, a force q
 was blank, from a cold launch, with his real accounts, opened the instant Face ID succeeded, force
 quit between repeats. X5 is closed.
 
+## The tail, 2026-10-07 onward
+
+**The maintainer's call: fix everything before 1.1.3**, since no open item puts a current user at
+risk and a complete release beats a quick one.
+
+**The archive writer Low, as widened by the verification round, fixed, failing first.** In generated
+mode `BackupArchive.write` now requires the canonical passphrase to be exactly the generated length,
+and refuses anything else with a new `notAGeneratedPassphrase`. The test runs four inputs, an empty
+string, "abc", a short grouped string and 23 characters: **before the fix the writer sealed a 604 byte
+archive with every one of them**, the empty string included, and after it refuses all four. The test
+for a real generated passphrase passes both ways. Core 493.
+
+**Documentation drift, corrected:**
+- `README.md` no longer carries a version beside the store link, so it cannot drift again.
+- `docs/UI_SPEC.md`: codes on the clipboard are not `localOnly`, by the recorded decision, and
+  passphrases are; both passphrase fields are masked with a reveal; the watch shows one message for
+  every way the phone fails to answer, the one the code shows; and only the alert's two buttons
+  answer the watch's question, any other dismissal leaving it pending.
+- `docs/APP_LOCK.md`: the settings sheet boolean is removed from the "owned by the app" table, with
+  a note that it is `@State` on the list and why that suffices.
+- `docs/ARCHITECTURE.md`: the shared inbox is swept by age, ten minutes, on every scene phase change.
+
+**Still open from the documentation items:** S7, one sentence for `SECURITY.md`'s threat model, which
+is public and waits for the maintainer's approved wording; and S12, "a Release binary is checked",
+which waits for his choice between automating the check and rewording the claim.
+

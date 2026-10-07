@@ -345,6 +345,25 @@ struct BackupArchiveTests {
         }
     }
 
+    /// Audit X5's verification round. The generated mode skips the estimator because a generated
+    /// passphrase is 120 bits from the CSPRNG, and the writer used to take the mode's word for it:
+    /// `write(accounts, passphrase: "abc", mode: .generated)` sealed every secret under `ABC`, and an
+    /// empty string sealed them under nothing. Unreachable from the export screen, which always holds
+    /// a generated passphrase, but that was the screen's guarantee, not the writer's.
+    @Test("In generated mode the writer refuses anything that is not a full generated passphrase", arguments: [
+        "", "abc", "ABCD-EFGH-JKMN", String(repeating: "A", count: 23),
+    ])
+    func writerRefusesAPassphraseThatIsNotGenerated(passphrase: String) throws {
+        #expect(throws: BackupError.notAGeneratedPassphrase) {
+            try BackupArchive.write(
+                [try self.account("GitHub")],
+                passphrase: passphrase,
+                mode: .generated,
+                iterations: Self.iterations
+            )
+        }
+    }
+
     /// The strength rule applies to the custom path only. A generated passphrase is 120 bits
     /// and is not run past an estimator that could only be wrong about it.
     @Test("A generated passphrase is not subject to the estimator")

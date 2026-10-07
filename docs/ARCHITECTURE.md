@@ -423,8 +423,9 @@ can end up in a diagnostic bundle, so it may carry a name and never content. Tha
 has nothing left to govern. A share extension cannot open its containing app, measured twice, so
 the URL could not be delivered and the scheme was removed rather than left declared.
 
-**The lifecycle is the other half.** The app takes the item once, destructively, and sweeps the
-whole directory at launch for anything nobody came back for. The argument that this container is
+**The lifecycle is the other half.** The app takes the item once, destructively, and sweeps
+anything nobody came back for by age: older than ten minutes, on every scene phase change and at
+appearance, so the threshold is a deadline rather than a condition checked once at launch. The argument that this container is
 acceptable rests entirely on the item living for seconds, so the removal is the feature.
 
 **The App Group is not treated as a confidentiality boundary**, exactly as gate E1 proved of

@@ -217,6 +217,19 @@ public enum BackupArchive {
             throw BackupError.passphraseTooWeak
         }
 
+        // **And the generated mode is checked for being generated.** It skips the estimator
+        // because a generated passphrase is 120 bits from the CSPRNG, and the writer used to take
+        // the mode's word for that, so an empty string or "abc" sealed every secret under itself.
+        // Unreachable from the export screen, which always holds a generated passphrase, but that
+        // was the screen's guarantee, and a rule that lives in one caller is the rule the comment
+        // above warns about. Audit X5's verification round, after an attempt to move generation
+        // out of the export model's initialiser showed the guarantee was the only thing there.
+        if mode == .generated,
+            BackupPassphrase.canonical(passphrase).count != BackupPassphrase.generatedLength
+        {
+            throw BackupError.notAGeneratedPassphrase
+        }
+
         return try seal(
             plaintext: try BackupPayload.write(accounts), passphrase: passphrase, mode: mode,
             iterations: iterations)

@@ -50,8 +50,12 @@ generated length", logged and open. **The finder's closing check on `b09bc99`
 confirmed N1 and all five Mediums closed, with no new defect**, and asked for one measurement before
 shipping: the App Lock checklist's item 4, the switcher card right after an unlock, re-run from a cold
 launch, since N1's fix moved when the cover goes up on that path. **The maintainer ran it the
-same day and every card was blank.** X5 is closed. **Next: the fix release, 1.1.3**, carrying all
-five X5 Mediums and N1.
+same day and every card was blank.** X5 is closed. **Next: everything else from X5 before
+1.1.3**, the maintainer's decision since nothing open is a risk to current users. Done so far: the
+archive writer refuses anything but a full generated passphrase in generated mode, failing test
+first, and the documentation drift is corrected except S7 and S12, which wait for his wording and
+choice. Then the small behavior Lows as one batch, the items that need his decisions, one Mythos
+verification round over all of it, and 1.1.3.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

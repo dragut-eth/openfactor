@@ -99,8 +99,7 @@ again. The "Try again" button stays for when nothing changed and somebody wants 
 | State | Title | Detail |
 | --- | --- | --- |
 | Asking | Waiting for your iPhone | a spinner, no button |
-| The phone is not answering | iPhone not reachable | Bring your iPhone closer and try again. |
-| The phone is not frontmost or is locked | Open OpenFactor on your iPhone | Unlock your iPhone and open OpenFactor, then try again. |
+| The phone is not answering, is not frontmost, or is locked | Open OpenFactor on your iPhone | Your iPhone needs to be nearby, unlocked, and showing OpenFactor. Then try again. |
 | The phone has no vault either | Set up your iPhone first | OpenFactor is not set up on your iPhone yet. Do that first, then set up this watch. |
 | Declined, or nothing opened | Not set up | Try again when you are ready. |
 | A fresh key arrived and still opens nothing | Accounts cannot be read | This watch has the key but cannot open your accounts. They may need a newer version of OpenFactor. |
@@ -122,8 +121,10 @@ One line, deliberately. The system alert is translucent on iOS 26 and this one a
 account list, which is a wall of saturated color, so anything not load bearing is working against
 the words being read at all.
 
-Dismissing it any other way counts as declining. A question about releasing a key must never
-resolve as yes by default. It cannot appear while App Lock is showing, so the question waits
+Only the two buttons answer it. An alert that goes away any other way leaves the question
+unanswered, so it comes back rather than resolving itself; the earlier rule, that any other
+dismissal counted as declining, depended on a mechanism the alert does not have. A question about
+releasing a key must never resolve as yes by default. It cannot appear while App Lock is showing, so the question waits
 rather than being answered by somebody holding a locked phone.
 
 **A backup opened from Files arrives as a copy**, never as the original: the app declares
@@ -213,12 +214,13 @@ that it could find no accounts in it.
 
 **Interactions**
 
-- Tap a card: copy the code to the pasteboard, with a brief confirmation. The entry is
-  written with `localOnly` and an `expirationDate` set to the moment the code itself stops
-  working, so it neither outlives its usefulness nor travels to the user's other devices.
-  Both were verified rather than assumed: an entry written with an expiry already past is
-  unreadable, and an entry written without `localOnly` does reach the host clipboard while
-  one written with it does not. See `CodeClipboardTests`.
+- Tap a card: copy the code to the pasteboard, with a brief confirmation. The entry carries
+  an `expirationDate` set to the moment the code itself stops working, so it cannot outlive
+  its usefulness. **It is not `localOnly`**: a code may travel to the owner's other devices
+  through Universal Clipboard, a decision made with the maintainer after measuring it on
+  devices and recorded on `CodeClipboard`, for the same reason iCloud Keychain sync is
+  allowed. A passphrase is the opposite: `localOnly`, expiring after 120 seconds. Both
+  behaviours were verified rather than assumed. See `CodeClipboardTests`.
 - Search filters by issuer and label.
 
 ## Screen 2: Settings (modal sheet)
@@ -354,9 +356,12 @@ exports is kept. The file name carries a date and nothing else: no device name, 
 count, no issuer, because a file name is visible in every share sheet and every screenshot
 of one.
 
-**Both passphrase fields show what you type.** They take 24 generated characters copied off a
-card or out of a password manager, and hiding them means a mistyped character cannot be seen in
-the one string where the app has already admitted it cannot tell a typo from a wrong passphrase.
+**Both passphrase fields are masked, with a button to reveal what you type.** They take 24
+generated characters copied off a card or out of a password manager, and a mistyped character
+has to be visible on request in the one string where the app has already admitted it cannot tell
+a typo from a wrong passphrase. Masked by default since audit X2, so the passphrase is not on
+screen for a shoulder or a recording; the reveal button is disabled while the screen is being
+captured.
 
 **Importing a backup asks for the passphrase and says nothing encouraging.** No attempt
 counter, no "close", no distinction between a wrong passphrase and an altered file, because

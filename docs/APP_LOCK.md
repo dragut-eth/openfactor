@@ -302,7 +302,10 @@ remains above the lock, and why each:
 | The vault gate model | The passphrase being shown exists nowhere else |
 | The pending arrival | Collecting is destructive; the item must outlive any view |
 | `AddAccountSession` | Its dismissal-resets semantics; also the arrival's path to closing the add sheet |
-| The settings sheet boolean | The arrival's path to closing settings and everything nested |
+
+**The settings sheet boolean is not on this list, and an earlier version of this table said it
+was.** It is `@State` on the account list, and the arrival rule closes Settings directly from there.
+That is enough, because a warm lock keeps the tree and a cold lock has no settings open to keep.
 
 Nothing else moves. The hoists already shipped stay, because their semantics are about
 dismissal versus lock, which is orthogonal to what survives a teardown that no longer
