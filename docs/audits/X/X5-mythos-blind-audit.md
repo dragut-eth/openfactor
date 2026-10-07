@@ -309,7 +309,10 @@ phone means removing its passcode, which was not done.
 Lock on: cancel the system passcode prompt, switch to another app, return. The app showed a blank
 white screen rather than its lock screen, for several seconds, until it was quit and relaunched. It
 may be the simulator's handling of its system passcode sheet, or it may be a second dead end beside
-S1. The maintainer is checking it on the 15 Pro with Face ID; the result is recorded here when it is
-known.
+S1. **Checked on the 15 Pro the same day, on `546d230`, and not reproduced:** with App Lock on and
+the delay at Immediately, Face ID made to fail and cancelled, the home screen, five seconds, and
+back, the app showed its lock screen with the Unlock button. Read as a simulator artifact around its
+system passcode sheet. The variant that went through another app rather than the home screen was
+not run on the phone.
 
 **Still open from the five:** S2, which needs the watch.

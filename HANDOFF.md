@@ -33,8 +33,8 @@ reverted, because it exposed that the archive writer trusts a generated passphra
 that is logged as a new Low in the record. **S1 is fixed the smallest way**: the Unlock button stays
 under the message. It could not be reproduced on the simulator, which always reports a passcode, so
 its check is left to the Mythos verification round. That attempt showed a blank white screen after
-cancelling the system prompt and returning, unexplained, possibly a simulator artifact; the
-maintainer is checking it on the phone. **S2 needs the watch.** Not yet shipped; the next fix
+cancelling the system prompt and returning; **checked on the 15 Pro and not reproduced**, the lock
+screen came back with its Unlock button, so it reads as a simulator artifact. **S2 needs the watch.** Not yet shipped; the next fix
 release carries them, after one Mythos verification round over all five.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
