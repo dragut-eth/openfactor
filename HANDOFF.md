@@ -46,8 +46,11 @@ maintainer on the 15 Pro**: force quit, open, cancel Face ID, blank screen. **Fi
 `AppLockPresentation.coverVisible` leaves the cover down while the lock screen is the root view. Two
 tests failed before and pass after, a third pins that a cold unlock is still covered until active,
 and the maintainer validated it on the phone with the same sequence. The export Low is widened to "in generated mode, require the
-generated length", logged and open. **Next: the fix release, 1.1.3**, carrying all five X5 Mediums
-and N1.
+generated length", logged and open. **The finder's closing check on `b09bc99`
+confirmed N1 and all five Mediums closed, with no new defect**, and asked for one measurement before
+shipping: the App Lock checklist's item 4, the switcher card right after an unlock, re-run from a cold
+launch, since N1's fix moved when the cover goes up on that path. **Next: that measurement, then the
+fix release, 1.1.3**, carrying all five X5 Mediums and N1.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

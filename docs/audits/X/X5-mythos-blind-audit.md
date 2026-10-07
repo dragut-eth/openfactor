@@ -409,3 +409,22 @@ visible on a cold lock too.
 **The Low, as widened by the round, stays logged and open:** in generated mode the archive writer
 should require the canonical passphrase to be exactly the generated length.
 
+## Closing check, 2026-10-07
+
+The same reviewer, a fresh read-only checkout at `b09bc99`, asked to verify N1's fix and answer three
+questions. It compiled `AppLockPresentation` unchanged from that commit and drove it again: the cover
+stays down with the root lock up through a cold launch, a cancelled prompt, home and back, and goes
+up the moment a cold unlock lands while inactive, and in the background-unlock sequence. It found the
+three tests assert what this record says and the two comments describe the code, and it confirmed
+that the root lock screen, now what the switcher photographs on a cold lock, shows no codes or names.
+
+**Its three answers, quoted and not adopted:** "N1 is closed." "All five X5 Mediums are closed at this
+commit", "S1 now for cold locks too." "No change since `f35d7c0` introduced a defect."
+
+**One residual, to measure, not a defect.** The fix moved the cold-unlock path from "cover already up"
+to "cover raised at the unlock". The code raises it in the same update as the unlock, inside the two
+to three seconds of inactivity the cover exists for, but that is reasoned, not measured, and the
+manual checklist's item 4, the switcher card right after an unlock, is the measurement this window has
+needed before. **To be re-run from a cold launch on the 15 Pro before 1.1.3 ships**, with the item's
+own rules: real accounts, no wait between the unlock and the switcher, a force quit between repeats.
+
