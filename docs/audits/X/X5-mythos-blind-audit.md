@@ -428,3 +428,7 @@ manual checklist's item 4, the switcher card right after an unlock, is the measu
 needed before. **To be re-run from a cold launch on the 15 Pro before 1.1.3 ships**, with the item's
 own rules: real accounts, no wait between the unlock and the switcher, a force quit between repeats.
 
+**Re-run by the maintainer the same day, on the build of `b09bc99`, and passed:** every switcher card
+was blank, from a cold launch, with his real accounts, opened the instant Face ID succeeded, force
+quit between repeats. X5 is closed.
+

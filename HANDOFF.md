@@ -49,8 +49,9 @@ and the maintainer validated it on the phone with the same sequence. The export 
 generated length", logged and open. **The finder's closing check on `b09bc99`
 confirmed N1 and all five Mediums closed, with no new defect**, and asked for one measurement before
 shipping: the App Lock checklist's item 4, the switcher card right after an unlock, re-run from a cold
-launch, since N1's fix moved when the cover goes up on that path. **Next: that measurement, then the
-fix release, 1.1.3**, carrying all five X5 Mediums and N1.
+launch, since N1's fix moved when the cover goes up on that path. **The maintainer ran it the
+same day and every card was blank.** X5 is closed. **Next: the fix release, 1.1.3**, carrying all
+five X5 Mediums and N1.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator
