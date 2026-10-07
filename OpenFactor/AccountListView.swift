@@ -194,6 +194,13 @@ struct AccountListView: View {
                 // screen away from the cards.
                 .navigationBarTitleDisplayMode(.inline)
                 .searchable(text: $model.searchText, prompt: "Search accounts")
+                // **A search ends edit mode.** Reordering is refused while searching, and the
+                // button that leaves edit mode is hidden then too, so edit mode left on stranded the
+                // list: drag handles over a filtered list, and a tap opening details instead of
+                // copying, with no way out but clearing the search. Audit X5, S6 and B7.
+                .onChange(of: model.isSearching) { _, searching in
+                    if searching && editMode.isEditing { editMode = .inactive }
+                }
                 .background(Tokens.Surface.background)
                 .environment(\.editMode, $editMode)
                 .onAppear {
@@ -431,7 +438,9 @@ struct AccountListView: View {
             ForEach(model.visibleRows) { row in
                 card(for: row).listRowStyling()
             }
-            .onMove { model.move(from: $0, to: $1) }
+            // Detached while searching, so no drag handles are offered over a filtered list.
+            // `move` refuses one anyway. Audit X5, S6.
+            .onMove(perform: model.canReorder ? { model.move(from: $0, to: $1) } : nil)
             .onDelete { offsets in
                 // Routed through the same confirmation as everything else. A swipe is a
                 // convenient gesture, not a decision to lose an account.

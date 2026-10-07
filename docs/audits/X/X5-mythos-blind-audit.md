@@ -85,9 +85,10 @@ reviewer used two scales, one per pass; this record uses the project's one.
 | S3 / B3 | Low / Medium | Medium: the add screen loop's own pattern, in the import screen, decrypting every secret once a second |
 | S6 / B6 | Low / Medium | Medium: the stored order is rewritten wrongly and syncs |
 
-**Everything else is Low, Info or documentation**, listed below, and the list is long. **Nothing
-has been changed yet.** By the rule agreed for X2's verification round, the five Mediums are in
-scope this week and the rest waits for the maintainer's word.
+**Everything else is Low, Info or documentation**, listed below, and the list is long. By the rule
+agreed for X2's verification round, the five Mediums are in scope this week and the rest waits for
+the maintainer's word. **Three of the five are fixed, B1, S3 and S6 with B7 alongside**, in one
+batch validated on the maintainer's phone; S1 and S2 follow. See "Fixes" at the end.
 
 ## The five Mediums
 
@@ -258,4 +259,37 @@ maintainer's sessions edited on 2026-09-22 and read again on 2026-10-02 while fi
 elsewhere. The fix was applied where the symptom was, and the shape was not searched for. That is
 the finding this record most wants kept.
 
-**Nothing has been changed yet.** Analysis and record first; the fixes wait for a decision.
+## Fixes, 2026-10-07
+
+**B1, S3 and S6 as one batch**, with B7 closed by S6's change, validated by the maintainer on the
+iPhone 15 Pro. Core suite 486, hosted suite on the simulator, both green. Each fix was followed by a
+search for its shape elsewhere, which is the lesson S3 records.
+
+- **B1.** A `ScanLatch` type owns the camera's one-report-per-look rule, re-armed by a generation
+  number the add screen's view model bumps on "Try again" and on closing a transfer preview. **Not
+  a reset on every update**, which the report's first suggestion was: SwiftUI calls the camera's
+  update every second under the account list, so that would have reported a held code once a
+  second. Tests on the view model's two bumps and on the latch itself. **Shape search:** every
+  one-shot flag in the app targets; the others are presentation toggles, intended one-time flags,
+  or labels that clear themselves after two seconds.
+- **S3.** Both `ImportView` initializers now only record what arrived; the read, the parse and the
+  classify run once in `onAppear`, behind a flag kept in `@State`, as the add screen does since the
+  loop. **Shape search:** every view initializer in both app targets, listed with any work it does.
+  After this change every one only assigns.
+  **The export screen's smaller instance is left as it was, deliberately, after a first attempt was
+  reverted.** Moving passphrase generation from the initializer to authentication made three
+  hosted tests fail, and the reason is the finding: the archive writer checks strength only for a
+  custom passphrase, so a generated one is trusted to be non-empty, and that was guaranteed only
+  because the initializer always made one. The move created a model state that could reach the
+  writer with an empty passphrase. Unreachable from the screen, which reaches the writer only after
+  authenticating, but a guarantee had become a precondition. One random passphrase generated and
+  discarded each second, touching no secret, is a smaller cost than that. **Logged as a new Low:**
+  the writer should refuse an empty passphrase in either mode, which would make the guarantee its
+  own and the export fix safe to revisit.
+- **S6 and B7.** `move` refuses while a search is active, which is the guard that does not depend on
+  the screen. The list detaches its drag handler while searching, and edit mode ends when a search
+  begins, which also closes B7. Two tests: a drag during a search changes neither the order nor the
+  stored positions, and under an automatic sort it leaves the sort and the full list alone.
+
+**Still open from the five:** S1, which needs the maintainer's choice of shape, and S2, which needs
+the watch.

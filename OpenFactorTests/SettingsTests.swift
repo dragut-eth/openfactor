@@ -154,6 +154,41 @@ struct AccountSortOrderTests {
         #expect(model.visibleRows.map(\.record.metadata.name) == expected)
         #expect(model.rows.map(\.record.metadata.sortIndex) == [0, 1, 2, 3])
     }
+
+    /// Audit X5, S6. A drag over a filtered list reports positions in the filtered list, and they
+    /// used to be applied to the full one: dragging the only visible card moved a different
+    /// account, and the wrong order was written and synced.
+    @Test("A drag during a search changes nothing")
+    func draggingWhileSearchingIsRefused() throws {
+        let model = try loadedModel()
+        model.sortOrder = .manual
+        let before = model.rows.map(\.record.metadata.name)
+        let indexes = model.rows.map(\.record.metadata.sortIndex)
+
+        model.searchText = "zoe"
+        model.move(from: IndexSet(integer: 0), to: 1)
+        model.searchText = ""
+
+        #expect(model.rows.map(\.record.metadata.name) == before)
+        #expect(model.rows.map(\.record.metadata.sortIndex) == indexes)
+    }
+
+    @Test("A drag during a search under an automatic sort leaves the sort alone")
+    func draggingWhileSearchingKeepsTheSort() throws {
+        let model = try loadedModel()
+        model.sortOrder = .name
+
+        var persisted: AccountSortOrder?
+        model.onSortOrderChange = { persisted = $0 }
+
+        model.searchText = "a"
+        model.move(from: IndexSet(integer: 0), to: 1)
+        model.searchText = ""
+
+        #expect(model.sortOrder == .name)
+        #expect(persisted == nil, "nothing was moved, so nothing should be written back")
+        #expect(model.rows.count == 4, "the full list must not be replaced by the filtered one")
+    }
 }
 
 @Suite("Preferences")

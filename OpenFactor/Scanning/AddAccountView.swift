@@ -196,7 +196,7 @@ struct AddAccountView: View {
         VStack(spacing: 0) {
             ZStack {
                 if cameraStatus == .allowed {
-                    CameraScannerView { model.handleScan($0) }
+                    CameraScannerView(generation: model.scanGeneration) { model.handleScan($0) }
                         .ignoresSafeArea(edges: .horizontal)
                     ScanningFrame()
                 } else {

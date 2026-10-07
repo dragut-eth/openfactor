@@ -29,6 +29,27 @@ struct ImportView: View {
 
     private let origin: Origin
 
+    /// What a one-shot opening brought with it, read once when the screen appears.
+    ///
+    /// **Not in the initialiser, which runs on every rebuild.** This screen is presented from
+    /// sheets on views that redraw every second for their codes, so its initialiser ran every
+    /// second too. SwiftUI kept the first model and discarded the rest, so the screen looked
+    /// right, but each discarded model had already done the work: a bounded file read, a parse,
+    /// and a classify that decrypts every stored secret to find duplicates. For as long as the
+    /// preview was open, every secret in the vault was decrypted once a second. Audit X5, S3: the
+    /// same mistake as the add screen loop, found two weeks after that loop was fixed in
+    /// `AddAccountView` and not searched for here.
+    private let pending: Pending?
+
+    /// Whether `pending` has been handled. State, so it survives rebuilds.
+    @State private var hasHandledPending = false
+
+    private enum Pending {
+        case file(URL)
+        case document(Result<Data, BoundedFile.ReadError>)
+        case transfer(ImportResult)
+    }
+
     @Environment(\.dismiss) private var dismiss
 
     /// How the accounts got here, which changes only what the last screen says.
@@ -44,6 +65,7 @@ struct ImportView: View {
 
     init(store: any SecretStore, onImported: @escaping () -> Void) {
         _model = State(initialValue: ImportViewModel(store: store))
+        pending = nil
         self.onImported = onImported
         self.onFinished = nil
         self.origin = .file
@@ -56,14 +78,12 @@ struct ImportView: View {
         arrival: InboxOpener.Arrival,
         onImported: @escaping () -> Void
     ) {
-        let model = ImportViewModel(store: store)
+        _model = State(initialValue: ImportViewModel(store: store))
         switch arrival {
-        case let .file(url): model.read(url)
-        case let .document(result): model.read(result)
-        case .image, .code: break
+        case let .file(url): pending = .file(url)
+        case let .document(result): pending = .document(result)
+        case .image, .code: pending = nil
         }
-
-        _model = State(initialValue: model)
         self.onImported = onImported
         self.onFinished = nil
         self.origin = .file
@@ -76,13 +96,24 @@ struct ImportView: View {
         onImported: @escaping () -> Void,
         onFinished: @escaping () -> Void
     ) {
-        let model = ImportViewModel(store: store)
-        model.present(batch.result, source: "Google Authenticator")
-
-        _model = State(initialValue: model)
+        _model = State(initialValue: ImportViewModel(store: store))
+        pending = .transfer(batch.result)
         self.onImported = onImported
         self.onFinished = onFinished
         self.origin = .transfer(part: batch.position, of: batch.size)
+    }
+
+    /// Reads what a one-shot opening brought, the first time the screen appears and never again.
+    /// `onAppear` because it runs before the first frame is shown, so the preview is what
+    /// appears rather than a flash of the file chooser.
+    private func handlePendingOnce() {
+        guard !hasHandledPending, let pending else { return }
+        hasHandledPending = true
+        switch pending {
+        case let .file(url): model.read(url)
+        case let .document(result): model.read(result)
+        case let .transfer(result): model.present(result, source: "Google Authenticator")
+        }
     }
 
     var body: some View {
@@ -98,6 +129,7 @@ struct ImportView: View {
                 }
             }
             .navigationTitle("Import accounts")
+            .onAppear { handlePendingOnce() }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // The word follows the stage, because the wrong one here is a data loss

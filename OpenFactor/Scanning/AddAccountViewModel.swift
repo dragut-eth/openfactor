@@ -35,6 +35,10 @@ final class AddAccountViewModel {
 
     private(set) var stage: Stage = .scanning
 
+    /// How many times this screen has returned to scanning. The camera re-arms when it changes.
+    /// See `ScanLatch` for why a count rather than a signal.
+    private(set) var scanGeneration = 0
+
     /// What went wrong with the last attempt, in words the user can act on.
     private(set) var problem: String?
 
@@ -90,7 +94,10 @@ final class AddAccountViewModel {
     /// Without this the screen stays in a stage it can never leave: `handleScan` refuses
     /// anything but `.scanning`, so the viewfinder would be live and deaf.
     func resumeScanning() {
-        if case .transferring = stage { stage = .scanning }
+        if case .transferring = stage {
+            stage = .scanning
+            scanGeneration += 1
+        }
     }
 
     /// Handles an imported image, which may hold no codes, one, or several.
@@ -165,6 +172,7 @@ final class AddAccountViewModel {
     func scanAgain() {
         stage = .scanning
         problem = nil
+        scanGeneration += 1
     }
 
     func dismissProblem() {

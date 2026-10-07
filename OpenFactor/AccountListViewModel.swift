@@ -343,6 +343,14 @@ final class AccountListViewModel {
     /// Keychain round trip and dragging one card to the top would otherwise rewrite every
     /// account in the list.
     func move(from source: IndexSet, to destination: Int) {
+        // **Not while searching.** The offsets a drag reports are positions in `visibleRows`,
+        // which a search has filtered, and they were applied to `rows`, the full list, so dragging
+        // the one visible card moved a different account and wrote that order to the Keychain,
+        // where it synced. Hiding the toolbar button was the only guard, and edit mode survives a
+        // search begun after it. Audit X5, S6. The view also ends edit mode when a search begins
+        // and detaches the drag; this is the guard that does not depend on either.
+        guard canReorder else { return }
+
         // Dragging a list that is sorting itself used to be impossible, because the affordance
         // was hidden. Refusing the gesture is the worst of the options: the user has said
         // plainly where they want the card, and the honest response is to take the order

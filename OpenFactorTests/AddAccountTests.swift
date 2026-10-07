@@ -225,6 +225,18 @@ struct AddAccountViewModelTests {
         #expect(model.stage == .scanning)
     }
 
+    /// Audit X5, B1: "Try again" left the camera deaf, because nothing told it to look again.
+    @Test("Scanning again tells the camera to look again")
+    func scanAgainAdvancesTheGeneration() {
+        let model = AddAccountViewModel(store: InMemorySecretStore())
+        let before = model.scanGeneration
+
+        model.handleScan("nonsense")
+        model.scanAgain()
+
+        #expect(model.scanGeneration == before + 1)
+    }
+
     // MARK: - Images
 
     @Test("Importing a picture of a code works end to end")
@@ -325,6 +337,26 @@ struct TransferScanTests {
         }
         #expect(batch.result.accounts.count == 3)
         #expect(model.problem == nil)
+    }
+
+    /// Audit X5, B1: cancelling a transfer preview returned to a viewfinder that would not report.
+    @Test("Closing a transfer preview tells the camera to look again")
+    @MainActor
+    func resumingAdvancesTheGeneration() throws {
+        let store = try makeStore()
+        defer { store.cleanUp() }
+
+        let model = AddAccountViewModel(store: store)
+        model.handleScan(transferCode())
+        let before = model.scanGeneration
+
+        model.resumeScanning()
+        #expect(model.stage == .scanning)
+        #expect(model.scanGeneration == before + 1)
+
+        // Only a real return counts. Resuming from anywhere else must not re-arm the camera.
+        model.resumeScanning()
+        #expect(model.scanGeneration == before + 1)
     }
 
     @Test("A plain setup code still adds one account")
@@ -443,3 +475,62 @@ struct TransferScanTests {
             == .transfer(part: 2, of: 3))
     }
 }
+
+/// The camera's one-report-per-look rule, on its own. Audit X5, B1.
+@Suite("Scan latch")
+struct ScanLatchTests {
+
+    // Each result is taken before it is checked: `#expect` evaluates inside a closure, which
+    // cannot call a mutating method on a local.
+
+    @Test("A held code is reported once, not once per frame")
+    func reportsOncePerGeneration() {
+        var latch = ScanLatch()
+        latch.rearm(for: 0)
+        let reported1 = latch.accept()
+        #expect(reported1)
+        let reported2 = latch.accept()
+        #expect(!reported2)
+        let reported3 = latch.accept()
+        #expect(!reported3)
+    }
+
+    /// The reason for a generation rather than a reset: the camera's update runs on every redraw,
+    /// which is every second under the account list.
+    @Test("Redraws with the same generation do not re-arm")
+    func sameGenerationDoesNotRearm() {
+        var latch = ScanLatch()
+        latch.rearm(for: 3)
+        let reported4 = latch.accept()
+        #expect(reported4)
+        latch.rearm(for: 3)
+        latch.rearm(for: 3)
+        let reported5 = latch.accept()
+        #expect(!reported5)
+    }
+
+    @Test("A new generation re-arms")
+    func newGenerationRearms() {
+        var latch = ScanLatch()
+        latch.rearm(for: 0)
+        let reported6 = latch.accept()
+        #expect(reported6)
+        latch.rearm(for: 1)
+        let reported7 = latch.accept()
+        #expect(reported7)
+        let reported8 = latch.accept()
+        #expect(!reported8)
+    }
+
+    @Test("Appearing afresh re-arms whatever the generation")
+    func appearingRearms() {
+        var latch = ScanLatch()
+        latch.rearm(for: 0)
+        let reported9 = latch.accept()
+        #expect(reported9)
+        latch.rearm()
+        let reported10 = latch.accept()
+        #expect(reported10)
+    }
+}
+

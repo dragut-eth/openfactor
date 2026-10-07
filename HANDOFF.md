@@ -27,7 +27,12 @@ once a second while its preview is open (S3); and reordering while searching wri
 order (S6). Among the documentation drift: the README still says "version 1.0" beside the store
 link. The record, with each item's basis and the shape of each fix, is
 [docs/audits/X/X5-mythos-blind-audit.md](docs/audits/X/X5-mythos-blind-audit.md). Under the rule
-from X2's round the five Mediums are in scope this week; they wait for a decision.
+from X2's round the five Mediums are in scope this week. **B1, S3 and S6 are fixed, on 2026-10-07**,
+validated on the 15 Pro, and B7 closed with S6. The export screen's part of S3 was tried and
+reverted, because it exposed that the archive writer trusts a generated passphrase to be non-empty;
+that is logged as a new Low in the record. **S1 waits for the maintainer's choice of shape**: keep
+the Unlock button under the message, re-prompt on return, or both, with both recommended. **S2
+needs the watch.** Not yet shipped; the next fix release carries them.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator
