@@ -198,6 +198,56 @@ struct AppLockPresentationTests {
         p.didBecomeActive(at: launch, enabled: true, gracePeriod: grace)
         #expect(p.presentsRootLock)
         #expect(!p.lockWindowVisible)
+
+        // **And the cover stays down once the app is active.** The root lock is the screen, and
+        // nothing sits above the cover on a cold lock, so a cover here hides the lock screen and
+        // its button behind a blank surface. This line is past the point the test used to stop
+        // looking, which is why audit X5's verification round found it and no test did (N1).
+        #expect(!p.coverVisible)
+    }
+
+    /// Audit X5, N1, reproduced on the maintainer's phone: App Lock on, the app cold started,
+    /// the prompt cancelled. The app showed a blank screen with no button, and leaving and coming
+    /// back did not change it.
+    @Test("A cancelled prompt on a cold lock leaves the lock screen showing, across home and back")
+    func cancelledColdPromptLeavesTheLockScreenUncovered() {
+        var p = AppLockPresentation(lockEnabled: true)
+        p.sceneBecameInactive()
+        p.didBecomeActive(at: launch, enabled: true, gracePeriod: grace)
+
+        // The system prompt takes the app inactive, and the person cancels it.
+        p.willResignActive()
+        p.unlockFailed()
+        p.didBecomeActive(at: launch, enabled: true, gracePeriod: grace)
+        #expect(p.presentsRootLock)
+        #expect(!p.coverVisible, "the lock screen and its Unlock button must be what is on screen")
+
+        // Home, and back.
+        p.willResignActive()
+        p.didEnterBackground(at: launch)
+        p.willEnterForeground()
+        p.didBecomeActive(at: launch.addingTimeInterval(5), enabled: true, gracePeriod: grace)
+        #expect(p.presentsRootLock)
+        #expect(!p.coverVisible)
+    }
+
+    /// The protection N1's fix must not undo. The cover exists because the switcher once
+    /// photographed live codes right after an unlock: the interface is on screen while the app is
+    /// still inactive behind the prompt. Leaving the cover down during a cold lock is safe only if
+    /// it goes up the moment the unlock lands.
+    @Test("A cold unlock raises the cover until the app is active again")
+    func coldUnlockIsCoveredUntilActive() {
+        var p = AppLockPresentation(lockEnabled: true)
+        p.sceneBecameInactive()
+        p.didBecomeActive(at: launch, enabled: true, gracePeriod: grace)
+
+        p.willResignActive()
+        p.unlockSucceeded()
+        #expect(!p.presentsRootLock)
+        #expect(p.coverVisible, "the interface is up and the app is not yet active")
+
+        p.didBecomeActive(at: launch, enabled: true, gracePeriod: grace)
+        #expect(!p.coverVisible)
     }
 
     /// A cold lock that was never unlocked stays the root through any number of

@@ -387,3 +387,25 @@ quit item re-run on the phone with the prompt cancelled once.
 went through another app was not run", where the variable that matters is cold versus warm. Both are
 corrected above.
 
+### N1 fixed, 2026-10-07
+
+**`coverVisible` leaves the cover down while the lock screen is the root view**, the reviewer's two
+lines, and both comments that described the cover wrongly now say what it does. Failing first: the
+cold launch test was extended past `didBecomeActive`, and a new sequence test covers cold start,
+prompt cancelled, home and back. **Both failed before the fix and pass after.** A third test pins the
+protection N1's fix must not undo, the reason the cover exists at all: after a cold unlock, while the
+app is still inactive behind the prompt, the interface is on screen and must be covered until the app
+is active. It passed before the fix and passes after. The lock presentation suite is 18, all green.
+
+**Shape search:** the cover is driven by `coverVisible` alone, and it can hide something with its own
+button in exactly one state, the root lock. A warm lock is a window above the cover; an unlocked
+active app has the cover down.
+
+**Validated on the 15 Pro by the maintainer**, the sequence that reproduced it: App Lock on, the app
+swiped away, opened, Face ID made to fail and cancelled. The lock screen with its Unlock button, and
+Unlock brought Face ID back. **This also closes the cold half of S1**: the always-shown button is now
+visible on a cold lock too.
+
+**The Low, as widened by the round, stays logged and open:** in generated mode the archive writer
+should require the canonical passphrase to be exactly the generated length.
+

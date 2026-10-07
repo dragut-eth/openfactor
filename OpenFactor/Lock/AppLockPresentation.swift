@@ -82,10 +82,15 @@ struct AppLockPresentation: Equatable {
     /// The lock screen in a window above the untouched interface. Warm locks only.
     var lockWindowVisible: Bool { engine.isLocked && !coldLock }
 
-    /// The blank surface for the app switcher. Never while locked, because the lock,
-    /// root or window, is what belongs in the photograph and it has a button. Never
-    /// while settling, see `settling`. Never at launch, because there is no interface
-    /// to hide and no window scene to hang a cover on yet.
+    /// The blank surface for the app switcher. Up whenever the app is not active and unlocked,
+    /// with one exception: **never while the lock screen is the root view.** A warm lock is a
+    /// window above the cover, so both up is the lock screen. A cold lock has no such window: the
+    /// lock screen is the root, below the cover, so a cover there hides the lock screen and its
+    /// Unlock button behind a blank surface. The root lock shows no codes, so it is safe to be
+    /// the photograph, which is the stance this property had before `4b183ff`. Audit X5's
+    /// verification round found the gap as N1, and the maintainer reproduced it: cold start,
+    /// cancel the prompt, a blank screen with no way out. Never at launch either, because there
+    /// is no interface to hide and no window scene to hang a cover on yet.
     var coverVisible: Bool {
         // **One invariant: content is uncovered only when the app is active and unlocked.**
         //
@@ -96,8 +101,13 @@ struct AppLockPresentation: Equatable {
         // `.alert + 1`, so both up is visually the lock screen and costs nothing.
         //
         // Everything else here is a consequence rather than a case: locked, inactive,
-        // backgrounded, or mid Face ID are all "not active and unlocked", and all covered.
-        phase != .launching && !(phase == .active && !engine.isLocked)
+        // backgrounded, or mid Face ID are all "not active and unlocked", and all covered,
+        // **except a cold lock, where the lock screen is the root and there is no window above
+        // the cover.** The moment a cold lock is unlocked `presentsRootLock` turns false in the
+        // same update, so the interface appearing behind the prompt is covered as before.
+        phase != .launching
+            && !presentsRootLock
+            && !(phase == .active && !engine.isLocked)
     }
 
     /// Whether the prompt should be raised without a tap, once per locked spell.
