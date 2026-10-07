@@ -87,6 +87,50 @@ public struct WatchProvisioningFlow: Equatable, Sendable {
         stage = .cannotRead
     }
 
+    // MARK: - Deciding whether to ask
+
+    /// What reading the watch's own key found, on a wrist raise or at launch.
+    public enum KeyReading: Equatable, Sendable {
+        /// No usable key: none was ever installed, or it is gone.
+        case absent
+        /// A key that opens the accounts.
+        case opens
+        /// A key that opens none of the accounts. `alreadyReplaced` is whether a fresh key was
+        /// fetched once already and still opened nothing.
+        case opensNothing(alreadyReplaced: Bool)
+    }
+
+    /// Records what the key read found, and says whether the watch should now ask its phone.
+    ///
+    /// **In the core so a test can reach it.** This decision lived in the watch's view model,
+    /// in a target no test can build, and audit X5 found a dead end in it (S2).
+    public mutating func keyRead(_ reading: KeyReading) -> Bool {
+        switch reading {
+        case .opens:
+            foundWorkingKey()
+            return false
+        case .opensNothing(alreadyReplaced: true):
+            foundKeyThatOpensNothing()
+            return false
+        case .absent, .opensNothing(alreadyReplaced: false):
+            // Not while a request is already out, or raising the wrist twice would send two.
+            guard stage != .waiting else { return false }
+
+            // **A watch that was reading its accounts has stopped being able to.** The phone
+            // replaced its vault and re-sealed the records, or the key file is gone. `.ready`
+            // described the moment before this read, not this one, and the watch's `ask` refuses
+            // while ready, so the watch detected the change and then never asked: "No accounts
+            // yet" until watchOS killed the process, in exactly the case the documents say is
+            // handled. Audit X5, S2. Back to `.checking`, which draws nothing, and the ask that
+            // follows moves it to `.waiting` at once.
+            if stage == .ready {
+                outstanding = nil
+                stage = .checking
+            }
+            return true
+        }
+    }
+
     // MARK: - Asking
 
     /// Begins an attempt and returns the token every callback for it must carry.

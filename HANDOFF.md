@@ -34,8 +34,11 @@ that is logged as a new Low in the record. **S1 is fixed the smallest way**: the
 under the message. It could not be reproduced on the simulator, which always reports a passcode, so
 its check is left to the Mythos verification round. That attempt showed a blank white screen after
 cancelling the system prompt and returning; **checked on the 15 Pro and not reproduced**, the lock
-screen came back with its Unlock button, so it reads as a simulator artifact. **S2 needs the watch.** Not yet shipped; the next fix
-release carries them, after one Mythos verification round over all five.
+screen came back with its Unlock button, so it reads as a simulator artifact. **S2 is fixed, failing
+test first**: the watch's ask decision moved into `WatchProvisioningFlow.keyRead` in the core,
+unchanged, the two S2 tests failed, then the fix made them pass. Not hardware tested, by choice: it
+would mean replacing the vault on the only iPhone. **All five Mediums are fixed and none is
+shipped**; next is one Mythos verification round over all five, then the fix release.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

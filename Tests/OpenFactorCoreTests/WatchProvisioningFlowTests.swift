@@ -261,4 +261,75 @@ struct WatchProvisioningFlowTests {
         }
         #expect(flow.isCurrent(tokens.last!))
     }
+
+    // MARK: - Deciding whether to ask, audit X5, S2
+
+    // Each decision is taken before it is checked: `#expect` evaluates inside a closure, which
+    // cannot call a mutating method.
+
+    /// **The dead end.** A watch reading its accounts is `.ready`. When the phone replaces its
+    /// vault, the re-sealed records arrive and this watch's key opens none of them. The watch
+    /// detected that, and then refused to ask because it was `.ready`, so it showed "No accounts
+    /// yet" until watchOS killed the process.
+    @Test("A watch showing its accounts asks again when its key stops opening them")
+    func readyWatchWithAStaleKeyAsks() {
+        var flow = WatchProvisioningFlow()
+        let asks1 = flow.keyRead(.opens)
+        #expect(!asks1)
+        #expect(flow.stage == .ready)
+
+        let asks2 = flow.keyRead(.opensNothing(alreadyReplaced: false))
+        #expect(asks2)
+        #expect(flow.stage != .ready, "a watch about to ask cannot also claim to be reading its accounts")
+
+        _ = flow.beganAsking()
+        #expect(flow.stage == .waiting)
+    }
+
+    /// The same guard, the same dead end, for a key file that is gone outright.
+    @Test("A watch showing its accounts asks again when its key is gone")
+    func readyWatchWithNoKeyAsks() {
+        var flow = WatchProvisioningFlow()
+        _ = flow.keyRead(.opens)
+
+        let asks3 = flow.keyRead(.absent)
+        #expect(asks3)
+        #expect(flow.stage != .ready)
+    }
+
+    @Test("A key that opens the accounts settles on ready and does not ask")
+    func workingKeyDoesNotAsk() {
+        var flow = WatchProvisioningFlow()
+        let asks4 = flow.keyRead(.opens)
+        #expect(!asks4)
+        #expect(flow.stage == .ready)
+    }
+
+    @Test("A fresh key that still opens nothing does not ask forever")
+    func replacedKeyDoesNotAskAgain() {
+        var flow = WatchProvisioningFlow()
+        let asks5 = flow.keyRead(.opensNothing(alreadyReplaced: true))
+        #expect(!asks5)
+        #expect(flow.stage == .cannotRead)
+    }
+
+    @Test("A request already out is not doubled by a second wrist raise")
+    func waitingDoesNotAskTwice() {
+        var flow = WatchProvisioningFlow()
+        _ = flow.beganAsking()
+
+        let asks6 = flow.keyRead(.absent)
+        #expect(!asks6)
+        let asks7 = flow.keyRead(.opensNothing(alreadyReplaced: false))
+        #expect(!asks7)
+        #expect(flow.stage == .waiting)
+    }
+
+    @Test("A watch with no key yet asks")
+    func firstLaunchAsks() {
+        var flow = WatchProvisioningFlow()
+        let asks8 = flow.keyRead(.absent)
+        #expect(asks8)
+    }
 }
+

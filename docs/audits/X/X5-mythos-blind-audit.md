@@ -315,4 +315,20 @@ back, the app showed its lock screen with the Unlock button. Read as a simulator
 system passcode sheet. The variant that went through another app rather than the home screen was
 not run on the phone.
 
-**Still open from the five:** S2, which needs the watch.
+**S2, the same day, without hardware by the maintainer's choice, and failing first.** Reproducing it
+on a device means replacing the vault on the only iPhone, which holds the maintainer's real
+accounts, and two simulators cannot deliver records to a running watch app. So the decision was
+moved where a test can reach it. The watch's "should I ask?" logic left its view model, in a target
+no test builds, for `WatchProvisioningFlow.keyRead`, in the core, unchanged, the bug included. Six
+tests were written against it and run: **the two describing S2 failed**, a ready watch whose key
+opens nothing and a ready watch whose key is gone both refused to ask, and the four pinning what
+must not change passed. Then the fix, in the flow: a ready watch leaves `.ready` for `.checking`
+before asking. All six pass, the flow suite is 22, the core suite 492, the hosted suite green, and
+the watch app compiles for hardware. The watch model's own `ask` still refuses while ready, which is
+now correct, since the flow leaves ready first and the Try again button is never drawn there.
+**The key-gone case is a widening, stated here**: the report named the stale key only; the same
+guard blocked a ready watch whose key file had vanished, and it now asks too, which is what a
+watch with no key always does.
+
+**All five Mediums are fixed.** None is shipped. The next step is one verification round by the
+reviewer over all five, the export decision, the new Low, and S1's untested state.

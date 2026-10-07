@@ -115,23 +115,20 @@ final class WatchVaultModel: NSObject {
             loaded = nil
         }
 
-        if loaded != nil {
-            guard keyOpensNothing else {
-                flow.foundWorkingKey()
-                return
-            }
-
-            // A fresh key was installed and these records still will not open, so a newer format
-            // wrote them rather than a different key having sealed them. Asking again would
-            // fetch the same key and produce the same result, forever.
-            guard !hasReplacedStaleKey else {
-                flow.foundKeyThatOpensNothing()
-                return
-            }
+        // **The decision is the flow's, in the core, where a test can reach it.** See
+        // `WatchProvisioningFlow.keyRead`. A key that opens nothing after a fresh one was already
+        // installed means a newer format wrote these records, not a different key, and asking
+        // again would fetch the same key forever; that is `alreadyReplaced`.
+        let reading: WatchProvisioningFlow.KeyReading
+        if loaded == nil {
+            reading = .absent
+        } else if keyOpensNothing {
+            reading = .opensNothing(alreadyReplaced: hasReplacedStaleKey)
+        } else {
+            reading = .opens
         }
 
-        // Not while a request is already out, or raising the wrist twice would send two.
-        guard flow.stage != .waiting else { return }
+        guard flow.keyRead(reading) else { return }
         ask()
     }
 
