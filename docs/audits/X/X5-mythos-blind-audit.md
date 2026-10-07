@@ -311,9 +311,9 @@ white screen rather than its lock screen, for several seconds, until it was quit
 may be the simulator's handling of its system passcode sheet, or it may be a second dead end beside
 S1. **Checked on the 15 Pro the same day, on `546d230`, and not reproduced:** with App Lock on and
 the delay at Immediately, Face ID made to fail and cancelled, the home screen, five seconds, and
-back, the app showed its lock screen with the Unlock button. Read as a simulator artifact around its
-system passcode sheet. The variant that went through another app rather than the home screen was
-not run on the phone.
+back, the app showed its lock screen with the Unlock button. **Read here as a simulator artifact,
+and that reading was wrong**: see the verification round below, N1. The phone check was a warm lock
+and the simulator run was a cold one, and cold versus warm is the variable.
 
 **S2, the same day, without hardware by the maintainer's choice, and failing first.** Reproducing it
 on a device means replacing the vault on the only iPhone, which holds the maintainer's real
@@ -332,3 +332,54 @@ watch with no key always does.
 
 **All five Mediums are fixed.** None is shipped. The next step is one verification round by the
 reviewer over all five, the export decision, the new Low, and S1's untested state.
+
+## Verification round, 2026-10-07
+
+The same reviewer, a fresh read-only checkout at `a7b967b`, the "Fixes" section opened to it, asked
+to falsify all five. It ran the core suite, 492, and compiled the lock's presentation logic on its
+own with `swiftc` to drive it through a cold lock. It did not build the hosted suite or the watch.
+
+**B1, S3, S6 with B7, and S2 hold**, each checked against every caller and every path back, with no
+missed path found. **No change since `f35d7c0` introduced a defect.** Two notes it recorded, neither a
+defect: with the unusable QR still in frame, "Try again" reports it again at once, which is what a
+scanner that is not deaf does; and the watch model's own `.ready` guard in `ask` is now unreachable.
+
+**The export decision: sound, and the logged Low is narrower than the gap.** Refusing an empty
+passphrase closes the case the tests hit. But in generated mode the writer accepts any string at all,
+so `write(accounts, passphrase: "abc", mode: .generated)` seals every secret under `ABC`. The mode's
+promise is 120 bits from the CSPRNG, and the writer can own it in one line: in generated mode, require
+the canonical passphrase to be exactly the generated length. **The Low is widened to that.**
+Unreachable from the screen today, for the reason this record already gives.
+
+### N1, medium: on a cold lock, the snapshot cover hides the lock screen
+
+**Confirmed by reading, and by the reviewer's probe.** `AppLockPresentation.coverVisible` is true
+whenever the app is active and locked. For a warm lock that is harmless: the lock window sits at
+`.alert + 2`, above the cover at `.alert + 1`. **For a cold lock there is no lock window.** The lock
+screen is the root view in the app's main window, below the cover, and the cover is opaque
+`systemBackground`. So once a cold-locked app becomes active, its own lock screen, lock mark,
+message and Unlock button included, is under a blank surface. The cold launch test asserts
+"not covered" only before the app becomes active, which is why no test saw it. The doc comment above
+the property still says "never while locked, because the lock, root or window, is what belongs in
+the photograph", which is what the code did before `4b183ff`.
+
+**Since `4b183ff`, 2026-08-22, so in every shipped version.** Not caused by the S1 fix and not found
+by X5. **Surfaced by this project's own simulator observation, which this record then misread as an
+artifact.** The phone check that "did not reproduce" it was a warm lock.
+
+**What a person sees.** App Lock on, the app force quit or killed by iOS, then opened: the system
+prompt appears over a blank background. Authenticate and everything is normal, which is why months of
+daily use never showed it. Cancel the prompt and the app is a blank screen with no button and no
+message; leaving and returning does not change it; only a force quit and a successful prompt get out.
+**The cold half of S1 is this dead end**, worse than X5 described: no reason text, no button.
+
+**Fix shape, from the reviewer, not yet applied:** leave the cover down while the lock screen is the
+root view, since the root lock is itself opaque, safe to photograph, and has its button, which was
+the documented stance before `4b183ff`. Two lines in `coverVisible`, the cold launch test extended
+past `didBecomeActive`, a sequence test for cancel, home and back, and the manual checklist's force
+quit item re-run on the phone with the prompt cancelled once.
+
+**Where the round found the record wrong:** the "simulator artifact" reading, and "the variant that
+went through another app was not run", where the variable that matters is cold versus warm. Both are
+corrected above.
+
