@@ -30,9 +30,12 @@ link. The record, with each item's basis and the shape of each fix, is
 from X2's round the five Mediums are in scope this week. **B1, S3 and S6 are fixed, on 2026-10-07**,
 validated on the 15 Pro, and B7 closed with S6. The export screen's part of S3 was tried and
 reverted, because it exposed that the archive writer trusts a generated passphrase to be non-empty;
-that is logged as a new Low in the record. **S1 waits for the maintainer's choice of shape**: keep
-the Unlock button under the message, re-prompt on return, or both, with both recommended. **S2
-needs the watch.** Not yet shipped; the next fix release carries them.
+that is logged as a new Low in the record. **S1 is fixed the smallest way**: the Unlock button stays
+under the message. It could not be reproduced on the simulator, which always reports a passcode, so
+its check is left to the Mythos verification round. That attempt showed a blank white screen after
+cancelling the system prompt and returning, unexplained, possibly a simulator artifact; the
+maintainer is checking it on the phone. **S2 needs the watch.** Not yet shipped; the next fix
+release carries them, after one Mythos verification round over all five.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

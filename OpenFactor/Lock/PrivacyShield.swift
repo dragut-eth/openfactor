@@ -239,12 +239,19 @@ struct LockScreenView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, Tokens.Spacing.large)
-                } else {
-                    Button("Unlock") {
-                        Task { await controller.requestUnlock() }
-                    }
-                    .buttonStyle(.borderedProminent)
                 }
+
+                // **Shown under the reason too, not replaced by it.** The reason tells the person to
+                // set a passcode, and nothing re-asked once they had: the automatic prompt runs once
+                // per lock, the reason had taken the button's place, and only a force quit ended it.
+                // `requestUnlock` checks again on every tap, so with a passcode set the reason clears
+                // and the prompt appears, and without one the reason simply stays. Audit X5, S1. The
+                // smallest change that removes the dead end, chosen over re-prompting on return,
+                // which would mean new logic in the lock machinery for an edge case.
+                Button("Unlock") {
+                    Task { await controller.requestUnlock() }
+                }
+                .buttonStyle(.borderedProminent)
             }
         }
         .task {

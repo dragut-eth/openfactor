@@ -291,5 +291,25 @@ search for its shape elsewhere, which is the lesson S3 records.
   begins, which also closes B7. Two tests: a drag during a search changes neither the order nor the
   stored positions, and under an automatic sort it leaves the sort and the full list alone.
 
-**Still open from the five:** S1, which needs the maintainer's choice of shape, and S2, which needs
-the watch.
+**S1, the same day, the smallest change that removes the dead end.** The lock screen shows the
+Unlock button under the reason text instead of replacing it with the reason. `requestUnlock` checks
+again on every tap, so with a passcode set the reason clears and the prompt appears; without one the
+reason stays. Re-prompting on return was considered and declined by the maintainer: it is new logic
+in the lock machinery, which has the most history of subtle defects in this project, for an edge case
+with no safety consequence. **Shape search:** no other screen replaces its only action with a
+message. Core 486 and hosted 1,240 green.
+
+**Not reproduced, and the verification is left to the reviewer's round, by the maintainer's
+decision.** The iOS 27 simulator behaves as if a device passcode is always set: with Face ID
+unenrolled it still offers the passcode prompt, so the check that fails on a phone without a
+passcode never fails there, and the dead end cannot be shown on the simulator. Reproducing it on the
+phone means removing its passcode, which was not done.
+
+**An observation from that attempt, recorded and not yet explained.** On the simulator, with App
+Lock on: cancel the system passcode prompt, switch to another app, return. The app showed a blank
+white screen rather than its lock screen, for several seconds, until it was quit and relaunched. It
+may be the simulator's handling of its system passcode sheet, or it may be a second dead end beside
+S1. The maintainer is checking it on the 15 Pro with Face ID; the result is recorded here when it is
+known.
+
+**Still open from the five:** S2, which needs the watch.
