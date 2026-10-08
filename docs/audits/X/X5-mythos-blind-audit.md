@@ -458,3 +458,28 @@ for a real generated passphrase passes both ways. Core 493.
 is public and waits for the maintainer's approved wording; and S12, "a Release binary is checked",
 which waits for his choice between automating the check and rewording the claim.
 
+**The small behavior batch, B9, B10 and B20, fixed and validated.** Failing first for the two that
+tests can reach: a wrong-passphrase message survived onto the setup screen after the record
+disappeared (B10), and "There is nothing on this iPhone to unlock" left the typed passphrase in the
+field (B9). Both tests failed before the fix and pass after. The gate model now clears a message when
+a re-read moves it to a different screen, leaving a message set together with its new screen alone,
+and clears the field on that branch. B20: the watch list loads only when the screen is active, so a
+read failing while the wrist is down no longer flashes the failure line; the watch target has no
+tests, and the device build compiles it. Hosted suite 1,254. Neither B9 nor B10 can be triggered on
+one iPhone and B20 is a flash, so the maintainer's pass was that daily use on the phone and the watch
+is unchanged, which it is.
+
+**Three items from that batch turned out not small, and are recommended for acceptance, awaiting the
+maintainer's word:**
+- **S5.** The proposed fix shows "Your vault cannot be read" for an unreadable key file instead of the
+  passphrase screen. That screen offers only "Try again" and a restart, so a key file that stays
+  unreadable would leave no way in, where today the passphrase screen rewrites the file. A correct
+  fix needs the watch's "once is a moment, twice is a state" counter in the gate. The window is
+  narrow and the current behavior recovers.
+- **B15.** Stopping a derivation on Cancel means making the core's archive reader cancellable between
+  its attempts. The cost of not doing it is a few seconds of work finishing on a discarded screen,
+  and only a deliberately hostile archive makes it more than one.
+- **B16.** Showing a failed "Add account" means moving the error alert, whose title, "That code could
+  not be used", is wrong for a save failure. It needs new text, so it joins B14 and S8 for the
+  maintainer's review.
+

@@ -54,8 +54,11 @@ same day and every card was blank.** X5 is closed. **Next: everything else from 
 1.1.3**, the maintainer's decision since nothing open is a risk to current users. Done so far: the
 archive writer refuses anything but a full generated passphrase in generated mode, failing test
 first, and the documentation drift is corrected except S7 and S12, which wait for his wording and
-choice. Then the small behavior Lows as one batch, the items that need his decisions, one Mythos
-verification round over all of it, and 1.1.3.
+choice. **The small behavior batch is done**: B9 and B10, failing tests first, and B20 on the watch.
+S5 and B15 turned out not small and are recommended for acceptance; B16 needs new text. **Waiting for
+the maintainer's fresh look:** B14, S8 and B16, which would each add an alert, B17, S4, S7, S12, and
+the acceptances. Then one Mythos verification round over everything since its closing check, and
+1.1.3.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

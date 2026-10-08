@@ -379,6 +379,47 @@ struct VaultGateModelTests {
         #expect(!gate.typedPassphrase.isEmpty)
     }
 
+    /// Audit X5, B10. The unlock screen's red message stayed on the model when the record it was
+    /// about disappeared, so the intro screen came up wearing an error about a passphrase.
+    @Test("An unlock failure does not follow the device to the setup screen")
+    func unlockFailureIsClearedWhenTheScreenChanges() async throws {
+        let (gate, vault, keys, wrapped) = makeGate()
+        defer { try? wrapped.delete() }
+
+        _ = try vault.create()
+        try keys.discard()
+        gate.refresh()
+        gate.typedPassphrase = "AAAA-BBBB-CCCC-DDDD-EEEE-FFFF"
+        await gate.unlock()
+        #expect(gate.failure != nil)
+
+        // Another device starts over: the record is gone, and the app comes back to the front.
+        try wrapped.delete()
+        gate.refresh()
+
+        #expect(gate.stage == .introducing)
+        #expect(gate.failure == nil)
+    }
+
+    /// Audit X5, B9. When the unlock found nothing to unlock, the typed passphrase stayed, and a
+    /// record arriving later brought the unlock screen back with the old text already in it.
+    @Test("Finding nothing to unlock clears what was typed")
+    func nothingToUnlockClearsTheField() async throws {
+        let (gate, vault, keys, wrapped) = makeGate()
+        defer { try? wrapped.delete() }
+
+        _ = try vault.create()
+        try keys.discard()
+        gate.refresh()
+        gate.typedPassphrase = "AAAA-BBBB-CCCC-DDDD-EEEE-FFFF"
+
+        try wrapped.delete()
+        await gate.unlock()
+
+        #expect(gate.stage == .introducing)
+        #expect(gate.typedPassphrase.isEmpty)
+    }
+
     @Test("An empty field does nothing rather than reporting a wrong passphrase")
     func emptyAttemptIsNotAFailure() async throws {
         let (gate, vault, keys, wrapped) = makeGate()

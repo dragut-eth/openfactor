@@ -109,12 +109,21 @@ final class VaultGateModel {
         // A record is here, or a key is. Not knowing is not evidence.
         if case .showingPassphrase = stage, state != .locked, state != .open { return }
 
+        let previous = stage
         switch state {
         case .open: stage = keyOpensNothing ? .locked : .open
         case .locked: stage = .locked
         case .absent: stage = .introducing
         case .unavailable: stage = .unavailable
         }
+
+        // **A message belongs to the screen it was said on.** When a re-read moves the gate to a
+        // different screen, an error left from the previous one describes something the person is
+        // no longer looking at: the unlock screen's "That did not open your accounts" used to come
+        // up on the setup screen after another device started over. A message set together with
+        // its new screen, as "There is nothing on this iPhone to unlock" is, is not touched,
+        // because that is set outside this method. Audit X5, B10.
+        if stage != previous { failure = nil }
     }
 
     /// **Having a key is not the same as having the right one.** Two iPhones on one Apple
@@ -236,6 +245,9 @@ final class VaultGateModel {
                 : "That did not open your accounts. Check for a mistyped character."
         case .nothingToUnlock:
             failure = "There is nothing on this iPhone to unlock."
+            // What was typed was for a record that no longer exists, and the field would otherwise
+            // be waiting, filled, when a record next arrives. Audit X5, B9.
+            typedPassphrase = ""
             stage = .introducing
         case .recordNotUnderstood:
             // **Not "check for a mistyped character".** This record was refused before the

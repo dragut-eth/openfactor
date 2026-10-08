@@ -70,7 +70,15 @@ struct WatchAccountListView: View {
             // No title. The app's name at the top of its own list is a word the wearer
             // already knows, spending the most valuable strip of a very small screen.
         }
-        .task(id: scenePhase) { load() }
+        // **Loaded when the screen is active, not on every phase.** Keyed on the phase so a wrist
+        // raise re-reads the list, which is how the watch shows accounts that arrived while it was
+        // dimmed. It used to load on `.inactive` and `.background` too, where a Keychain read can
+        // fail while the wrist is down, and the failure line flashed until the next `.active`
+        // load cleared it. Audit X5, B20.
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            load()
+        }
     }
 
     /// A row, dimmed and marked when its code lives on the phone.
