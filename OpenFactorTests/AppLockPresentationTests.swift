@@ -207,10 +207,10 @@ struct AppLockPresentationTests {
     }
 
     /// Audit X5, N1, reproduced on the maintainer's phone: App Lock on, the app cold started,
-    /// the prompt cancelled. The app showed a blank screen with no button, and leaving and coming
+    /// the prompt canceled. The app showed a blank screen with no button, and leaving and coming
     /// back did not change it.
-    @Test("A cancelled prompt on a cold lock leaves the lock screen showing, across home and back")
-    func cancelledColdPromptLeavesTheLockScreenUncovered() {
+    @Test("A canceled prompt on a cold lock leaves the lock screen showing, across home and back")
+    func canceledColdPromptLeavesTheLockScreenUncovered() {
         var p = AppLockPresentation(lockEnabled: true)
         p.sceneBecameInactive()
         p.didBecomeActive(at: launch, enabled: true, gracePeriod: grace)

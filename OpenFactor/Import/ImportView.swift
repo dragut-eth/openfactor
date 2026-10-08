@@ -31,8 +31,8 @@ struct ImportView: View {
 
     /// What a one-shot opening brought with it, read once when the screen appears.
     ///
-    /// **Not in the initialiser, which runs on every rebuild.** This screen is presented from
-    /// sheets on views that redraw every second for their codes, so its initialiser ran every
+    /// **Not in the initializer, which runs on every rebuild.** This screen is presented from
+    /// sheets on views that redraw every second for their codes, so its initializer ran every
     /// second too. SwiftUI kept the first model and discarded the rest, so the screen looked
     /// right, but each discarded model had already done the work: a bounded file read, a parse,
     /// and a classify that decrypts every stored secret to find duplicates. For as long as the

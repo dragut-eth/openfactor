@@ -33,14 +33,14 @@ reverted, because it exposed that the archive writer trusts a generated passphra
 that is logged as a new Low in the record. **S1 is fixed the smallest way**: the Unlock button stays
 under the message. It could not be reproduced on the simulator, which always reports a passcode, so
 its check is left to the Mythos verification round. That attempt showed a blank white screen after
-cancelling the system prompt and returning; **checked on the 15 Pro and not reproduced**, the lock
+canceling the system prompt and returning; **checked on the 15 Pro and not reproduced**, the lock
 screen came back with its Unlock button. **That reading was wrong**: X5's verification round found
 it is N1, below; the phone check was a warm lock. **S2 is fixed, failing
 test first**: the watch's ask decision moved into `WatchProvisioningFlow.keyRead` in the core,
 unchanged, the two S2 tests failed, then the fix made them pass. Not hardware tested, by choice: it
 would mean replacing the vault on the only iPhone. **All five Mediums are fixed and none is
 shipped.** **The verification round, the same day, confirmed B1, S3, S6 and S2, and found N1,
-Medium:** on a cold lock the snapshot cover sits over the root lock screen, so a cancelled prompt
+Medium:** on a cold lock the snapshot cover sits over the root lock screen, so a canceled prompt
 leaves a blank screen with no button. In every version since 2026-08-22. **Reproduced by the
 maintainer on the 15 Pro**: force quit, open, cancel Face ID, blank screen. **Fixed the same day**:
 `AppLockPresentation.coverVisible` leaves the cover down while the lock screen is the root view. Two
@@ -55,9 +55,11 @@ same day and every card was blank.** X5 is closed. **Next: everything else from 
 archive writer refuses anything but a full generated passphrase in generated mode, failing test
 first, and the documentation drift is corrected except S7 and S12, which wait for his wording and
 choice. **The small behavior batch is done**: B9 and B10, failing tests first, and B20 on the watch.
-S5 and B15 turned out not small and are recommended for acceptance; B16 needs new text. **Waiting for
-the maintainer's fresh look:** B14, S8 and B16, which would each add an alert, B17, S4, S7, S12, and
-the acceptances. Then one Mythos verification round over everything since its closing check, and
+S5 and B15 turned out not small and are recommended for acceptance; B16 needs new text. **Done since:** S12 as a CI check
+of the Release build, S7 in `SECURITY.md` with the maintainer's wording, a CI rule against work in a
+view's initializer (`scripts/check-view-initializers.py`), and `CHANGELOG.md`. **Waiting for the
+maintainer's fresh look:** B14, S8 and B16, which would each add an alert, B17, S4, and the
+acceptances. Then one Mythos verification round over everything since its closing check, and
 1.1.3.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**

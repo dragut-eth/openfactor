@@ -57,7 +57,7 @@ public enum BackupError: Sendable, Equatable, Error {
     case derivationFailed
 
     /// A passphrase offered as generated that is not the shape a generated one has: the full
-    /// generated length in the generated alphabet once canonicalised. The writer used to take the
+    /// generated length in the generated alphabet once canonicalized. The writer used to take the
     /// mode's word for it, so an empty string sealed an archive. Audit X5's verification round.
     case notAGeneratedPassphrase
 

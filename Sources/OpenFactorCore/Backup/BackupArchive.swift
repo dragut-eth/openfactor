@@ -223,7 +223,7 @@ public enum BackupArchive {
         // Unreachable from the export screen, which always holds a generated passphrase, but that
         // was the screen's guarantee, and a rule that lives in one caller is the rule the comment
         // above warns about. Audit X5's verification round, after an attempt to move generation
-        // out of the export model's initialiser showed the guarantee was the only thing there.
+        // out of the export model's initializer showed the guarantee was the only thing there.
         if mode == .generated,
             BackupPassphrase.canonical(passphrase).count != BackupPassphrase.generatedLength
         {

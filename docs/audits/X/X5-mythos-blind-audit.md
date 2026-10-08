@@ -98,7 +98,7 @@ batch validated on the maintainer's phone; S1 and S2 follow. See "Fixes" at the 
 callback. It is reset only in `viewWillAppear`. `scanAgain()` and `resumeScanning()` return the
 view model to `.scanning` without touching it, and neither the "That code could not be used" alert
 nor the transfer preview sheet takes the scanner off screen, which the project's own comment relies
-on. So after "Try again" on a wrong QR, or after cancelling a transfer preview, the viewfinder is
+on. So after "Try again" on a wrong QR, or after canceling a transfer preview, the viewfinder is
 live and deaf until the add screen is closed and reopened or manual entry is pushed and popped.
 
 **Why Medium and not the reviewer's High.** Nothing is lost and nothing is saved, and the way out
@@ -191,10 +191,10 @@ begins, or map filtered offsets to identifiers before moving.
 - **B11.** Presenting a sheet from an alert button may be dropped, the class this project has
   already recorded. Unverified by the reviewer; two sites.
 - **B12.** The sync toggle does one Keychain update per account synchronously in its binding.
-- **B13.** A cancelled Face ID on export leaves no message. Arguably correct.
+- **B13.** A canceled Face ID on export leaves no message. Arguably correct.
 - **B14.** "Done" on the export's Ready screen deletes a backup that was never shared, with no
   confirmation that nothing was saved.
-- **B15.** Cancelling during "Deriving the key" leaves up to four derivations running on a
+- **B15.** Canceling during "Deriving the key" leaves up to four derivations running on a
   discarded model.
 - **B16.** A failed "Add account" on the confirm screen is silent: the problem alert is attached to
   the scanner, which is not rendered while confirming. A Keychain write failure shows nothing.
@@ -310,7 +310,7 @@ Lock on: cancel the system passcode prompt, switch to another app, return. The a
 white screen rather than its lock screen, for several seconds, until it was quit and relaunched. It
 may be the simulator's handling of its system passcode sheet, or it may be a second dead end beside
 S1. **Checked on the 15 Pro the same day, on `546d230`, and not reproduced:** with App Lock on and
-the delay at Immediately, Face ID made to fail and cancelled, the home screen, five seconds, and
+the delay at Immediately, Face ID made to fail and canceled, the home screen, five seconds, and
 back, the app showed its lock screen with the Unlock button. **Read here as a simulator artifact,
 and that reading was wrong**: see the verification round below, N1. The phone check was a warm lock
 and the simulator run was a cold one, and cold versus warm is the variable.
@@ -375,13 +375,13 @@ message; leaving and returning does not change it; only a force quit and a succe
 
 **Reproduced on hardware by the maintainer, the same day**, on the 15 Pro with the build of
 `546d230`: App Lock on, the app swiped away in the switcher, opened again, Face ID made to fail and
-cancelled. The blank screen, with no button. In his words, the difference is a cold boot of the app.
+canceled. The blank screen, with no button. In his words, the difference is a cold boot of the app.
 
 **Fix shape, from the reviewer, not yet applied:** leave the cover down while the lock screen is the
 root view, since the root lock is itself opaque, safe to photograph, and has its button, which was
 the documented stance before `4b183ff`. Two lines in `coverVisible`, the cold launch test extended
 past `didBecomeActive`, a sequence test for cancel, home and back, and the manual checklist's force
-quit item re-run on the phone with the prompt cancelled once.
+quit item re-run on the phone with the prompt canceled once.
 
 **Where the round found the record wrong:** the "simulator artifact" reading, and "the variant that
 went through another app was not run", where the variable that matters is cold versus warm. Both are
@@ -392,7 +392,7 @@ corrected above.
 **`coverVisible` leaves the cover down while the lock screen is the root view**, the reviewer's two
 lines, and both comments that described the cover wrongly now say what it does. Failing first: the
 cold launch test was extended past `didBecomeActive`, and a new sequence test covers cold start,
-prompt cancelled, home and back. **Both failed before the fix and pass after.** A third test pins the
+prompt canceled, home and back. **Both failed before the fix and pass after.** A third test pins the
 protection N1's fix must not undo, the reason the cover exists at all: after a cold unlock, while the
 app is still inactive behind the prompt, the interface is on screen and must be covered until the app
 is active. It passed before the fix and passes after. The lock presentation suite is 18, all green.
@@ -402,7 +402,7 @@ button in exactly one state, the root lock. A warm lock is a window above the co
 active app has the cover down.
 
 **Validated on the 15 Pro by the maintainer**, the sequence that reproduced it: App Lock on, the app
-swiped away, opened, Face ID made to fail and cancelled. The lock screen with its Unlock button, and
+swiped away, opened, Face ID made to fail and canceled. The lock screen with its Unlock button, and
 Unlock brought Face ID back. **This also closes the cold half of S1**: the always-shown button is now
 visible on a cold lock too.
 
@@ -413,7 +413,7 @@ should require the canonical passphrase to be exactly the generated length.
 
 The same reviewer, a fresh read-only checkout at `b09bc99`, asked to verify N1's fix and answer three
 questions. It compiled `AppLockPresentation` unchanged from that commit and drove it again: the cover
-stays down with the root lock up through a cold launch, a cancelled prompt, home and back, and goes
+stays down with the root lock up through a cold launch, a canceled prompt, home and back, and goes
 up the moment a cold unlock lands while inactive, and in the background-unlock sequence. It found the
 three tests assert what this record says and the two comments describe the code, and it confirmed
 that the root lock screen, now what the switcher photographs on a cold lock, shows no codes or names.
@@ -476,10 +476,29 @@ maintainer's word:**
   unreadable would leave no way in, where today the passphrase screen rewrites the file. A correct
   fix needs the watch's "once is a moment, twice is a state" counter in the gate. The window is
   narrow and the current behavior recovers.
-- **B15.** Stopping a derivation on Cancel means making the core's archive reader cancellable between
+- **B15.** Stopping a derivation on Cancel means making the core's archive reader cancelable between
   its attempts. The cost of not doing it is a few seconds of work finishing on a discarded screen,
   and only a deliberately hostile archive makes it more than one.
 - **B16.** Showing a failed "Add account" means moving the error alert, whose title, "That code could
   not be used", is wrong for a save failure. It needs new text, so it joins B14 and S8 for the
   maintainer's review.
+
+**S12, S7, a CI rule, and the changelog, 2026-10-08.**
+- **S12.** A step in CI's Release build job searches the built app for five Debug-only strings, from
+  the two Debug-only Settings rows, the reset they call, and the lock trace. Run locally with the
+  exact command before it was added: none is in the Release build, and all five are in the Debug
+  build, so the step can fail. `docs/VAULT.md` and `docs/UI_SPEC.md` now say CI checks it.
+- **S7.** `SECURITY.md`'s section on an attacker with an unlocked device now carries the
+  maintainer's sentence, verbatim: on an iPhone without a passcode, plaintext export and account
+  erasure proceed without an identity check.
+- **A CI rule against work in a view's initializer**, `scripts/check-view-initializers.py`, run in the
+  style job. It flags a method called on an object the initializer just built, and a newly built
+  object stored in a `@Bindable` or `@ObservedObject` property. Checked against the add screen and
+  the import screen as they were before their fixes: it flags both. The current tree is clean.
+- **`CHANGELOG.md`**, from the release records and the commits between them, 1.0 to 1.1.2 and the
+  unreleased 1.1.3.
+- **Spelling.** The maintainer asked for American English from 2026-10-03; this record and the
+  comments, tests and documents written since then had drifted British in about twenty lines, and
+  those lines are corrected. Text he entered himself, and the hash script's output format, are left
+  as they are.
 

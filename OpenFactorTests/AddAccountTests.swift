@@ -339,7 +339,7 @@ struct TransferScanTests {
         #expect(model.problem == nil)
     }
 
-    /// Audit X5, B1: cancelling a transfer preview returned to a viewfinder that would not report.
+    /// Audit X5, B1: canceling a transfer preview returned to a viewfinder that would not report.
     @Test("Closing a transfer preview tells the camera to look again")
     @MainActor
     func resumingAdvancesTheGeneration() throws {

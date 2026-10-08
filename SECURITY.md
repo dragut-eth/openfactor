@@ -246,6 +246,10 @@ App Lock fails closed. If the device passcode is removed after App Lock was enab
 locked with an explanation rather than quietly opening. App Lock cannot be enabled on a device
 with no passcode.
 
+On an iPhone without a passcode, iOS has no device identity to verify, so plaintext export and
+account erasure proceed without an identity check. App Lock cannot be enabled without a passcode,
+and Start Over from the locked screen is unavailable until one is set.
+
 The Watch has no separate App Lock. It relies on the Watch passcode and wrist detection, which
 locks the device when it leaves the wearer's wrist.
 

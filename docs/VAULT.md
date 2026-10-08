@@ -638,8 +638,8 @@ removes every account, the vault, and the preferences, returning the device to a
 has never been run. It exists because the setup screen can otherwise be read once per device and
 never again, which makes working on its wording a loop of deleting the app, reinstalling, landing
 on the unlock screen and starting over. It is inside `#if DEBUG`, its row in Settings is keyed off
-an environment value only the gate sets, and a Release binary is checked to contain neither
-string. It sits on the model rather than in the view because a private method on a `View` cannot
+an environment value only the gate sets, and CI checks that the Release build contains neither
+string, on every push that changes code. It sits on the model rather than in the view because a private method on a `View` cannot
 be tested, and a destructive path nobody can check is not worth adding even to a Debug build.
 
 *`KeychainSecretStore` has written this format since PR 16d: it seals on write, opens the

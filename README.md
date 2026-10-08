@@ -240,6 +240,7 @@ it.
 
 ## Documentation
 
+- [CHANGELOG.md](CHANGELOG.md), what changed in each App Store version
 - [docs/ROADMAP.md](docs/ROADMAP.md), the PR by PR delivery plan
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), how the pieces fit and why
 - [docs/VAULT.md](docs/VAULT.md), the normative storage and key-management design

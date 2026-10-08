@@ -378,6 +378,13 @@ jobs:
       # RTF fixtures are excluded because in RTF a trailing space is not whitespace: it
       # is the delimiter that terminates a control word, so `\u8232 ` at the end of a line
       # carries meaning. The fixtures are captured exports and are kept byte exact.
+      # **A view's initializer assigns and does nothing else.** SwiftUI runs it on every rebuild, once
+      # a second under the account list, and two shipped defects came from work done there: the add
+      # screen loop and audit X5's S3. The script says what it catches and what it does not; it was
+      # checked against both files as they were before their fixes and flags each.
+      - name: No work in a view's initializer
+        run: python3 scripts/check-view-initializers.py
+
       - name: No trailing whitespace
         run: |
           if git grep -n -I -- ' $' -- ':!*.rtf'; then
@@ -629,6 +636,27 @@ jobs:
               echo "# absent from this build: $binary"
             fi
           done
+
+      # **The Debug-only code is absent from the Release build, checked rather than trusted.**
+      # docs/VAULT.md and docs/UI_SPEC.md said a Release binary "is checked" to contain neither
+      # debug-only string, and nothing checked it: it was done by hand once. Audit X5, S12. These
+      # five strings come from the two Debug-only Settings rows, the reset they call, and the lock
+      # trace. Each was confirmed present in a Debug build and absent from Release when this step
+      # was written, so the search can find them and the step can fail.
+      - name: No Debug-only code in the Release build
+        run: |
+          set -e
+          APP=build/rel/Build/Products/Release-iphonesimulator/OpenFactor.app
+          [ -d "$APP" ] || { echo "No app at $APP."; exit 1; }
+          FOUND=0
+          for STRING in "Forget everything" "Lock this iPhone" "forgetEverything" "LockTrace" "UIKit willResignActive"; do
+            if grep -r -l -a -F "$STRING" "$APP"; then
+              echo "FAIL: \"$STRING\" is in the Release build. It belongs inside #if DEBUG."
+              FOUND=1
+            fi
+          done
+          [ "$FOUND" = 0 ] || exit 1
+          echo "No Debug-only strings in the Release build."
 
       - name: Nothing in the bundle can reach the network
         run: |

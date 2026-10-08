@@ -83,8 +83,8 @@ vault only after the accounts are gone.
 Settings carries "Lock this iPhone" and "Forget everything" in Debug builds. The first drops the
 key and keeps the accounts, which is the only way to reach the unlock screen on a phone that is
 already set up. The second returns the device to an install that has never been run. Both are
-inside `#if DEBUG`, keyed off an environment value only the gate sets, and a Release binary is
-checked to contain neither string.
+inside `#if DEBUG`, keyed off an environment value only the gate sets, and CI checks that the
+Release build contains neither string.
 
 ## Screen 0b: The watch asks for its key
 
@@ -220,7 +220,7 @@ that it could find no accounts in it.
   through Universal Clipboard, a decision made with the maintainer after measuring it on
   devices and recorded on `CodeClipboard`, for the same reason iCloud Keychain sync is
   allowed. A passphrase is the opposite: `localOnly`, expiring after 120 seconds. Both
-  behaviours were verified rather than assumed. See `CodeClipboardTests`.
+  behaviors were verified rather than assumed. See `CodeClipboardTests`.
 - Search filters by issuer and label.
 
 ## Screen 2: Settings (modal sheet)
