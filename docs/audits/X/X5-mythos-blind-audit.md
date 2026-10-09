@@ -522,3 +522,43 @@ initializer does work on an object it builds." and "No Debug-only strings in the
 | **B19** | Accepted | The watch asking on every raise until it is set up is by design, and is S8's recovery |
 | **S10** | Fixed | The repair now runs on the first read of the key after launch, remembered per path so a moved container is checked again, and retried on the next read if it did not take. Removing it was considered: no App Store build ever wrote a key under the old rules, but the repair is also the only thing that would restore the backup exclusion if an update, transfer or restore stripped it, and those happen while the app is not running, which is why once per launch is enough. Three tests, the first failing before the fix. Core 496, hosted 1,259 |
 | **B16** | Fixed | A failed save is shown on the confirmation screen, under "Add account", in red: "The account was not added.", the maintainer's approved line, then the store's own reason. No alert. It has its own property, so the scanner's alert, titled "That code could not be used", is never handed a save failure. A test with a store that refuses every write; validated on the phone with a temporary build that failed every tap with each of three errors in turn, discarded afterward. Hosted suite 1,256, core 493 |
+
+## Final verification round, 2026-10-09
+
+**Asked of the finder, Mythos 5.1, in its own session:** review `b09bc99..f8e3963`, everything since
+its closing check, for whether each fix matches its finding and is pinned by its test, regressions,
+disagreement with any acceptance, docs that contradict the code, and whether the two new CI checks
+can pass while what they guard is broken. Read-only, with the core suite and the initializer
+script run on a scratch copy; the hosted suite and the watch target were not built.
+
+**Its answer: nothing in the range is wrong.** Every fix matches its finding, every test pins it, no
+regression found, every acceptance agreed, every changed doc sentence matches the code. Nothing
+blocks 1.1.3. It looked hardest at S10 on the watch's read path and at B16 against the scanner's
+alert, and found both clean: every caller of `load()` sees the same values, and `problem` and
+`saveFailure` are disjoint by construction. It names the one behavioral difference S10 makes: a key
+whose metadata is stripped while the app is running is not repaired until the next launch. Nothing
+in the app strips it.
+
+**Three notes, none blocking, analyzed here:**
+
+| | Severity | Note | Analysis |
+| --- | --- | --- | --- |
+| **N2** | Low, reasoned, not reproduced | B20's `.active` guard can let the watch list draw "No accounts yet" for the launch transition on a cold launch, before the first load. Before B20, the `.inactive` load filled the rows | Plausible by reading: `WatchAccountListView` draws `emptyState` whenever `rows` is empty and there is no failure, and the task now returns until `.active`. A fraction of a second, and it trades the wrist-down failure flash for a cold-launch empty-state flash. Its remedy, a flag so the empty state draws only after a load, changes what the screen shows for that moment and needs a look on the watch first |
+| **N3** | Observation | Both new CI checks are tripwires. The initializer script does not see work in a `@State` default value, the shape of the accepted `ExportView` instance, nor work in a free function, on a stored property, or built and called on one line | The script's own docstring says it is a backstop and not a guarantee, and nothing claims more. Covering the `@State` default would flag `ExportView` and need an exception mechanism |
+| **N4** | Info | `WrappedVaultKey.wrap`, the vault passphrase path, trusts its caller that a generated passphrase is 24 characters, the shape the archive writer had before `b0c9e72`. Unreachable today | The same one-line guard would apply to the public `wrap` only: the seam that takes a salt and nonce serves the published vectors, whose passphrases are not this app's |
+
+The report is kept outside the repository with the earlier ones.
+
+**The maintainer's decisions, the same day:**
+- **N2, not seen, no change.** He force quit the watch app, opened it, and saw no "No accounts
+  yet" before the accounts appeared.
+- **N3, accepted** as the scripts already describe themselves: tripwires under review, not
+  guarantees.
+- **N4, fixed, failing first.** The public `WrappedVaultKey.wrap` now refuses anything whose
+  canonical form is not the generated length, with a new `notAGeneratedPassphrase`; the entry point
+  that takes a salt and nonce, which serves the published vectors, is unchanged. The test runs the
+  archive writer's four inputs: before the fix the writer sealed the vault key under every one of
+  them, the empty string included, and after it refuses all four. Seven vault decision tests had
+  planted records under prose passphrases such as "phone A's passphrase"; their fixtures are now in
+  the generated shape, spelling the same words. `Vault`'s unwrap switch names the new case, which
+  `unwrap` never throws. Core 497, hosted 1,263.

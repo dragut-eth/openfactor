@@ -54,6 +54,8 @@ public enum WrappedVaultKey {
         case iterationsOutOfRange(Int)
         case wrongPassphrase
         case derivationFailed
+        /// Asked to seal under something that is not a passphrase `Vault` generated. See `wrap`.
+        case notAGeneratedPassphrase
     }
 
     private static func aad(salt: Data, iterations: Int) -> Data {
@@ -70,11 +72,22 @@ public enum WrappedVaultKey {
     /// Fresh on **every** call, not only at creation. A passphrase change rewraps, and reusing
     /// either value across rewraps is the writer mistake this project's format documents call
     /// catastrophic rather than merely wrong.
+    ///
+    /// **Only a generated passphrase is accepted, checked here rather than trusted.** The vault
+    /// passphrase is always one `Vault` generated, 120 bits from the system's generator, and this
+    /// used to take its caller's word for it, so an empty string would have sealed the vault key
+    /// under nothing. Unreachable from the app; the archive writer had the same shape and was
+    /// given the same rule. Audit X5, final round, N4. On this entry point only: the one below,
+    /// which takes a salt and nonce, exists for the published vectors.
     public static func wrap(
         vaultKey: SymmetricKey,
         passphrase: String,
         iterations: Int = writeIterations
     ) throws -> Data {
+        guard BackupPassphrase.canonical(passphrase).count == BackupPassphrase.generatedLength else {
+            throw WrapError.notAGeneratedPassphrase
+        }
+
         var salt = Data(repeating: 0, count: saltSize)
         let status = salt.withUnsafeMutableBytes {
             SecRandomCopyBytes(kSecRandomDefault, saltSize, $0.baseAddress!)

@@ -65,7 +65,7 @@ struct VaultDecisionTests {
         let recordBefore = try #require(wrapped.storedRecord)
 
         #expect(throws: Vault.VaultError.alreadyExists) {
-            try vault.create(with: "second passphrase entirely")
+            try vault.create(with: "SECO-NDPA-SSPH-RASE-ENTI-RELY")
         }
 
         #expect(wrapped.storedRecord == recordBefore, "the record that opens the accounts is intact")
@@ -86,7 +86,7 @@ struct VaultDecisionTests {
         #expect(vault.state() == .locked)
 
         #expect(throws: Vault.VaultError.alreadyExists) {
-            try vault.create(with: "a passphrase this device made up")
+            try vault.create(with: "MADE-UPBY-THIS-DEVI-CEAA-AAAA")
         }
     }
 
@@ -105,7 +105,7 @@ struct VaultDecisionTests {
         }
 
         #expect(throws: Vault.VaultError.alreadyExists) {
-            try vault.create(with: "the passphrase this device just generated")
+            try vault.create(with: "JUST-GENE-RATE-DBYT-HISD-EVIC")
         }
 
         #expect(wrapped.storedRecord == arrived, "the arrived record is untouched")
@@ -123,7 +123,7 @@ struct VaultDecisionTests {
         wrapped.writeFailure = .keychain(status: errSecInteractionNotAllowed)
 
         #expect(throws: (any Error).self) {
-            try vault.create(with: "the passphrase this device just generated")
+            try vault.create(with: "JUST-GENE-RATE-DBYT-HISD-EVIC")
         }
 
         #expect(try keys.load() == nil, "no key, because nothing could record how to recover it")
@@ -229,7 +229,7 @@ struct VaultDecisionTests {
         // Not `(any Error).self`: a review pointed out that would pass if creation refused for
         // any reason at all, including the wrong one.
         #expect(throws: Vault.VaultError.storage(.keychain(status: errSecNotAvailable))) {
-            try vault.create(with: "a passphrase somebody just generated")
+            try vault.create(with: "SOME-BODY-JUST-GENE-RATE-DTHI")
         }
         #expect(wrapped.storedRecord == nil, "and wrote nothing while it could not see")
     }
@@ -255,15 +255,15 @@ struct VaultDecisionTests {
         let (vault, keys, wrapped) = makeVault()
 
         // The wrap that belongs to somebody else's vault, sitting where `load` would find it.
-        let stranger = try BackupPassphraseFixture.wrap(passphrase: "a different vault entirely")
+        let stranger = try BackupPassphraseFixture.wrap(passphrase: "ADIF-FERE-NTVA-ULTE-NTIR-ELYA")
         try wrapped.save(stranger)
 
         // And this device's own, arriving under the other flag.
-        let mine = try BackupPassphraseFixture.wrap(passphrase: "the passphrase somebody wrote down")
+        let mine = try BackupPassphraseFixture.wrap(passphrase: "SOME-BODY-WROT-ETHI-SDOW-NAAA")
         wrapped.plantTwin(mine, isSynchronizable: true)
         #expect(wrapped.recordCount == 2, "the premise: two records, one unspecified winner")
 
-        try vault.unlock(with: "the passphrase somebody wrote down")
+        try vault.unlock(with: "SOME-BODY-WROT-ETHI-SDOW-NAAA")
 
         #expect(try keys.load() != nil, "the vault opened")
     }
@@ -281,15 +281,15 @@ struct VaultDecisionTests {
     func aSuccessfulUnlockDeletesNothing() throws {
         let (vault, _, wrapped) = makeVault()
 
-        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "phone A's passphrase"))
+        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "PHON-EAPA-SSPH-RASE-AAAA-AAAA"))
         wrapped.plantTwin(
-            try BackupPassphraseFixture.wrap(passphrase: "phone B's passphrase"),
+            try BackupPassphraseFixture.wrap(passphrase: "PHON-EBPA-SSPH-RASE-BBBB-BBBB"),
             isSynchronizable: true)
 
-        try vault.unlock(with: "phone B's passphrase")
+        try vault.unlock(with: "PHON-EBPA-SSPH-RASE-BBBB-BBBB")
         #expect(wrapped.recordCount == 2, "the wrap this passphrase did not open is untouched")
 
-        try vault.unlock(with: "phone A's passphrase")
+        try vault.unlock(with: "PHON-EAPA-SSPH-RASE-AAAA-AAAA")
         #expect(wrapped.recordCount == 2, "and the same is true typed the other way around")
     }
 
@@ -301,11 +301,11 @@ struct VaultDecisionTests {
     func replacementRefusesTwins() throws {
         let (vault, _, wrapped) = makeVault()
 
-        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "phone A's passphrase"))
+        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "PHON-EAPA-SSPH-RASE-AAAA-AAAA"))
         wrapped.plantTwin(
-            try BackupPassphraseFixture.wrap(passphrase: "phone B's passphrase"),
+            try BackupPassphraseFixture.wrap(passphrase: "PHON-EBPA-SSPH-RASE-BBBB-BBBB"),
             isSynchronizable: true)
-        try vault.unlock(with: "phone B's passphrase")
+        try vault.unlock(with: "PHON-EBPA-SSPH-RASE-BBBB-BBBB")
 
         let replacement = try vault.prepareReplacementPassphrase()
         #expect(throws: Vault.VaultError.storage(.twinnedRecord)) {
@@ -319,9 +319,9 @@ struct VaultDecisionTests {
     func wrongPassphraseAgainstTwins() throws {
         let (vault, _, wrapped) = makeVault()
 
-        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "one vault"))
+        try wrapped.save(try BackupPassphraseFixture.wrap(passphrase: "ONEV-AULT-AAAA-AAAA-AAAA-AAAA"))
         wrapped.plantTwin(
-            try BackupPassphraseFixture.wrap(passphrase: "another vault"), isSynchronizable: true)
+            try BackupPassphraseFixture.wrap(passphrase: "ANOT-HERV-AULT-AAAA-AAAA-AAAA"), isSynchronizable: true)
 
         #expect(throws: Vault.VaultError.wrongPassphrase) {
             try vault.unlock(with: "neither of them")
@@ -336,7 +336,7 @@ struct VaultDecisionTests {
 
         try wrapped.save(Data("not a wrapped key at all".utf8))
         wrapped.plantTwin(
-            try BackupPassphraseFixture.wrap(passphrase: "the real one"), isSynchronizable: true)
+            try BackupPassphraseFixture.wrap(passphrase: "THER-EALO-NEAA-AAAA-AAAA-AAAA"), isSynchronizable: true)
 
         #expect(throws: Vault.VaultError.wrongPassphrase) { try vault.unlock(with: "mistyped") }
     }
@@ -344,6 +344,10 @@ struct VaultDecisionTests {
 
 /// Builds a wrapped record for a given passphrase, so a test can plant one that belongs to a
 /// different vault.
+///
+/// The passphrases in this file are in the generated shape, 24 characters in groups of four,
+/// because since audit X5's N4 that is the only shape `WrappedVaultKey.wrap` accepts. Their
+/// letters spell what each one stands for.
 enum BackupPassphraseFixture {
     static func wrap(passphrase: String) throws -> Data {
         try WrappedVaultKey.wrap(vaultKey: SymmetricKey(size: .bits256), passphrase: passphrase)

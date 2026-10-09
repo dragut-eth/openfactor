@@ -167,6 +167,20 @@ struct WrappedVaultKeyTests {
         }
     }
 
+    /// Audit X5's final round, N4, the archive writer's rule applied to the vault. The vault
+    /// passphrase is always generated, and `wrap` used to take its caller's word for that: an empty
+    /// string would seal the vault key under nothing. Unreachable from the app, which only ever
+    /// passes a passphrase `Vault` generated, but that was the caller's guarantee, not the writer's.
+    @Test("The writer refuses anything that is not a full generated passphrase", arguments: [
+        "", "abc", "ABCD-EFGH-JKMN", String(repeating: "A", count: 23),
+    ])
+    func writerRefusesAPassphraseThatIsNotGenerated(passphrase: String) {
+        #expect(throws: WrappedVaultKey.WrapError.notAGeneratedPassphrase) {
+            try WrappedVaultKey.wrap(
+                vaultKey: self.vaultKey, passphrase: passphrase, iterations: self.iterations)
+        }
+    }
+
     @Test("A writer cannot ask for a count outside the range either")
     func writerRefusesBadIterations() {
         #expect(throws: WrappedVaultKey.WrapError.iterationsOutOfRange(50)) {

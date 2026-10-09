@@ -233,7 +233,8 @@ public struct Vault: Sendable {
                 // `VaultError.recordNotUnderstood`.
                 switch error {
                 case .wrongPassphrase: sawWrongPassphrase = true
-                case .derivationFailed: throw .storage(.keychain(status: -1))
+                // `notAGeneratedPassphrase` is the writer's and `unwrap` never throws it.
+                case .derivationFailed, .notAGeneratedPassphrase: throw .storage(.keychain(status: -1))
                 case .notAWrappedKey, .iterationsOutOfRange: break
                 }
             } catch {

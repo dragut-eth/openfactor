@@ -45,6 +45,8 @@ was decided against. Builds that reached TestFlight only are not listed here; th
 - **The backup writer refuses anything but a full generated passphrase in generated mode.** It used
   to trust the mode, so an empty passphrase could seal an archive. Unreachable from the app's export
   screen, which always holds a generated passphrase; now the writer's own rule.
+- **The vault key is sealed only under a full generated passphrase**, by the same rule, checked by
+  the writer rather than trusted from its caller. Unreachable from the app. Audit X5, N4.
 
 ## 1.1.2 (11), 2026-10-03
 

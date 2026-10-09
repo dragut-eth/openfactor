@@ -64,8 +64,12 @@ S4 kept, with `docs/APP_LOCK.md` corrected; B14, S8, S5, B15, S9, S11, B18 and B
 with its reason in the X5 record. B16 fixed the same day: a failed "Add account" now says "The
 account was not added." and why, on the confirmation screen, validated on the phone. S10 fixed after a brainstorm: the key file's
 protection repair runs once per launch per path, retried until it takes, instead of on every
-code. **X5 has nothing open.** Next: one Mythos verification round over everything since its
-closing check, then 1.1.3.
+code. **X5 has nothing open.** **The finder's final verification round, the same day, over
+`b09bc99..f8e3963`: nothing wrong, nothing blocks 1.1.3.** Its three non-blocking notes, decided:
+N2, a possible empty-state flash on the watch at cold launch, not seen by the maintainer on the
+watch, no change; N3, the reach of the two new CI checks, accepted; N4, fixed: the vault
+passphrase wrap refuses anything but a full generated passphrase, as the archive writer now does.
+Next: 1.1.3.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator
