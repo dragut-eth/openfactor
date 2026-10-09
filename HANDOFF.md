@@ -70,8 +70,9 @@ N2, a possible empty-state flash on the watch at cold launch, not seen by the ma
 watch, no change; N3, the reach of the two new CI checks, accepted; N4, fixed: the vault
 passphrase wrap refuses anything but a full generated passphrase, as the archive writer now does,
 and the finder checked that fix and found nothing wrong. **Shipping it as 1.1.3 (12), started
-2026-10-09**: bumped, then the ship script, a TestFlight pass on the 15 Pro, What's New text approved
-by the maintainer, and submission, which he does himself in App Store Connect, release manual.
+2026-10-09**: bumped, uploaded by the ship script, provenance in `docs/releases/1.1.3-12.md`,
+TestFlight pass on the 15 Pro done, What's New approved and entered with build 12 attached,
+release manual. **Waiting for the maintainer to submit it** in App Store Connect.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

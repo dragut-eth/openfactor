@@ -360,6 +360,35 @@ American English is the project's spelling from 2026-10-03 on:
 
     A color chosen for a new account now stays chosen.
 
+### 1.1.3
+
+**Approved by the maintainer on 2026-10-09 and entered verbatim** through the App Store Connect API,
+with build 12 attached and release manual; he submits it himself. Audit X5's fixes, one paragraph
+each, neither naming the audit nor listing what nobody would notice: the two writers' passphrase
+checks and the key file check running once per launch are in `CHANGELOG.md` only. The draft was
+put through a second model for a pass; its split into one fix per paragraph was kept, and three of
+its lines were not, because they had become less accurate:
+
+    After "Try again", or after canceling a transfer preview, the camera now picks up the next code right away.
+
+    With App Lock on, canceling Face ID right after opening OpenFactor now shows the lock screen and its Unlock button instead of a blank screen.
+
+    If adding an account fails, OpenFactor now says so.
+
+    When adding an account by hand, you can now set the refresh period from 1 second to 1 hour, the same range a scanned code can carry.
+
+    Starting a search now ends reordering, so accounts can no longer move to the wrong place.
+
+    Your Apple Watch now asks your iPhone again after the vault on your iPhone is replaced.
+
+    Your Apple Watch no longer briefly shows an error while your wrist is down.
+
+    App Lock no longer gets stuck after your iPhone's passcode is removed and set again.
+
+    The import preview now does less work while it is open.
+
+    The vault screens no longer carry an old message onto a later screen.
+
 ## App Privacy, the nutrition label
 
 App Store Connect asks this separately from the privacy manifest and does not read the manifest
