@@ -68,8 +68,10 @@ code. **X5 has nothing open.** **The finder's final verification round, the same
 `b09bc99..f8e3963`: nothing wrong, nothing blocks 1.1.3.** Its three non-blocking notes, decided:
 N2, a possible empty-state flash on the watch at cold launch, not seen by the maintainer on the
 watch, no change; N3, the reach of the two new CI checks, accepted; N4, fixed: the vault
-passphrase wrap refuses anything but a full generated passphrase, as the archive writer now does.
-Next: 1.1.3.
+passphrase wrap refuses anything but a full generated passphrase, as the archive writer now does,
+and the finder checked that fix and found nothing wrong. **Shipping it as 1.1.3 (12), started
+2026-10-09**: bumped, then the ship script, a TestFlight pass on the 15 Pro, What's New text approved
+by the maintainer, and submission, which he does himself in App Store Connect, release manual.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

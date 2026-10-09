@@ -562,3 +562,12 @@ The report is kept outside the repository with the earlier ones.
   planted records under prose passphrases such as "phone A's passphrase"; their fixtures are now in
   the generated shape, spelling the same words. `Vault`'s unwrap switch names the new case, which
   `unwrap` never throws. Core 497, hosted 1,263.
+
+**The finder checked N4's fix, `33bf2ac`, the same day: nothing wrong.** The public `wrap` has two
+production callers, `Vault.create(with:)` and `Vault.replacePassphrase(with:)`; the only app path
+into either passes `BackupPassphrase.grouped(generate())`, which canonicalizes to 24, and
+`replacePassphrase(with:)` has no app caller at all, so no real path throws. The guard precedes the
+salt draw, so a refused call spends no randomness and writes nothing. All eleven replaced fixtures
+are 24 letters with no character `canonical` would drop, distinct where they must differ, and the
+twin and wrong-passphrase tests keep their meaning; the unlock-only prose strings were right to
+stay, since `unwrap` has no guard. Core 497 passed there. Nothing blocks 1.1.3.
