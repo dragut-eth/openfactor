@@ -156,9 +156,10 @@ does not place the vault key in Keychain or cause that key to sync.
 
 The key is written into a directory that is excluded from backup before any key material
 exists, then moved into place, so there is no instant at which a complete key sits on disk outside
-the exclusion. Reading the key also repairs its protection class and exclusion in place, because a
-device provisioned before these rules were corrected would otherwise never write again and never
-receive them.
+the exclusion. The first read of the key after each launch also repairs its protection class and
+exclusion in place, and a repair that fails is tried again on the next read, because a device
+provisioned before these rules were corrected would otherwise never write again and never receive
+them.
 
 The backup exclusion and protection attributes have been verified on a real device. Their
 behavior through a restore and Quick Start has not been measured and is not claimed.

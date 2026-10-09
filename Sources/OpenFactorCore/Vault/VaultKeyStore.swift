@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Synchronization
 
 /// The vault key, on disk, in the one place another app cannot reach.
 ///
@@ -124,8 +125,30 @@ public struct VaultKeyStore: Sendable {
 
         guard data.count == Self.keySize else { throw KeyStoreError.damaged }
 
-        repairProtection(of: url)
+        repairProtectionOnce(of: url)
         return SymmetricKey(data: data)
+    }
+
+    /// Where the repair below has succeeded in this process, by path.
+    ///
+    /// **Once per launch, because every code is a read.** The repair used to run on each of them,
+    /// a metadata write at every code boundary for every account, on the phone and the watch.
+    /// Audit X5 counted it as S10. What it guards against, a key file whose protection or backup
+    /// exclusion is not what this build writes, comes from builds before 2026-08-18, and now only
+    /// from events outside this app: an update moving the container, which E6 measured, a
+    /// transfer, a restore. All of those happen while the app is not running, so the first read
+    /// after launch catches every one, and the reads after it add nothing.
+    ///
+    /// **By path rather than a single flag**, so a container that moves is checked at its new
+    /// location, and **only on success**, so a repair that did not take is tried again on the next
+    /// read, exactly as before.
+    private static let repairedPaths = Mutex<Set<String>>([])
+
+    private func repairProtectionOnce(of url: URL) {
+        guard !Self.repairedPaths.withLock({ $0.contains(url.path) }) else { return }
+        if repairProtection(of: url) {
+            Self.repairedPaths.withLock { _ = $0.insert(url.path) }
+        }
     }
 
     /// Brings an already-written key up to the rules the current build writes under.
@@ -140,12 +163,15 @@ public struct VaultKeyStore: Sendable {
     /// file in place, so this never opens, rewrites, or replaces the key: there is no window here
     /// in which the key is absent or half written, and the worst outcome of a failure is the
     /// protection the device already had.
-    private func repairProtection(of url: URL) {
-        try? FileManager.default.setAttributes(Self.protectionAttributes, ofItemAtPath: url.path)
+    ///
+    /// - Returns: whether both halves are now in place, so the caller knows whether to try again.
+    private func repairProtection(of url: URL) -> Bool {
+        let protected = (try? FileManager.default.setAttributes(
+            Self.protectionAttributes, ofItemAtPath: url.path)) != nil
 
         let excluded = (try? url.resourceValues(forKeys: [.isExcludedFromBackupKey]))?
             .isExcludedFromBackup
-        guard excluded != true else { return }
+        guard excluded != true else { return protected }
 
         // `try?` here, unlike the staging directory, and the difference is deliberate: this is a
         // repair of a key that already exists and is already readable. A repair that cannot run
@@ -155,7 +181,7 @@ public struct VaultKeyStore: Sendable {
         var marked = url
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
-        try? marked.setResourceValues(values)
+        return protected && (try? marked.setResourceValues(values)) != nil
     }
 
     // MARK: - Writing

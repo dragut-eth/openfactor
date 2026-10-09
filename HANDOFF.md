@@ -62,9 +62,10 @@ passed on their first run. **The maintainer's decisions, 2026-10-09:** B17 fixed
 period stepper now covering the scanner's 1 to 3600 as 1, 5, 10 and on, validated on the phone;
 S4 kept, with `docs/APP_LOCK.md` corrected; B14, S8, S5, B15, S9, S11, B18 and B19 accepted, each
 with its reason in the X5 record. B16 fixed the same day: a failed "Add account" now says "The
-account was not added." and why, on the confirmation screen, validated on the phone. **Still
-open:** S10, which the maintainer wants to brainstorm. Then one Mythos verification round over
-everything since its closing check, and 1.1.3.
+account was not added." and why, on the confirmation screen, validated on the phone. S10 fixed after a brainstorm: the key file's
+protection repair runs once per launch per path, retried until it takes, instead of on every
+code. **X5 has nothing open.** Next: one Mythos verification round over everything since its
+closing check, then 1.1.3.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

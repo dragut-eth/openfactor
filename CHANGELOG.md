@@ -35,6 +35,11 @@ was decided against. Builds that reached TestFlight only are not listed here; th
 - **Manual entry accepts any refresh period a scanned code can carry**, 1 to 3600 seconds. It used
   to stop at 5 to 300. Audit X5, B17.
 
+### Changed
+
+- **The vault key file's protection is checked once per launch** instead of at every code. Audit
+  X5, S10.
+
 ### Security
 
 - **The backup writer refuses anything but a full generated passphrase in generated mode.** It used

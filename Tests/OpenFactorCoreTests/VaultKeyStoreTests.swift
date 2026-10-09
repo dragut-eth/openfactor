@@ -300,6 +300,94 @@ struct VaultKeyStoreTests {
         #expect(!FileManager.default.fileExists(atPath: staging.path))
     }
 
+    // MARK: - Once per launch, audit X5 S10
+
+    /// Clears the backup exclusion on the key file, the stand-in for whatever might strip it.
+    private func unexclude(_ dir: URL) throws {
+        var url = dir.appendingPathComponent(VaultKeyStore.fileName)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = false
+        try url.setResourceValues(values)
+    }
+
+    /// A fresh `URL` each time, for the caching reason `loadRepairsAnUnexcludedKey` records.
+    private func isExcluded(_ dir: URL) throws -> Bool {
+        try dir.appendingPathComponent(VaultKeyStore.fileName)
+            .resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true
+    }
+
+    /// **The repair runs on the first read after launch, not on every read.** Every code is a
+    /// read, so the repair used to write the file's metadata at every code boundary for every
+    /// account, on the phone and the watch, for a state only builds before 2026-08-18 could
+    /// leave. What can strip the metadata now, an update moving the container, a transfer, a
+    /// restore, happens while the app is not running, so the first read after launch is where
+    /// the check belongs. Audit X5, S10.
+    @Test("A key is repaired on the first read, not on every read")
+    func repairsOncePerLaunch() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try Data(repeating: 7, count: 32).write(to: dir.appendingPathComponent(VaultKeyStore.fileName))
+
+        _ = try #require(try store.load())
+        #expect(try isExcluded(dir), "the first read repairs")
+
+        try unexclude(dir)
+        _ = try #require(try store.load())
+        #expect(try !isExcluded(dir), "a later read in the same launch leaves the file alone")
+    }
+
+    /// Remembered per location, so a container that moves, which E6 measured an update doing, is
+    /// checked again at its new path.
+    @Test("A key found at a new location is repaired again")
+    func repairsAgainAtANewLocation() throws {
+        let first = FileManager.default.temporaryDirectory
+            .appendingPathComponent("vault-\(UUID().uuidString)")
+        let second = FileManager.default.temporaryDirectory
+            .appendingPathComponent("vault-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: first)
+            try? FileManager.default.removeItem(at: second)
+        }
+        nonisolated(unsafe) var current = first
+        let store = VaultKeyStore(directory: { current })
+
+        _ = try store.create()
+        _ = try #require(try store.load())
+
+        try FileManager.default.createDirectory(at: second, withIntermediateDirectories: true)
+        try FileManager.default.moveItem(
+            at: first.appendingPathComponent(VaultKeyStore.fileName),
+            to: second.appendingPathComponent(VaultKeyStore.fileName))
+        try unexclude(second)
+        current = second
+
+        _ = try #require(try store.load())
+        #expect(try isExcluded(second))
+    }
+
+    /// **A repair that did not take is tried again on the next read**, as every read used to,
+    /// rather than counted as done. A file the process cannot write to refuses the exclusion
+    /// while still being readable, which is a failure macOS can produce on demand.
+    @Test("A repair that failed is tried again on the next read")
+    func retriesAFailedRepair() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let path = dir.appendingPathComponent(VaultKeyStore.fileName).path
+        try Data(repeating: 7, count: 32).write(to: URL(fileURLWithPath: path))
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o400], ofItemAtPath: path)
+        _ = try #require(try store.load())
+        #expect(try !isExcluded(dir), "the premise: this repair could not be made")
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: path)
+        _ = try #require(try store.load())
+        #expect(try isExcluded(dir), "and the next read made it")
+    }
+
     /// The repair must not be able to damage what it is repairing.
     @Test("Repairing does not disturb the key itself")
     func repairPreservesTheKey() throws {
