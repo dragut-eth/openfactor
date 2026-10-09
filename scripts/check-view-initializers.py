@@ -7,7 +7,7 @@ Two defects came from forgetting that, both shipped, both passed every test and 
 
 - The add screen loop, fixed on 2026-10-02. `AddAccountView` built a session in its initializer,
   decoded a shared image into it, and held it as `@Bindable`, which is not storage. Each rebuild
-  replaced the session and decoded again, so cancelling a transfer preview reopened it forever.
+  replaced the session and decoded again, so canceling a transfer preview reopened it forever.
 - Audit X5, S3. `ImportView` read, parsed and classified a file in its initializer. SwiftUI kept
   the first model and threw the rest away, so the screen looked right while every stored secret was
   decrypted once a second.
@@ -24,7 +24,7 @@ The rule that prevents both: **an initializer may assign, and nothing else.** Wo
 
 **What it is not.** A grep with brackets counted, not a Swift parser. It reads the shapes this
 project has actually written. A clever enough initializer can hide work from it, and a review is
-still the real defence; this catches the plain version of a mistake that has already cost two
+still the real defense; this catches the plain version of a mistake that has already cost two
 releases.
 
 Run from the repository root. Exits non-zero, naming file and line, when it finds anything.

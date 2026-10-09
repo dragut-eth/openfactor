@@ -105,6 +105,31 @@ struct ManualSetupViewModelTests {
         #expect(model.previewSecondsRemaining(at: Date(timeIntervalSince1970: 0)) == 60)
     }
 
+    /// The scanner accepts 1 to 3600, so manual entry must reach both ends, and the stepper skips
+    /// from 1 straight to 5 rather than landing on 6, 11 and 16. Audit X5, B17.
+    @Test("The period stepper runs 1, 5, 10 and on to 3600")
+    func periodStepperCoversTheScannersRange() {
+        let model = filledModel()
+
+        model.period = 30
+        #expect(model.periodAbove == 35)
+        #expect(model.periodBelow == 25)
+
+        model.period = 5
+        #expect(model.periodBelow == 1)
+
+        model.period = 1
+        #expect(model.periodBelow == nil)
+        #expect(model.periodAbove == 5)
+
+        model.period = 3595
+        #expect(model.periodAbove == 3600)
+
+        model.period = 3600
+        #expect(model.periodAbove == nil)
+        #expect(model.periodBelow == 3595)
+    }
+
     /// A counter based account has nothing to count down, so the preview offers no
     /// countdown for the card to draw.
     @Test("A counter based account previews without a countdown")

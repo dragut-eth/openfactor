@@ -30,6 +30,8 @@ was decided against. Builds that reached TestFlight only are not listed here; th
 - **The vault screens no longer carry an old passphrase or error message onto a later screen.**
   Audit X5, B9 and B10.
 - **The Apple Watch list no longer flashes an error while the wrist is down.** Audit X5, B20.
+- **Manual entry accepts any refresh period a scanned code can carry**, 1 to 3600 seconds. It used
+  to stop at 5 to 300. Audit X5, B17.
 
 ### Security
 

@@ -257,8 +257,8 @@ are the first attempt's defects, kept as tests so they cannot return.
 ## Arrivals, and who wins
 
 Three things arrive from outside: an image the share extension left in the group container,
-an `otpauth://` or `otpauth-migration://` code from the Camera app or Photos, and a file
-opened from Files or Mail. One rule for all three, Xavier's:
+an `otpauth://` or `otpauth-migration://` code from the Camera app, Photos, or any other app,
+and a file opened from Files or Mail. One rule for all three, Xavier's:
 
 > An arrival takes precedence. Whatever was open closes, and the import presents clean from
 > the root.
@@ -283,9 +283,12 @@ hoist of booleans, not of content.
 **A consequence to say out loud rather than discover:** an arrival closes the add sheet,
 and closing it is a dismissal, and a dismissal discards the draft. Somebody halfway through
 typing a secret who shares an image into the app loses the typed half. That is what "takes
-precedence, back to root, clean" means, it matches the rule that only the lock preserves
-and every deliberate act discards, and the sequence requires deliberately sharing while
-mid-entry. Vetoable at review.
+precedence, back to root, clean" means, and it matches the rule that only the lock preserves
+and every deliberate act discards. It does not take a deliberate share: any app in the
+foreground can open an `otpauth://` link, and that closes the add sheet just the same,
+discarding a half-typed secret or an unsaved export. Kept on purpose: sparing those cases would
+add logic to the arrival rules for a rare event that costs a retyped secret or a repeated export,
+not an account. Audit X5, S4.
 
 **Bounds:** inbox items older than `SharedInbox.staleAfter`, which is ten minutes and is the
 same constant that decides whether an item is still worth presenting, are swept unread,

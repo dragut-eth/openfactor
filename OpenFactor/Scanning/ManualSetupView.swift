@@ -179,7 +179,12 @@ struct ManualSetupView: View {
                             .multilineTextAlignment(.trailing)
                     }
                 } else {
-                    Stepper("Refreshes every \(model.period)s", value: $model.period, in: 5...300, step: 5)
+                    // 1, 5, 10 and on to 3600; see `periodAbove`. A nil action disables its button.
+                    Stepper(
+                        "Refreshes every \(model.period)s",
+                        onIncrement: model.periodAbove.map { above in { model.period = above } },
+                        onDecrement: model.periodBelow.map { below in { model.period = below } }
+                    )
                 }
             }
         } footer: {

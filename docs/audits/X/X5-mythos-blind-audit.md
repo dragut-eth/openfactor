@@ -502,3 +502,23 @@ maintainer's word:**
   those lines are corrected. Text he entered himself, and the hash script's output format, are left
   as they are.
 
+
+**The first CI run of both new checks passed**, on `7e35bf9`: each printed its pass line, "No view
+initializer does work on an object it builds." and "No Debug-only strings in the Release build."
+
+**The maintainer's decisions on the rest, 2026-10-09:**
+
+| Item | Decision | Why |
+| --- | --- | --- |
+| **B17** | Fixed | Manual entry's period stepper now covers the scanner's range, 1 to 3600: 1, then 5, then steps of 5. A code that can be scanned can be typed. Plain steps of 5 from 1 gave 6, 11 and 16; the maintainer saw that on the phone and asked for 1 to go straight to 5, which he then validated on the phone. A test pins the sequence; hosted suite 1,255, core 493. No new text |
+| **S4** | Kept, document corrected | `docs/APP_LOCK.md` said the sequence needs a deliberate share. Any foreground app can open an `otpauth://` link; the rule stays, for the reason now written there |
+| **B14** | Accepted | "Done" removes the backup file, never the vault. Making it again takes seconds, and every fix considered changes the screen |
+| **S8** | Accepted | The watch asks again on the next raise, which is the recovery |
+| **S5** | Accepted | For the reason above: the fix as proposed could leave no way in, and today's behavior recovers |
+| **B15** | Accepted | For the reason above: a few seconds of work on a discarded screen |
+| **S9** | Accepted | Only a sibling app in the access group can plant the item, which the threat model already allows, and it holds none of the person's secrets |
+| **S11** | Accepted | `.oneTimeCode` is what stops iOS offering to save the vault passphrase beside the record it opens (X2). Its side effect is a suggestion above the keyboard, which the fields refuse. Removing it is unverified and could bring back what X2 fixed |
+| **B18** | Accepted | The edit sheet keeping the record it opened with is how an edit sheet should behave |
+| **B19** | Accepted | The watch asking on every raise until it is set up is by design, and is S8's recovery |
+| **S10** | Open | The maintainer wants to think it through first |
+| **B16** | Open | It needs error text he approves |

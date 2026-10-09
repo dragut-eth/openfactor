@@ -91,6 +91,25 @@ final class ManualSetupViewModel {
             : "A code cannot refresh every \(period) seconds."
     }
 
+    /// The period the stepper moves to, up and down, or `nil` at the end of the range.
+    ///
+    /// **The range is the scanner's, 1 to 3600, so a code that can be scanned can also be typed.**
+    /// It used to stop at 5 to 300. Audit X5, B17. Steps of 5 from 1 would land on 6, 11 and 16,
+    /// which no service uses, so the bottom is the one exception: 1 and 5 are neighbors, and
+    /// everything above 5 is a multiple of 5.
+    var periodAbove: Int? {
+        let range = TOTPConfiguration.supportedPeriods
+        guard period < range.upperBound else { return nil }
+        return min(max(5, (period / 5 + 1) * 5), range.upperBound)
+    }
+
+    var periodBelow: Int? {
+        let range = TOTPConfiguration.supportedPeriods
+        guard period > range.lowerBound else { return nil }
+        guard period > 5 else { return range.lowerBound }
+        return (period - 1) / 5 * 5
+    }
+
     /// The account the form currently describes, or `nil` if it does not describe one yet.
     ///
     /// Everything else on this screen is derived from this, so there is one definition of

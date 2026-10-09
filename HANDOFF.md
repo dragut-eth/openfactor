@@ -57,10 +57,13 @@ first, and the documentation drift is corrected except S7 and S12, which wait fo
 choice. **The small behavior batch is done**: B9 and B10, failing tests first, and B20 on the watch.
 S5 and B15 turned out not small and are recommended for acceptance; B16 needs new text. **Done since:** S12 as a CI check
 of the Release build, S7 in `SECURITY.md` with the maintainer's wording, a CI rule against work in a
-view's initializer (`scripts/check-view-initializers.py`), and `CHANGELOG.md`. **Waiting for the
-maintainer's fresh look:** B14, S8 and B16, which would each add an alert, B17, S4, and the
-acceptances. Then one Mythos verification round over everything since its closing check, and
-1.1.3.
+view's initializer (`scripts/check-view-initializers.py`), and `CHANGELOG.md`. Both new CI checks
+passed on their first run. **The maintainer's decisions, 2026-10-09:** B17 fixed, the manual
+period stepper now covering the scanner's 1 to 3600 as 1, 5, 10 and on, validated on the phone;
+S4 kept, with `docs/APP_LOCK.md` corrected; B14, S8, S5, B15, S9, S11, B18 and B19 accepted, each
+with its reason in the X5 record. **Still open:** S10, which the maintainer wants to brainstorm,
+and B16, which needs error text he approves. Then one Mythos verification round over everything
+since its closing check, and 1.1.3.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator
