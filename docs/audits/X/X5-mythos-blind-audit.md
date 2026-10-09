@@ -521,4 +521,4 @@ initializer does work on an object it builds." and "No Debug-only strings in the
 | **B18** | Accepted | The edit sheet keeping the record it opened with is how an edit sheet should behave |
 | **B19** | Accepted | The watch asking on every raise until it is set up is by design, and is S8's recovery |
 | **S10** | Open | The maintainer wants to think it through first |
-| **B16** | Open | It needs error text he approves |
+| **B16** | Fixed | A failed save is shown on the confirmation screen, under "Add account", in red: "The account was not added.", the maintainer's approved line, then the store's own reason. No alert. It has its own property, so the scanner's alert, titled "That code could not be used", is never handed a save failure. A test with a store that refuses every write; validated on the phone with a temporary build that failed every tap with each of three errors in turn, discarded afterward. Hosted suite 1,256, core 493 |

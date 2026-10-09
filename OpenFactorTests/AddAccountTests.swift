@@ -129,6 +129,27 @@ struct AddAccountViewModelTests {
         #expect(model.stage == .added)
     }
 
+    /// A failed save used to go to the scanner's alert, which is not on screen while confirming,
+    /// so nothing changed and nothing said so. It now stays on the confirmation screen, and the
+    /// scanner's alert is not handed a save failure to show later. Audit X5, B16.
+    @Test("A failed save is reported on the confirmation screen, and cleared by scanning again")
+    func failedSaveIsReportedWhereItHappened() {
+        let model = AddAccountViewModel(store: RefusingStore())
+
+        model.handleScan(Self.validURI)
+        model.confirm()
+
+        guard case .confirming = model.stage else {
+            Issue.record("A failed save must stay on the confirmation screen, was \(model.stage)")
+            return
+        }
+        #expect(model.saveFailure == SecretStoreError.deviceLocked.description)
+        #expect(model.problem == nil)
+
+        model.scanAgain()
+        #expect(model.saveFailure == nil)
+    }
+
     /// The preview is the point of the confirmation step: it is checked against what the
     /// service is showing while the enrollment page is still open.
     @Test("The confirmation shows the code the account really produces")
@@ -534,3 +555,14 @@ struct ScanLatchTests {
     }
 }
 
+/// Refuses every write, the way a device that locks at the wrong moment does.
+private struct RefusingStore: SecretStore {
+    func add(_ account: OTPAccount, color: AccountColor) throws(SecretStoreError) -> AccountRecord {
+        throw .deviceLocked
+    }
+
+    func records() throws(SecretStoreError) -> StoredRecords { StoredRecords(readable: []) }
+    func secret(for id: UUID) throws(SecretStoreError) -> Data { throw .notFound }
+    func update(_ record: AccountRecord) throws(SecretStoreError) { throw .deviceLocked }
+    func delete(id: UUID) throws(SecretStoreError) { throw .deviceLocked }
+}

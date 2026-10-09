@@ -333,6 +333,18 @@ private struct ConfirmAccountView: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
 
+                    // On this screen rather than in an alert: the screen stays as it was, and
+                    // the first line says nothing was saved, which the reason alone does not.
+                    if let failure = model.saveFailure {
+                        VStack(spacing: Tokens.Spacing.tight) {
+                            Text("The account was not added.")
+                            Text(failure)
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                    }
+
                     Button("Scan a different code") { model.scanAgain() }
                 }
             }

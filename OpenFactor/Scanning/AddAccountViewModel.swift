@@ -33,7 +33,9 @@ final class AddAccountViewModel {
         case added
     }
 
-    private(set) var stage: Stage = .scanning
+    private(set) var stage: Stage = .scanning {
+        didSet { saveFailure = nil }
+    }
 
     /// How many times this screen has returned to scanning. The camera re-arms when it changes.
     /// See `ScanLatch` for why a count rather than a signal.
@@ -41,6 +43,15 @@ final class AddAccountViewModel {
 
     /// What went wrong with the last attempt, in words the user can act on.
     private(set) var problem: String?
+
+    /// Why "Add account" did not save, shown on the confirmation screen under the button.
+    ///
+    /// **Its own property, not `problem`.** `problem` is shown by an alert attached to the
+    /// scanner, which is not on screen while confirming, so a failed save used to change nothing
+    /// at all: the account was not added and nothing said so. And that alert's title, "That code
+    /// could not be used", is wrong for a save that failed. Audit X5, B16. Cleared whenever the
+    /// stage changes, so it belongs to the one code it was about.
+    private(set) var saveFailure: String?
 
     /// The colour the account will get.
     ///
@@ -159,12 +170,13 @@ final class AddAccountViewModel {
     func confirm() {
         guard case let .confirming(account) = stage else { return }
 
+        saveFailure = nil
         do {
             try store.add(account, color: color)
             problem = nil
             stage = .added
         } catch {
-            problem = error.description
+            saveFailure = error.description
         }
     }
 

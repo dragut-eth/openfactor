@@ -493,6 +493,10 @@ both as translucent pill buttons. No frame overlay, no instructions.
   gets added should not be a coin toss.
 - The confirmation carries a **swatch strip directly under the card**, so a color choice
   lands on the thing being chosen for. A picker that covered the card would hide it.
+- **A save that fails says so on the confirmation, under "Add account"**, in red: "The account
+  was not added." and then the store's own reason. On the screen rather than in an alert,
+  because the screen stays as it was and the first line is what says nothing was saved. It
+  clears when the button is tapped again or another code is scanned. Audit X5, B16.
 
 ## Screen 4: Manual setup
 
