@@ -72,7 +72,9 @@ passphrase wrap refuses anything but a full generated passphrase, as the archive
 and the finder checked that fix and found nothing wrong. **Shipping it as 1.1.3 (12), started
 2026-10-09**: bumped, uploaded by the ship script, provenance in `docs/releases/1.1.3-12.md`,
 TestFlight pass on the 15 Pro done, What's New approved and entered with build 12 attached,
-release manual. **Waiting for the maintainer to submit it** in App Store Connect.
+prepared with release manual. **Submitted for review by the maintainer on 2026-10-09**, and read
+back from App Store Connect as waiting for review, with the release set to automatic after
+approval at submission, so it goes live when Apple approves it.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

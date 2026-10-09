@@ -363,7 +363,8 @@ American English is the project's spelling from 2026-10-03 on:
 ### 1.1.3
 
 **Approved by the maintainer on 2026-10-09 and entered verbatim** through the App Store Connect API,
-with build 12 attached and release manual; he submits it himself. Audit X5's fixes, one paragraph
+with build 12 attached and release manual; he submitted it the same day, and at submission the
+release became automatic after approval. Audit X5's fixes, one paragraph
 each, neither naming the audit nor listing what nobody would notice: the two writers' passphrase
 checks and the key file check running once per launch are in `CHANGELOG.md` only. The draft was
 put through a second model for a pass; its split into one fix per paragraph was kept, and three of
