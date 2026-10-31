@@ -8,7 +8,17 @@ is named, and its record in [docs/audits/](docs/audits/) holds the reasoning, th
 was decided against. Builds that reached TestFlight only are not listed here; they are in
 `docs/releases/` too.
 
-## Unreleased: 1.1.3
+## Unreleased: 1.1.4
+
+### Changed
+
+- **Built for iPhone Duo.** The same code as 1.1.3, built with the iOS 27.2 SDK so that it runs
+  natively on both of the iPhone Duo's screens.
+
+## 1.1.3 (12), released by 2026-10-31
+
+[Provenance record](docs/releases/1.1.3-12.md). Submitted 2026-10-09; the exact day of release was
+not recorded.
 
 ### Fixed
 

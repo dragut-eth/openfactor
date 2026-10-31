@@ -8,7 +8,24 @@ first when picking the work back up.
 **Working only on the website?** Read **The website: working on it cold**, the section right
 after this one. It is self-contained and is all a session needs for a web fix.
 
-**Last updated:** 2026-10-06. **1.1.2 (11) is on the App Store**, released 2026-10-03 at 16:38 UTC
+**Last updated:** 2026-10-31. **1.1.3 (12) is on the App Store**, read back from App Store Connect
+as ready for distribution on 2026-10-31; the exact day of release was not recorded. It carries
+every X5 fix. **1.1.4 (13) is being shipped for the "Made for iPhone Duo" badge**, see below.
+
+**1.1.4 (13), started 2026-10-31: a rebuild for iPhone Duo, with no code change.** Apple's
+foldable iPhone Duo has two screens, an outer 1398 x 2034 and an inner 2007 x 2853, and a "Made
+for iPhone Duo" badge on the product page. The badge needs two things: a build made with the iOS
+27.1 SDK or later, and iPhone Duo screenshots submitted in App Store Connect. 1.1.3 was built with
+Xcode 27.0, before the Duo, so this release is the same code built with Xcode 27.2. The
+maintainer checked it on the iPhone Duo simulator (Xcode 27.2's Device Hub, with the separate iOS
+27.2 runtime for the Duo): the account list folded and unfolded, App Lock while folding and
+unfolding, the app switcher card, and the add screen across a fold, all as expected. Unfolded in
+landscape the cards run the full width, which works but looks stretched; two columns were
+considered and declined for now, since this release changes no code. The screenshots will use the
+inner screen in portrait. Apple requires Duo screenshots from April 2027 for builds made with the
+27.1 SDK or later. Core 497 and hosted 1,263 passed with Xcode 27.2 before the bump.
+
+**Before that: 1.1.2 (11) shipped**, released 2026-10-03 at 16:38 UTC
 per the public store listing, after the maintainer submitted it at 15:06 UTC that day, release
 manual. Built from `075fddc`; the record is
 [docs/releases/1.1.2-11.md](docs/releases/1.1.2-11.md). It passed his TestFlight pass on the 15 Pro.
