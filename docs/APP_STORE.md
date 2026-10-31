@@ -402,7 +402,9 @@ changes no code:
 API has one slot for both screens, `APP_IPHONE_DUO`. Two were uploaded, the inner display in
 portrait (2007 x 2853) and the outer display (1398 x 2034), captured from the iPhone Duo simulator
 with the seven demo accounts of the existing set at 9:41 in light mode. An inner landscape capture
-(2853 x 2007) was made and left out: the cards run the full width and look stretched. The source
+(2853 x 2007) was first left out, since the cards run the full width and look stretched, then added
+third at the maintainer's request, because Apple's featuring advice asks for screenshots across
+orientations. The order is inner portrait, outer, inner landscape. The source
 files are in the private `assets/screenshots-duo/`. Apple makes Duo screenshots required from April
 2027 for builds made with the iOS 27.1 SDK or later.
 
