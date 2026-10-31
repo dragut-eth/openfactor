@@ -390,6 +390,22 @@ its lines were not, because they had become less accurate:
 
     The vault screens no longer carry an old message onto a later screen.
 
+### 1.1.4
+
+**Approved by the maintainer on 2026-10-31 and entered verbatim** through the App Store Connect API,
+with build 13 attached and release manual; he submits it himself. One line, because the release
+changes no code:
+
+    OpenFactor now runs natively on both screens of iPhone Duo.
+
+**iPhone Duo screenshots, added the same day**, the trigger for the "Made for iPhone Duo" badge. The
+API has one slot for both screens, `APP_IPHONE_DUO`. Two were uploaded, the inner display in
+portrait (2007 x 2853) and the outer display (1398 x 2034), captured from the iPhone Duo simulator
+with the seven demo accounts of the existing set at 9:41 in light mode. An inner landscape capture
+(2853 x 2007) was made and left out: the cards run the full width and look stretched. The source
+files are in the private `assets/screenshots-duo/`. Apple makes Duo screenshots required from April
+2027 for builds made with the iOS 27.1 SDK or later.
+
 ## App Privacy, the nutrition label
 
 App Store Connect asks this separately from the privacy manifest and does not read the manifest

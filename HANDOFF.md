@@ -23,7 +23,13 @@ unfolding, the app switcher card, and the add screen across a fold, all as expec
 landscape the cards run the full width, which works but looks stretched; two columns were
 considered and declined for now, since this release changes no code. The screenshots will use the
 inner screen in portrait. Apple requires Duo screenshots from April 2027 for builds made with the
-27.1 SDK or later. Core 497 and hosted 1,263 passed with Xcode 27.2 before the bump.
+27.1 SDK or later. Core 497 and hosted 1,263 passed with Xcode 27.2 before the bump. Shipped to
+TestFlight and passed the maintainer's pass on the 15 Pro. **Prepared in App Store Connect on
+2026-10-31**: build 13, the approved What's New, release manual, and two iPhone Duo screenshots,
+inner portrait and outer, uploaded and processed. Apple's checklist was gone through: the 27.1
+SDK, no sizing from the main screen, no layout by orientation or device type, windows made from
+their scene; the code needed nothing. **Waiting for the maintainer to submit**, and to send a
+featuring nomination in App Store Connect if he wants one.
 
 **Before that: 1.1.2 (11) shipped**, released 2026-10-03 at 16:38 UTC
 per the public store listing, after the maintainer submitted it at 15:06 UTC that day, release
