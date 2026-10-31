@@ -393,7 +393,8 @@ its lines were not, because they had become less accurate:
 ### 1.1.4
 
 **Approved by the maintainer on 2026-10-31 and entered verbatim** through the App Store Connect API,
-with build 13 attached and release manual; he submits it himself. One line, because the release
+with build 13 attached and release manual; he submitted it the same day, and at submission the
+release became automatic after approval. One line, because the release
 changes no code:
 
     OpenFactor now runs natively on both screens of iPhone Duo.

@@ -28,8 +28,10 @@ TestFlight and passed the maintainer's pass on the 15 Pro. **Prepared in App Sto
 2026-10-31**: build 13, the approved What's New, release manual, and three iPhone Duo screenshots,
 inner portrait, outer and inner landscape, uploaded and processed. Apple's checklist was gone through: the 27.1
 SDK, no sizing from the main screen, no layout by orientation or device type, windows made from
-their scene; the code needed nothing. **Waiting for the maintainer to submit**, and to send a
-featuring nomination in App Store Connect if he wants one.
+their scene; the code needed nothing. **Submitted for review by the maintainer on 2026-10-31**,
+read back as waiting for review with the release set to automatic after approval, so it goes live
+when Apple approves it. A featuring nomination in App Store Connect is his to send, if he wants
+one; its helpful details should say the app is optimized for iPhone Duo.
 
 **Before that: 1.1.2 (11) shipped**, released 2026-10-03 at 16:38 UTC
 per the public store listing, after the maintainer submitted it at 15:06 UTC that day, release
