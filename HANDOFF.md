@@ -10,7 +10,7 @@ after this one. It is self-contained and is all a session needs for a web fix.
 
 **Last updated:** 2026-11-10. **1.1.4 (13) is on the App Store**, released 2026-11-01 at 09:33
 UTC per Apple's public catalog. It is 1.1.3 (12) rebuilt for the "Made for iPhone Duo" badge, see
-below, and 1.1.3 carries every X5 fix. **The X5 reviewer rescanned 1.1.4 on 2026-11-09: no
+below, and 1.1.3 carries every X5 fix. **Claude Mythos 5.2 rescanned 1.1.4 on 2026-11-09: no
 security defect, two Lows and three Info notes, all deferred**, see the X5 paragraphs below.
 
 **1.1.4 (13), started 2026-10-31: a rebuild for iPhone Duo, with no code change.** Apple's
@@ -105,9 +105,9 @@ prepared with release manual. **Submitted for review by the maintainer on 2026-1
 back from App Store Connect as waiting for review, with the release set to automatic after
 approval at submission, so it goes live when Apple approves it.
 
-**The X5 reviewer rescanned 1.1.4 on 2026-11-09, and nothing from it is being fixed now.** The
-same session that ran X5, by then on Mythos 5.2, swept `main` at `b0a99ca` read-only, at the
-maintainer's request. It ran nothing; the sources are identical to `33bf2ac`, where the core
+**Claude Mythos 5.2 rescanned 1.1.4 on 2026-11-09, and nothing from it is being fixed now.** X5
+itself was Mythos 5.1; this is the same session, moved to the newer model. It swept `main` at
+`b0a99ca` read-only, at the maintainer's request. It ran nothing; the sources are identical to `33bf2ac`, where the core
 suite passed 497. **No security defect, two new Lows and three Info notes**, each checked against
 the code and recorded in the last section of
 [docs/audits/X/X5-mythos-blind-audit.md](docs/audits/X/X5-mythos-blind-audit.md):

@@ -574,17 +574,17 @@ stay, since `unwrap` has no guard. Core 497 passed there. Nothing blocks 1.1.3.
 
 ## Rescan at 1.1.4, 2026-11-09
 
-**The same reviewer swept `main` at `b0a99ca`, 1.1.4 (13), a month after the final round, at the
-maintainer's request.** The session is the one that ran X5, now on Mythos 5.2, so it carried the
-three rounds with it. Not a second full read: no file under `Sources/`, `Tests/`, the app, watch or
-share targets, `.github/` or `scripts/` has changed since `33bf2ac`, and the project file differs
-only by the version bump. It swept the same code for the shapes X5 found, which are work on every
-view rebuild, guarantees held by callers, decisions gated on a signal a cold path can miss,
-one-shot flags, delayed tasks, fixed-screen assumptions for iPhone Duo, and swallowed errors, then
-read the app target's platform settings and loaded the public App Store page. Read-only, on a
-fresh clone. It ran nothing: its session could not execute code from the clone, so the core suite
-and the initializer script were not re-run, and it says so. The sources are identical to `33bf2ac`,
-where the suite passed 497.
+**Claude Mythos 5.2 swept `main` at `b0a99ca`, 1.1.4 (13), a month after the final round, at the
+maintainer's request.** X5 and its three rounds were Mythos 5.1. The session is the same one, moved
+to the newer model, so it carried those rounds with it. Not a second full read: no file under
+`Sources/`, `Tests/`, the app, watch or share targets, `.github/` or `scripts/` has changed since
+`33bf2ac`, and the project file differs only by the version bump. It swept the same code for the
+shapes X5 found, which are work on every view rebuild, guarantees held by callers, decisions gated
+on a signal a cold path can miss, one-shot flags, delayed tasks, fixed-screen assumptions for iPhone
+Duo, and swallowed errors, then read the app target's platform settings and loaded the public App
+Store page. Read-only, on a fresh clone. It ran nothing: its session could not execute code from the
+clone, so the core suite and the initializer script were not re-run, and it says so. The sources are
+identical to `33bf2ac`, where the suite passed 497.
 
 **Its answer: no security defect. Two new Lows and three Info notes.** All five Mediums, N1 and N4
 remain closed, and nothing in the range could have reopened them.
