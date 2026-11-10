@@ -8,9 +8,10 @@ first when picking the work back up.
 **Working only on the website?** Read **The website: working on it cold**, the section right
 after this one. It is self-contained and is all a session needs for a web fix.
 
-**Last updated:** 2026-10-31. **1.1.3 (12) is on the App Store**, read back from App Store Connect
-as ready for distribution on 2026-10-31; the exact day of release was not recorded. It carries
-every X5 fix. **1.1.4 (13) is being shipped for the "Made for iPhone Duo" badge**, see below.
+**Last updated:** 2026-11-10. **1.1.4 (13) is on the App Store**, released 2026-11-01 at 09:33
+UTC per Apple's public catalog. It is 1.1.3 (12) rebuilt for the "Made for iPhone Duo" badge, see
+below, and 1.1.3 carries every X5 fix. **The X5 reviewer rescanned 1.1.4 on 2026-11-09: no
+security defect, two Lows and three Info notes, all deferred**, see the X5 paragraphs below.
 
 **1.1.4 (13), started 2026-10-31: a rebuild for iPhone Duo, with no code change.** Apple's
 foldable iPhone Duo has two screens, an outer 1398 x 2034 and an inner 2007 x 2853, and a "Made
@@ -30,7 +31,10 @@ inner portrait, outer and inner landscape, uploaded and processed. Apple's check
 SDK, no sizing from the main screen, no layout by orientation or device type, windows made from
 their scene; the code needed nothing. **Submitted for review by the maintainer on 2026-10-31**,
 read back as waiting for review with the release set to automatic after approval, so it goes live
-when Apple approves it. A featuring nomination in App Store Connect is his to send, if he wants
+when Apple approves it. **Live on 2026-11-01**: Apple's public catalog, read on 2026-11-10, gives
+1.1.4 with a release time of 09:33 UTC that day and lists iPhone Duo among its 131 supported
+devices. The badge itself shows only in the App Store app, not on the web page, and has not been
+read back here. A featuring nomination in App Store Connect is his to send, if he wants
 one; its helpful details should say the app is optimized for iPhone Duo.
 
 **Before that: 1.1.2 (11) shipped**, released 2026-10-03 at 16:38 UTC
@@ -100,6 +104,29 @@ TestFlight pass on the 15 Pro done, What's New approved and entered with build 1
 prepared with release manual. **Submitted for review by the maintainer on 2026-10-09**, and read
 back from App Store Connect as waiting for review, with the release set to automatic after
 approval at submission, so it goes live when Apple approves it.
+
+**The X5 reviewer rescanned 1.1.4 on 2026-11-09, and nothing from it is being fixed now.** The
+same session that ran X5, by then on Mythos 5.2, swept `main` at `b0a99ca` read-only, at the
+maintainer's request. It ran nothing; the sources are identical to `33bf2ac`, where the core
+suite passed 497. **No security defect, two new Lows and three Info notes**, each checked against
+the code and recorded in the last section of
+[docs/audits/X/X5-mythos-blind-audit.md](docs/audits/X/X5-mythos-blind-audit.md):
+- **R1, Low, reasoned and not reproduced.** After a cold unlock the vault gate can stay blank: its
+  first read waits on SwiftUI reporting `.active`, which this project's own device trace says is
+  not always delivered after Face ID. Any scene change recovers it.
+- **R2, Low, configuration.** "No Mac app" is held by two App Store Connect availability settings
+  that the repository neither records nor checks. The live listing is right: no Mac and no Vision
+  Pro among the supported devices.
+- **I1.** `KeychainSecretStore.add` does not consult `AccountLimits`; all five enrollment paths
+  do, so nothing is reachable.
+- **I2.** For up to a second after a rollover the list shows, and copies, the previous code.
+- **I3.** N2 unchanged, as decided on 2026-10-09.
+
+**The maintainer's decision, 2026-11-10: no release for these.** None is serious enough to justify
+a release, with the risk a release carries. R1, R2, I1 and I2 are deferred to the next release
+made for another reason. No code, project setting or CI step was changed. The half of R2 that
+needs no release, reading the two availability settings in App Store Connect and recording them
+in `docs/APP_STORE.md`, is not done either.
 
 **A shared transfer code trapped the add screen in a loop, fixed and shipped in 1.1.2.**
 Found by the maintainer on hardware on 2026-10-02, in 1.1.1. Share a Google Authenticator

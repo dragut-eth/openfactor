@@ -571,3 +571,45 @@ salt draw, so a refused call spends no randomness and writes nothing. All eleven
 are 24 letters with no character `canonical` would drop, distinct where they must differ, and the
 twin and wrong-passphrase tests keep their meaning; the unlock-only prose strings were right to
 stay, since `unwrap` has no guard. Core 497 passed there. Nothing blocks 1.1.3.
+
+## Rescan at 1.1.4, 2026-11-09
+
+**The same reviewer swept `main` at `b0a99ca`, 1.1.4 (13), a month after the final round, at the
+maintainer's request.** The session is the one that ran X5, now on Mythos 5.2, so it carried the
+three rounds with it. Not a second full read: no file under `Sources/`, `Tests/`, the app, watch or
+share targets, `.github/` or `scripts/` has changed since `33bf2ac`, and the project file differs
+only by the version bump. It swept the same code for the shapes X5 found, which are work on every
+view rebuild, guarantees held by callers, decisions gated on a signal a cold path can miss,
+one-shot flags, delayed tasks, fixed-screen assumptions for iPhone Duo, and swallowed errors, then
+read the app target's platform settings and loaded the public App Store page. Read-only, on a
+fresh clone. It ran nothing: its session could not execute code from the clone, so the core suite
+and the initializer script were not re-run, and it says so. The sources are identical to `33bf2ac`,
+where the suite passed 497.
+
+**Its answer: no security defect. Two new Lows and three Info notes.** All five Mediums, N1 and N4
+remain closed, and nothing in the range could have reopened them.
+
+**The findings, each checked here against the code before anything else:**
+
+| | Severity | Finding | Analysis |
+| --- | --- | --- | --- |
+| **R1** | Low, reasoned, not reproduced | After a cold unlock the vault gate can stay blank. `VaultGateModel` starts in `.checking`, which draws an empty background, and at launch the only thing that moves it on is `VaultGateView`'s `.onChange(of: scenePhase, initial: true)`, guarded on `.active`. On a cold lock the gate enters the tree while the Face ID sheet holds the scene inactive, so it waits for SwiftUI to report `.active`, and this project's own device trace records that SwiftUI does not always deliver it after Face ID. The lock and the cover were given UIKit's `didBecomeActive` for that reason; the gate was not | Confirmed by reading. `refresh()` is reached six ways: this handler, the list's code-failure callback, "Try again", "Check again", the end of the erase flow, and a Debug row. None of the other five runs at launch. It is N1's picture after a successful unlock, intermittent where N1 was certain, and any scene change recovers it. Its two remedies are a refresh in `onAppear` while the stage is `.checking`, or routing `didBecomeActiveNotification` to `refresh()`. Either is a change to launch behavior and needs the cold-unlock sequence on a device first |
+| **R2** | Low, configuration | "No Mac app" rests on two App Store Connect availability checkboxes that the repository neither records nor checks. The app target declares `SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator"` with `SDKROOT = auto`, and `SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD` and `SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD` appear nowhere, so both default to yes. CI's project-settings step asserts the device family only. On a Mac `vault.key` would have no Complete Protection, and the container boundary was measured on iOS only | Confirmed by reading, both configurations. The shipped listing is right today: Apple's public catalog entry for 1.1.4, read on 2026-11-09, lists 131 supported devices and none is a Mac or a Vision Pro. So nothing is reachable, and the gap is that the sentence in `README.md` is held by a setting outside the repository. Two details for the remedy: the share extension already has `SDKROOT = iphoneos` and no platform list, and the test targets say `macosx` and `1,2,7` and are exempt from the CI step because they never ship |
+| **I1** | Info | `KeychainSecretStore.add` does not consult `AccountLimits`. All five enrollment paths do, so there is no reachable gap. The same shape as N4: a rule about what the store may hold, enforced everywhere but in the store | Confirmed: `AccountLimits` is not named in the store. A sixth path that forgot it would produce what gate A4 found, an account that works daily and makes every encrypted export refuse |
+| **I2** | Info | The list's one-second timer starts when the view is created, not on the second. For up to a second after a rollover the card shows the previous period's code, and `copyCode` copies what the card shows with an expiry computed from the current time, so the just-expired code goes to the clipboard with the whole new period as its lifetime | Confirmed: `tick` regenerates when it notices the counter has moved, and `copyCode` takes `row.code` and `TOTP.expiry(at: date)`. Most services accept the previous step, so a login rarely fails on it. The clipboard half is the part that touches a stated rule, that an entry dies with the code it holds |
+| **I3** | Info | N2, the watch list's possible empty-state flash at a cold launch, is unchanged, since no watch code has changed | As decided on 2026-10-09: not seen on the watch, no change |
+
+**Its sweeps came back clean:** no view initializer does work; no one-shot flag guards a path that
+can be re-entered without resetting it; the two delayed tasks that outlive their attempt carry a
+token or a nonce; nothing assumes a fixed screen, which is the iPhone Duo question; and every
+`try?` in the core and the app targets is a fold its comment argues or a display-only read.
+
+The report is kept outside the repository with the earlier ones.
+
+**The maintainer's decision, 2026-11-10: no release for these.** None of the five is serious
+enough to justify a release, with the risk a release carries. R1, R2, I1 and I2 are deferred, to
+be taken up with the next release made for another reason. I3 stays as decided on 2026-10-09.
+
+**Nothing is changed by this section**: no code, no project setting, no CI step. The half of R2
+that needs no release, reading the two App Store Connect availability settings and recording them
+in `docs/APP_STORE.md`, is not done either.
